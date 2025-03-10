@@ -1,0 +1,21 @@
+@media screen and (max-width: 520px) {
+    .tabs {
+        flex-direction: column;
+    }
+    .addplan_btn {
+        margin-left: auto;
+        padding: 0px 8px 8px 0px;
+    }
+}
+
+@media screen and (max-width: 1025px) {
+    .name {
+        font-size: 1.4vh;
+    }
+}
+
+@media screen and (max-width: 376px) {
+    .impact_value {
+        display: inline;
+    }
+}

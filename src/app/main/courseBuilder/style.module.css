@@ -1,0 +1,12 @@
+@media screen and (max-width: 426px) {
+    .Search_container {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .Search {
+        width: 100%;
+    }
+    .button {
+        margin-left: auto;
+    }
+}

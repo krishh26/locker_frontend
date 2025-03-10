@@ -1,0 +1,23 @@
+.create_user {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 0.8rem;
+    padding-bottom: 5px;
+}
+
+.create_user .search_filed {
+    display: flex;
+    gap: 12px;
+    width: 50%;
+}
+
+@media screen and (max-width:426px) {
+    .create_user {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .create_user .search_filed {
+        width: 100%;
+    }
+}

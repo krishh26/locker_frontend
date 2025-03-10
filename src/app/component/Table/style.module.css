@@ -1,0 +1,10 @@
+.avatar {
+    display: flex;
+    align-items: center;
+}
+
+@media screen and (max-width: 1025px) {
+    .name {
+        font-size: 1.4vh;
+    }
+}
