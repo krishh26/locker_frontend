@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "target": "es5",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@fuse/*": [
+        "./src/@fuse/*"
+      ],
+      "@history*": [
+        "./src/@history"
+      ],
+      "@lodash": [
+        "./src/@lodash"
+      ],
+      "@mock-api": [
+        "./src/@mock-api"
+      ],
+      "app/store/*": [
+        "./src/app/store/*"
+      ],
+      "app/shared-components/*": [
+        "./src/app/shared-components/*"
+      ],
+      "app/configs/*": [
+        "./src/app/configs/*"
+      ],
+      "app/theme-layouts/*": [
+        "./src/app/theme-layouts/*"
+      ],
+      "app/AppContext": [
+        "./src/app/AppContext"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "src/assets/logo/linkedin.tsx"
+  ]
+}

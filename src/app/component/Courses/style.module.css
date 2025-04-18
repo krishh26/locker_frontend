@@ -1,0 +1,17 @@
+@media screen and (max-width: 1025px) {
+    .name {
+        font-size: 1.1rem;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .input_feald {
+        width: 300%;
+    }
+    .last2_input_feald {
+        width: 200%;
+    }
+    .last_input_feald {
+        width: 100%;
+    }
+}

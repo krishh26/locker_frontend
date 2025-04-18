@@ -1,0 +1,59 @@
+/* Custom styles for FullCalendar buttons */
+
+.fc-toolbar .fc-button {
+    color: rgb(0, 0, 0);
+    /* Default text color */
+    background-color: #ffffff;
+    /* Default background color */
+    border: none;
+    /* Remove border */
+    padding: 8px 12px;
+    /* Add padding */
+    border-radius: 4px;
+    /* Add rounded corners */
+}
+
+.fc-toolbar .fc-button:hover {
+    background-color: #6D81A3;
+    /* Darken on hover */
+}
+
+.fc-today-button {
+    background-color: #ff5722;
+    /* Orange background for Today button */
+}
+
+.fc-today-button:hover {
+    background-color: #e64a19;
+    /* Darker orange on hover */
+}
+
+.fc-dayGridMonth-button {
+    background-color: #4caf50;
+    /* Green background for Month button */
+}
+
+.fc-dayGridMonth-button:hover {
+    background-color: #388e3c;
+    /* Darker green on hover */
+}
+
+.fc-timeGridWeek-button {
+    background-color: #2196f3;
+    /* Blue background for Week button */
+}
+
+.fc-timeGridWeek-button:hover {
+    background-color: #1976d2;
+    /* Darker blue on hover */
+}
+
+.fc-timeGridDay-button {
+    background-color: #9c27b0;
+    /* Purple background for Day button */
+}
+
+.fc-timeGridDay-button:hover {
+    background-color: #7b1fa2;
+    /* Darker purple on hover */
+}
