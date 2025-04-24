@@ -135,6 +135,14 @@ const navigationConfig = [{
     icon: 'heroicons-outline:hand',
     url: '/support',
     visible: [UserRole.Trainer, UserRole.Learner, UserRole.Employer, UserRole.IQA, UserRole.EQA, UserRole.Admin, UserRole.LIQA],
+},
+{
+    id: 'dashboards.evidenceLibrary',
+    title: 'Evidence Library',
+    type: 'item',
+    icon: 'heroicons-outline:document-text',
+    url: '/evidenceLibrary',
+    visible: [UserRole.Learner],
 }
 ];
 export default navigationConfig;
