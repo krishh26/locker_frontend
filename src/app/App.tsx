@@ -4,14 +4,15 @@ import BrowserRouter from '@fuse/core/BrowserRouter';
 import FuseLayout from '@fuse/core/FuseLayout';
 import FuseTheme from '@fuse/core/FuseTheme';
 import { SnackbarProvider } from 'notistack';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import rtlPlugin from 'stylis-plugin-rtl';
 import createCache from '@emotion/cache';
 import { CacheProvider } from '@emotion/react';
 import { selectCurrentLanguageDirection } from 'app/store/i18nSlice';
 import { selectUser } from 'app/store/userSlice';
 import themeLayouts from 'app/theme-layouts/themeLayouts';
-import { selectMainTheme } from 'app/store/fuse/settingsSlice';
+import { changeFuseTheme, selectMainTheme } from 'app/store/fuse/settingsSlice';
+import themesConfig from 'app/configs/themesConfig';
 import FuseAuthorization from '@fuse/core/FuseAuthorization';
 import settingsConfig from 'app/configs/settingsConfig';
 import withAppProviders from './withAppProviders';
@@ -36,7 +37,25 @@ const emotionCacheOptions = {
 function App() {
   const langDirection = useSelector(selectCurrentLanguageDirection);
   const mainTheme = useSelector(selectMainTheme);
+  const dispatch = useDispatch();
   let user = useSelector(selectUser)?.data;
+
+  // Load saved theme from localStorage
+  useEffect(() => {
+    try {
+      const savedThemeData = localStorage.getItem('selectedTheme');
+      if (savedThemeData) {
+        const { themeName } = JSON.parse(savedThemeData);
+        if (themeName && themesConfig[themeName]) {
+          // Create a new function instance for the saved theme
+          const changeTheme = changeFuseTheme(themesConfig[themeName]);
+          changeTheme(dispatch, () => ({ fuse: { settings: { current: { theme: { main: null } } } } }));
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load saved theme:', e);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     return () => {
