@@ -6,6 +6,7 @@ import axios from 'axios';
 import jwtDecode from 'jwt-decode';
 import jsonData from 'src/url.json';
 import { connectToSocket } from 'src/utils/socket';
+import { cleanupGoogleTranslate } from 'app/theme-layouts/shared-components/GoogleTranslateElement';
 
 /* eslint-disable camelcase */
 
@@ -22,7 +23,7 @@ class JwtService extends FuseUtils.EventEmitter {
                 return response;
             },
             (err) => {
-                return new Promise((resolve, reject) => {
+                return new Promise(() => {
                     if (err.response.status === 401 && err.config && !err.config.__isRetryRequest) {
                         // if you ever get an unauthorized response, logout the user
                         this.emit('onAutoLogout', 'Invalid access_token');
@@ -102,7 +103,7 @@ class JwtService extends FuseUtils.EventEmitter {
     }
 
     signInWithToken = (dispatch) => {
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             const decoded = jwtDecode(this.getAccessToken());
             if (decoded.role === 'Learner') {
                 sessionStorage.setItem('learnerToken', JSON.stringify({ accessToken: this.getAccessToken(), user: { ...decoded, displayName: decoded?.first_name + " " + decoded?.last_name } }));
@@ -123,9 +124,27 @@ class JwtService extends FuseUtils.EventEmitter {
     };
 
     logout = () => {
+        const currentLang = document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('googtrans='))
+            ?.split('/')[2] || '';
+
+        if (currentLang && currentLang !== 'en') {
+            localStorage.setItem('googtrans_lang', currentLang);
+        }
+
+        cleanupGoogleTranslate();
+
         this.setSession(null);
+
         sessionStorage.clear();
+
+        const savedLang = localStorage.getItem('googtrans_lang');
         localStorage.clear();
+        if (savedLang) {
+            localStorage.setItem('googtrans_lang', savedLang);
+        }
+
         this.emit('onLogout', 'Logged out');
     };
 
@@ -137,7 +156,6 @@ class JwtService extends FuseUtils.EventEmitter {
         const decoded = jwtDecode(access_token);
         const currentTime = Date.now() / 1000;
         if (decoded.exp < currentTime) {
-            console.warn('access token expired');
             return false;
         }
 
