@@ -1,27 +1,17 @@
-/* eslint-disable consistent-return */
 import { memo, useEffect, useRef } from 'react';
 
-// Global variable to track if script is loaded
+// Global variable to track if the script is loaded
 let googleTranslateScriptLoaded = false;
+let googleTranslateScriptPromise = null;
 
 function GoogleTranslateElement() {
   const translatorInitialized = useRef(false);
-  
+
   useEffect(() => {
-    // Only initialize once
-    if (translatorInitialized.current) {
-      return;
-    }
-    
     const initGoogleTranslate = () => {
-      if (window.google && window.google.translate) {
-        try {
-          // Clear previous instance if exists
-          const existingElement = document.querySelector('.goog-te-combo');
-          if (existingElement) {
-            return; // Already initialized
-          }
-          
+      if (window.google?.translate) {
+        const existingElement = document.querySelector('.goog-te-combo');
+        if (!existingElement) {
           // eslint-disable-next-line no-new
           new window.google.translate.TranslateElement(
             {
@@ -30,41 +20,75 @@ function GoogleTranslateElement() {
             },
             'google_translate_element'
           );
-          
-          // Mark as initialized
-          translatorInitialized.current = true;
-        } catch (error) {
-          console.error('Error initializing Google Translate:', error);
         }
-      } else {
-        console.error('Google Translate library not loaded yet.');
+        translatorInitialized.current = true;
       }
     };
 
-    if (!window.googleTranslateElementInit && !googleTranslateScriptLoaded) {
-      window.googleTranslateElementInit = initGoogleTranslate;
-      googleTranslateScriptLoaded = true;
-      
-      const script = document.createElement('script');
-      script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      script.async = true;
-      script.onerror = () => {
-        console.error('Failed to load Google Translate script.');
-        googleTranslateScriptLoaded = false;
-        delete window.googleTranslateElementInit;
-      };
-      document.body.appendChild(script);
-    } else if (window.google && window.google.translate) {
-      // If already loaded, initialize directly
-      initGoogleTranslate();
-    }
-    
-    // No cleanup needed as we want to keep the script loaded
-    return () => {
-      // We intentionally don't clean up the script or init function here
-      // to maintain single load behavior
+    const loadScript = () => {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = (error) => reject(error);
+        document.body.appendChild(script);
+      });
     };
-  }, []); // Empty dependency array ensures this only runs once
+
+    // Clear previous translate element container content
+    const container = document.getElementById('google_translate_element');
+    if (container) container.innerHTML = '';
+
+    const loadTranslateElement = async () => {
+      try {
+        // If the script is not loaded, load it
+        if (!googleTranslateScriptLoaded) {
+          if (!googleTranslateScriptPromise) {
+            googleTranslateScriptPromise = loadScript().then(() => {
+              googleTranslateScriptLoaded = true;
+            });
+          }
+          await googleTranslateScriptPromise;
+        }
+
+        // Wait for Google Translate to be available
+        const checkTranslateLoaded = () => {
+          return new Promise((resolve, reject) => {
+            const interval = setInterval(() => {
+              if (window.google?.translate) {
+                clearInterval(interval);
+                resolve();
+              }
+            }, 100);
+            setTimeout(() => {
+              clearInterval(interval);
+              reject(new Error('Google Translate failed to load in time'));
+            }, 5000); // Timeout after 5 seconds
+          });
+        };
+
+        await checkTranslateLoaded();
+        initGoogleTranslate();
+      } catch (error) {
+        console.error(error);
+        // Reset the promise to allow retry on next mount
+        googleTranslateScriptPromise = null;
+        googleTranslateScriptLoaded = false;
+      }
+    };
+
+    loadTranslateElement();
+
+    return () => {
+      const scriptTags = document.querySelectorAll(
+        'script[src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"]'
+      );
+      scriptTags.forEach((script) => script.remove());
+      // Reset the initialized state
+      translatorInitialized.current = false;
+    };
+  }, []);
 
   return (
     <div
