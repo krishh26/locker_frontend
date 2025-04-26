@@ -1,8 +1,9 @@
-import { Autocomplete, Dialog, IconButton, InputAdornment, Paper, TextField, Typography } from "@mui/material";
+import { Autocomplete, Dialog, FormControlLabel, IconButton, InputAdornment, Paper, Switch, TextField, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { SecondaryButton } from "src/app/component/Buttons";
 import { useSelector } from "react-redux";
 import SearchIcon from "@mui/icons-material/Search";
+import CloseIcon from "@mui/icons-material/Close";
 import DataNotFound from "src/app/component/Pages/dataNotFound";
 import { useNavigate } from "react-router-dom";
 import ResourceUploadDialog from "src/app/component/Dialogs/resourceUploadDialog";
@@ -18,12 +19,43 @@ const Resources = () => {
   const { data, dataFetchLoading } = useSelector(selectResourceManagement)
   const [open, setOpen] = useState(false);
   const dispatch: any = useDispatch();
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [jobType, setJobType] = useState("");
+
+  // Job type switch state
+  const [isOnJob, setIsOnJob] = useState(false);
 
   const handleOpen = () => {
     setOpen(true);
   };
   const handleClose = () => {
     setOpen(false);
+  };
+
+  const searchHandler = (e) => {
+    setSearchKeyword(e.target.value);
+  };
+
+  const searchByKeywordUser = (e) => {
+    if (e.key === "Enter") {
+      searchAPIHandler();
+    }
+  };
+
+  const handleJobTypeChange = (event) => {
+    const isOn = event.target.checked;
+    setIsOnJob(isOn);
+    setJobType(isOn ? "On" : "Off");
+    searchAPIHandler(searchKeyword, isOn ? "On" : "Off");
+  };
+
+  const searchAPIHandler = (keyword = searchKeyword, jobTypeValue = jobType) => {
+    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, keyword, jobTypeValue));
+  };
+
+  const clearSearch = () => {
+    setSearchKeyword("");
+    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, "", jobType));
   };
 
   useEffect(() => {
@@ -33,10 +65,10 @@ const Resources = () => {
   return (
     <>
       {data?.length ?
-        <div className="m-4 flex items-center justify-between">
-          <div className="w-2/4 flex gap-12">
-            {/* <TextField
-              label="Search by keyword"
+        <div className="mt-8 mx-4 flex items-center justify-between">
+          <div className="w-3/4 flex gap-12">
+            <TextField
+              label="Search by name or description"
               fullWidth
               size="small"
               onKeyDown={searchByKeywordUser}
@@ -48,11 +80,8 @@ const Resources = () => {
                   <InputAdornment position="end" >
                     {
                       searchKeyword ? (
-                        <Close
-                          onClick={() => {
-                            setSearchKeyword("");
-                            dispatch(fetchUserAPI({ page: 1, page_size: 25 }, "", filterValue));
-                          }}
+                        <CloseIcon
+                          onClick={clearSearch}
                           sx={{
                             color: "#5B718F",
                             fontSize: 18,
@@ -69,29 +98,22 @@ const Resources = () => {
                     >
                       <SearchIcon fontSize="small" />
                     </IconButton>
-                     )} 
+                     )}
                   </InputAdornment>
               }}
-            /> */}
+            />
 
-            {/* <Autocomplete
-
-              className="w-1/2"
-              fullWidth
-              size="small"
-              options={["Course 1", "Course 2"].map((option) => option)}
-              renderInput={(params) => (
-                <TextField {...params} placeholder="Search by course name" />
-              )}
-              sx={{
-                ".MuiAutocomplete-clearIndicator": {
-                  color: "#5B718F",
-                }
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-              )}
-            /> */}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isOnJob}
+                  onChange={handleJobTypeChange}
+                  color="primary"
+                />
+              }
+              label={`Job Type: ${isOnJob ? 'On' : 'Off'} Job`}
+              className="ml-4"
+            />
           </div>
 
           <SecondaryButton
@@ -113,6 +135,8 @@ const Resources = () => {
           <ResouresManagementTable
             columns={resourceManagementTableColumn}
             rows={data}
+            search_keyword={searchKeyword}
+            search_role={jobType}
           />
           :
 
