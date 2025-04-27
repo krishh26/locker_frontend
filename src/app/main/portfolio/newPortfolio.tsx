@@ -85,7 +85,7 @@ export default function NewPortfolio() {
         }
 
         const data = await dispatch(tokenGetFetch(selectedUser.email))
-        const newTab = window.open('/portfolio', '_blank');
+        const newTab = window.open('/home', '_blank');
         newTab.sessionStorage.setItem('learnerToken', JSON.stringify({ ...data, user: { ...data.user, displayName: data.user.first_name + " " + data.user.last_name } }));
         newTab.onload = async () => {
             if (data) {
