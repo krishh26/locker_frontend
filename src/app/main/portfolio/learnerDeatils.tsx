@@ -157,7 +157,7 @@ const LearnerDetails = () => {
             response = await dispatch(updateLearnerAPI(learner_id, learnerData));
 
             if (response) {
-                navigate("/portfolio")
+                navigate("/home")
             }
         } catch (error) {
             console.error("Error updated data:", error);
@@ -166,7 +166,7 @@ const LearnerDetails = () => {
     }
 
     const handleClose = () => {
-        navigate("/portfolio");
+        navigate("/home");
     };
 
     const formatDate = (date) => {
@@ -895,7 +895,7 @@ const LearnerDetails = () => {
                                         </Grid>
 
                                         {/* <Grid className='w-full flex flex-row gap-20'>
-                                            
+
                                             <Grid className='w-1/2'>
                                                 <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem", fontWeight: "500" }}>Shift</Typography>
                                                 <TextField

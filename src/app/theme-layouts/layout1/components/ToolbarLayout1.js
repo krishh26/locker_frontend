@@ -3,45 +3,25 @@ import AppBar from '@mui/material/AppBar';
 import Hidden from '@mui/material/Hidden';
 import Toolbar from '@mui/material/Toolbar';
 import clsx from 'clsx';
-import { memo, useEffect } from 'react';
+import { memo } from 'react';
 import { useSelector } from 'react-redux';
 import { selectFuseCurrentLayoutConfig, selectToolbarTheme } from 'app/store/fuse/settingsSlice';
 import { selectFuseNavbar } from 'app/store/fuse/navbarSlice';
-import AdjustFontSize from '../../shared-components/AdjustFontSize';
-import Notification from './notification';
-import NavbarToggleButton from '../../shared-components/NavbarToggleButton';
-import UserMenu from '../../shared-components/UserMenu';
 import { Typography } from '@mui/material';
 import { selectGlobalUser } from 'app/store/globalUser';
 import { RoleShortForm } from 'src/utils/randomColor';
 import { UserRole } from 'src/enum';
+import AdjustFontSize from '../../shared-components/AdjustFontSize';
+import Notification from './notification';
+import NavbarToggleButton from '../../shared-components/NavbarToggleButton';
+import UserMenu from '../../shared-components/UserMenu';
+import GoogleTranslateElement from '../../shared-components/GoogleTranslateElement';
+
 function ToolbarLayout1(props) {
   const config = useSelector(selectFuseCurrentLayoutConfig);
   const navbar = useSelector(selectFuseNavbar);
   const toolbarTheme = useSelector(selectToolbarTheme);
-  const { currentUser, selectedUser, selected } = useSelector(selectGlobalUser);
-
-  const googleTranslateElementInit = () => {
-    // @ts-ignore
-    new window.google.translate.TranslateElement(
-      {
-        autoDisplay: false,
-        pageLanguage: "en",
-      },
-      "google_translate_element"
-    );
-  };
-
-  useEffect(() => {
-    var addScript = document.createElement("script");
-    addScript.setAttribute(
-      "src",
-      "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-    );
-    document.body.appendChild(addScript);
-    // @ts-ignore
-    window.googleTranslateElementInit = googleTranslateElementInit;
-  }, []);
+  const { currentUser } = useSelector(selectGlobalUser);
 
   return (
     <ThemeProvider theme={toolbarTheme}>
@@ -85,7 +65,7 @@ function ToolbarLayout1(props) {
           </div>
 
           <div className="flex items-center px-8 h-full overflow-x-auto">
-            <div id="google_translate_element" style={{ borderBottom: "1px solid lightgray", padding: 0, fontSize: "14px", width: "100px" }}></div>
+            <GoogleTranslateElement />
 
             {/* <LanguageSwitcher /> */}
             <AdjustFontSize />

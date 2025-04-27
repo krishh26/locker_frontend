@@ -21,6 +21,7 @@ const navigationConfig = [{
         UserRole.IQA,
         UserRole.EQA,
         UserRole.LIQA,
+        UserRole.Learner,
     ],
 },
 {

@@ -3,11 +3,9 @@ import { useTheme } from '@mui/material/styles';
 import { memo, useMemo, useCallback } from 'react';
 import clsx from 'clsx';
 
-// Memoized SchemePreview component to prevent unnecessary re-renders
 const SchemePreview = memo(({ theme, className, id, onSelect }) => {
   const _theme = useTheme();
 
-  // Use useMemo for expensive calculations
   const colors = useMemo(() => {
     const primaryColor = theme.palette.primary[500]
       ? theme.palette.primary[500]
@@ -36,10 +34,8 @@ const SchemePreview = memo(({ theme, className, id, onSelect }) => {
     };
   }, [theme.palette, _theme]);
 
-  // Check if this is an accessibility-focused theme
   const isAccessibilityTheme = theme.accessibility && theme.accessibility.type;
 
-  // Get accessibility type and badge properties - memoized
   const accessibilityInfo = useMemo(() => {
     if (!theme.accessibility) {
       return {
@@ -58,18 +54,12 @@ const SchemePreview = memo(({ theme, className, id, onSelect }) => {
         type = 'High Contrast';
         badgeColor = '#FF5722'; // Deep Orange
         break;
-      case 'colorblind':
-        type = 'Color Blind Friendly';
-        badgeColor = '#2196F3'; // Blue
-        break;
+
       case 'lightSensitivity':
         type = 'Light Sensitivity';
         badgeColor = '#9C27B0'; // Purple
         break;
-      case 'readability':
-        type = 'Enhanced Readability';
-        badgeColor = '#4CAF50'; // Green
-        break;
+
       default:
         type = '';
         badgeTextColor = colors.secondaryColorContrast;
@@ -78,7 +68,6 @@ const SchemePreview = memo(({ theme, className, id, onSelect }) => {
     return { type, badgeColor, badgeTextColor };
   }, [theme.accessibility, colors.secondaryColor, colors.secondaryColorContrast]);
 
-  // Handle click with useCallback to prevent unnecessary function recreation
   const handleClick = useCallback(() => {
     onSelect(theme);
   }, [onSelect, theme]);
@@ -105,7 +94,6 @@ const SchemePreview = memo(({ theme, className, id, onSelect }) => {
           }}
         >
           <span className="text-12 opacity-75">Header (Primary)</span>
-
           <div
             className="flex items-center justify-center w-20 h-20 rounded-full absolute bottom-0 right-0 -mb-10 shadow text-10 mr-4"
             style={{
@@ -148,7 +136,11 @@ const SchemePreview = memo(({ theme, className, id, onSelect }) => {
       <Typography className="font-semibold w-full text-center mt-12">
         {theme.accessibility ? theme.accessibility.name : id}
         {isAccessibilityTheme && (
-          <Typography component="span" className="block text-xs mt-1 text-center" color="text.secondary">
+          <Typography
+            component="span"
+            className="block text-xs mt-1 text-center"
+            color="text.secondary"
+          >
             {id}
           </Typography>
         )}
@@ -157,7 +149,6 @@ const SchemePreview = memo(({ theme, className, id, onSelect }) => {
   );
 });
 
-// Memoized Theme Section component
 const ThemeSection = memo(({ title, themes: sectionThemes, onSelect }) => {
   if (sectionThemes.length === 0) return null;
 
@@ -180,24 +171,20 @@ const ThemeSection = memo(({ title, themes: sectionThemes, onSelect }) => {
 function FuseThemeSchemes(props) {
   const { themes, onSelect } = props;
 
-  // Use useMemo to avoid recalculating on every render
   const groupedThemes = useMemo(() => {
     const groups = {
       standard: [],
       highContrast: [],
-      colorblind: [],
-      lightSensitivity: [],
-      readability: []
+      lightSensitivity: []
     };
 
-    // Categorize themes
     Object.entries(themes)
       .filter(([key]) => !(key === 'mainThemeDark' || key === 'mainThemeLight'))
       .forEach(([key, theme]) => {
         if (!theme.accessibility) {
           groups.standard.push({ key, theme });
         } else {
-          const type = theme.accessibility.type;
+          const { type } = theme.accessibility;
           if (groups[type]) {
             groups[type].push({ key, theme });
           } else {
@@ -207,16 +194,21 @@ function FuseThemeSchemes(props) {
       });
 
     return groups;
-  }, [themes]); // Only recalculate when themes change
+  }, [themes]);
 
-  // Use lazy loading with React.lazy and Suspense for better performance
   return (
     <div>
       <ThemeSection title="Standard Themes" themes={groupedThemes.standard} onSelect={onSelect} />
-      <ThemeSection title="High Contrast Themes" themes={groupedThemes.highContrast} onSelect={onSelect} />
-      <ThemeSection title="Color Blind Friendly Themes" themes={groupedThemes.colorblind} onSelect={onSelect} />
-      <ThemeSection title="Light Sensitivity Themes" themes={groupedThemes.lightSensitivity} onSelect={onSelect} />
-      <ThemeSection title="Enhanced Readability Themes" themes={groupedThemes.readability} onSelect={onSelect} />
+      <ThemeSection
+        title="High Contrast Themes"
+        themes={groupedThemes.highContrast}
+        onSelect={onSelect}
+      />
+      <ThemeSection
+        title="Light Sensitivity Themes"
+        themes={groupedThemes.lightSensitivity}
+        onSelect={onSelect}
+      />
     </div>
   );
 }

@@ -40,14 +40,20 @@ function App() {
   const dispatch = useDispatch();
   let user = useSelector(selectUser)?.data;
 
-  // Load saved theme from localStorage
   useEffect(() => {
     try {
       const savedThemeData = localStorage.getItem('selectedTheme');
       if (savedThemeData) {
         const { themeName } = JSON.parse(savedThemeData);
         if (themeName && themesConfig[themeName]) {
-          // Create a new function instance for the saved theme
+          const saveGoogleTranslateState = () => {
+            const comboBox = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+            if (comboBox && comboBox.value) {
+              localStorage.setItem('googleTranslateLanguage', comboBox.value);
+            }
+          };
+
+          saveGoogleTranslateState();
           const changeTheme = changeFuseTheme(themesConfig[themeName]);
           changeTheme(dispatch, () => ({ fuse: { settings: { current: { theme: { main: null } } } } }));
         }
@@ -56,6 +62,32 @@ function App() {
       console.error('Failed to load saved theme:', e);
     }
   }, [dispatch]);
+
+  useEffect(() => {
+    const reinitializeGoogleTranslate = () => {
+      setTimeout(() => {
+        if (typeof window.googleTranslateInit === 'function') {
+          window.googleTranslateInit();
+        }
+        else if (window.googleTranslateConfig) {
+          if (typeof window.saveGoogleTranslateLanguage === 'function') {
+            window.saveGoogleTranslateLanguage();
+          }
+
+          window.googleTranslateConfig.initialized = false;
+          if (typeof window.initializeGoogleTranslate === 'function') {
+            window.initializeGoogleTranslate();
+          } else if (typeof window.googleTranslateElementInit === 'function') {
+            window.googleTranslateElementInit();
+          }
+        }
+      }, 500);
+    };
+
+    if (mainTheme) {
+      reinitializeGoogleTranslate();
+    }
+  }, [mainTheme]);
 
   useEffect(() => {
     return () => {

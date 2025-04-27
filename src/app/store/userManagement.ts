@@ -108,7 +108,7 @@ export const sendOTPMailHandler = (data) => async (dispatch) => {
     }
 }
 
-//verify otp 
+//verify otp
 export const verifyOTPMailHandler = (data, navigate) => async (dispatch) => {
     try {
         const payload = {
@@ -151,10 +151,7 @@ export const resetPasswordHandler = (data) => async (dispatch) => {
             await JwtService.emit('onLogin', data.decoded);
             sessionStorage.removeItem("reset");
             sessionStorage.removeItem("email");
-            if (data.decoded?.role === "Learner")
-                return "/portfolio";
-              else
-                return "/home";
+            return "/home";
         }
         sessionStorage.removeItem("email");
         return "/sign-in";
@@ -302,7 +299,7 @@ export const deleteUserHandler = (id, meta_data, search_keyword = "", search_rol
     };
 }
 
-// Upload user avatar 
+// Upload user avatar
 export const uploadAvatar = (file) => async (dispatch, getStore) => {
     try {
         const formData = new FormData();
@@ -320,7 +317,7 @@ export const uploadAvatar = (file) => async (dispatch, getStore) => {
     }
 }
 
-// Upload learner avatar by admin 
+// Upload learner avatar by admin
 export const uploadLearnerAvatar = (file) => async (dispatch, getStore) => {
     try {
         const formData = new FormData();

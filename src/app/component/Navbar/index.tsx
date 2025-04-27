@@ -19,10 +19,7 @@ const Index = () => {
 
   const navigateLogin = () => {
     if (instance.getAccessToken()) {
-      if (user?.role === "Learner")
-        navigate("/portfolio");
-      else
-        navigate("/home");
+      navigate("/home");
     } else {
       navigate("/sign-in");
     }
