@@ -64,12 +64,11 @@ function ToolbarLayout1(props) {
 
           </div>
 
-          <div className="flex items-center px-8 h-full overflow-x-auto">
+          <div className="flex items-center px-8 h-full overflow-x-auto" id="toolbar-container">
+            {/* Google Translate Element - positioned to the left of font size resizer */}
             <GoogleTranslateElement />
 
-            {/* <LanguageSwitcher /> */}
             <AdjustFontSize />
-            {/* <NotificationPanelToggleButton /> */}
             <Notification />
             <UserMenu />
           </div>

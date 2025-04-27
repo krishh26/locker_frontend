@@ -46,7 +46,7 @@ export const logoutUser = (redirection) => async (dispatch) => {
     history.push('/')
     dispatch(slice.userLoggedOut())
     dispatch(userSlice.actions.userLoggedOut())
-
+    window.location.reload() // Add this line to reload after redirect
   }
 }
 
@@ -55,3 +55,4 @@ export const selectUser = ({ user }) => user;
 export const selectUserShortcuts = ({ user }) => user.data.shortcuts;
 
 export default userSlice.reducer;
+

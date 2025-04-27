@@ -9,29 +9,18 @@ let selectedLanguage = null;
 let translateElementContainer = null;
 function initGoogleTranslate() {
   if (!document.getElementById('google_translate_element')) {
-    translateElementContainer = document.createElement('div');
-    translateElementContainer.id = 'google_translate_element';
-    translateElementContainer.style.position = 'fixed';
-    translateElementContainer.style.bottom = '20px';
-    translateElementContainer.style.right = '20px';
-    translateElementContainer.style.zIndex = '9999';
-    translateElementContainer.style.backgroundColor = 'white';
-    translateElementContainer.style.padding = '10px';
-    translateElementContainer.style.borderRadius = '8px';
-    translateElementContainer.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
-    translateElementContainer.style.minWidth = '200px';
-    document.body.appendChild(translateElementContainer);
+    // Look for the element in the React app first
+    const reactElement = document.getElementById('google_translate_element_container');
+    if (reactElement) {
+      translateElementContainer = reactElement;
+    } else {
+      // If not found, create it (fallback)
+      translateElementContainer = document.createElement('div');
+      translateElementContainer.id = 'google_translate_element';
+      document.body.appendChild(translateElementContainer);
+    }
   } else {
     translateElementContainer = document.getElementById('google_translate_element');
-    translateElementContainer.style.position = 'fixed';
-    translateElementContainer.style.bottom = '20px';
-    translateElementContainer.style.right = '20px';
-    translateElementContainer.style.zIndex = '9999';
-    translateElementContainer.style.backgroundColor = 'white';
-    translateElementContainer.style.padding = '10px';
-    translateElementContainer.style.borderRadius = '8px';
-    translateElementContainer.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
-    translateElementContainer.style.minWidth = '200px';
   }
 
   if (!isScriptLoaded) {
@@ -203,22 +192,22 @@ function addGoogleTranslateStyles() {
       top: 0 !important;
     }
 
-    /* Style the dropdown - enhanced attractive design */
+    /* Style the dropdown - compact toolbar design */
     .goog-te-combo {
-      padding: 10px 14px !important;
-      border-radius: 8px !important;
-      border: 2px solid #4285f4 !important;
+      padding: 6px 10px !important;
+      border-radius: 4px !important;
+      border: 1px solid #4285f4 !important;
       background-color: #ffffff !important;
       color: #333 !important;
-      font-size: 14px !important;
+      font-size: 13px !important;
       font-weight: 500 !important;
       width: 100% !important;
       max-width: 100% !important;
-      height: 45px !important;
+      height: 36px !important;
       display: block !important;
       visibility: visible !important;
       opacity: 1 !important;
-      box-shadow: 0 2px 8px rgba(66, 133, 244, 0.15) !important;
+      box-shadow: 0 1px 4px rgba(66, 133, 244, 0.1) !important;
       transition: all 0.3s ease !important;
       cursor: pointer !important;
       outline: none !important;
@@ -227,10 +216,10 @@ function addGoogleTranslateStyles() {
       -moz-appearance: none !important;
       background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234285f4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
       background-repeat: no-repeat !important;
-      background-position: right 12px center !important;
-      background-size: 18px !important;
-      padding-right: 40px !important;
-      letter-spacing: 0.3px !important;
+      background-position: right 8px center !important;
+      background-size: 14px !important;
+      padding-right: 30px !important;
+      letter-spacing: 0.2px !important;
     }
 
     .goog-te-combo:hover {
@@ -245,20 +234,22 @@ function addGoogleTranslateStyles() {
       outline: none !important;
     }
 
-    /* Container styling - enhanced */
+    /* Container styling - enhanced for toolbar positioning */
     #google_translate_element {
-      background-color: white !important;
-      padding: 15px !important;
-      border-radius: 12px !important;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+      background-color: transparent !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
       display: block !important;
       visibility: visible !important;
       opacity: 1 !important;
-      border: 1px solid rgba(66, 133, 244, 0.1) !important;
+      border: none !important;
       transition: all 0.3s ease !important;
+      width: 200px !important;
+      height: 40px !important;
     }
 
-    /* Make sure the gadget is visible and styled */
+    /* Make sure the gadget is visible and styled for toolbar */
     .goog-te-gadget {
       display: block !important;
       visibility: visible !important;
@@ -266,6 +257,10 @@ function addGoogleTranslateStyles() {
       margin: 0 !important;
       padding: 0 !important;
       width: 100% !important;
+      height: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
 
     /* Fix for dropdown options - enhanced */
