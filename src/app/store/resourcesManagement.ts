@@ -81,7 +81,7 @@ export const createResourceAPI = (data) => async (dispatch) => {
 }
 
 // get resource
-export const fetchResourceAPI = (data = { page: 1, page_size: 25 }, search_keyword = "", search_role = "") => async (dispatch) => {
+export const fetchResourceAPI = (data = { page: 1, page_size: 25 }, search_keyword = "", job_type = "") => async (dispatch) => {
 
     try {
         dispatch(slice.setLoader());
@@ -90,11 +90,11 @@ export const fetchResourceAPI = (data = { page: 1, page_size: 25 }, search_keywo
         let url = `${URL_BASE_LINK}/resource/list?page=${page}&limit=${page_size}&meta=true`;
 
         if (search_keyword) {
-            url = `${url}&keyword=${search_keyword}`
+            url = `${url}&search=${search_keyword}`
         }
 
-        if (search_role) {
-            url = `${url}&role=${search_role}`
+        if (job_type) {
+            url = `${url}&job_type=${job_type}`
         }
 
         const response = await axios.get(url);

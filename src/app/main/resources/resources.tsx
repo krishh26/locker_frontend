@@ -1,8 +1,9 @@
-import { Autocomplete, Dialog, IconButton, InputAdornment, Paper, TextField, Typography } from "@mui/material";
+import { Autocomplete, Dialog, IconButton, InputAdornment, Paper, TextField, Typography, FormControlLabel, Switch } from "@mui/material";
 import { useEffect, useState } from "react";
 import { SecondaryButton } from "src/app/component/Buttons";
 import { useSelector } from "react-redux";
 import SearchIcon from "@mui/icons-material/Search";
+import Close from "@mui/icons-material/Close";
 import DataNotFound from "src/app/component/Pages/dataNotFound";
 import { useNavigate } from "react-router-dom";
 import ResourceUploadDialog from "src/app/component/Dialogs/resourceUploadDialog";
@@ -17,6 +18,8 @@ const Resources = () => {
 
   const { data, dataFetchLoading } = useSelector(selectResourceManagement)
   const [open, setOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [jobType, setJobType] = useState(false); // false = off, true = on
   const dispatch: any = useDispatch();
 
   const handleOpen = () => {
@@ -26,74 +29,86 @@ const Resources = () => {
     setOpen(false);
   };
 
+  const searchByKeywordUser = (e) => {
+    if (e.key === "Enter") {
+      searchAPIHandler();
+    }
+  };
+
+  const searchHandler = (e) => {
+    setSearchKeyword(e.target.value);
+  };
+
+  const handleJobTypeChange = (e) => {
+    setJobType(e.target.checked);
+    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, searchKeyword, e.target.checked ? "On" : "Off"));
+  };
+
+  const searchAPIHandler = () => {
+    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, searchKeyword, jobType ? "On" : "Off"));
+  };
+
+  const clearSearch = () => {
+    setSearchKeyword("");
+    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, "", jobType ? "On" : "Off"));
+  };
+
   useEffect(() => {
     dispatch(fetchResourceAPI())
   }, []);
 
   return (
     <>
-      {data?.length ?
-        <div className="m-4 flex items-center justify-between">
-          <div className="w-2/4 flex gap-12">
-            {/* <TextField
-              label="Search by keyword"
-              fullWidth
-              size="small"
-              onKeyDown={searchByKeywordUser}
-              onChange={searchHandler}
-              value={searchKeyword}
-              className="w-1/2"
-              InputProps={{
-                endAdornment:
-                  <InputAdornment position="end" >
-                    {
-                      searchKeyword ? (
-                        <Close
-                          onClick={() => {
-                            setSearchKeyword("");
-                            dispatch(fetchUserAPI({ page: 1, page_size: 25 }, "", filterValue));
-                          }}
-                          sx={{
-                            color: "#5B718F",
-                            fontSize: 18,
-                            cursor: "pointer",
-                          }}
-                        />
-                      ) : (
+      <div className="m-24 flex items-center justify-between">
+        <div className="w-2/3 flex gap-12 items-center">
+          <TextField
+            label="Search by name and description"
+            fullWidth
+            size="small"
+            className="w-1/2"
+            onKeyDown={searchByKeywordUser}
+            onChange={searchHandler}
+            value={searchKeyword}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  {searchKeyword ? (
+                    <Close
+                      onClick={clearSearch}
+                      sx={{
+                        color: "#5B718F",
+                        fontSize: 18,
+                        cursor: "pointer",
+                      }}
+                    />
+                  ) : (
                     <IconButton
                       id="dashboard-search-events-btn"
                       disableRipple
                       sx={{ color: "#5B718F" }}
-                      onClick={() => searchAPIHandler()}
+                      onClick={searchAPIHandler}
                       size="small"
                     >
                       <SearchIcon fontSize="small" />
                     </IconButton>
-                     )} 
-                  </InputAdornment>
-              }}
-            /> */}
+                  )}
+                </InputAdornment>
+              ),
+            }}
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={jobType}
+                onChange={handleJobTypeChange}
+                color="primary"
+              />
+            }
+            label={`Job Type: ${jobType ? 'On' : 'Off'}`}
+          />
+        </div>
 
-            {/* <Autocomplete
-
-              className="w-1/2"
-              fullWidth
-              size="small"
-              options={["Course 1", "Course 2"].map((option) => option)}
-              renderInput={(params) => (
-                <TextField {...params} placeholder="Search by course name" />
-              )}
-              sx={{
-                ".MuiAutocomplete-clearIndicator": {
-                  color: "#5B718F",
-                }
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-              )}
-            /> */}
-          </div>
-
+        {data?.length ? (
           <SecondaryButton
             name="Create Resource"
             startIcon={
@@ -105,14 +120,16 @@ const Resources = () => {
             }
             onClick={handleOpen}
           />
-        </div>
-        : null}
+        ) : null}
+      </div>
 
       {dataFetchLoading ? <FuseLoading /> :
         data?.length ?
           <ResouresManagementTable
             columns={resourceManagementTableColumn}
             rows={data}
+            search_keyword={searchKeyword}
+            search_role={jobType ? "On" : "Off"}
           />
           :
 
