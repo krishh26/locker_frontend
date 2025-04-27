@@ -11,23 +11,62 @@ import {
 import settingsConfig from 'app/configs/settingsConfig';
 import themeLayoutConfigs from 'app/theme-layouts/themeLayoutConfigs';
 // import { setUser, updateUserSettings } from 'app/store/userSlice';
-import { darkPaletteText, lightPaletteText } from 'app/configs/themesConfig';
+import themesConfig, { darkPaletteText, lightPaletteText } from 'app/configs/themesConfig';
 
-export const changeFuseTheme = (theme) => (dispatch, getState) => {
-  const { fuse } = getState();
-  const { settings } = fuse;
-
-  const newSettings = {
-    ...settings.current,
-    theme: {
-      main: theme,
-      navbar: theme,
-      toolbar: theme,
-      footer: theme,
-    },
+// Debounce helper to prevent rapid theme changes
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
   };
+};
 
-  dispatch(setDefaultSettings(newSettings));
+// Optimized theme change function with debouncing
+export const changeFuseTheme = (theme) => {
+  // Return a debounced version of the actual theme change function
+  return debounce((dispatch, getState) => {
+    const { fuse } = getState();
+    const { settings } = fuse;
+
+    // Only update if the theme is actually different
+    if (settings.current.theme.main === theme) {
+      return;
+    }
+
+    // Clear theme cache when changing themes to prevent memory leaks
+    if (themeCache.size > 20) {
+      themeCache.clear();
+    }
+
+    const newSettings = {
+      ...settings.current,
+      theme: {
+        main: theme,
+        navbar: theme,
+        toolbar: theme,
+        footer: theme,
+      },
+    };
+
+    // Save theme to localStorage for persistence
+    try {
+      // Find the theme name by comparing with themesConfig
+      const themeName = Object.keys(themesConfig).find(key => themesConfig[key] === theme) || 'default';
+      localStorage.setItem('selectedTheme', JSON.stringify({
+        themeName,
+        timestamp: new Date().getTime()
+      }));
+    } catch (e) {
+      console.error('Failed to save theme to localStorage:', e);
+    }
+
+    dispatch(setDefaultSettings(newSettings));
+  }, 50); // 50ms debounce time
 };
 
 function getInitialSettings() {
@@ -119,7 +158,19 @@ const getNavbarTheme = (state) => state.fuse.settings.current.theme.navbar;
 const getToolbarTheme = (state) => state.fuse.settings.current.theme.toolbar;
 const getFooterTheme = (state) => state.fuse.settings.current.theme.footer;
 
+// Cache for generated themes to avoid expensive recalculations
+const themeCache = new Map();
+
 function generateMuiTheme(theme, direction) {
+  // Create a cache key from theme and direction
+  const themeKey = `${theme.palette.mode}-${direction}-${theme.palette.primary.main}-${theme.palette.secondary.main}`;
+
+  // Check if this theme is already in cache
+  if (themeCache.has(themeKey)) {
+    return themeCache.get(themeKey);
+  }
+
+  // If not in cache, generate the theme
   const data = _.merge({}, defaultThemeOptions, theme, mustHaveThemeOptions);
   const response = createTheme(
     _.merge({}, data, {
@@ -127,6 +178,10 @@ function generateMuiTheme(theme, direction) {
       direction,
     })
   );
+
+  // Store in cache for future use
+  themeCache.set(themeKey, response);
+
   return response;
 }
 

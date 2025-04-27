@@ -11,8 +11,9 @@ const persistConfig = {
     'globalUser',
     'userManagement',
     'learnerManagement',
-    'courseManagement'
-  ]
+    'courseManagement',
+    'fuse',
+  ],
 };
 
 const persistedReducer = persistReducer(persistConfig, createReducer());

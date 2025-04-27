@@ -22,7 +22,7 @@ class JwtService extends FuseUtils.EventEmitter {
                 return response;
             },
             (err) => {
-                return new Promise((resolve, reject) => {
+                return new Promise(() => {
                     if (err.response.status === 401 && err.config && !err.config.__isRetryRequest) {
                         // if you ever get an unauthorized response, logout the user
                         this.emit('onAutoLogout', 'Invalid access_token');
@@ -79,7 +79,7 @@ class JwtService extends FuseUtils.EventEmitter {
                             sessionStorage.setItem('learnerToken', JSON.stringify({ ...data, user: { ...data.user, displayName: data.user.first_name + " " + data.user.last_name } }));
                         }
                         connectToSocket(decoded?.user_id, dispatch);
-                        dispatch(slice.setCurrentUser(data.user))
+                        dispatch(slice.setCurrentUser(data.user));
                         if (data.password_changed) {
                             this.setSession(data.accessToken);
                             this.emit('onLogin', decoded);
@@ -102,7 +102,7 @@ class JwtService extends FuseUtils.EventEmitter {
     }
 
     signInWithToken = (dispatch) => {
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             const decoded = jwtDecode(this.getAccessToken());
             if (decoded.role === 'Learner') {
                 sessionStorage.setItem('learnerToken', JSON.stringify({ accessToken: this.getAccessToken(), user: { ...decoded, displayName: decoded?.first_name + " " + decoded?.last_name } }));
