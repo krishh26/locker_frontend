@@ -1,61 +1,84 @@
-import { Autocomplete, Dialog, IconButton, InputAdornment, Paper, TextField, Typography, FormControlLabel, Switch } from "@mui/material";
-import { useEffect, useState } from "react";
-import { SecondaryButton } from "src/app/component/Buttons";
-import { useSelector } from "react-redux";
+import {
+  Dialog,
+  IconButton,
+  InputAdornment,
+  TextField,
+  Typography,
+  FormControlLabel,
+  Switch,
+} from "@mui/material";
+import { useEffect, useState, useRef } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import SearchIcon from "@mui/icons-material/Search";
 import Close from "@mui/icons-material/Close";
 import DataNotFound from "src/app/component/Pages/dataNotFound";
-import { useNavigate } from "react-router-dom";
 import ResourceUploadDialog from "src/app/component/Dialogs/resourceUploadDialog";
-import { useDispatch } from "react-redux";
 import { fetchResourceAPI, selectResourceManagement } from "app/store/resourcesManagement";
 import FuseLoading from "@fuse/core/FuseLoading";
 import ResouresManagementTable from "src/app/component/Table/ResourseManagementTable";
 import { resourceManagementTableColumn } from "src/app/contanst";
-import { selectUser } from "app/store/userSlice";
+import { useDebounce } from "@fuse/hooks";
+import { SecondaryButton } from "src/app/component/Buttons";
 
 const Resources = () => {
+  const dispatch: any = useDispatch();
+  const { data, dataFetchLoading } = useSelector(selectResourceManagement);
 
-  const { data, dataFetchLoading } = useSelector(selectResourceManagement)
   const [open, setOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [jobType, setJobType] = useState(false); // false = off, true = on
-  const dispatch: any = useDispatch();
+  const [jobType, setJobType] = useState<"On" | "Off">("Off");
+  const jobTypeRef = useRef(jobType);
 
-  const handleOpen = () => {
-    setOpen(true);
-  };
-  const handleClose = () => {
-    setOpen(false);
-  };
+  useEffect(() => {
+    jobTypeRef.current = jobType;
+  }, [jobType]);
 
-  const searchByKeywordUser = (e) => {
-    if (e.key === "Enter") {
-      searchAPIHandler();
-    }
-  };
+  const debouncedSearch = useDebounce((value: string) => {
+    fetchResources(value, jobTypeRef.current);
+  }, 500);
 
-  const searchHandler = (e) => {
-    setSearchKeyword(e.target.value);
+  const fetchResources = (keyword = searchKeyword, job = jobType) => {
+    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, keyword, job));
   };
 
-  const handleJobTypeChange = (e) => {
-    setJobType(e.target.checked);
-    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, searchKeyword, e.target.checked ? "On" : "Off"));
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchKeyword(value);
+    debouncedSearch(value);
   };
 
-  const searchAPIHandler = () => {
-    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, searchKeyword, jobType ? "On" : "Off"));
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") fetchResources(searchKeyword, jobType);
+  };
+
+  const handleJobTypeToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newJobType = e.target.checked ? "On" : "Off";
+    setJobType(newJobType);
+    fetchResources(searchKeyword, newJobType);
   };
 
   const clearSearch = () => {
     setSearchKeyword("");
-    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, "", jobType ? "On" : "Off"));
+    fetchResources("", jobType);
   };
 
   useEffect(() => {
-    dispatch(fetchResourceAPI())
-  }, []);
+    fetchResources("", jobType);
+  }, [dispatch]);
+
+  const renderCreateButton = () => (
+    <SecondaryButton
+      name="Create Resource"
+      startIcon={
+        <img
+          src="assets/images/svgimage/createcourseicon.svg"
+          alt="Create File"
+          className="w-6 h-6 mr-2 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
+        />
+      }
+      onClick={() => setOpen(true)}
+    />
+  );
 
   return (
     <>
@@ -66,27 +89,22 @@ const Resources = () => {
             fullWidth
             size="small"
             className="w-1/2"
-            onKeyDown={searchByKeywordUser}
-            onChange={searchHandler}
             value={searchKeyword}
+            onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
                   {searchKeyword ? (
                     <Close
                       onClick={clearSearch}
-                      sx={{
-                        color: "#5B718F",
-                        fontSize: 18,
-                        cursor: "pointer",
-                      }}
+                      sx={{ color: "#5B718F", fontSize: 18, cursor: "pointer" }}
                     />
                   ) : (
                     <IconButton
-                      id="dashboard-search-events-btn"
                       disableRipple
                       sx={{ color: "#5B718F" }}
-                      onClick={searchAPIHandler}
+                      onClick={() => fetchResources()}
                       size="small"
                     >
                       <SearchIcon fontSize="small" />
@@ -99,70 +117,45 @@ const Resources = () => {
           <FormControlLabel
             control={
               <Switch
-                checked={jobType}
-                onChange={handleJobTypeChange}
+                checked={jobType === "On"}
+                onChange={handleJobTypeToggle}
                 color="primary"
               />
             }
-            label={`Job Type: ${jobType ? 'On' : 'Off'}`}
+            label={`Job Type: ${jobType}`}
           />
         </div>
-
-        {data?.length ? (
-          <SecondaryButton
-            name="Create Resource"
-            startIcon={
-              <img
-                src="assets/images/svgimage/createcourseicon.svg"
-                alt="Create File"
-                className="w-6 h-6 mr-2 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
-              />
-            }
-            onClick={handleOpen}
-          />
-        ) : null}
+        {data?.length > 0 && renderCreateButton()}
       </div>
 
-      {dataFetchLoading ? <FuseLoading /> :
-        data?.length ?
-          <ResouresManagementTable
-            columns={resourceManagementTableColumn}
-            rows={data}
-            search_keyword={searchKeyword}
-            search_role={jobType ? "On" : "Off"}
-          />
-          :
+      {dataFetchLoading ? (
+        <FuseLoading />
+      ) : data?.length > 0 ? (
+        <ResouresManagementTable
+          columns={resourceManagementTableColumn}
+          rows={data}
+          search_keyword={searchKeyword}
+          search_role={jobType}
+        />
+      ) : (
+        <div className="flex flex-col justify-center items-center gap-10" style={{ height: "94%" }}>
+          <DataNotFound width="25%" />
+          <Typography variant="h5">No data found</Typography>
+          <Typography variant="body2" className="text-center">
+            It is a long established fact that a reader will be <br />distracted by the readable content.
+          </Typography>
+          {renderCreateButton()}
+        </div>
+      )}
 
-          <div className="flex flex-col justify-center items-center gap-10 " style={{ height: "94%" }}>
-            <DataNotFound width="25%" />
-            <Typography variant="h5">No data found</Typography>
-            <Typography variant="body2" className="text-center">It is a long established fact that a reader will be <br />distracted by the readable content.</Typography>
-            <div className="flex items-center space-x-4">
-              {<SecondaryButton
-                name="Create Resource"
-                startIcon={
-                  <img
-                    src="assets/images/svgimage/createcourseicon.svg"
-                    alt="Create File"
-                    className="w-6 h-6 mr-2 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
-                  />
-                }
-                onClick={handleOpen}
-              />}
-            </div>
-          </div>
-      }
       <Dialog
         open={open}
-        onClose={handleClose}
+        onClose={() => setOpen(false)}
         sx={{
-          ".MuiDialog-paper": {
-            borderRadius: "4px",
-            padding: "1rem",
-          },
+          ".MuiDialog-paper": { borderRadius: "4px", padding: "1rem" },
         }}
       >
-        <ResourceUploadDialog dialogFn={{ handleClose }} />
+        <ResourceUploadDialog dialogFn={{ handleClose: () => setOpen(false) }} />
       </Dialog>
     </>
   );
