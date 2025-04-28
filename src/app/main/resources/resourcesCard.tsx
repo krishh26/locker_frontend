@@ -1,4 +1,4 @@
-import { Dialog, Typography } from "@mui/material";
+import { Dialog, Typography, TextField, InputAdornment, IconButton, FormControlLabel, Switch } from "@mui/material";
 import { useEffect, useState } from "react";
 import { SecondaryButton } from "src/app/component/Buttons";
 import { useSelector } from "react-redux";
@@ -11,6 +11,8 @@ import { resourceManagementTableColumn } from "src/app/contanst";
 import ResouresTable from "src/app/component/Table/ResourseTable";
 import { selectUser } from "app/store/userSlice";
 import { UserRole } from "src/enum";
+import SearchIcon from "@mui/icons-material/Search";
+import Close from "@mui/icons-material/Close";
 
 const ResourcesCard = () => {
 
@@ -18,6 +20,8 @@ const ResourcesCard = () => {
   const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
 
   const [open, setOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [jobType, setJobType] = useState(false); // false = off, true = on
   const dispatch: any = useDispatch();
 
   const handleOpen = () => {
@@ -27,24 +31,93 @@ const ResourcesCard = () => {
     setOpen(false);
   };
 
+  const searchByKeywordUser = (e) => {
+    if (e.key === "Enter") {
+      searchAPIHandler();
+    }
+  };
+
+  const searchHandler = (e) => {
+    setSearchKeyword(e.target.value);
+  };
+
+  const handleJobTypeChange = (e) => {
+    setJobType(e.target.checked);
+    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, searchKeyword, e.target.checked ? "On" : "Off"));
+  };
+
+  const searchAPIHandler = () => {
+    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, searchKeyword, jobType ? "On" : "Off"));
+  };
+
+  const clearSearch = () => {
+    setSearchKeyword("");
+    dispatch(fetchResourceAPI({ page: 1, page_size: 25 }, "", jobType ? "On" : "Off"));
+  };
+
   useEffect(() => {
     dispatch(fetchResourceAPI())
   }, []);
 
   return (
     <>
-      {data?.length ?
-        <div className="m-4 flex items-center justify-between">
-          <div className="w-2/4 flex gap-12">
-          </div>
+      <div className="m-4 flex items-center justify-between">
+        <div className="w-full flex gap-12 items-center">
+          <TextField
+            label="Search by keyword"
+            fullWidth
+            size="small"
+            className="w-1/3"
+            onKeyDown={searchByKeywordUser}
+            onChange={searchHandler}
+            value={searchKeyword}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  {searchKeyword ? (
+                    <Close
+                      onClick={clearSearch}
+                      sx={{
+                        color: "#5B718F",
+                        fontSize: 18,
+                        cursor: "pointer",
+                      }}
+                    />
+                  ) : (
+                    <IconButton
+                      id="dashboard-search-events-btn"
+                      disableRipple
+                      sx={{ color: "#5B718F" }}
+                      onClick={searchAPIHandler}
+                      size="small"
+                    >
+                      <SearchIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                </InputAdornment>
+              ),
+            }}
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={jobType}
+                onChange={handleJobTypeChange}
+                color="primary"
+              />
+            }
+            label={`Job Type: ${jobType ? 'On' : 'Off'}`}
+          />
         </div>
-        : null}
+      </div>
 
       {dataFetchLoading ? <FuseLoading /> :
         data?.length ?
           <ResouresTable
             columns={resourceManagementTableColumn}
             rows={data}
+            search_keyword={searchKeyword}
+            search_role={jobType ? "On" : "Off"}
           />
           :
 

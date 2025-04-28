@@ -127,6 +127,7 @@ class JwtService extends FuseUtils.EventEmitter {
         sessionStorage.clear();
         localStorage.clear();
         this.emit('onLogout', 'Logged out');
+        window.location.reload(); // Add this line to reload the page
     };
 
     // eslint-disable-next-line class-methods-use-this

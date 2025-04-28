@@ -94,7 +94,7 @@ export default function ResouresManagementTable(props) {
   };
   return (
     <>
-      <div style={{ width: "100%", overflow: "hidden", marginTop: "0.5rem" }}>
+      <div style={{ width: "100%", overflow: "hidden", padding: "0 24px" }}>
         <TableContainer sx={{ maxHeight: 480, minHeight: 480 }}>
           <Table stickyHeader aria-label="sticky table" size="small">
             <TableHead>
