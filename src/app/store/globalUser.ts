@@ -2,27 +2,11 @@ import { createSlice } from '@reduxjs/toolkit';
 import jsonData from 'src/url.json';
 import axios from 'axios';
 
-// Get user info from localStorage if available
-const getUserInfoFromStorage = () => {
-    try {
-        const userInfoString = localStorage.getItem('userInfo');
-        if (userInfoString) {
-            const userInfo = JSON.parse(userInfoString);
-            return {
-                first_name: userInfo.first_name,
-                last_name: userInfo.last_name,
-                role: userInfo.role
-            };
-        }
-        return {};
-    } catch (error) {
-        console.error('Error parsing user info from localStorage:', error);
-        return {};
-    }
-};
+// Initial state with empty user object
+// User data will be loaded from sessionStorage via our custom persistence implementation
 
 const initialState = {
-    currentUser: getUserInfoFromStorage(),
+    currentUser: {},
     selectedUser: {},
     selected: false,
     dataFetchLoading: false,
