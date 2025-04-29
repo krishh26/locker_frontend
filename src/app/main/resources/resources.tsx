@@ -26,7 +26,7 @@ const Resources = () => {
 
   const [open, setOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [jobType, setJobType] = useState<"On" | "Off">("Off");
+  const [jobType, setJobType] = useState<"On" | "Off">(null);
   const jobTypeRef = useRef(jobType);
 
   useEffect(() => {
@@ -122,7 +122,7 @@ const Resources = () => {
                 color="primary"
               />
             }
-            label={`Job Type: ${jobType}`}
+            label={`Job Type: ${jobType ? jobType : "On/Off"}`}
           />
         </div>
         {data?.length > 0 && renderCreateButton()}
