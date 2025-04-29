@@ -2,6 +2,9 @@ import { createSlice } from '@reduxjs/toolkit';
 import jsonData from 'src/url.json';
 import axios from 'axios';
 
+// Initial state with empty user object
+// User data will be loaded from sessionStorage via our custom persistence implementation
+
 const initialState = {
     currentUser: {},
     selectedUser: {},

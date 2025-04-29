@@ -10,7 +10,6 @@ import { selectFuseNavbar } from 'app/store/fuse/navbarSlice';
 import { Typography } from '@mui/material';
 import { selectGlobalUser } from 'app/store/globalUser';
 import { RoleShortForm } from 'src/utils/randomColor';
-import { UserRole } from 'src/enum';
 import AdjustFontSize from '../../shared-components/AdjustFontSize';
 import Notification from './notification';
 import NavbarToggleButton from '../../shared-components/NavbarToggleButton';
@@ -37,10 +36,12 @@ function ToolbarLayout1(props) {
         }}
         position="static"
       >
-
-        <Toolbar className="p-0 min-h-64 md:min-h-64" >
-
-          <Typography className='ml-12' variant='h6'>Welcome{currentUser?.role !== UserRole.Learner && ", " + currentUser?.first_name + " " + currentUser?.last_name + " " + "(" + RoleShortForm[currentUser?.role] + ")"}</Typography>
+        <Toolbar className="p-0 min-h-64 md:min-h-64">
+          <Typography className="ml-12" variant="h6">
+            Welcome
+            {`, ${currentUser?.first_name} ${currentUser?.last_name} ` +
+              `(${RoleShortForm[currentUser?.role]})`}
+          </Typography>
 
           <div className="flex flex-1 px-16">
             {config.navbar.display && config.navbar.position === 'left' && (
@@ -48,8 +49,8 @@ function ToolbarLayout1(props) {
                 <Hidden lgDown>
                   {(config.navbar.style === 'style-3' ||
                     config.navbar.style === 'style-3-dense') && (
-                      <NavbarToggleButton className="w-40 h-40 p-0 mx-0" />
-                    )}
+                    <NavbarToggleButton className="w-40 h-40 p-0 mx-0" />
+                  )}
 
                   {config.navbar.style === 'style-1' && !navbar.open && (
                     <NavbarToggleButton className="w-40 h-40 p-0 mx-0" />
@@ -61,7 +62,6 @@ function ToolbarLayout1(props) {
                 </Hidden>
               </>
             )}
-
           </div>
 
           <div className="flex items-center px-8 h-full overflow-x-auto" id="toolbar-container">

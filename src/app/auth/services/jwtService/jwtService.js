@@ -78,6 +78,10 @@ class JwtService extends FuseUtils.EventEmitter {
                         if (decoded?.role === 'Learner') {
                             sessionStorage.setItem('learnerToken', JSON.stringify({ ...data, user: { ...data.user, displayName: data.user.first_name + " " + data.user.last_name } }));
                         }
+
+                        // User info is now persisted through Redux to sessionStorage
+                        // No need to manually store in localStorage
+
                         connectToSocket(decoded?.user_id, dispatch);
                         dispatch(slice.setCurrentUser(data.user));
                         if (data.password_changed) {
@@ -107,6 +111,10 @@ class JwtService extends FuseUtils.EventEmitter {
             if (decoded.role === 'Learner') {
                 sessionStorage.setItem('learnerToken', JSON.stringify({ accessToken: this.getAccessToken(), user: { ...decoded, displayName: decoded?.first_name + " " + decoded?.last_name } }));
             }
+
+            // User info is now persisted through Redux to sessionStorage
+            // No need to manually store in localStorage
+
             connectToSocket(decoded.user_id, dispatch);
             resolve(decoded);
         });
@@ -124,10 +132,11 @@ class JwtService extends FuseUtils.EventEmitter {
 
     logout = () => {
         this.setSession(null);
+        // Clear all storage
         sessionStorage.clear();
         localStorage.clear();
         this.emit('onLogout', 'Logged out');
-        window.location.reload(); // Add this line to reload the page
+        window.location.reload(); // Reload the page to reset the application state
     };
 
     // eslint-disable-next-line class-methods-use-this
