@@ -44,6 +44,7 @@ const saveState = (state) => {
       userManagement: state.userManagement,
       learnerManagement: state.learnerManagement,
       courseManagement: state.courseManagement,
+      cpdLearner: state.cpdLearner,
       fuse: state.fuse,
     };
 

@@ -6,33 +6,31 @@ import {
   TableCell,
   Box,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  useTheme
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { format, isValid } from 'date-fns';
 
 interface EditableRowProps {
   row: any;
   headers: any[];
   onSave: (updatedRow: any) => Promise<boolean>;
   onDelete: () => void;
-  onAddRow: () => void;
-  isLastRow: boolean;
 }
 
 const EditableRow: React.FC<EditableRowProps> = ({
   row,
   headers,
   onSave,
-  onDelete,
-  onAddRow,
-  isLastRow
+  onDelete
 }) => {
+  const theme = useTheme();
   const [editedRow, setEditedRow] = useState({ ...row });
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -56,7 +54,20 @@ const EditableRow: React.FC<EditableRowProps> = ({
   };
 
   const handleDateChange = (date: Date | null, field: string) => {
-    const formattedDate = date ? date.toISOString().split('T')[0] : '';
+    let formattedDate = '';
+
+    if (date) {
+      // Use date-fns to check if the date is valid
+      if (isValid(date)) {
+        try {
+          // Format the date as YYYY-MM-DD
+          formattedDate = format(date, 'yyyy-MM-dd');
+        } catch (error) {
+          console.error('Error formatting date:', error);
+        }
+      }
+    }
+
     setEditedRow({
       ...editedRow,
       [field]: formattedDate
@@ -66,16 +77,22 @@ const EditableRow: React.FC<EditableRowProps> = ({
   };
 
   const handleSave = async () => {
+    // Keep the current data visible during saving
     setIsSaving(true);
+
     try {
+      // Pass the edited data to the parent component for saving
       const success = await onSave(editedRow);
+
       if (success) {
+        // Only update UI state after successful save
         setIsDirty(false);
         setSaveError(false);
       } else {
         setSaveError(true);
       }
     } catch (error) {
+      console.error("Error saving row:", error);
       setSaveError(true);
     } finally {
       setIsSaving(false);
@@ -86,23 +103,66 @@ const EditableRow: React.FC<EditableRowProps> = ({
     <TableRow
       hover
       sx={{
-        '&:nth-of-type(odd)': { backgroundColor: '#f9f9f9' },
-        '& td': { borderRight: '1px solid #e0e0e0' },
-        '& td:last-child': { borderRight: 'none' }
+        '&:nth-of-type(odd)': {
+          backgroundColor: theme.palette.mode === 'light'
+            ? theme.palette.grey[50]
+            : theme.palette.background.default + '80' // 80% opacity
+        },
+        '& td': { borderRight: `1px solid ${theme.palette.divider}` },
+        '& td:last-child': { borderRight: 'none' },
+        // Add a subtle highlight when saving
+        ...(isSaving && {
+          backgroundColor: theme.palette.mode === 'light'
+            ? theme.palette.primary.light + '20' // 20% opacity
+            : theme.palette.primary.dark + '20',
+          transition: 'background-color 0.3s ease'
+        })
       }}
     >
       {headers.map((header) => (
-        <TableCell key={header.id} sx={{ padding: '8px' }}>
+        <TableCell key={header.id} sx={{ padding: '4px' }}>
           {header.id === 'date' ? (
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
-                value={editedRow[header.id] ? new Date(editedRow[header.id]) : null}
+                value={editedRow[header.id] ? (() => {
+                  try {
+                    // Parse the date string and validate it
+                    const dateStr = editedRow[header.id];
+                    const date = new Date(dateStr);
+
+                    // Check if the date is valid
+                    if (isValid(date)) {
+                      return date;
+                    }
+                    return null;
+                  } catch (e) {
+                    return null;
+                  }
+                })() : null}
                 onChange={(date) => handleDateChange(date, header.id)}
+                format="yyyy-MM-dd"
+                disabled={isSaving}
                 slotProps={{
                   textField: {
                     fullWidth: true,
                     size: "small",
-                    variant: "outlined"
+                    variant: "outlined",
+                    // Add error handling for invalid dates
+                    onError: (error) => {
+                      if (error) {
+                        // Clear the invalid date value
+                        setEditedRow({
+                          ...editedRow,
+                          [header.id]: ''
+                        });
+                      }
+                    }
+                  }
+                }}
+                // Prevent manual input parsing errors
+                onError={(reason) => {
+                  if (reason) {
+                    console.log("Date error:", reason);
                   }
                 }}
               />
@@ -115,18 +175,21 @@ const EditableRow: React.FC<EditableRowProps> = ({
               value={editedRow[header.id] || ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e, header.id)}
               multiline={header.multiline}
-              rows={header.multiline ? 2 : 1}
+              rows={header.multiline ? 1 : 1}
+              disabled={isSaving}
               // placeholder={header.label}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': {
-                    borderColor: '#e0e0e0',
+                    borderColor: theme.palette.divider,
                   },
                   '&:hover fieldset': {
-                    borderColor: '#bdbdbd',
+                    borderColor: theme.palette.mode === 'light'
+                      ? theme.palette.grey[400]
+                      : theme.palette.grey[600],
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#1976d2',
+                    borderColor: theme.palette.primary.main,
                   },
                 },
               }}
@@ -134,8 +197,8 @@ const EditableRow: React.FC<EditableRowProps> = ({
           )}
         </TableCell>
       ))}
-      <TableCell align="center" sx={{ width: '120px', padding: '8px' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+      <TableCell align="center" sx={{ padding: '4px' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
           {isDirty && !saveError && (
             <Tooltip title="Save changes">
               <IconButton
@@ -145,9 +208,9 @@ const EditableRow: React.FC<EditableRowProps> = ({
                 disabled={isSaving}
               >
                 {isSaving ? (
-                  <CircularProgress size={16} color="inherit" />
+                  <CircularProgress size={18} color="inherit" />
                 ) : (
-                  <SaveIcon fontSize="small" />
+                  <SaveIcon sx={{ fontSize: '20px' }}/>
                 )}
               </IconButton>
             </Tooltip>
@@ -158,35 +221,25 @@ const EditableRow: React.FC<EditableRowProps> = ({
               <IconButton
                 onClick={handleSave}
                 size="small"
+                sx={{ color: theme.palette.warning.main }}
               >
-                <RefreshIcon fontSize="small" />
+                <RefreshIcon sx={{ fontSize: '20px' }} />
               </IconButton>
             </Tooltip>
           )}
 
           <Tooltip title="Delete row">
             <IconButton
-              sx={{ color: '#f44336' }}
+              sx={{ color: theme.palette.error.main }}
               onClick={onDelete}
               size="small"
               disabled={isSaving}
             >
-              <DeleteIcon fontSize="small" />
+              <DeleteIcon sx={{ fontSize: '20px' }} />
             </IconButton>
           </Tooltip>
 
-          {isLastRow && (
-            <Tooltip title="Add new row">
-              <IconButton
-                color="primary"
-                onClick={onAddRow}
-                size="small"
-                disabled={isSaving}
-              >
-                <AddIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
+
         </Box>
       </TableCell>
     </TableRow>

@@ -432,8 +432,6 @@ export const updateCpdEntryAPI = (id: string, data: Partial<CpdEntry>) => async 
     try {
         dispatch(slice.setUpdatingLoader());
 
-        // For now, we'll use the existing activity API endpoint
-        // In a real implementation, you would create a new endpoint for this
         const payload = {
             learning_objective: data.activity,
             date: data.date,
@@ -469,8 +467,6 @@ export const deleteCpdEntryAPI = (id: string) => async (dispatch: any, getStore:
     try {
         dispatch(slice.setUpdatingLoader());
 
-        // For now, we'll use the existing activity API endpoint
-        // In a real implementation, you would create a new endpoint for this
         const response = await axios.delete(`${URL_BASE_LINK}/cpd/activity/delete/${id}`);
 
         // Update the state directly instead of fetching again

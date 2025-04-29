@@ -1,77 +1,72 @@
-import React, { useState, useEffect } from "react";
+import { useEffect } from "react";
 import {
   Box,
   Typography,
   Paper,
-  Grid
+  useTheme
 } from "@mui/material";
-import {
-  selectCpdPlanning,
-  getCpdEntriesAPI,
-  createCpdEntryAPI,
-  updateCpdEntryAPI,
-  deleteCpdEntryAPI,
-  CpdEntry
-} from "app/store/cpdPlanning";
 import { useDispatch, useSelector } from "react-redux";
-import { selectstoreDataSlice } from "app/store/reloadData";
-import { selectUser } from "app/store/userSlice";
-import EditableTable from "./EditableTable";
+import capitalize from "@mui/utils/capitalize";
+import withReducer from "app/store/withReducer";
 import { showMessage } from "app/store/fuse/messageSlice";
+
+import EditableTable from "./EditableTable";
+import {
+  selectCpdLearner,
+  getCpdLearnerListAPI,
+  createCpdLearnerEntryAPI,
+  updateCpdLearnerEntryAPI,
+  deleteCpdLearnerEntryAPI,
+  CpdLearnerEntry
+} from "app/store/cpdLearner";
+import reducer from "app/store/cpdLearner";
+
+import { selectstoreDataSlice } from "app/store/reloadData"; // Optional: remove if unused
+import { selectUser } from "app/store/userSlice";
+import { selectLearnerManagement } from "app/store/learnerManagement";
 
 const Cpd = () => {
   const dispatch: any = useDispatch();
-  const { data, dataFetchLoading } = useSelector(selectCpdPlanning);
-  const { user_id } = useSelector(selectstoreDataSlice);
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const { data, dataFetchLoading } = useSelector(selectCpdLearner);
+  const user = JSON.parse(sessionStorage.getItem("learnerToken") || "null")?.user 
+    || useSelector(selectUser)?.data || {};
+  const { learner } = useSelector(selectLearnerManagement);
+  
+  const theme = useTheme();
 
-  const [userInfo] = useState({
-    name: user?.name || '',
-    jobTitle: user?.job_title || '',
-    workplace: user?.workplace || ''
+  useEffect(() => {
+    dispatch(getCpdLearnerListAPI());
+  }, [dispatch]);
+
+  const mapRow = (row: Partial<CpdLearnerEntry>) => ({
+    what_training: row.activity || "",
+    date: row.date || "",
+    how_you_did: row.method || "",
+    what_you_learned: row.learning || "",
+    how_it_improved_work: row.impact || ""
   });
 
-  // Fetch CPD entries on component mount
-  useEffect(() => {
-    const userId = user_id || user?.user_id;
-    if (userId) {
-      dispatch(getCpdEntriesAPI(userId));
-    }
-  }, [dispatch, user_id, user?.user_id]);
+  const handleAddRow = async (newRow: Partial<CpdLearnerEntry>): Promise<boolean> => {
+    const mappedRow = mapRow(newRow);
 
-  const handleAddRow = async (newRow: Partial<CpdEntry>): Promise<boolean> => {
-    // Only save if at least one field has data
-    if (!newRow.activity && !newRow.date && !newRow.method && !newRow.learning && !newRow.impact) {
-      return true; // Don't save completely empty rows
-    }
-
-    const userId = user_id || user?.user_id;
-    if (!userId) {
-      dispatch(showMessage({ message: "User ID not found", variant: "error" }));
-      return false;
-    }
-
-    const rowWithId = {
-      ...newRow,
-      user_id: userId
-    };
+    if (Object.values(mappedRow).every(val => !val)) return true;
 
     try {
-      await dispatch(createCpdEntryAPI(rowWithId as CpdEntry));
-      dispatch(showMessage({ message: "CPD entry added successfully", variant: "success" }));
-      return true;
-    } catch (error) {
+      const result = await dispatch(createCpdLearnerEntryAPI(mappedRow));
+      if (result) dispatch(showMessage({ message: "CPD entry added successfully", variant: "success" }));
+      return result;
+    } catch {
       dispatch(showMessage({ message: "Failed to add CPD entry", variant: "error" }));
       return false;
     }
   };
 
-  const handleUpdateRow = async (rowId: string, updatedRow: Partial<CpdEntry>): Promise<boolean> => {
+  const handleUpdateRow = async (rowId: string, updatedRow: Partial<CpdLearnerEntry>): Promise<boolean> => {
     try {
-      await dispatch(updateCpdEntryAPI(rowId, updatedRow));
-      dispatch(showMessage({ message: "CPD entry updated successfully", variant: "success" }));
-      return true;
-    } catch (error) {
+      const result = await dispatch(updateCpdLearnerEntryAPI(rowId, mapRow(updatedRow)));
+      if (result) dispatch(showMessage({ message: "CPD entry updated successfully", variant: "success" }));
+      return result;
+    } catch {
       dispatch(showMessage({ message: "Failed to update CPD entry", variant: "error" }));
       return false;
     }
@@ -79,72 +74,81 @@ const Cpd = () => {
 
   const handleDeleteRow = async (rowId: string): Promise<boolean> => {
     try {
-      await dispatch(deleteCpdEntryAPI(rowId));
-      dispatch(showMessage({ message: "CPD entry deleted successfully", variant: "success" }));
-      return true;
-    } catch (error) {
+      const result = await dispatch(deleteCpdLearnerEntryAPI(rowId));
+      if (result) dispatch(showMessage({ message: "CPD entry deleted successfully", variant: "success" }));
+      return result;
+    } catch {
       dispatch(showMessage({ message: "Failed to delete CPD entry", variant: "error" }));
       return false;
     }
   };
 
+  const formattedData = (data || []).map((item: CpdLearnerEntry) => ({
+    id: item.id,
+    activity: item.what_training,
+    date: item.date,
+    method: item.how_you_did,
+    learning: item.what_you_learned,
+    impact: item.how_it_improved_work
+  }));
+
   return (
-    <div>
-      <Box sx={{ width: "100%", p: 2 }}>
-        {/* Header */}
-        <Paper
-          elevation={0}
+    <Box sx={{ width: "100%", p: 1 }}>
+      <Paper
+        elevation={2}
+        sx={{
+          mb: 2,
+          borderRadius: 2,
+          boxShadow: theme.shadows[2],
+          border: `1px solid ${theme.palette.divider}`,
+          overflow: "hidden"
+        }}
+      >
+        <Box
           sx={{
+            bgcolor: theme.palette.primary.light,
+            color: theme.palette.primary.contrastText,
             p: 2,
-            mb: 3,
-            backgroundColor: "#f0f0f0",
             textAlign: "center"
           }}
         >
-          <Typography variant="h6" component="h1" fontWeight="bold">
+          <Typography variant="h4" fontWeight={600}>
             Continuing Professional Development (CPD) – Learning log
           </Typography>
-        </Paper>
+        </Box>
 
-        {/* User Info */}
-        <Paper
-          elevation={1}
+        <Box
           sx={{
-            p: 2,
-            mb: 3,
-            border: "1px solid #ccc"
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            p: 1.5,
+            bgcolor: theme.palette.mode === "light" ? theme.palette.grey[100] : theme.palette.background.paper,
+            borderTop: `1px solid ${theme.palette.divider}`
           }}
         >
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <Typography variant="body1" fontWeight="bold">
-                Name: {userInfo.name}
-              </Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="body1" fontWeight="bold">
-                Job title: {userInfo.jobTitle}
-              </Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="body1" fontWeight="bold">
-                Workplace: {userInfo.workplace}
-              </Typography>
-            </Grid>
-          </Grid>
-        </Paper>
+          {[
+            { label: "Name", value: capitalize(user.displayName || "") },
+            { label: "Job title", value: learner?.job_title },
+            { label: "Employer", value: user?.employer }
+          ].map(({ label, value }) => (
+            <Box key={label} sx={{ display: "flex", alignItems: "center", minWidth: 200 }}>
+              <Typography variant="body1" fontWeight="bold" sx={{ mr: 1 }}>{label}:</Typography>
+              <Typography variant="body1">{value}</Typography>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
 
-        {/* Editable Table */}
-        <EditableTable
-          data={data || []}
-          onAddRow={handleAddRow}
-          onUpdateRow={handleUpdateRow}
-          onDeleteRow={handleDeleteRow}
-          loading={dataFetchLoading}
-        />
-      </Box>
-    </div>
+      <EditableTable
+        data={formattedData}
+        onAddRow={handleAddRow}
+        onUpdateRow={handleUpdateRow}
+        onDeleteRow={handleDeleteRow}
+        loading={dataFetchLoading}
+      />
+    </Box>
   );
 };
 
-export default Cpd;
+export default withReducer("cpdLearner", reducer)(Cpd);
