@@ -90,7 +90,7 @@ export const fetchResourceAPI = (data = { page: 1, page_size: 25 }, search_keywo
         let url = `${URL_BASE_LINK}/resource/list?page=${page}&limit=${page_size}&meta=true`;
 
         if (search_keyword) {
-            url = `${url}&keyword=${search_keyword}`
+            url = `${url}&search=${search_keyword}`
         }
 
         if (job_type) {
@@ -158,25 +158,37 @@ export const deleteResourceHandler = (id) => async (dispatch) => {
 }
 
 // get resource
-export const fetchResourceByCourseAPI = (course_id, user_id) => async (dispatch) => {
+// get resource by course (with optional search and job_type)
+export const fetchResourceByCourseAPI = (
+  course_id,
+  user_id,
+  search_keyword = "",
+  job_type = ""
+) => async (dispatch) => {
+  try {
+    dispatch(slice.setLoader());
 
-    try {
-        dispatch(slice.setLoader());
+    let url = `${URL_BASE_LINK}/resource/list-by-course?course_id=${course_id}&user_id=${user_id}`;
 
-        let url = `${URL_BASE_LINK}/resource/list-by-course?course_id=${course_id}&user_id=${user_id}`;
+    if (search_keyword) {
+      url += `&search=${encodeURIComponent(search_keyword)}`;
+    }
 
-        const response = await axios.get(url);
-        dispatch(slice.setSingleData(response.data.data));
-        dispatch(slice.setLoader());
-        return true;
+    if (job_type) {
+      url += `&job_type=${encodeURIComponent(job_type)}`;
+    }
 
-    } catch (err) {
-        dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
-        dispatch(slice.setLoader());
-        return false
-    };
+    const response = await axios.get(url);
+    dispatch(slice.setSingleData(response.data.data));
+    dispatch(slice.setLoader());
+    return true;
+  } catch (err) {
+    dispatch(showMessage({ message: err?.response?.data?.message || "Failed to fetch resources", variant: "error" }));
+    dispatch(slice.setLoader());
+    return false;
+  }
+};
 
-}
 
 export const resourceAccess = (resource_id, user_id) => async (dispatch) => {
 

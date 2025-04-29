@@ -95,6 +95,15 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    const token = localStorage.getItem('token') || null;
+    const googleTranslateElement = document.getElementById('google_translate_element');
+    
+    if (!token && googleTranslateElement) {
+      googleTranslateElement.style.display = 'none !important';
+    }
+  }, []);
+
   return (
     <CacheProvider value={createCache(emotionCacheOptions[langDirection])}>
       <FuseTheme theme={mainTheme} direction={langDirection}>
