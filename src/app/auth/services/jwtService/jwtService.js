@@ -78,6 +78,15 @@ class JwtService extends FuseUtils.EventEmitter {
                         if (decoded?.role === 'Learner') {
                             sessionStorage.setItem('learnerToken', JSON.stringify({ ...data, user: { ...data.user, displayName: data.user.first_name + " " + data.user.last_name } }));
                         }
+
+                        // Store user info in localStorage for persistence
+                        const userInfo = {
+                            first_name: data.user.first_name,
+                            last_name: data.user.last_name,
+                            role: data.user.role
+                        };
+                        localStorage.setItem('userInfo', JSON.stringify(userInfo));
+
                         connectToSocket(decoded?.user_id, dispatch);
                         dispatch(slice.setCurrentUser(data.user));
                         if (data.password_changed) {
@@ -107,6 +116,15 @@ class JwtService extends FuseUtils.EventEmitter {
             if (decoded.role === 'Learner') {
                 sessionStorage.setItem('learnerToken', JSON.stringify({ accessToken: this.getAccessToken(), user: { ...decoded, displayName: decoded?.first_name + " " + decoded?.last_name } }));
             }
+
+            // Store user info in localStorage for persistence
+            const userInfo = {
+                first_name: decoded.first_name,
+                last_name: decoded.last_name,
+                role: decoded.role
+            };
+            localStorage.setItem('userInfo', JSON.stringify(userInfo));
+
             connectToSocket(decoded.user_id, dispatch);
             resolve(decoded);
         });
@@ -124,6 +142,7 @@ class JwtService extends FuseUtils.EventEmitter {
 
     logout = () => {
         this.setSession(null);
+        localStorage.removeItem('userInfo');
         sessionStorage.clear();
         localStorage.clear();
         this.emit('onLogout', 'Logged out');
