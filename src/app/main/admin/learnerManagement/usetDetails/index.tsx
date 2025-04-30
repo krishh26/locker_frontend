@@ -37,7 +37,7 @@ const UserDetails = (props) => {
     dataUpdatingLoadding,
     userDataError,
   } = props;
-
+  console.log('userData', userData)
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -446,6 +446,30 @@ const UserDetails = (props) => {
                 <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
               )}
             />
+          </div>
+        </Box>
+
+        <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+          <div className="w-1/2">
+            <Typography
+              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
+              className={Style.name}
+            >
+              Job Title<sup>*</sup>
+            </Typography>
+            <TextField
+              name="job_title"
+              placeholder="Enter job title"
+              value={userData?.job_title}
+              size="small"
+              type="text"
+              fullWidth
+              onChange={handleUpdate}
+              error={userDataError?.job_title}
+            />
+          </div>
+          <div className="w-1/2">
+            {/* Empty div to maintain layout */}
           </div>
         </Box>
       </Box>

@@ -8,6 +8,7 @@ import learnerManagement from './learnerManagement';
 import courseManagement from './courseManagement';
 import resourceManagement from './resourcesManagement';
 import cpdPlanning from './cpdPlanning';
+import cpdLearner from './cpdLearner';
 import supportData from './supportData';
 import yourInnovation from './yourInnovation';
 import assignment from './assignment';
@@ -32,6 +33,7 @@ const createReducer = (asyncReducers) => (state, action) => {
         learnerManagement,
         courseManagement,
         cpdPlanning,
+        cpdLearner,
         resourceManagement,
         supportData,
         yourInnovation,

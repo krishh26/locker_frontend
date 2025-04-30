@@ -104,6 +104,7 @@ export default function LearnerManagementTable(props) {
       employer_id,
       funding_body,
       national_ins_no,
+      job_title,
     } = rows.filter((item) => item.learner_id === openMenuDialog.learner_id)[0];
     setUserData({
       first_name,
@@ -116,6 +117,7 @@ export default function LearnerManagementTable(props) {
       employer_id: employer_id?.employer_id,
       funding_body,
       national_ins_no,
+      job_title: job_title || "",
     });
     handleOpen();
   };

@@ -1,6 +1,6 @@
 {
-    "API_LOCAL_URL": "https://api.yourlockerroom.co.uk/api/v1",
-    "SOCKER_LINK": "wss://testigndomain.online",
-    "API_LOCAL_URL_": "http://192.168.1.5:3005/api/v1",
-    "SOCKER_LINK_": "ws://192.168.1.5:3005"
+  "API_LOCAL_URL": "https://api.yourlockerroom.co.uk/api/v1",
+  "SOCKER_LINK": "ws://testigndomain.online",
+  "API_LOCAL_URL_": "https://9c24558574ab2d16ea33e2d5853c811f.serveo.net/api/v1",
+  "SOCKER_LINK_": "ws://9c24558574ab2d16ea33e2d5853c811f.serveo.net"
 }

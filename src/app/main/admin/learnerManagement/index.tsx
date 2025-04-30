@@ -63,7 +63,8 @@ const Index = () => {
     mobile: "",
     employer_id: "",
     funding_body: "",
-    national_ins_no: ""
+    national_ins_no: "",
+    job_title: ""
   })
 
   const [userDataError, setUserDataError] = useState({
@@ -76,6 +77,7 @@ const Index = () => {
     mobile: false,
     employer_id: false,
     funding_body: false,
+    job_title: false,
   })
 
   const handleOpen = () => {
@@ -105,7 +107,8 @@ const Index = () => {
       mobile: "",
       employer_id: "",
       funding_body: "",
-      national_ins_no: ""
+      national_ins_no: "",
+      job_title: ""
     });
     setUserDataError({
       first_name: false,
@@ -116,7 +119,8 @@ const Index = () => {
       confrimpassword: false,
       mobile: false,
       employer_id: false,
-      funding_body: false
+      funding_body: false,
+      job_title: false
     })
   }
 
@@ -191,6 +195,7 @@ const Index = () => {
       mobile: !mobileReg.test(userData.mobile),
       employer_id: userData?.employer_id === "",
       funding_body: userData?.funding_body === "",
+      job_title: userData?.job_title === "",
     })
     if (nameReg.test(userData?.first_name) &&
       nameReg.test(userData?.last_name) &&
@@ -199,8 +204,9 @@ const Index = () => {
       passwordReg.test(userData?.password) &&
       userData?.password === userData?.confrimpassword &&
       // mobileReg.test(userData.mobile) &&
-      userData?.employer_id !== "",
-      userData?.funding_body !== "") {
+      userData?.employer_id !== "" &&
+      userData?.funding_body !== "" &&
+      userData?.job_title !== "") {
       return true;
     }
     return false
