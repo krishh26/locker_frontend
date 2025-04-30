@@ -21,7 +21,6 @@ import {
 } from "app/store/cpdLearner";
 import reducer from "app/store/cpdLearner";
 
-import { selectstoreDataSlice } from "app/store/reloadData"; // Optional: remove if unused
 import { selectUser } from "app/store/userSlice";
 import { selectLearnerManagement } from "app/store/learnerManagement";
 
@@ -130,7 +129,7 @@ const Cpd = () => {
           {[
             { label: "Name", value: capitalize(user.displayName || "") },
             { label: "Job title", value: learner?.job_title },
-            { label: "Employer", value: user?.employer }
+            { label: "Employer", value: learner?.employer_name }
           ].map(({ label, value }) => (
             <Box key={label} sx={{ display: "flex", alignItems: "center", minWidth: 200 }}>
               <Typography variant="body1" fontWeight="bold" sx={{ mr: 1 }}>{label}:</Typography>

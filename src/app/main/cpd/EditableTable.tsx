@@ -21,6 +21,8 @@ import AddIcon from '@mui/icons-material/Add';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import AlertDialog from 'src/app/component/Dialogs/AlertDialog';
+import { selectLearnerManagement } from 'app/store/learnerManagement';
+import { selectUser } from 'app/store/userSlice';
 
 const defaultHeaders = [
   { id: 'activity', label: 'What training, learning or development activity have you done?', multiline: true },
@@ -42,6 +44,9 @@ const createEmptyRow = (userId) => ({
 
 const EditableTable = ({ data, onAddRow, onUpdateRow, onDeleteRow, loading }) => {
   const theme = useTheme();
+    const user = JSON.parse(sessionStorage.getItem("learnerToken") || "null")?.user 
+      || useSelector(selectUser)?.data || {};
+    const { learner } = useSelector(selectLearnerManagement);
   const { dataUpdatingLoading } = useSelector(selectCpdLearner);
   const [tableData, setTableData] = useState([]);
   const [deleteRowId, setDeleteRowId] = useState(null);
@@ -49,6 +54,7 @@ const EditableTable = ({ data, onAddRow, onUpdateRow, onDeleteRow, loading }) =>
   const [anchorEl, setAnchorEl] = useState(null);
   const exportMenuOpen = Boolean(anchorEl);
   const tableRef = useRef(null);
+
 
   useEffect(() => {
     const userId = data[0]?.user_id || 'temp';
@@ -99,14 +105,12 @@ const EditableTable = ({ data, onAddRow, onUpdateRow, onDeleteRow, loading }) =>
     handleExportClose();
     const rows = tableData.filter(row => defaultHeaders.some(h => row[h.id]?.trim()));
     if (!rows.length) return alert('No data to export!');
-
-    const userInfo = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || {};
     const csv = [
-      ['Continuing Professional Development (CPD) – Learning log – Academic Year 2013-2022,,,,'],
+      ['Continuing Professional Development (CPD) – Learning log'],
       [],
-      ['Name:', userInfo.name || ''],
-      ['Job title:', userInfo.job_title || ''],
-      ['Workplace:', userInfo.employer || ''],
+      ['Name:', user.displayName || ''],
+      ['Job title:', learner.job_title || ''],
+      ['Employer:', learner.employer_name || ''],
       [],
       defaultHeaders.map(h => h.label),
       ...rows.map(row => defaultHeaders.map(h => row[h.id] || '')),
