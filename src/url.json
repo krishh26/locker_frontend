@@ -1,6 +1,6 @@
 {
-  "API_LOCAL_URL": "https://api.yourlockerroom.co.uk/api/v1",
-  "SOCKER_LINK": "ws://testigndomain.online",
-  "API_LOCAL_URL_": "https://9c24558574ab2d16ea33e2d5853c811f.serveo.net/api/v1",
-  "SOCKER_LINK_": "ws://9c24558574ab2d16ea33e2d5853c811f.serveo.net"
+  "API_LOCAL_URL_": "https://api.yourlockerroom.co.uk/api/v1",
+  "SOCKER_LINK_": "ws://api.yourlockerroom.co.uk",
+  "API_LOCAL_URL": "https://910791599522dad9f8b7e1fa58d08eb6.serveo.net/api/v1",
+  "SOCKER_LINK": "ws://910791599522dad9f8b7e1fa58d08eb6.serveo.net"
 }
