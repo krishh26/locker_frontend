@@ -1,251 +1,153 @@
-import React, { useState } from "react";
+import { useEffect } from "react";
 import {
-  Tabs,
-  Tab,
   Box,
-  Typography
+  Typography,
+  Paper,
+  useTheme
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import Planning from "./planning";
-import Activity from "./activity";
-import Evaluation from "./evaluation";
-import Reflection from "./reflection";
+import { useDispatch, useSelector } from "react-redux";
+import capitalize from "@mui/utils/capitalize";
+import withReducer from "app/store/withReducer";
+import { showMessage } from "app/store/fuse/messageSlice";
+
+import EditableTable from "./EditableTable";
 import {
-  SecondaryButton,
-} from "src/app/component/Buttons";
-import {
-  selectCpdPlanning,
-} from "app/store/cpdPlanning";
-import { useSelector } from "react-redux";
-import Style from "./style.module.css"
-import { selectstoreDataSlice } from "app/store/reloadData";
-import { selectGlobalUser } from "app/store/globalUser";
-import { UserRole } from "src/enum";
+  selectCpdLearner,
+  getCpdLearnerListAPI,
+  createCpdLearnerEntryAPI,
+  updateCpdLearnerEntryAPI,
+  deleteCpdLearnerEntryAPI,
+  CpdLearnerEntry
+} from "app/store/cpdLearner";
+import reducer from "app/store/cpdLearner";
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function CustomTabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          <Typography>{children}</Typography>
-        </Box>
-      )}
-    </div>
-  );
-}
-
-function a11yProps(index: number) {
-  return {
-    id: `simple-tab-${index}`,
-    "aria-controls": `simple-tabpanel-${index}`,
-  };
-}
+import { selectUser } from "app/store/userSlice";
+import { selectLearnerManagement } from "app/store/learnerManagement";
 
 const Cpd = () => {
-  const { data, dataFetchLoading, dataUpdatingLoadding } = useSelector(selectCpdPlanning);
-  const [value, setValue] = useState(0);
-  const [dialogType, setDialogType] = useState<string | null>(data.dialogType);
-  const { user_id } = useSelector(selectstoreDataSlice)
-  const { currentUser } = useSelector(selectGlobalUser);
+  const dispatch: any = useDispatch();
+  const { data, dataFetchLoading } = useSelector(selectCpdLearner);
+  const user = JSON.parse(sessionStorage.getItem("learnerToken") || "null")?.user 
+    || useSelector(selectUser)?.data || {};
+  const { learner } = useSelector(selectLearnerManagement);
+  
+  const theme = useTheme();
 
-  const handleTabChange = (event, newValue) => {
-    setValue(newValue);
+  useEffect(() => {
+    dispatch(getCpdLearnerListAPI());
+  }, [dispatch]);
+
+  const mapRow = (row: Partial<CpdLearnerEntry>) => ({
+    what_training: row.activity || "",
+    date: row.date || "",
+    how_you_did: row.method || "",
+    what_you_learned: row.learning || "",
+    how_it_improved_work: row.impact || ""
+  });
+
+  const handleAddRow = async (newRow: Partial<CpdLearnerEntry>): Promise<boolean> => {
+    const mappedRow = mapRow(newRow);
+
+    if (Object.values(mappedRow).every(val => !val)) return true;
+
+    try {
+      const result = await dispatch(createCpdLearnerEntryAPI(mappedRow));
+      if (result) dispatch(showMessage({ message: "CPD entry added successfully", variant: "success" }));
+      return result;
+    } catch {
+      dispatch(showMessage({ message: "Failed to add CPD entry", variant: "error" }));
+      return false;
+    }
   };
 
-  const handleClickOpen = (type) => {
-    setDialogType(type);
+  const handleUpdateRow = async (rowId: string, updatedRow: Partial<CpdLearnerEntry>): Promise<boolean> => {
+    try {
+      const result = await dispatch(updateCpdLearnerEntryAPI(rowId, mapRow(updatedRow)));
+      if (result) dispatch(showMessage({ message: "CPD entry updated successfully", variant: "success" }));
+      return result;
+    } catch {
+      dispatch(showMessage({ message: "Failed to update CPD entry", variant: "error" }));
+      return false;
+    }
   };
 
-  const handleClose = () => {
-    setDialogType(null);
+  const handleDeleteRow = async (rowId: string): Promise<boolean> => {
+    try {
+      const result = await dispatch(deleteCpdLearnerEntryAPI(rowId));
+      if (result) dispatch(showMessage({ message: "CPD entry deleted successfully", variant: "success" }));
+      return result;
+    } catch {
+      dispatch(showMessage({ message: "Failed to delete CPD entry", variant: "error" }));
+      return false;
+    }
   };
+
+  const formattedData = (data || []).map((item: CpdLearnerEntry) => ({
+    id: item.id,
+    activity: item.what_training,
+    date: item.date,
+    method: item.how_you_did,
+    learning: item.what_you_learned,
+    impact: item.how_it_improved_work
+  }));
 
   return (
-    <div>
-      <Box sx={{ width: "100%" }}>
+    <Box sx={{ width: "100%", p: 1 }}>
+      <Paper
+        elevation={2}
+        sx={{
+          mb: 2,
+          borderRadius: 2,
+          boxShadow: theme.shadows[2],
+          border: `1px solid ${theme.palette.divider}`,
+          overflow: "hidden"
+        }}
+      >
         <Box
-          className={Style.tabs}
           sx={{
-            borderBottom: 1,
-            borderColor: "divider",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+            bgcolor: theme.palette.primary.light,
+            color: theme.palette.primary.contrastText,
+            p: 2,
+            textAlign: "center"
           }}
         >
-          <Tabs
-            value={value}
-            onChange={handleTabChange}
-            aria-label="basic tabs example"
-            className="border-1 m-12 rounded-md"
-            sx={{
-              "& .MuiTabs-indicator": {
-                display: "none",
-              },
-            }}
-          >
-            <Tab
-              label="Planning"
-              {...a11yProps(0)}
-              sx={{
-                borderRight: "1px solid #e5e7eb",
-                "&:last-child": { borderRight: "none" },
-                "&:hover": {
-                  backgroundColor: "#6D81A3",
-                  color: "#ffffff",
-                  borderRadius: "0px",
-                },
-                "&.Mui-selected": {
-                  backgroundColor: "#6D81A3",
-                  color: "#ffffff",
-                  borderRadius: "0px",
-                },
-              }}
-            />
-            <Tab
-              label="Activity"
-              {...a11yProps(1)}
-              sx={{
-                borderRight: "1px solid #e5e7eb",
-                "&:last-child": { borderRight: "none" },
-                "&.Mui-selected": {
-                  backgroundColor: "#6D81A3",
-                  color: "#ffffff",
-                  borderRadius: "0px",
-                },
-              }}
-            />
-            <Tab
-              label="Evaluation"
-              {...a11yProps(2)}
-              sx={{
-                borderRight: "1px solid #e5e7eb",
-                "&:last-child": { borderRight: "none" },
-                "&.Mui-selected": {
-                  backgroundColor: "#6D81A3",
-                  color: "#ffffff",
-                  borderRadius: "0px",
-                },
-              }}
-            />
-            <Tab
-              label="Reflection"
-              {...a11yProps(3)}
-              sx={{
-                borderRight: "1px solid #e5e7eb",
-                "&:last-child": { borderRight: "none" },
-                "&.Mui-selected": {
-                  backgroundColor: "#6D81A3",
-                  color: "#ffffff",
-                  borderRadius: "0px",
-                },
-              }}
-            />
-          </Tabs>
-
-          <div className={`flex space-x-4 mr-12 ${Style.addplan_btn}`}>
-            {(value === 0 && user_id === null && currentUser?.role === UserRole.Learner) && (
-              <SecondaryButton
-                className="p-12"
-                name="Add Plan"
-                startIcon={<AddIcon sx={{ mx: -0.5 }} />}
-                onClick={() => handleClickOpen("addPlan")}
-              />
-            )}
-            {(value === 1 && user_id === null && currentUser?.role === UserRole.Learner) && (
-              <SecondaryButton
-                className="p-12"
-                name="Add New"
-                startIcon={<AddIcon sx={{ mx: -0.5 }} />}
-                onClick={() => handleClickOpen("addNew")}
-              />
-            )}
-            {(value === 2 && user_id === null) && (
-              <>
-                <SecondaryButton
-                  className="p-12"
-                  name="Export PDF"
-                  startIcon={<AddIcon sx={{ mx: -0.5 }} />}
-                  onClick={() => handleClickOpen("exportPdf")}
-                />
-                {currentUser?.role === UserRole.Learner && <SecondaryButton
-                  className="p-12"
-                  name="Add New"
-                  startIcon={<AddIcon sx={{ mx: -0.5 }} />}
-                  onClick={() => handleClickOpen("addNewEvaluation")}
-                />}
-              </>
-            )}
-            {(value === 3 && user_id === null && currentUser?.role === UserRole.Learner) && (
-              <SecondaryButton
-                className="p-12"
-                name="Add Reflection"
-                startIcon={<AddIcon sx={{ mx: -0.5 }} />}
-                onClick={() => handleClickOpen("addReflection")}
-              />
-            )}
-          </div>
+          <Typography variant="h4" fontWeight={600}>
+            Continuing Professional Development (CPD) – Learning log
+          </Typography>
         </Box>
 
-        <CustomTabPanel value={value} index={0}>
-          <Planning
-            dialogType={dialogType}
-            setDialogType={setDialogType}
-            dataFetchLoading={dataFetchLoading}
-            dataUpdatingLoadding={dataUpdatingLoadding}
-            learnerId={user_id}
-          />
-        </CustomTabPanel>
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            p: 1.5,
+            bgcolor: theme.palette.mode === "light" ? theme.palette.grey[100] : theme.palette.background.paper,
+            borderTop: `1px solid ${theme.palette.divider}`
+          }}
+        >
+          {[
+            { label: "Name", value: capitalize(user.displayName || "") },
+            { label: "Job title", value: learner?.job_title },
+            { label: "Employer", value: learner?.employer_name }
+          ].map(({ label, value }) => (
+            <Box key={label} sx={{ display: "flex", alignItems: "center", minWidth: 200 }}>
+              <Typography variant="body1" fontWeight="bold" sx={{ mr: 1 }}>{label}:</Typography>
+              <Typography variant="body1">{value}</Typography>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
 
-        <CustomTabPanel value={value} index={1}>
-          <Activity
-            cpdData={data}
-            dialogType={dialogType}
-            setDialogType={setDialogType}
-            dataFetchLoading={dataFetchLoading}
-            dataUpdatingLoadding={dataUpdatingLoadding}
-            learnerId={user_id}
-          />
-        </CustomTabPanel>
-
-        <CustomTabPanel value={value} index={2}>
-          <Evaluation
-            cpdData={data}
-            dialogType={dialogType}
-            setDialogType={setDialogType}
-            dataFetchLoading={dataFetchLoading}
-            dataUpdatingLoadding={dataUpdatingLoadding}
-            learnerId={user_id}
-          />
-        </CustomTabPanel>
-
-        <CustomTabPanel value={value} index={3}>
-          <Reflection
-            cpdData={data}
-            dialogType={dialogType}
-            setDialogType={setDialogType}
-            dataFetchLoading={dataFetchLoading}
-            dataUpdatingLoadding={dataUpdatingLoadding}
-            learnerId={user_id}
-          />
-        </CustomTabPanel>
-      </Box>
-    </div>
+      <EditableTable
+        data={formattedData}
+        onAddRow={handleAddRow}
+        onUpdateRow={handleUpdateRow}
+        onDeleteRow={handleDeleteRow}
+        loading={dataFetchLoading}
+      />
+    </Box>
   );
 };
 
-export default Cpd;
+export default withReducer("cpdLearner", reducer)(Cpd);

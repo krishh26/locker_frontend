@@ -79,6 +79,7 @@ const Transition = forwardRef(function Transition(props, ref) {
 function SettingsPanel() {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
+  const [isChangingTheme, setIsChangingTheme] = useState(false);
   const dispatch = useDispatch();
 
   const handlerOptions = {
@@ -187,10 +188,29 @@ function SettingsPanel() {
             settings.
           </Typography>
 
+          {isChangingTheme && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="bg-white p-16 rounded-lg shadow-xl text-center">
+                <div className="w-64 h-64 mx-auto mb-16 animate-spin rounded-full border-8 border-solid border-blue-500 border-t-transparent"></div>
+                <Typography variant="h6">Applying Theme...</Typography>
+              </div>
+            </div>
+          )}
           <FuseThemeSchemes
             themes={themesConfig}
             onSelect={(_theme) => {
-              dispatch(changeFuseTheme(_theme));
+              // Show loading indicator
+              setIsChangingTheme(true);
+
+              // Create a new function instance only when a theme is selected
+              const changeTheme = changeFuseTheme(_theme);
+              changeTheme(dispatch, () => ({ fuse: { settings: { current: { theme: { main: null } } } } }));
+
+              // Close the dialog and hide loading after theme selection
+              setTimeout(() => {
+                setIsChangingTheme(false);
+                handleClose();
+              }, 300);
             }}
           />
         </FuseScrollbars>

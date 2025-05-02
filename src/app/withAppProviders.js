@@ -3,9 +3,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { StyledEngineProvider } from '@mui/material/styles';
 import routes from 'app/configs/routesConfig';
-import store, { persistor } from './store';
+import store from './store';
 import AppContext from './AppContext';
-import { PersistGate } from 'redux-persist/integration/react';
 
 const withAppProviders = (Component) => (props) => {
 
@@ -17,11 +16,9 @@ const withAppProviders = (Component) => (props) => {
     >
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <Provider store={store}>
-          <PersistGate loading={null} persistor={persistor}>
-            <StyledEngineProvider injectFirst>
-              <Component {...props} />
-            </StyledEngineProvider>
-          </PersistGate>
+          <StyledEngineProvider injectFirst>
+            <Component {...props} />
+          </StyledEngineProvider>
         </Provider>
       </LocalizationProvider>
     </AppContext.Provider>

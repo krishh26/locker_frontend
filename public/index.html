@@ -33,7 +33,10 @@
 
         <!-- <link id="external-css" rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" media="all"> -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.1/js/all.min.js" id="external-js"></script>
-        
+
+        <!-- Load our direct Google Translate implementation -->
+        <script src="%PUBLIC_URL%/google-translate-direct.js"></script>
+
         <noscript id='emotion-insertion-point'></noscript>
         <!--
           Notice the use of %PUBLIC_URL% in the tags above.
@@ -144,6 +147,8 @@
         </div>
         <!-- / FUSE Splash Screen -->
     </div>
+    <!-- Google Translate Element Container (outside React root) -->
+    <div id='google_translate_element' style='display: none;'></div>
     <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.

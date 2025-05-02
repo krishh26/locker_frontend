@@ -4,9 +4,21 @@ import jsonData from 'src/url.json';
 import { showMessage } from './fuse/messageSlice';
 import { userTableMetaData } from '../contanst/metaData';
 
+// Define types for CPD entries
+export interface CpdEntry {
+    id: string;
+    user_id: string;
+    activity: string;
+    date: string;
+    method: string;
+    learning: string;
+    impact: string;
+    [key: string]: any; // Allow for dynamic fields
+}
+
 const initialState = {
-    data: [],
-    singleData: {},
+    data: [] as CpdEntry[],
+    singleData: {} as CpdEntry,
     dataFetchLoading: false,
     dataUpdatingLoadding: false,
     dialogType: "",
@@ -321,5 +333,156 @@ export const uploadImages = (file: any) => async (dispatch) => {
 }
 
 
+
+// New API functions for the editable table
+
+// Get all CPD entries for a user
+export const getCpdEntriesAPI = (userId: string) => async (dispatch: any) => {
+    try {
+        dispatch(slice.setLoader());
+
+        // For now, we'll use the existing API endpoint and transform the data
+        // In a real implementation, you would create a new endpoint for this
+        const response = await axios.get(`${URL_BASE_LINK}/cpd/get/${userId}`);
+
+        // Transform the data to match our new structure
+        // This is a temporary solution until the backend is updated
+        let entries: CpdEntry[] = [];
+
+        if (response.data.data && response.data.data.length > 0) {
+            // Combine activities, evaluations, and reflections into a single array
+            response.data.data.forEach((cpd: any) => {
+                if (cpd.activities) {
+                    entries = [...entries, ...cpd.activities.map((activity: any) => ({
+                        id: activity.id,
+                        user_id: userId,
+                        activity: activity.learning_objective || '',
+                        date: activity.date || '',
+                        method: activity.activity || '',
+                        learning: activity.comment || '',
+                        impact: activity.support_you || '',
+                    }))];
+                }
+            });
+        }
+
+        dispatch(slice.setCPDdata(entries));
+        dispatch(slice.setLoader());
+        return true;
+    } catch (err) {
+        dispatch(slice.setLoader());
+        dispatch(slice.setCPDdata([]));
+        return false;
+    }
+};
+
+// Create a new CPD entry
+export const createCpdEntryAPI = (data: CpdEntry) => async (dispatch: any, getStore: any) => {
+    try {
+        dispatch(slice.setUpdatingLoader());
+
+        // For now, we'll use the existing activity API endpoint
+        // In a real implementation, you would create a new endpoint for this
+        const payload = {
+            cpd_id: data.cpd_id || getStore().cpdPlanning.data[0]?.id || '',
+            learning_objective: data.activity,
+            date: data.date,
+            activity: data.method,
+            comment: data.learning,
+            support_you: data.impact,
+            completed: 'Fully', // Default value
+            timeTake: {
+                day: 0,
+                hours: 0,
+                minutes: 0
+            },
+            files: []
+        };
+
+        const response = await axios.post(`${URL_BASE_LINK}/cpd/activity/create`, payload);
+
+        // Add the new entry to the state directly instead of fetching again
+        if (response.data.status) {
+            const newEntry: CpdEntry = {
+                id: response.data.data.id || data.id,
+                user_id: data.user_id,
+                activity: data.activity,
+                date: data.date,
+                method: data.method,
+                learning: data.learning,
+                impact: data.impact
+            };
+
+            // Update the state with the new entry
+            const currentData = getStore().cpdPlanning.data;
+            dispatch(slice.setCPDdata([...currentData, newEntry]));
+        }
+
+        dispatch(slice.setUpdatingLoader());
+        return true;
+    } catch (err: any) {
+        dispatch(showMessage({ message: err.response?.data.message || 'Error creating entry', variant: "error" }));
+        dispatch(slice.setUpdatingLoader());
+        return false;
+    }
+};
+
+// Update an existing CPD entry
+export const updateCpdEntryAPI = (id: string, data: Partial<CpdEntry>) => async (dispatch: any, getStore: any) => {
+    try {
+        dispatch(slice.setUpdatingLoader());
+
+        const payload = {
+            learning_objective: data.activity,
+            date: data.date,
+            activity: data.method,
+            comment: data.learning,
+            support_you: data.impact,
+        };
+
+        const response = await axios.patch(`${URL_BASE_LINK}/cpd/activity/update/${id}`, payload);
+
+        // Update the state directly instead of fetching again
+        if (response.data.status) {
+            const currentData = getStore().cpdPlanning.data;
+            const updatedData = currentData.map((entry: CpdEntry) =>
+                entry.id === id
+                    ? { ...entry, ...data }
+                    : entry
+            );
+            dispatch(slice.setCPDdata(updatedData));
+        }
+
+        dispatch(slice.setUpdatingLoader());
+        return true;
+    } catch (err: any) {
+        dispatch(showMessage({ message: err.response?.data.message || 'Error updating entry', variant: "error" }));
+        dispatch(slice.setUpdatingLoader());
+        return false;
+    }
+};
+
+// Delete a CPD entry
+export const deleteCpdEntryAPI = (id: string) => async (dispatch: any, getStore: any) => {
+    try {
+        dispatch(slice.setUpdatingLoader());
+
+        const response = await axios.delete(`${URL_BASE_LINK}/cpd/activity/delete/${id}`);
+
+        // Update the state directly instead of fetching again
+        if (response.data.status) {
+            const currentData = getStore().cpdPlanning.data;
+            const filteredData = currentData.filter((entry: CpdEntry) => entry.id !== id);
+            dispatch(slice.setCPDdata(filteredData));
+        }
+
+        dispatch(slice.setUpdatingLoader());
+        return true;
+    } catch (err: any) {
+        dispatch(showMessage({ message: err.response?.data.message || 'Error deleting entry', variant: "error" }));
+        dispatch(slice.setUpdatingLoader());
+        return false;
+    }
+};
 
 export default cpdPlanningSlice.reducer;
