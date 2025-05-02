@@ -22,8 +22,7 @@ const UploadWorkDialog = (props) => {
   const { dataUpdatingLoadding } = useSelector(selectAssignment);
   const dispatch: any = useDispatch();
   const navigate = useNavigate();
-  const data = useSelector(selectLearnerManagement)?.learnerDetails?.course?.map(item => item?.course) || [];
-
+  const data = useSelector(selectLearnerManagement)?.learner?.course?.map(item => item?.course) || [];
   const fileTypes = ["PDF"];
   const [file, setFile] = useState(null);
 

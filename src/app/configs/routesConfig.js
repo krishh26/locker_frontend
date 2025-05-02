@@ -24,6 +24,7 @@ import MyProfileConfig from "../main/myProfile/myProfileConfig";
 import NotificationConfig from "../main/notification/notificationConfig";
 import TimeLogConfig from "../main/timeLog/timeLogConfig";
 import BroadcastConfig from "../main/broadcast/broadcastConfig";
+import EvidenceLibraryConfig from "../main/evidenceLibrary/evidenceLibraryConfig";
 
 const routeConfigs = [
     LandingConfig,
@@ -48,7 +49,8 @@ const routeConfigs = [
     MyProfileConfig,
     NotificationConfig,
     TimeLogConfig,
-    BroadcastConfig
+    BroadcastConfig,
+    EvidenceLibraryConfig
 ];
 
 const routes = [
