@@ -25,15 +25,23 @@ const CourseBuilderConfig = {
       },
     },
   },
-  auth: [authRoles.Admin], 
+  auth: [authRoles.Admin],
   routes: [
     {
       path: "/courseBuilder",
       element: <CourseBuilderView />
     },
     {
-      path:"/courseBuilder/course",
+      path: "/courseBuilder/course",
       element: <CourseBuilder />
+    },
+    {
+      path: "/courseBuilder/course/:courseId",
+      element: <CourseBuilder />
+    },
+    {
+      path: "/courseBuilder/view/:courseId",
+      element: <CourseBuilder edit="view" />
     }
   ],
 };

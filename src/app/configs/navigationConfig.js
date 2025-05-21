@@ -143,6 +143,14 @@ const navigationConfig = [{
     icon: 'heroicons-outline:document-text',
     url: '/evidenceLibrary',
     visible: [UserRole.Learner],
+},
+{
+    id: 'dashboards.criteriaDemo',
+    title: 'Criteria Demo',
+    type: 'item',
+    icon: 'heroicons-outline:table',
+    url: '/criteria-demo',
+    visible: [UserRole.Admin],
 }
 ];
 export default navigationConfig;
