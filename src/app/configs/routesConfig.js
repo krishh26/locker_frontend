@@ -20,6 +20,7 @@ import CourseBuilderConfig from "../main/courseBuilder/courseBuilderConfig";
 import FormsConfig from "../main/forms/formsConfig";
 import CommunicationsConfig from "../main/communications/communicationsConfig";
 import ForgotConfig from "../main/forgotPassword/forgotConfig";
+
 import MyProfileConfig from "../main/myProfile/myProfileConfig";
 import NotificationConfig from "../main/notification/notificationConfig";
 import TimeLogConfig from "../main/timeLog/timeLogConfig";
@@ -50,7 +51,8 @@ const routeConfigs = [
     NotificationConfig,
     TimeLogConfig,
     BroadcastConfig,
-    EvidenceLibraryConfig
+    EvidenceLibraryConfig,
+
 ];
 
 const routes = [

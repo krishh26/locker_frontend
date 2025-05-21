@@ -5,9 +5,9 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
+import { useNavigate } from "react-router-dom";
 import {
   Avatar,
-  Dialog,
   IconButton,
   Menu,
   MenuItem,
@@ -24,8 +24,10 @@ import {
 import {
   deleteCourseHandler,
   slice,
+  fetchCourseById
 } from "app/store/courseManagement";
-import CourseBuilderComponent from "src/app/component/Courses";
+import { showMessage } from "app/store/fuse/messageSlice";
+
 import { getRandomColor } from "src/utils/randomColor";
 import CustomPagination from "../Pagination/CustomPagination";
 
@@ -43,9 +45,7 @@ export default function CourseManagementTable(props) {
 
   const [deleteId, setDeleteId] = useState("");
   const [openMenuDialog, setOpenMenuDialog] = useState("");
-  const [edit, setEdit] = useState("view");
-
-  const [open, setOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
 
   const dispatch: any = useDispatch();
 
@@ -55,41 +55,55 @@ export default function CourseManagementTable(props) {
     setAnchorEl(event.currentTarget);
   };
 
-  const editIcon = (edit) => {
-    setEdit(edit);
-    setUpdateData(openMenuDialog);
-    setOpen(true);
-    const data = rows.find((item) => item.course_id === openMenuDialog);
-    console.log(data, '+++')
-    const preFillData = {
-      course_id: data?.course_id,
-      assessment_language: data?.assessment_language || "",
-      assessment_methods: data?.assessment_methods || "",
-      brand_guidelines: data?.brand_guidelines || "",
-      course_code: data?.course_code || "",
-      course_name: data?.course_name || "",
-      guided_learning_hours: data?.guided_learning_hours || "",
-      internal_external: data?.internal_external || "",
-      level: data?.level || "",
-      operational_start_date: data?.operational_start_date || "",
-      overall_grading_type: data?.overall_grading_type || "",
-      permitted_delivery_types: data?.permitted_delivery_types || "",
-      qualification_status: data?.qualification_status || "",
-      qualification_type: data?.qualification_type || "",
-      course_type: data?.course_type || "",
-      recommended_minimum_age: data?.recommended_minimum_age || "",
-      sector: data?.sector || "",
-      total_credits: data?.total_credits || "",
-      units: data?.units,
-    };
-    dispatch(slice.updatePreFillData(preFillData));
+  const navigate = useNavigate();
+
+  const editIcon = async (mode: 'view' | 'edit') => {
+    if (mode === "view") {
+      // For view mode, navigate to the dedicated view route
+      setEditLoading(true);
+
+      try {
+        // Pre-fetch the course data before navigation to ensure it's loaded with all units
+        await dispatch(slice.setLoader(true));
+        await dispatch(fetchCourseById(openMenuDialog));
+
+        setEditLoading(false);
+        navigate(`/courseBuilder/view/${openMenuDialog}`);
+      } catch (error) {
+        setEditLoading(false);
+        dispatch(showMessage({ message: "Error loading course data", variant: "error" }));
+      }
+    } else {
+      // For edit mode, show loader and navigate to the dedicated edit route
+      setEditLoading(true);
+
+      try {
+        // Pre-fetch the course data before navigation to ensure it's loaded with all units
+        await dispatch(slice.setLoader(true));
+        const response = await dispatch(fetchCourseById(openMenuDialog));
+
+        // If we have course data with units, mark the course as ready for unit editing
+        if (response && response.units && response.units.length > 0) {
+          // Store a flag in sessionStorage to indicate we're coming from the edit button
+          // This will be used to automatically navigate to the units tab
+          sessionStorage.setItem('directEditMode', 'true');
+          sessionStorage.setItem('editCourseId', openMenuDialog);
+        }
+
+        setEditLoading(false);
+        navigate(`/courseBuilder/course/${openMenuDialog}`);
+      } catch (error) {
+        setEditLoading(false);
+        dispatch(showMessage({ message: "Error loading course data", variant: "error" }));
+      }
+    }
   };
 
-  const deleteIcon = (id) => {
+  const deleteIcon = (id: string) => {
     setDeleteId(id);
   };
 
-  const openMenu = (e, id) => {
+  const openMenu = (e: React.MouseEvent<HTMLElement>, id: string) => {
     handleClick(e);
     setOpenMenuDialog(id);
   };
@@ -103,7 +117,6 @@ export default function CourseManagementTable(props) {
 
   const handleClose = () => {
     dispatch(slice.updatePreFillData({}));
-    setOpen(false);
     setAnchorEl(null);
   };
   return (
@@ -150,6 +163,32 @@ export default function CourseManagementTable(props) {
                             >
                               <MoreHorizIcon fontSize="small" />
                             </IconButton>
+                          </TableCell>
+                        );
+                      }
+                      if (column.id === "course_core_type") {
+                        return (
+                          <TableCell
+                            key={column.id}
+                            align={column.align}
+                            sx={{ borderBottom: "2px solid #F8F8F8" }}
+                          >
+                            <span
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                backgroundColor:
+                                  value === 'Qualification' ? '#e3f2fd' :
+                                  value === 'Standard' ? '#e8f5e9' :
+                                  value === 'Gateway' ? '#fff3e0' : '#f5f5f5',
+                                color:
+                                  value === 'Qualification' ? '#1976d2' :
+                                  value === 'Standard' ? '#388e3c' :
+                                  value === 'Gateway' ? '#f57c00' : '#757575'
+                              }}
+                            >
+                              {value || 'Unknown'}
+                            </span>
                           </TableCell>
                         );
                       }
@@ -229,16 +268,18 @@ export default function CourseManagementTable(props) {
             handleClose();
             editIcon("view");
           }}
+          disabled={editLoading}
         >
-          View
+          {editLoading ? "Loading..." : "View"}
         </MenuItem>
         <MenuItem
           onClick={() => {
             handleClose();
             editIcon("edit");
           }}
+          disabled={editLoading}
         >
-          Edit
+          {editLoading ? "Loading..." : "Edit"}
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -250,19 +291,7 @@ export default function CourseManagementTable(props) {
         </MenuItem>
       </Menu>
 
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        fullScreen
-        sx={{
-          ".MuiDialog-paper": {
-            borderRadius: "4px",
-            padding: "1rem",
-          },
-        }}
-      >
-        <CourseBuilderComponent edit={edit} handleClose={handleClose} />
-      </Dialog>
+
     </>
   );
 }

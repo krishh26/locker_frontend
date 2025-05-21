@@ -231,7 +231,7 @@ export default function ResouresManagementTable(props) {
           },
         }}
       >
-        <CourseBuilderComponent edit={true} handleClose={handleClose} />
+        <CourseBuilderComponent edit="create" handleClose={handleClose} />
       </Dialog>
     </>
   );

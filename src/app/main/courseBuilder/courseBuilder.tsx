@@ -4,8 +4,15 @@ import {
   IconButton,
   InputAdornment,
   TextField,
-  Tooltip,
   Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  Menu,
+  Tooltip,
+  Box,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { SecondaryButton } from "src/app/component/Buttons";
@@ -20,21 +27,37 @@ import { useDispatch } from "react-redux";
 import {
   fetchCourseAPI,
   selectCourseManagement,
+  resetCourseData,
 } from "app/store/courseManagement";
 import FuseLoading from "@fuse/core/FuseLoading";
 import Close from "@mui/icons-material/Close";
 import Style from "./style.module.css";
 import { selectGlobalUser } from "app/store/globalUser";
+import AddIcon from "@mui/icons-material/Add";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
 const CourseBuilder = () => {
   const { dataUpdatingLoadding, meta_data, data, dataFetchLoading } =
     useSelector(selectCourseManagement);
   const dispatch: any = useDispatch();
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [coreTypeFilter, setCoreTypeFilter] = useState("");
   const { pagination } = useSelector(selectGlobalUser)
 
-  const fetchCourse = (a = searchKeyword, page = 1) => {
-    dispatch(fetchCourseAPI({ page, page_size: pagination?.page_size }, a));
+  // Main course types for filtering
+  const mainCourseTypes = [
+    'Qualification', 'Standard', 'Gateway'
+  ];
+
+  // Course type descriptions for tooltips
+  const courseTypeDescriptions = {
+    'Qualification': 'Create a qualification course with units and criteria',
+    'Standard': 'Create a standard course with modules and topics',
+    'Gateway': 'Create a gateway course for assessments'
+  };
+
+  const fetchCourse = (a = searchKeyword, page = 1, coreType = coreTypeFilter) => {
+    dispatch(fetchCourseAPI({ page, page_size: pagination?.page_size }, a, "", coreType));
   }
 
   useEffect(() => {
@@ -43,6 +66,7 @@ const CourseBuilder = () => {
 
   const navigate = useNavigate();
 
+  // State for file upload dialog
   const [open, setOpen] = useState(false);
   const handleOpen = () => {
     setOpen(true);
@@ -51,38 +75,61 @@ const CourseBuilder = () => {
     setOpen(false);
   };
 
-  const handleCreateCourse = () => {
-    navigate("/courseBuilder/course");
+  // State for course type dropdown menu
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleCreateCourse = (courseCoreType = "Qualification") => {
+    // Reset course data in Redux store before navigating
+    dispatch(resetCourseData());
+
+    // Always include the course core type in the URL as a query parameter
+    navigate(`/courseBuilder/course?type=${courseCoreType}`);
+    handleMenuClose();
   };
 
   const searchAPIHandler = () => {
-    dispatch(fetchCourseAPI({ page: 1, page_size: pagination?.page_size }, searchKeyword));
+    fetchCourse(searchKeyword, 1, coreTypeFilter);
   };
 
-  const searchByKeywordUser = (e) => {
+  const searchByKeywordUser = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       searchAPIHandler();
     }
   };
 
-  const searchHandler = (e) => {
+  const searchHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchKeyword(e.target.value);
     if (e.target.value === "") {
       searchAPIHandler();
     }
   };
 
-
-  const handleChangePage = (event: unknown, newPage: number) => {
-    fetchCourse(searchKeyword, newPage)
+  const handleCoreTypeChange = (event: SelectChangeEvent) => {
+    const value = event.target.value;
+    setCoreTypeFilter(value);
+    fetchCourse(searchKeyword, 1, value);
   };
 
+
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    fetchCourse(searchKeyword, newPage, coreTypeFilter)
+  };
 
   return (
     <>
       <Card className="mx-10 rounded-6" style={{ height: "100%", overflowY: "scroll" }}>
-        {data?.length || searchKeyword ? (
-          <div className={`m-12 flex items-center justify-between mt-10 ${Style.Search_container}`}>
+        {/* Always show the search and filter bar */}
+        <div className={`m-12 flex items-center justify-between mt-10 ${Style.Search_container}`}>
+          <div className="flex items-center gap-4 w-2/3">
             <TextField
               label="Search by keyword"
               fullWidth
@@ -90,7 +137,7 @@ const CourseBuilder = () => {
               onKeyDown={searchByKeywordUser}
               onChange={searchHandler}
               value={searchKeyword}
-              className={`w-1/4 ${Style.Search}`}
+              className={`w-1/2 ${Style.Search}`}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -122,35 +169,85 @@ const CourseBuilder = () => {
               }}
             />
 
-            <div className={`flex items-center space-x-4 ${Style.button}`}>
+            <FormControl size="small" className="w-1/3">
+              <InputLabel id="core-type-filter-label">Course Core Type</InputLabel>
+              <Select
+                labelId="core-type-filter-label"
+                id="core-type-filter"
+                value={coreTypeFilter}
+                label="Course Core Type"
+                onChange={handleCoreTypeChange}
+              >
+                <MenuItem value="">All Types</MenuItem>
+                {mainCourseTypes.map((type) => (
+                  <MenuItem key={type} value={type}>{type}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </div>
+
+          <div className={`flex items-center space-x-4 ${Style.button}`}>
+            <SecondaryButton
+              className="py-6 mr-4"
+              name="Upload File"
+              startIcon={
+                <img
+                  src="assets/images/svgimage/uploadfileicon.svg"
+                  alt="Create File"
+                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
+                />
+              }
+              onClick={handleOpen}
+            />
+
+            {/* Create Course Button with Dropdown */}
+            <Box className={`flex items-center space-x-4 ${Style.button}`}>
               <SecondaryButton
-                // disable={true}
-                className="py-6 mr-4"
-                name="Upload File"
-                startIcon={
-                  <img
-                    src="assets/images/svgimage/uploadfileicon.svg"
-                    alt="Create File"
-                    className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
-                  />
-                }
-                onClick={handleOpen}
-              />
-              <SecondaryButton
-                className="py-6"
+                id="create-course-button"
                 name="Create Course"
+                className="min-h-[35px]"
+                aria-controls={openMenu ? 'create-course-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={openMenu ? 'true' : undefined}
+                onClick={handleMenuClick}
                 startIcon={
                   <img
                     src="assets/images/svgimage/createcourseicon.svg"
-                    alt="Create File"
+                    alt="Create Course"
                     className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
                   />
                 }
-                onClick={handleCreateCourse}
+                endIcon={<KeyboardArrowDownIcon />}
               />
-            </div>
+              <Menu
+                id="create-course-menu"
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={handleMenuClose}
+                MenuListProps={{
+                  'aria-labelledby': 'create-course-button',
+                }}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right',
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+              >
+                {mainCourseTypes.map((type) => (
+                  <Tooltip key={type} title={courseTypeDescriptions[type]} placement="left">
+                    <MenuItem onClick={() => handleCreateCourse(type)}>
+                      <AddIcon fontSize="small" sx={{ mr: 1 }} />
+                      {type}
+                    </MenuItem>
+                  </Tooltip>
+                ))}
+              </Menu>
+            </Box>
           </div>
-        ) : null}
+        </div>
 
         {dataFetchLoading ? (
           <FuseLoading />
@@ -163,47 +260,54 @@ const CourseBuilder = () => {
             handleChangePage={handleChangePage}
           />
         ) : (
-          <div
-            className="flex flex-col justify-center items-center gap-10 "
-            style={{ height: "94%" }}
-          >
-            <DataNotFound width="25%" />
-            <Typography variant="h5">No data found</Typography>
-            <Typography variant="body2" className="text-center">
-              It is a long established fact that a reader will be <br />
-              distracted by the readable content.
-            </Typography>
+          <div className="m-12 p-6 border border-gray-200 rounded-md bg-gray-50">
+            <div className="flex flex-col justify-center items-center gap-6 py-10">
+              <DataNotFound width="20%" />
+              <Typography variant="h5">No courses found</Typography>
 
-            {!searchKeyword && (
-              <div className="flex items-center space-x-4">
-                <span>
-                  <SecondaryButton
-                    disableRipple
-                    name="Upload Files"
-                    startIcon={
-                      <img
-                        src="assets/images/svgimage/uploadfileicon.svg"
-                        alt="Create File"
-                        className="w-6 h-6 mr-2 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
-                      />
-                    }
-                    onClick={handleOpen}
-                  />
-                </span>
-                <div className="w-48 text-center">OR</div>
+              {searchKeyword || coreTypeFilter ? (
+                <Typography variant="body2" className="text-center">
+                  No courses match your search criteria. Try adjusting your filters or create a new course.
+                </Typography>
+              ) : (
+                <Typography variant="body2" className="text-center">
+                  There are no courses available. Get started by creating your first course.
+                </Typography>
+              )}
+
+              <div className="flex flex-row items-center gap-4 mt-4">
                 <SecondaryButton
-                  name="Create Course"
+                  name="Upload File"
                   startIcon={
                     <img
-                      src="assets/images/svgimage/createcourseicon.svg"
+                      src="assets/images/svgimage/uploadfileicon.svg"
                       alt="Create File"
-                      className="w-6 h-6 mr-2 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
+                      className="w-6 h-6 mr-2"
                     />
                   }
-                  onClick={handleCreateCourse}
+                  onClick={handleOpen}
                 />
+
+                {/* Create Course Button with Dropdown */}
+                  <SecondaryButton
+                    id="create-course-button-empty"
+                    name="Create Course"
+                    className="min-h-[35px]"
+                    aria-controls={openMenu ? 'create-course-menu-empty' : undefined}
+                    aria-haspopup="true"
+                    aria-expanded={openMenu ? 'true' : undefined}
+                    onClick={handleMenuClick}
+                    startIcon={
+                      <img
+                        src="assets/images/svgimage/createcourseicon.svg"
+                        alt="Create Course"
+                        className="w-6 h-6 mr-2"
+                      />
+                    }
+                    endIcon={<KeyboardArrowDownIcon />}
+                  />
               </div>
-            )}
+            </div>
           </div>
         )}
       </Card>

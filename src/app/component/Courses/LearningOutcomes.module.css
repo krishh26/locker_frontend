@@ -1,0 +1,193 @@
+/* Learning Outcomes Component Styles */
+
+.container {
+  padding: 16px;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-top: 16px;
+}
+
+.header {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.searchBar {
+  margin-bottom: 16px;
+}
+
+.filterBar {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.accordion {
+  margin-bottom: 12px;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden;
+}
+
+.accordionSummary {
+  background-color: #f5f5f5;
+}
+
+.criteriaContainer {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.criteriaHeader {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.criteriaItem {
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.criteriaItem:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.badge {
+  margin-left: 8px;
+}
+
+.tabPanel {
+  padding: 16px 0;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+  font-style: italic;
+}
+
+.chipToDo {
+  background-color: #e3f2fd;
+  color: #0277bd;
+}
+
+.chipToKnow {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.chipRequired {
+  background-color: #fff8e1;
+  color: #ff8f00;
+}
+
+.chipOther {
+  background-color: #f5f5f5;
+  color: #616161;
+}
+
+.criterionTypeLabel {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.criterionActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.inputField {
+  margin-bottom: 10px;
+  margin-right: 10px;
+}
+
+.numberField {
+  width: 80px;
+}
+
+.typeField {
+  width: 120px;
+}
+
+.descriptionField {
+  flex-grow: 1;
+}
+
+.addButton {
+  margin-top: 16px;
+}
+
+.tabsContainer {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.divider {
+  margin: 16px 0;
+}
+
+.assessmentMethodsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.assessmentMethod {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.assessmentMethodLabel {
+  font-size: 0.75rem;
+  margin-left: 4px;
+}
+
+.orderField {
+  width: 60px;
+}
+
+.titleField {
+  width: 200px;
+}
+
+.timesMetField {
+  width: 80px;
+}
+
+.criterionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.criterionActions {
+  display: flex;
+  gap: 8px;
+}
