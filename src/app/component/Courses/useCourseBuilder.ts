@@ -482,7 +482,7 @@ export const useCourseBuilder = (edit = 'create') => {
 
       if (!hasUnits) {
         dispatch(showMessage({
-          message: "Please create units before accessing criteria.",
+          message: "Please create outcomes before accessing criteria.",
           variant: "warning"
         }));
         return;
@@ -490,7 +490,7 @@ export const useCourseBuilder = (edit = 'create') => {
 
       if (hasUnits && !hasSavedUnits) {
         dispatch(showMessage({
-          message: "Please save your units before accessing criteria.",
+          message: "Please save your outcomes before accessing criteria.",
           variant: "warning"
         }));
         return;

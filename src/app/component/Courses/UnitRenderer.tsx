@@ -239,7 +239,7 @@ const UnitRenderer: React.FC<UnitRendererProps> = ({
       {edit !== "view" && (
         <Box className="flex justify-end mb-4">
           <SecondaryButton
-            name="Add New Unit"
+            name="Add New Outcomes"
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.preventDefault();
               e.stopPropagation();
@@ -364,10 +364,10 @@ const UnitRenderer: React.FC<UnitRendererProps> = ({
       ) : (
         <Box className="p-6 border border-gray-200 rounded-md bg-gray-50 text-center">
           <Typography className="opacity-50 mb-4">
-            No units have been added yet. Click "Add New Unit" to get started.
+            No Outcomes have been added yet. Click "Add New Outcomes" to get started.
           </Typography>
           <SecondaryButton
-            name="Add New Unit"
+            name="Add New Outcomes"
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.preventDefault();
               e.stopPropagation();
@@ -383,7 +383,7 @@ const UnitRenderer: React.FC<UnitRendererProps> = ({
       {units.length > 0 && edit !== "view" && !areAllUnitsSaved && (
         <Box className="flex justify-end mt-4">
           <SecondaryButton
-            name="Save Units"
+            name="Save Outcomes"
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.preventDefault();
               e.stopPropagation();

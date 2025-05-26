@@ -276,7 +276,7 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
 
         {localModules.length === 0 ? (
           <Typography align="center" color="textSecondary" sx={{ py: 4 }}>
-            No modules yet. Click the "Add Module" button to create one.
+            No Outcomes yet. Click the "Add Outcomes" button to create one.
           </Typography>
         ) : (
           localModules.map((module) => (
@@ -403,7 +403,7 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
             <LoadingButton />
           ) : (
             <SecondaryButton
-              name="Save Modules"
+              name="Save Outcomes"
               onClick={handleSave}
             />
           )
