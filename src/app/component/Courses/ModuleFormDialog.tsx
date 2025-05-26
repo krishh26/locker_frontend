@@ -128,12 +128,12 @@ const ModuleFormDialog: React.FC<ModuleFormDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>{isEdit ? 'Edit Module' : 'Add Module'}</DialogTitle>
+      <DialogTitle>{isEdit ? 'Edit Outcomes' : 'Add Outcomes'}</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           <Accordion expanded={activeTab === 'create'} onChange={() => setActiveTab(activeTab === 'create' ? '' : 'create')}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography>Create New Module For Course</Typography>
+              <Typography>Create New Outcomes For Course</Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Grid container spacing={2}>

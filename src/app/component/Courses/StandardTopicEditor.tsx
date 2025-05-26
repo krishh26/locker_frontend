@@ -290,9 +290,9 @@ const StandardTopicEditor: React.FC<StandardTopicEditorProps> = ({
                     if (saveCourse) {
                       const success = await saveCourse();
                       if (success) {
-                        dispatch(showMessage({ message: 'Topics updated successfully', variant: 'success' }));
+                        dispatch(showMessage({ message: 'Assessment Criteria updated successfully', variant: 'success' }));
                       } else {
-                        dispatch(showMessage({ message: 'Failed to update topics', variant: 'error' }));
+                        dispatch(showMessage({ message: 'Failed to update Assessment Criteria', variant: 'error' }));
                       }
                     } else {
                       dispatch(showMessage({ message: 'Save function not available', variant: 'warning' }));

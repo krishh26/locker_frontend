@@ -122,9 +122,9 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
     if (courseData.course_core_type === 'Gateway') {
       return ['Course Details'];
     } else if (courseData.course_core_type === 'Standard') {
-      return ['Course Details', 'Modules', 'Topics'];
+      return ['Course Details', 'Learning Outcome', 'Assessment Criteria'];
     } else {
-      return ['Course Details', 'Units', 'Criteria'];
+      return ['Course Details', 'Learning Outcome', 'Assessment Criteria'];
     }
   }, [courseData.course_core_type]);
 
@@ -331,7 +331,7 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
       {activeStep === 1 && courseData.course_core_type !== 'Gateway' && courseSaved && (
         <Paper elevation={0} className="p-6 border border-gray-200 mb-6">
           <Typography variant="h6" gutterBottom>
-            {courseData.course_core_type === 'Standard' ? 'Modules' : 'Units'}
+           Learning Outcomes
           </Typography>
 
           {courseData.course_core_type === 'Standard' ? (
@@ -396,7 +396,7 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
       {activeStep === 2 && courseData.course_core_type === 'Standard' && (
         <Paper elevation={0} className="p-6 border border-gray-200 mb-6">
           <Typography variant="h6" gutterBottom>
-            Topics
+          Assessment Criteria
           </Typography>
 
           {/* @ts-ignore - Type issues will be fixed in a future update */}
@@ -416,13 +416,13 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
       {activeStep === 2 && courseData.course_core_type === 'Qualification' && courseSaved && Object.values(savedUnits).some(saved => saved) && (
         <Paper elevation={0} className="p-6 border border-gray-200 mb-6">
           <Typography variant="h6" gutterBottom>
-            Criteria
+          Assessment Criteria
           </Typography>
 
           {Object.values(mandatoryUnit).length > 0 ? (
             <Box sx={{ mt: 2 }}>
               <Typography variant="subtitle1" gutterBottom>
-                Select a unit to manage its criteria:
+                Select a unit to manage its assessment criteria:
               </Typography>
               {Object.values(mandatoryUnit).map((unit: any) => (
                 <Accordion key={unit.id}>
