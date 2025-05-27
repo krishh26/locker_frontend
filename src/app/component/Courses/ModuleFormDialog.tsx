@@ -50,7 +50,7 @@ const defaultModuleData: ModuleFormData = {
   component_ref: '',
   title: '',
   description: '',
-  moduleType: 'core',
+  moduleType: 'behaviour',
   mandatory: 'true',
   delivery_method: '',
   otj_hours: '0',
@@ -115,7 +115,7 @@ const ModuleFormDialog: React.FC<ModuleFormDialogProps> = ({
       id: originalId || `module_${uuidv4()}`,
       component_ref: formData.component_ref || '',
       title: formData.title || '',
-      moduleType: formData.moduleType || 'core',
+      moduleType: formData.moduleType || 'behaviour',
       mandatory: formData.mandatory || 'true',
       active: formData.active || 'true',
       subUnit: formData.subUnit || [],
@@ -183,11 +183,11 @@ const ModuleFormDialog: React.FC<ModuleFormDialogProps> = ({
                       label="Module Type"
                       required
                     >
-                      <MenuItem value="core">Core Module</MenuItem>
-                      <MenuItem value="optional">Optional Module</MenuItem>
+                      {/* <MenuItem value="core">Core Module</MenuItem> */}
+                      {/* <MenuItem value="optional">Optional Module</MenuItem> */}
                       <MenuItem value="behaviour">Behaviour</MenuItem>
                       <MenuItem value="knowledge">Knowledge</MenuItem>
-                      <MenuItem value="skill">Skill</MenuItem>
+                      <MenuItem value="skill">Skills</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
