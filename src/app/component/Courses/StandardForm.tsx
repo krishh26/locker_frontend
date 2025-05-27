@@ -94,68 +94,6 @@ const StandardForm: React.FC<StandardFormProps> = ({
           />
         </div>
         <div className='w-1/3'>
-          {/* <Typography
-            sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-            className={Style.name}
-          >
-            LAD Code
-          </Typography>
-          <TextField
-            name="lad_code"
-            size="small"
-            placeholder="Enter LAD Code"
-            fullWidth
-            value={courseData.lad_code || ""}
-            onChange={courseHandler}
-            disabled={edit === "view"}
-            className={Style.last2_input_feald}
-          /> */}
-        </div>
-      </Box>
-
-      {/* Course Guidance */}
-      {/* <Box className="m-12">
-        <Typography
-          sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-          className={Style.name}
-        >
-          Course Guidance<sup>*</sup>
-        </Typography>
-        <TextField
-          name="brand_guidelines"
-          multiline
-          rows={4}
-          placeholder="Enter Course Guidance"
-          required
-          fullWidth
-          value={courseData.brand_guidelines}
-          onChange={courseHandler}
-          disabled={edit === "view"}
-          className={Style.input_feald}
-        />
-      </Box> */}
-
-      {/* Course Type, Level, Expiration Date */}
-      <Box className='m-12 flex flex-col justify-between gap-12 sm:flex-row'>
-        {/* <div className="w-1/3">
-          <Typography
-            sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-            className={Style.name}
-          >
-            Course Type
-          </Typography>
-          <Autocomplete
-            size="small"
-            value={courseData?.course_type || null}
-            onChange={(_, newValue) => handleAutocompleteChange('course_type', newValue)}
-            disabled={edit === "view"}
-            options={courseType}
-            className={Style.last2_input_feald}
-            isOptionEqualToValue={(option, value) => option === value}
-            renderInput={(params) => <TextField {...params} placeholder="Course Type" />}
-          />
-        </div> */}
-        <div className='w-1/2'>
           <Typography
             sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
             className={Style.name}
@@ -184,7 +122,11 @@ const StandardForm: React.FC<StandardFormProps> = ({
             )}
           />
         </div>
-        <div className='w-1/2'>
+      </Box>
+
+      {/* Course Type, Level, Expiration Date */}
+      <Box className='m-12 flex flex-col justify-between gap-12 sm:flex-row'>
+        <div className='w-1/3'>
           <Typography
             sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
             className={Style.name}
@@ -205,11 +147,7 @@ const StandardForm: React.FC<StandardFormProps> = ({
             }}
           />
         </div>
-      </Box>
-
-      {/* Active, Included in Off The Job Calculation, Awarding Body */}
-      <Box className='m-12 flex flex-col justify-between gap-12 sm:flex-row'>
-        <div className='w-1/2'>
+        <div className='w-1/3'>
           <Typography
             sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
             className={Style.name}
@@ -231,7 +169,7 @@ const StandardForm: React.FC<StandardFormProps> = ({
             )}
           />
         </div>
-        <div className='w-1/2'>
+        <div className='w-1/3'>
           <Typography
             sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
             className={Style.name}
@@ -256,29 +194,10 @@ const StandardForm: React.FC<StandardFormProps> = ({
             )}
           />
         </div>
-        {/* <div className="w-1/3">
-          <Typography
-            sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-            className={Style.name}
-          >
-            Select Awarding Body
-          </Typography>
-          <Autocomplete
-            size="small"
-            value={courseData?.awarding_body || null}
-            onChange={(_, newValue) => handleAutocompleteChange('awarding_body', newValue)}
-            disabled={edit === "view"}
-            options={["No Awarding Body"]}
-            className={Style.last2_input_feald}
-            isOptionEqualToValue={(option, value) => option === value}
-            renderInput={(params) => <TextField {...params} placeholder="Select Awarding Body" />}
-          />
-        </div> */}
       </Box>
-
       {/* Duration of Course */}
       <Box className='m-12 flex flex-col justify-between gap-12 sm:flex-row'>
-        <div className='w-1/3'>
+        <div className='w-1/2'>
           <Typography
             sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
             className={Style.name}
@@ -302,13 +221,15 @@ const StandardForm: React.FC<StandardFormProps> = ({
                 required
                 error={validationErrors.duration_period}
                 helperText={
-                  validationErrors.duration_period ? 'Duration Period is required' : ''
+                  validationErrors.duration_period
+                    ? 'Duration Period is required'
+                    : ''
                 }
               />
             )}
           />
         </div>
-        <div className='w-1/3'>
+        <div className='w-1/2'>
           <Typography
             sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
             className={Style.name}
@@ -327,28 +248,7 @@ const StandardForm: React.FC<StandardFormProps> = ({
             type='number'
           />
         </div>
-        <div className='w-1/3'>{/* Empty space for alignment */}</div>
       </Box>
-
-      {/* Professional Certification */}
-      {/* <Box className="m-12">
-        <Typography
-          sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-          className={Style.name}
-        >
-          Professional Certification
-        </Typography>
-        <TextField
-          name="professional_certification"
-          size="small"
-          placeholder="Enter Professional Certification"
-          fullWidth
-          value={courseData.professional_certification || ""}
-          onChange={courseHandler}
-          disabled={edit === "view"}
-          className={Style.input_feald}
-        />
-      </Box> */}
 
       {/* Two Page Standard Link */}
       <Box className='m-12 flex flex-col justify-between gap-4 sm:flex-row'>

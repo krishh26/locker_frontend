@@ -261,54 +261,6 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
           />
         </div>
         <div className='w-1/3'>
-          {/* <Typography
-            sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-            className={Style.name}
-          >
-            LAD Code
-          </Typography>
-          <TextField
-            name="lad_code"
-            size="small"
-            placeholder="Enter LAD Code"
-            fullWidth
-            value={courseData.lad_code || ""}
-            onChange={courseHandler}
-            disabled={edit === "view"}
-            className={Style.last2_input_feald}
-          /> */}
-        </div>
-      </Box>
-
-      {/* Course Guidance */}
-      {/* <Box className='m-12'>
-        <Typography
-          sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
-          className={Style.name}
-        >
-          Course Guidance<sup>*</sup>
-        </Typography>
-        <TextField
-          name='brand_guidelines'
-          multiline
-          rows={4}
-          placeholder='Gateway check list'
-          required
-          fullWidth
-          value={courseData.brand_guidelines}
-          onChange={courseHandler}
-          disabled={edit === 'view'}
-          className={Style.input_feald}
-          error={validationErrors.brand_guidelines}
-          helperText={
-            validationErrors.brand_guidelines ? 'Brand Guidance is required' : ''
-          }
-        />
-      </Box> */}
-
-      {/* Active */}
-      <Box className='m-12 flex flex-col justify-between gap-12 sm:flex-row'>
-        <div className='w-1/3'>
           <Typography
             sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
             className={Style.name}
