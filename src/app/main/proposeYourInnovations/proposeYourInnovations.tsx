@@ -18,6 +18,7 @@ import {
   Avatar,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -636,19 +637,28 @@ const ProposeYourInnovations = (props) => {
           <Box
             sx={{ display: "flex", flexDirection: "column", height: "100%" }}
           >
-            <Box p={2}>
+            <Box p={2} position='relative'>
+              <IconButton
+                size='small'
+                onClick={handleDrawerClose}
+                sx={{ position: 'absolute', top: 8, right: 8 }}
+              >
+                <CloseIcon fontSize='small' />
+              </IconButton>
+
               <Tooltip title={yourInnovation.topic}>
                 <Typography
-                  variant="subtitle1"
-                  className="font-semibold overflow-hidden text-ellipsis whitespace-nowrap"
+                  variant='subtitle1'
+                  className='font-semibold overflow-hidden text-ellipsis whitespace-nowrap'
                 >
                   {yourInnovation.topic}
                 </Typography>
               </Tooltip>
+
               <Tooltip title={yourInnovation.description}>
                 <Typography
-                  variant="subtitle1"
-                  className="text-sm overflow-hidden text-ellipsis whitespace-nowrap"
+                  variant='subtitle1'
+                  className='text-sm overflow-hidden text-ellipsis whitespace-nowrap'
                 >
                   {yourInnovation.description}
                 </Typography>
