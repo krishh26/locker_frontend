@@ -1,6 +1,7 @@
-import { lazy } from "react";
-const EvidenceLibraryView = lazy(() => import("./evidenceLibrary"));
-import authRoles from 'src/app/auth/authRoles';
+import { lazy } from 'react'
+const EvidenceLibraryView = lazy(() => import('./evidenceLibrary'))
+const CreateViewEvidenceLibrary = lazy(() => import('./createViewEvidenceLibrary'))
+import authRoles from 'src/app/auth/authRoles'
 
 const EvidenceLibraryConfig = {
   settings: {
@@ -27,10 +28,18 @@ const EvidenceLibraryConfig = {
   auth: [authRoles.Learner],
   routes: [
     {
-      path: "/evidenceLibrary",
-      element: <EvidenceLibraryView />
+      path: '/evidenceLibrary',
+      element: <EvidenceLibraryView />,
+    },
+    {
+      path: '/evidenceLibrary/create',
+      element: <CreateViewEvidenceLibrary />,
+    },
+    {
+      path: '/evidenceLibrary/:id',
+      element: <CreateViewEvidenceLibrary />,
     },
   ],
-};
+}
 
-export default EvidenceLibraryConfig;
+export default EvidenceLibraryConfig
