@@ -76,7 +76,7 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
     }
 
     if (id === 1) {
-      setOpen(true);
+      navigate('/evidenceLibrary')
     } else if (id === 2) {
       navigate('/portfolio/progress');
     } else if (id === 3) {

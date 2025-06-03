@@ -1,21 +1,46 @@
-import { Typography, Paper, Container } from '@mui/material';
+import { FC, useState } from 'react'
+import { Typography, Paper, Container, Button, Dialog } from '@mui/material'
+import ReactUploadFile from 'src/app/component/react-upload-files'
 
-const EvidenceLibrary = () => {
+const EvidenceLibrary: FC = () => {
+  const [isOpenFileUpload, setIsOpenFileUpload] = useState<boolean>(false)
+
+  const handleClose = () => {
+    setIsOpenFileUpload(false)
+  }
+  
   return (
-    <Container className="mt-32">
-      <Paper className="p-24 shadow-lg">
-        <Typography variant="h4" className="mb-16 font-bold">
+    <Container sx={{ mt: 8 }}>
+      <div className='flex items-center justify-between mb-4'>
+        <Typography variant='h4' component='h1' gutterBottom>
           Evidence Library
         </Typography>
-        <Typography variant="body1" className="mb-16">
-          Welcome to your Evidence Library. This is where you can store, organize, and access all your evidence documents.
-        </Typography>
-        <Typography variant="body1">
-          This feature is currently under development. More functionality will be added soon.
-        </Typography>
-      </Paper>
-    </Container>
-  );
-};
+        <Button
+          variant='contained'
+          className='rounded-md'
+          color='primary'
+          sx={{ mb: 2 }}
+          onClick={() => setIsOpenFileUpload(true)}
+          startIcon={<i className='material-icons'>upload</i>}
+        >
+          Add Evidence
+        </Button>
+      </div>
 
-export default EvidenceLibrary;
+      <Dialog
+        open={isOpenFileUpload}
+        onClose={() => setIsOpenFileUpload(false)}
+        sx={{
+          '.MuiDialog-paper': {
+            borderRadius: '4px',
+            padding: '1rem',
+          },
+        }}
+      >
+        <ReactUploadFile handleClose={handleClose} />
+      </Dialog>
+    </Container>
+  )
+}
+
+export default EvidenceLibrary
