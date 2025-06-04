@@ -24,6 +24,8 @@ import timeLog from './timeLog';
 import broadcast from './broadcast';
 import contractWork from './contractedWork';
 
+import {evidenceAPI} from './api/evidence-api'
+
 const createReducer = (asyncReducers) => (state, action) => {
     const combinedReducer = combineReducers({
         fuse,
@@ -49,6 +51,10 @@ const createReducer = (asyncReducers) => (state, action) => {
         timeLog,
         broadcast,
         contractWork,
+        
+
+        // Add the API reducer
+        [evidenceAPI.reducerPath]: evidenceAPI.reducer,
 
         ...asyncReducers,
     });
@@ -60,5 +66,11 @@ const createReducer = (asyncReducers) => (state, action) => {
 
     return combinedReducer(state, action);
 };
+
+export const concatMiddleware = [
+    // Add the API middleware
+    evidenceAPI.middleware,
+]
+
 
 export default createReducer;
