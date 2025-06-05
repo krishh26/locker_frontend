@@ -1,5 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
-import createReducer from './rootReducer';
+import createReducer, { concatMiddleware } from './rootReducer';
 
 // Load state from sessionStorage
 const loadState = () => {
@@ -60,7 +60,7 @@ const throttledSaveState = throttle(saveState, 500);
 
 const preloadedState = loadState();
 
-const middlewares = [];
+
 
 if (process.env.NODE_ENV === 'development') {
   const { createLogger } = require('redux-logger');
@@ -68,7 +68,7 @@ if (process.env.NODE_ENV === 'development') {
     collapsed: (_getState, _action, logEntry) => !logEntry.error,
   });
 
-  middlewares.push(logger);
+  concatMiddleware.push(logger);
 }
 
 const store = configureStore({
@@ -78,7 +78,7 @@ const store = configureStore({
     getDefaultMiddleware({
       immutableCheck: false,
       serializableCheck: false,
-    }).concat(middlewares),
+    }).concat(concatMiddleware),
   devTools: true,
 });
 

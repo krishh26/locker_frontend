@@ -1,7 +1,9 @@
-import { FC, useState } from 'react'
+import { FC } from 'react'
 
+import { yupResolver } from '@hookform/resolvers/yup'
 import {
   Button,
+  CircularProgress,
   Divider,
   FormHelperText,
   Grid,
@@ -9,13 +11,15 @@ import {
   Select,
   Typography,
 } from '@mui/material'
-import { useSelector } from 'react-redux'
 import { FileUploader } from 'react-drag-drop-files'
-import { useForm, Controller } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { Controller, useForm } from 'react-hook-form'
+import { useSelector } from 'react-redux'
 import * as yup from 'yup'
 
+import { useUploadEvidenceFileMutation } from 'app/store/api/evidence-api'
+import { showMessage } from 'app/store/fuse/messageSlice'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
+import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 
 type FormValues = {
@@ -24,10 +28,21 @@ type FormValues = {
 }
 
 type ReactUploadFileProps = {
-  handleClose: () => void;
-};
+  handleClose: () => void
+}
 
-const fileTypes = ['JPG', 'PNG', 'GIF', 'PDF', 'DOCX', 'XLSX', 'PPTX', 'TXT', 'ZIP','MP4']
+const fileTypes = [
+  'JPG',
+  'PNG',
+  'GIF',
+  'PDF',
+  'DOCX',
+  'XLSX',
+  'PPTX',
+  'TXT',
+  'ZIP',
+  'MP4',
+]
 
 const schema = yup.object().shape({
   courseId: yup.string().required('Course is required'),
@@ -46,8 +61,11 @@ const schema = yup.object().shape({
 })
 
 const ReactUploadFile: FC<ReactUploadFileProps> = ({ handleClose }) => {
-    const navigate = useNavigate();
-  
+  const navigate = useNavigate()
+  const dispatch: any = useDispatch()
+
+  const [uploadEvidenceFile, { isLoading }] = useUploadEvidenceFileMutation()
+
   const data =
     useSelector(selectLearnerManagement)?.learner?.course?.map(
       (item) => item?.course
@@ -66,17 +84,31 @@ const ReactUploadFile: FC<ReactUploadFileProps> = ({ handleClose }) => {
     },
   })
 
-  const onSubmit = (values: FormValues) => {
-    console.log('Form Data:', values)
-    navigate('/evidenceLibrary/create', {
-      state: {
-        courseId: values.courseId,
-        file: values.file,
-      },
-    })
-    handleClose()
-  }
+  const onSubmit = async (values: FormValues) => {
+    const fromData = new FormData()
+    fromData.append('file', values.file as File)
+    fromData.append('course_id', values.courseId)
 
+    try {
+      const response = await uploadEvidenceFile(fromData).unwrap()
+
+      if (response.status) {
+        const { assignment_id } = response.data
+        dispatch(
+          showMessage({
+            message: 'File uploaded successfully',
+            variant: 'success',
+          })
+        )
+        navigate(`/evidenceLibrary/${assignment_id}`)
+        handleClose()
+      }
+    } catch {
+      console.error('Error uploading file:', 'File upload failed')
+      dispatch(showMessage({ message: 'File upload failed', variant: 'error' }))
+      return
+    }
+  }
 
   return (
     <form
@@ -128,7 +160,11 @@ const ReactUploadFile: FC<ReactUploadFileProps> = ({ handleClose }) => {
               multiple={false}
               maxSize={10}
             >
-              <div className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[200px] flex flex-col items-center justify-center ${errors.file ? 'border-red-500' : ''}`}>
+              <div
+                className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[200px] flex flex-col items-center justify-center ${
+                  errors.file ? 'border-red-500' : ''
+                }`}
+              >
                 <div className='flex justify-center mb-4'>
                   <img
                     src='assets/images/svgImage/uploadimage.svg'
@@ -170,11 +206,25 @@ const ReactUploadFile: FC<ReactUploadFileProps> = ({ handleClose }) => {
           color='secondary'
           className='rounded-md'
           onClick={handleClose}
+          disabled={isLoading}
         >
           Cancel
         </Button>
-        <Button variant='contained' color='primary' className='rounded-md' type="submit">
-          Upload
+        <Button
+          variant='contained'
+          color='primary'
+          className='rounded-md'
+          type='submit'
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <span className='flex items-center gap-5'>
+              <CircularProgress size={24} />
+              Uploading...
+            </span>
+          ) : (
+            'Upload'
+          )}
         </Button>
       </Grid>
     </form>
