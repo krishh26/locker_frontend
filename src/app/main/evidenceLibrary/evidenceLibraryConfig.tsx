@@ -32,10 +32,6 @@ const EvidenceLibraryConfig = {
       element: <EvidenceLibraryView />,
     },
     {
-      path: '/evidenceLibrary/create',
-      element: <CreateViewEvidenceLibrary />,
-    },
-    {
       path: '/evidenceLibrary/:id',
       element: <CreateViewEvidenceLibrary />,
     },

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import {
@@ -52,6 +52,10 @@ import { showMessage } from 'app/store/fuse/messageSlice'
 
 const CreateViewEvidenceLibrary = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [isEditMode, setIsEditMode] = useState<boolean>(
+    location.state && location.state?.isEdit
+  )
   const dispatch: any = useDispatch()
   const { id } = useParams()
 
@@ -192,7 +196,7 @@ const CreateViewEvidenceLibrary = () => {
         title,
         units,
         trainer_feedback,
-        session
+        session,
       } = evidenceDetails.data
       dispatch(fetchCourseById(course_id.course_id))
       setEvidenceData({
@@ -324,9 +328,23 @@ const CreateViewEvidenceLibrary = () => {
 
   return (
     <Container sx={{ mt: 8, mb: 4 }}>
-      <Typography variant='h4' component='h1' gutterBottom>
-        Evidence Details
-      </Typography>
+      <div className='flex items-start justify-between'>
+        <Typography variant='h4' component='h1' gutterBottom>
+          Evidence Details
+        </Typography>
+        {isEditMode && (
+          <Button
+            variant='contained'
+            className='rounded-md'
+            color='primary'
+            sx={{ mb: 2 }}
+            startIcon={<i className='material-icons'>edit</i>}
+            onClick={() => setIsEditMode(false)}
+          >
+            Edit
+          </Button>
+        )}
+      </div>
       <Paper
         elevation={1}
         sx={{
@@ -385,6 +403,7 @@ const CreateViewEvidenceLibrary = () => {
                   placeholder={'Enter Name'}
                   fullWidth
                   error={!!errors.title}
+                  disabled={isEditMode}
                   helperText={errors.title?.message}
                   {...field}
                 />
@@ -404,6 +423,7 @@ const CreateViewEvidenceLibrary = () => {
                   fullWidth
                   multiline
                   rows={4}
+                  disabled={isEditMode}
                   error={!!errors.description}
                   {...field}
                 />
@@ -424,9 +444,9 @@ const CreateViewEvidenceLibrary = () => {
                   multiline
                   rows={4}
                   fullWidth
-                  disabled={!roles.includes('Trainer')}
+                  disabled={!roles.includes('Trainer') || isEditMode}
                   style={
-                    !roles.includes('Trainer')
+                    !roles.includes('Trainer') || isEditMode
                       ? { backgroundColor: 'whitesmoke' }
                       : {}
                   }
@@ -451,9 +471,9 @@ const CreateViewEvidenceLibrary = () => {
                   multiline
                   rows={4}
                   error={!!errors.points_for_improvement}
-                  disabled={!roles.includes('Trainer')}
+                  disabled={!roles.includes('Trainer') || isEditMode}
                   style={
-                    !roles.includes('Trainer')
+                    !roles.includes('Trainer') || isEditMode
                       ? { backgroundColor: 'whitesmoke' }
                       : {}
                   }
@@ -478,14 +498,14 @@ const CreateViewEvidenceLibrary = () => {
                   types={fileTypes}
                   multiple={false}
                   maxSize={10}
-                  disabled={!roles.includes('Trainer')}
+                  disabled={!roles.includes('Trainer') || isEditMode}
                 >
                   <div
                     className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[100px] flex flex-col items-center justify-center ${
                       errors.file ? 'border-red-500' : ''
                     }`}
                     style={
-                      !roles.includes('Trainer')
+                      !roles.includes('Trainer') || isEditMode
                         ? { backgroundColor: 'whitesmoke' }
                         : {}
                     }
@@ -540,6 +560,7 @@ const CreateViewEvidenceLibrary = () => {
                   fullWidth
                   multiline
                   rows={4}
+                  disabled={isEditMode}
                   error={!!errors.learner_comments}
                   {...field}
                 />
@@ -562,6 +583,7 @@ const CreateViewEvidenceLibrary = () => {
                         render={({ field }) => (
                           <Checkbox
                             checked={field.value?.includes(method.value)}
+                             disabled={isEditMode}
                             onChange={(e) => {
                               const newValue = [...(field.value || [])]
                               if (e.target.checked) {
@@ -595,12 +617,12 @@ const CreateViewEvidenceLibrary = () => {
                   <RadioGroup row {...field}>
                     <FormControlLabel
                       value='yes'
-                      control={<Radio />}
+                      control={<Radio  disabled={isEditMode}/>}
                       label='Yes'
                     />
                     <FormControlLabel
                       value='no'
-                      control={<Radio />}
+                      control={<Radio  disabled={isEditMode}/>}
                       label='No'
                       defaultChecked
                     />
@@ -626,6 +648,7 @@ const CreateViewEvidenceLibrary = () => {
                   <Select
                     labelId='session-label'
                     label='Select Session'
+                     disabled={isEditMode}
                     {...field}
                   >
                     {sessions.map((session) => (
@@ -653,6 +676,7 @@ const CreateViewEvidenceLibrary = () => {
                   name='title'
                   size='small'
                   fullWidth
+                  disabled={isEditMode}
                   error={!!errors.grade}
                   {...field}
                 />
@@ -674,7 +698,7 @@ const CreateViewEvidenceLibrary = () => {
                       )}
                       onChange={(e) => handleCheckboxUnits(e, method)}
                       name='units'
-                      disabled={!roles.includes('Learner')}
+                      disabled={!roles.includes('Learner') || isEditMode}
                       style={
                         !roles.includes('Learner')
                           ? { backgroundColor: 'whitesmoke' }
@@ -710,6 +734,7 @@ const CreateViewEvidenceLibrary = () => {
                             <Checkbox
                               checked={row?.learnerMap || false}
                               onChange={() => learnerMapHandler(row)}
+                              disabled={isEditMode}
                             />
                           </TableCell>
                           <TableCell>{row?.subTitle}</TableCell>
@@ -743,7 +768,7 @@ const CreateViewEvidenceLibrary = () => {
                           <TableCell align='center'>
                             <Checkbox
                               checked={row?.trainerMap || false}
-                              disabled={roles.includes('Learner')}
+                              disabled={roles.includes('Learner') || isEditMode}
                               onChange={() => trainerMapHandler(row)}
                             />
                           </TableCell>
@@ -771,6 +796,7 @@ const CreateViewEvidenceLibrary = () => {
                       {...field}
                       checked={field.value}
                       color='primary'
+                      disabled={isEditMode}
                     />
                   }
                   label={
@@ -796,6 +822,7 @@ const CreateViewEvidenceLibrary = () => {
               color='secondary'
               className='rounded-md'
               disabled={isUpdateLoading}
+              onClick={()=> navigate('/evidenceLibrary')}
             >
               Cancel
             </Button>
@@ -804,7 +831,7 @@ const CreateViewEvidenceLibrary = () => {
               color='primary'
               className='rounded-md'
               type='submit'
-              disabled={isUpdateLoading}
+              disabled={isUpdateLoading || isEditMode}
             >
               {isUpdateLoading ? (
                 <span className='flex items-center gap-5'>
@@ -812,8 +839,7 @@ const CreateViewEvidenceLibrary = () => {
                   Updating...
                 </span>
               ) : (
-               <>
-                Update</>
+                <>Update</>
               )}
             </Button>
           </Grid>
