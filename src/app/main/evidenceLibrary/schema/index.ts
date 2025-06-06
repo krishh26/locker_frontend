@@ -14,7 +14,7 @@ export const getValidationSchema = (isTrainer: boolean) => {
       ? Yup.mixed().required('File is required')
       : Yup.mixed().nullable(),
     learner_comments: Yup.string(),
-    doYouLike: Yup.string().required('Required'),
+    doYouLike: Yup.string().required('Please select one option'),
     session: Yup.string().required('Session is required'),
     grade: Yup.string(),
     declaration: Yup.bool().oneOf([true], 'You must accept the declaration'),

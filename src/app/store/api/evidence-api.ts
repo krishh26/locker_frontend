@@ -3,7 +3,7 @@ import createBaseQueryWithReAuth from 'src/utils/fetch-base-query'
 export const evidenceAPI = createApi({
   reducerPath: 'evidence-api',
   baseQuery: createBaseQueryWithReAuth(),
-   tagTypes: ['EvidenceList'],
+  tagTypes: ['EvidenceList'],
   endpoints: (builder) => ({
     uploadEvidenceFile: builder.mutation({
       query: (data) => ({
@@ -37,7 +37,7 @@ export const evidenceAPI = createApi({
         const url = `assignment/list${queryString ? `?${queryString}` : ''}`
         return { url }
       },
-      providesTags: ['EvidenceList'], 
+      providesTags: ['EvidenceList'],
     }),
     deleteEvidence: builder.mutation({
       query: ({ id }) => ({
@@ -45,14 +45,27 @@ export const evidenceAPI = createApi({
         method: 'DELETE',
       }),
     }),
-    reuploadEvidenceDocument:builder.mutation({
-      query:({id,data}) => ({
-        url:`/assignment/${id}/reupload`,
-        method:'PATCH',
-        body:data,
+    reuploadEvidenceDocument: builder.mutation({
+      query: ({ id, data }) => ({
+        url: `/assignment/${id}/reupload`,
+        method: 'PATCH',
+        body: data,
       }),
-       invalidatesTags: ['EvidenceList'],
-    })
+      invalidatesTags: ['EvidenceList'],
+    }),
+    getSessionList: builder.query({
+      query: (params) => {
+        const queryString = Object.keys(params)
+          .filter((key) => params[key] !== '')
+          .map(
+            (key) =>
+              `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`
+          )
+          .join('&')
+        const url = `session/list${queryString ? `?${queryString}` : ''}`
+        return { url }
+      },
+    }),
   }),
 })
 export const {
@@ -61,5 +74,6 @@ export const {
   useGetEvidenceListQuery,
   useUpdateEvidenceIdMutation,
   useDeleteEvidenceMutation,
-  useReuploadEvidenceDocumentMutation
+  useReuploadEvidenceDocumentMutation,
+  useGetSessionListQuery
 } = evidenceAPI
