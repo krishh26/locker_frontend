@@ -3,6 +3,7 @@ import createBaseQueryWithReAuth from 'src/utils/fetch-base-query'
 export const evidenceAPI = createApi({
   reducerPath: 'evidence-api',
   baseQuery: createBaseQueryWithReAuth(),
+   tagTypes: ['EvidenceList'],
   endpoints: (builder) => ({
     uploadEvidenceFile: builder.mutation({
       query: (data) => ({
@@ -17,12 +18,6 @@ export const evidenceAPI = createApi({
         method: 'GET',
       }),
     }),
-    // getEvidenceList: builder.query({
-    //  query: ({ id }) => ({
-    //   url: `assignment/list?user_id=${id}`,
-    //   method: 'GET',
-    //  }),
-    // }),
     updateEvidenceId: builder.mutation({
       query: (data) => ({
         url: `/assignment/update/${data.id}`,
@@ -42,7 +37,22 @@ export const evidenceAPI = createApi({
         const url = `assignment/list${queryString ? `?${queryString}` : ''}`
         return { url }
       },
+      providesTags: ['EvidenceList'], 
     }),
+    deleteEvidence: builder.mutation({
+      query: ({ id }) => ({
+        url: `assignment/delete/${id}`,
+        method: 'DELETE',
+      }),
+    }),
+    reuploadEvidenceDocument:builder.mutation({
+      query:({id,data}) => ({
+        url:`/assignment/${id}/reupload`,
+        method:'PATCH',
+        body:data,
+      }),
+       invalidatesTags: ['EvidenceList'],
+    })
   }),
 })
 export const {
@@ -50,4 +60,6 @@ export const {
   useGetEvidenceDetailsQuery,
   useGetEvidenceListQuery,
   useUpdateEvidenceIdMutation,
+  useDeleteEvidenceMutation,
+  useReuploadEvidenceDocumentMutation
 } = evidenceAPI

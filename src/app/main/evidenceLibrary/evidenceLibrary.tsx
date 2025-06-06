@@ -16,6 +16,8 @@ import {
   Avatar,
   AvatarGroup,
   IconButton,
+  Menu,
+  MenuItem,
 } from '@mui/material'
 import {
   createColumnHelper,
@@ -28,19 +30,31 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import FileCopyIcon from '@mui/icons-material/FileCopy';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
+import FileCopyIcon from '@mui/icons-material/FileCopy'
 import { useSelector } from 'react-redux'
 
 import ReactUploadFile from 'src/app/component/react-upload-files'
 import { fuzzyFilter } from 'src/utils/string'
 import TablePaginationComponent from 'src/app/component/TablePagination'
 import ReactTable from 'src/app/component/react-table'
-import { useGetEvidenceListQuery } from 'app/store/api/evidence-api'
+import {
+  useDeleteEvidenceMutation,
+  useGetEvidenceListQuery,
+} from 'app/store/api/evidence-api'
 import { selectUser } from 'app/store/userSlice'
-import FuseLoading from "@fuse/core/FuseLoading";
-import { Link } from 'react-router-dom'
-import DataNotFound from 'src/app/component/Pages/dataNotFound';
+import FuseLoading from '@fuse/core/FuseLoading'
+import { Link, useNavigate } from 'react-router-dom'
+import DataNotFound from 'src/app/component/Pages/dataNotFound'
+import {
+  DangerButton,
+  LoadingButton,
+  SecondaryButtonOutlined,
+} from 'src/app/component/Buttons'
+import AlertDialog from 'src/app/component/Dialogs/AlertDialog'
+import { useDispatch } from 'react-redux'
+import { showMessage } from 'app/store/fuse/messageSlice'
+import ReuploadEvidenceLibrary from './reupload-evidenceLibrary'
 
 interface SurveyData {
   survey_number: string
@@ -49,45 +63,55 @@ interface SurveyData {
 
 interface Column {
   id:
-  | "title"
-  | "description"
-  | "trainer_feedback"
-  | "learner_comments"
-  | "file"
-  | "action"
-  label: string;
-  minWidth?: number;
-  align?: "right";
-  format?: (value: number) => string;
+    | 'title'
+    | 'description'
+    | 'trainer_feedback'
+    | 'learner_comments'
+    | 'file'
+    | 'action'
+  label: string
+  minWidth?: number
+  align?: 'right'
+  format?: (value: number) => string
 }
 
 const columns: readonly Column[] = [
-  { id: "title", label: "Title", minWidth: 10 },
-  { id: "description", label: "Description", minWidth: 10 },
-  { id: "trainer_feedback", label: "Trainer Feedback", minWidth: 10 },
-  { id: "learner_comments", label: "Learner Comments", minWidth: 10 },
-  { id: "file", label: "Files", minWidth: 10 },
-  { id: "action", label: "Action", minWidth: 10 },
-];
+  { id: 'title', label: 'Title', minWidth: 10 },
+  { id: 'description', label: 'Description', minWidth: 10 },
+  { id: 'trainer_feedback', label: 'Trainer Feedback', minWidth: 10 },
+  { id: 'learner_comments', label: 'Learner Comments', minWidth: 10 },
+  { id: 'file', label: 'Files', minWidth: 10 },
+  { id: 'action', label: 'Action', minWidth: 10 },
+]
 
 const columnHelper = createColumnHelper<SurveyData>()
 
 const EvidenceLibrary: FC = () => {
   const [isOpenFileUpload, setIsOpenFileUpload] = useState<boolean>(false)
+  const [isOpenReupload, setIsOpenReupload] = useState<boolean>(false)
+  const [isOpenDeleteBox, setIsOpenDeleteBox] = useState<boolean>(false)
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
-  const [evidenceData,setEvidenceData]  = useState([])
+  const [evidenceData, setEvidenceData] = useState([])
+  const [selectedRow, setSelectedRow] = useState<any>({})
 
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
   })
 
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+
+  const isOpenAction = Boolean(anchorEl)
+
   const user = sessionStorage.getItem('learnerToken')
     ? { data: JSON.parse(sessionStorage.getItem('learnerToken'))?.user }
     : useSelector(selectUser)
 
-  const { data, isLoading, isError, error } = useGetEvidenceListQuery(
+  const { data, isLoading, isError, error, refetch } = useGetEvidenceListQuery(
     {
       user_id: user.data.user_id,
     },
@@ -95,6 +119,9 @@ const EvidenceLibrary: FC = () => {
       refetchOnMountOrArgChange: true,
     }
   )
+
+  const [deleteEvidence, { isLoading: isDeleteLoading }] =
+    useDeleteEvidenceMutation()
 
   useEffect(() => {
     const existingErrorId = 'existingErrorId'
@@ -105,10 +132,9 @@ const EvidenceLibrary: FC = () => {
       return
     }
 
-    if(data){
+    if (data) {
       setEvidenceData(data.data)
     }
-
   }, [data, isError, error, isLoading])
 
   // const columns = useMemo(
@@ -258,8 +284,30 @@ const EvidenceLibrary: FC = () => {
   //   getFacetedMinMaxValues: getFacetedMinMaxValues(),
   // })
 
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const openMenu = (e, id) => {
+    handleClick(e)
+    setSelectedRow(id)
+  }
+
   const handleClose = () => {
     setIsOpenFileUpload(false)
+    setAnchorEl(null)
+  }
+
+  const handleReuploadClose = () => {
+    setIsOpenReupload(false)
+  }
+
+  const handleNavigate = () => {
+    navigate(`/evidenceLibrary/${selectedRow.assignment_id}`, {
+      state: {
+        isEdit: true,
+      },
+    })
   }
 
   const handlePageChange = (event, newPage) => {
@@ -272,6 +320,27 @@ const EvidenceLibrary: FC = () => {
       pageSize: Number(event.target.value),
       pageIndex: 0,
     }))
+  }
+
+  const handleDelete = async () => {
+    try {
+      await deleteEvidence({ id: selectedRow.assignment_id }).unwrap()
+      setIsOpenDeleteBox(false)
+      refetch()
+      dispatch(
+        showMessage({
+          message: 'Delete successfully',
+          variant: 'success',
+        })
+      )
+    } catch (error) {
+      dispatch(
+        showMessage({
+          message: 'Something Went Wrong !',
+          variant: 'error',
+        })
+      )
+    }
   }
 
   return (
@@ -292,18 +361,6 @@ const EvidenceLibrary: FC = () => {
         </Button>
       </div>
 
-      <Dialog
-        open={isOpenFileUpload}
-        onClose={() => setIsOpenFileUpload(false)}
-        sx={{
-          '.MuiDialog-paper': {
-            borderRadius: '4px',
-            padding: '1rem',
-          },
-        }}
-      >
-        <ReactUploadFile handleClose={handleClose} />
-      </Dialog>
       {/* <Card className='mt-5'>
         <ReactTable table={table} />
       </Card>
@@ -359,7 +416,7 @@ const EvidenceLibrary: FC = () => {
                           <IconButton
                             size='small'
                             sx={{ color: '#5B718F', marginRight: '4px' }}
-                            // onClick={(e) => openMenu(e, row)}
+                            onClick={(e) => openMenu(e, row)}
                           >
                             <MoreHorizIcon fontSize='small' />
                           </IconButton>
@@ -421,6 +478,87 @@ const EvidenceLibrary: FC = () => {
           </div>
         )}
       </TableContainer>
+      <Menu
+        id='long-menu'
+        MenuListProps={{
+          'aria-labelledby': 'long-button',
+        }}
+        anchorEl={anchorEl}
+        open={isOpenAction}
+        onClose={handleClose}
+      >
+        <MenuItem
+          onClick={() => {
+            handleClose()
+            setIsOpenReupload(true)
+            // handleOpenFile()
+          }}
+        >
+          Reupload
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleNavigate()
+          }}
+        >
+          View
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleClose()
+            setIsOpenDeleteBox(true)
+          }}
+        >
+          Delete
+        </MenuItem>
+      </Menu>
+      <AlertDialog
+        open={Boolean(isOpenDeleteBox)}
+        close={() => setIsOpenDeleteBox(false)}
+        title='Delete Evidence?'
+        content='Deleting this evidence will also remove all associated data and relationships. Proceed with deletion?'
+        actionButton={
+          isDeleteLoading ? (
+            <LoadingButton />
+          ) : (
+            <DangerButton onClick={handleDelete} name='Delete Evidence' />
+          )
+        }
+        cancelButton={
+          <SecondaryButtonOutlined
+            className='px-24'
+            onClick={() => setIsOpenDeleteBox(false)}
+            name='Cancel'
+          />
+        }
+      />
+      <Dialog
+        open={isOpenFileUpload}
+        onClose={() => setIsOpenFileUpload(false)}
+        sx={{
+          '.MuiDialog-paper': {
+            borderRadius: '4px',
+            padding: '1rem',
+          },
+        }}
+      >
+        <ReactUploadFile handleClose={handleClose} />
+      </Dialog>
+      <Dialog
+        open={isOpenReupload}
+        onClose={() => setIsOpenReupload(false)}
+        sx={{
+          '.MuiDialog-paper': {
+            borderRadius: '4px',
+            padding: '1rem',
+          },
+        }}
+      >
+        <ReuploadEvidenceLibrary
+          handleClose={handleReuploadClose}
+          id={selectedRow.assignment_id}
+        />
+      </Dialog>
     </Container>
   )
 }
