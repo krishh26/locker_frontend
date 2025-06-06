@@ -36,6 +36,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 
 import {
   useGetEvidenceDetailsQuery,
+  useGetSessionListQuery,
   useUpdateEvidenceIdMutation,
 } from 'app/store/api/evidence-api'
 import { assessmentMethod, fileTypes, sessions } from 'src/utils/constants'
@@ -49,6 +50,7 @@ import {
 } from 'app/store/courseManagement'
 import { useDispatch } from 'react-redux'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import { formatSessionTime } from 'src/utils/string'
 
 const CreateViewEvidenceLibrary = () => {
   const navigate = useNavigate()
@@ -56,6 +58,8 @@ const CreateViewEvidenceLibrary = () => {
   const [isEditMode, setIsEditMode] = useState<boolean>(
     location.state && location.state?.isEdit
   )
+  const [sessions, setSessions] = useState([])
+
   const dispatch: any = useDispatch()
   const { id } = useParams()
 
@@ -63,7 +67,7 @@ const CreateViewEvidenceLibrary = () => {
     ? { data: JSON.parse(sessionStorage.getItem('learnerToken'))?.user }
     : useSelector(selectUser)
 
-  const { roles } = user.data
+  const { roles, learner_id } = user.data
 
   const isTrainer = roles.includes('Trainer')
 
@@ -164,6 +168,29 @@ const CreateViewEvidenceLibrary = () => {
     }
   )
 
+  const { data: sessionsData } = useGetSessionListQuery(
+    {
+      meta: true,
+      page: 1,
+      limit: 100,
+      learners: learner_id,
+    },
+    {
+      skip: !learner_id,
+      refetchOnMountOrArgChange: true,
+    }
+  )
+
+  useEffect(() => {
+    if (sessionsData && sessionsData?.data?.length > 0) {
+      const payload = sessionsData?.data.map((time) => ({
+        id: time.session_id,
+        label: formatSessionTime(time.startDate, time.Duration)
+      }))
+      setSessions(payload)
+    }
+  }, [sessionsData])
+
   const [updateEvidenceId, { isLoading: isUpdateLoading }] =
     useUpdateEvidenceIdMutation()
 
@@ -178,11 +205,6 @@ const CreateViewEvidenceLibrary = () => {
     }
 
     if (evidenceDetails) {
-      console.log(
-        '🚀 ~ useEffect ~ evidenceDetails.data:',
-        evidenceDetails.data
-      )
-
       const {
         course_id,
         created_at,
@@ -316,7 +338,6 @@ const CreateViewEvidenceLibrary = () => {
       )
       navigate(`/evidenceLibrary`)
     } catch (error) {
-      console.log('🚀 ~ onSubmit ~ error:', error)
       dispatch(
         showMessage({
           message: 'Something error',
@@ -583,7 +604,7 @@ const CreateViewEvidenceLibrary = () => {
                         render={({ field }) => (
                           <Checkbox
                             checked={field.value?.includes(method.value)}
-                             disabled={isEditMode}
+                            disabled={isEditMode}
                             onChange={(e) => {
                               const newValue = [...(field.value || [])]
                               if (e.target.checked) {
@@ -611,18 +632,17 @@ const CreateViewEvidenceLibrary = () => {
             <Controller
               name='doYouLike'
               control={control}
-              rules={{ required: 'This field is required' }}
               render={({ field }) => (
                 <FormControl component='fieldset' error={!!errors.doYouLike}>
                   <RadioGroup row {...field}>
                     <FormControlLabel
                       value='yes'
-                      control={<Radio  disabled={isEditMode}/>}
+                      control={<Radio disabled={isEditMode} />}
                       label='Yes'
                     />
                     <FormControlLabel
                       value='no'
-                      control={<Radio  disabled={isEditMode}/>}
+                      control={<Radio disabled={isEditMode} />}
                       label='No'
                       defaultChecked
                     />
@@ -648,14 +668,15 @@ const CreateViewEvidenceLibrary = () => {
                   <Select
                     labelId='session-label'
                     label='Select Session'
-                     disabled={isEditMode}
+                    disabled={isEditMode}
                     {...field}
                   >
-                    {sessions.map((session) => (
-                      <MenuItem key={session.id} value={session.id}>
-                        {session.label}
-                      </MenuItem>
-                    ))}
+                    {sessions?.length > 0 &&
+                      sessions.map((session) => (
+                        <MenuItem key={session.id} value={session.id}>
+                          {session.label}
+                        </MenuItem>
+                      ))}
                   </Select>
                   {errors.session && (
                     <FormHelperText>{errors.session.message}</FormHelperText>
@@ -822,7 +843,7 @@ const CreateViewEvidenceLibrary = () => {
               color='secondary'
               className='rounded-md'
               disabled={isUpdateLoading}
-              onClick={()=> navigate('/evidenceLibrary')}
+              onClick={() => navigate('/evidenceLibrary')}
             >
               Cancel
             </Button>

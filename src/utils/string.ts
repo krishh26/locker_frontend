@@ -50,3 +50,28 @@ export const getInitials = (first_name, last_name) => {
  }
  return firstInitial.toUpperCase()
 }
+
+export function formatSessionTime(startDate: string, duration: string): string {
+  const start = new Date(startDate);
+
+  const [hours, minutes] = duration.split(':').map(Number);
+  const end = new Date(start.getTime() + (hours * 60 + minutes) * 60000);
+
+  const formatOptions: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  };
+  const dateString = start.toLocaleDateString('en-GB', formatOptions);
+
+  const formatTime = (date: Date): string => {
+    let hrs = date.getHours();
+    const mins = date.getMinutes().toString().padStart(2, '0');
+    const ampm = hrs >= 12 ? 'PM' : 'AM';
+    hrs = hrs % 12 || 12;
+    return `${hrs}:${mins} ${ampm}`;
+  };
+
+  return `${dateString}, ${formatTime(start)} - ${formatTime(end)}`;
+}
+
