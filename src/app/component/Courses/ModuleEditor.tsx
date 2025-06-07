@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -7,21 +7,29 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-} from '@mui/material';
-import { SecondaryButton, SecondaryButtonOutlined, LoadingButton } from '../Buttons';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import styles from './style.module.css';
-import { useDispatch } from 'react-redux';
-import { updateCourseAPI } from 'app/store/courseManagement';
-import { showMessage } from 'app/store/fuse/messageSlice';
-import axios from 'axios';
-import jsonData from 'src/url.json';
+  Dialog,
+} from '@mui/material'
+import {
+  SecondaryButton,
+  SecondaryButtonOutlined,
+  LoadingButton,
+} from '../Buttons'
+import AddIcon from '@mui/icons-material/Add'
+import ImportExportIcon from '@mui/icons-material/ImportExport'
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import styles from './style.module.css'
+import { useDispatch } from 'react-redux'
+import { updateCourseAPI } from 'app/store/courseManagement'
+import { showMessage } from 'app/store/fuse/messageSlice'
+import axios from 'axios'
+import jsonData from 'src/url.json'
 
-import { ModuleEditorProps } from './componentTypes';
-import ModuleFormDialog from './ModuleFormDialog';
+import { ModuleEditorProps } from './componentTypes'
+import ModuleFormDialog from './ModuleFormDialog'
+import ImportModuleDialog from './import-module-dialog'
+import ModuleAccordion from './module-accordion'
 
 const ModuleEditor: React.FC<ModuleEditorProps> = ({
   courseId,
@@ -31,17 +39,18 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
   setCourseSaved,
   edit,
   showModuleEditor,
-  setShowModuleEditor
+  setShowModuleEditor,
 }) => {
-  const modules = Object.values(mandatoryUnit);
-  const readOnly = edit === 'view';
-  const [localModules, setLocalModules] = useState<any[]>([]);
-  const [expandedModule, setExpandedModule] = useState<string | null>(null);
-  const [moduleFormOpen, setModuleFormOpen] = useState(false);
-  const [currentModule, setCurrentModule] = useState<any>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const dispatch: any = useDispatch();
+  const modules = Object.values(mandatoryUnit)
+  const readOnly = edit === 'view'
+  const [localModules, setLocalModules] = useState<any[]>([])
+  const [expandedModule, setExpandedModule] = useState<string | null>(null)
+  const [moduleFormOpen, setModuleFormOpen] = useState(false)
+  const [isOpenModule, setIsOpenModule] = useState(false)
+  const [currentModule, setCurrentModule] = useState<any>(null)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const dispatch: any = useDispatch()
 
   useEffect(() => {
     // Ensure modules is an array and has valid data
@@ -49,9 +58,12 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
       // Check if any module is missing required fields and log it
       modules.forEach((module, index) => {
         if (!module.id || !module.title) {
-          console.warn(`Module at index ${index} is missing required fields:`, module);
+          console.warn(
+            `Module at index ${index} is missing required fields:`,
+            module
+          )
         }
-      });
+      })
 
       // Ensure all modules have the required fields with default values if missing
       const processedModules = modules.map((module, idx) => ({
@@ -68,47 +80,51 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
         otj_hours: module.otj_hours || '0',
         delivery_lead: module.delivery_lead || '',
         sort_order: module.sort_order || '0',
-        active: module.active || 'true'
-      }));
+        active: module.active || 'true',
+      }))
 
-      setLocalModules(processedModules);
+      setLocalModules(processedModules)
     } else {
-      setLocalModules([]);
+      setLocalModules([])
     }
-  }, [modules]); // Update localModules whenever modules prop changes
+  }, [modules]) // Update localModules whenever modules prop changes
 
   const openAddModuleDialog = () => {
-    setCurrentModule(null);
-    setIsEditMode(false);
-    setModuleFormOpen(true);
-  };
+    setCurrentModule(null)
+    setIsEditMode(false)
+    setModuleFormOpen(true)
+  }
 
   const openEditModuleDialog = (module: any) => {
-    setCurrentModule(module);
-    setIsEditMode(true);
-    setModuleFormOpen(true);
-  };
+    setCurrentModule(module)
+    setIsEditMode(true)
+    setModuleFormOpen(true)
+  }
 
   const closeModuleDialog = () => {
-    setModuleFormOpen(false);
-    setCurrentModule(null);
-  };
+    setModuleFormOpen(false)
+    setCurrentModule(null)
+  }
 
   const handleModuleSave = (moduleData: any) => {
     const formattedModuleData = {
       ...moduleData,
-      id: moduleData.id.startsWith('module_') ? moduleData.id : `module_${moduleData.id}`
-    };
+      id: moduleData.id.startsWith('module_')
+        ? moduleData.id
+        : `module_${moduleData.id}`,
+    }
 
     if (isEditMode) {
       // Normalize IDs for comparison to handle both with and without 'module_' prefix
-      const updatedModules = localModules.map(module => {
-        const normalizedModuleId = module.id.replace(/^module_/, '');
-        const normalizedDataId = moduleData.id.replace(/^module_/, '');
+      const updatedModules = localModules.map((module) => {
+        const normalizedModuleId = module.id.replace(/^module_/, '')
+        const normalizedDataId = moduleData.id.replace(/^module_/, '')
 
-        return normalizedModuleId === normalizedDataId ? formattedModuleData : module;
-      });
-      setLocalModules(updatedModules);
+        return normalizedModuleId === normalizedDataId
+          ? formattedModuleData
+          : module
+      })
+      setLocalModules(updatedModules)
 
       // Update the module in the parent component's state
       if (courseDispatch) {
@@ -116,55 +132,59 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
           type: 'UPDATE_MANDATORY_UNIT',
           unitId: formattedModuleData.id,
           field: 'all',
-          value: formattedModuleData
-        });
+          value: formattedModuleData,
+        })
       }
     } else {
-      const newModules = [...localModules, formattedModuleData];
-      setLocalModules(newModules);
+      const newModules = [...localModules, formattedModuleData]
+      setLocalModules(newModules)
 
       // Add the new module to the parent component's state
       if (courseDispatch) {
         courseDispatch({
           type: 'ADD_UNIT',
           unitId: formattedModuleData.id,
-          unit: formattedModuleData
-        });
+          unit: formattedModuleData,
+        })
       }
     }
-  };
+  }
 
   const deleteModule = (moduleId: string) => {
-    const updatedModules = localModules.filter(module => module.id !== moduleId);
-    setLocalModules(updatedModules);
+    const updatedModules = localModules.filter(
+      (module) => module.id !== moduleId
+    )
+    setLocalModules(updatedModules)
 
     if (expandedModule === moduleId) {
-      setExpandedModule(null);
+      setExpandedModule(null)
     }
 
     // If the module form is open and we're deleting the current module, close it
     if (moduleFormOpen && currentModule && currentModule.id === moduleId) {
-      closeModuleDialog();
+      closeModuleDialog()
     }
 
     // Remove the module from the parent component's state
     if (courseDispatch) {
       courseDispatch({
         type: 'REMOVE_UNIT',
-        unitId: moduleId
-      });
+        unitId: moduleId,
+      })
     }
-  };
+  }
 
   const handleSave = async () => {
-    setIsSaving(true);
+    setIsSaving(true)
     try {
       // First, clear existing modules in the parent state to avoid stale data
       if (courseDispatch) {
         // Create a fresh object with all modules
-        const modulesObject = {};
-        localModules.forEach(module => {
-          const moduleId = module.id.startsWith('module_') ? module.id : `module_${module.id}`;
+        const modulesObject = {}
+        localModules.forEach((module) => {
+          const moduleId = module.id.startsWith('module_')
+            ? module.id
+            : `module_${module.id}`
           const unitData = {
             ...module,
             id: moduleId,
@@ -179,25 +199,27 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
             otj_hours: module.otj_hours || '0',
             delivery_lead: module.delivery_lead || '',
             sort_order: module.sort_order || '0',
-            active: module.active || 'true'
-          };
-          modulesObject[moduleId] = unitData;
-        });
+            active: module.active || 'true',
+          }
+          modulesObject[moduleId] = unitData
+        })
 
         // Set all modules at once
         courseDispatch({
           type: 'SET_MANDATORY_UNIT',
-          payload: modulesObject
-        });
+          payload: modulesObject,
+        })
 
         // Mark all units as saved
-        courseDispatch({ type: 'MARK_UNITS_SAVED' });
-        setCourseSaved(true);
+        courseDispatch({ type: 'MARK_UNITS_SAVED' })
+        setCourseSaved(true)
       }
 
       // Format modules for API
       const units = localModules.map((module: any) => {
-        const moduleId = module.id.startsWith('module_') ? module.id : `module_${module.id}`;
+        const moduleId = module.id.startsWith('module_')
+          ? module.id
+          : `module_${module.id}`
         return {
           id: moduleId,
           title: module.title,
@@ -211,60 +233,76 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
           otj_hours: module.otj_hours || '0',
           delivery_lead: module.delivery_lead || '',
           sort_order: module.sort_order || '0',
-          active: module.active || 'true'
-        };
-      });
+          active: module.active || 'true',
+        }
+      })
 
       // Save to API if courseId exists
       if (courseId) {
         try {
-          const fetchCourseResponse = await axios.get(`${jsonData.API_LOCAL_URL}/course/get/${courseId}`);
-          const currentCourse = fetchCourseResponse.data.data;
+          const fetchCourseResponse = await axios.get(
+            `${jsonData.API_LOCAL_URL}/course/get/${courseId}`
+          )
+          const currentCourse = fetchCourseResponse.data.data
           const payload = {
             ...currentCourse,
-            units: units
-          };
+            units: units,
+          }
 
           dispatch(updateCourseAPI(courseId, payload))
             .then((response: boolean) => {
               if (response) {
-                dispatch(showMessage({
-                  message: "Modules updated successfully",
-                  variant: "success"
-                }));
+                dispatch(
+                  showMessage({
+                    message: 'Modules updated successfully',
+                    variant: 'success',
+                  })
+                )
               }
             })
             .catch((error: any) => {
-              dispatch(showMessage({
-                message: "Error updating modules",
-                variant: "error"
-              }));
-            });
+              dispatch(
+                showMessage({
+                  message: 'Error updating modules',
+                  variant: 'error',
+                })
+              )
+            })
         } catch (error) {
-          dispatch(showMessage({
-            message: "Error updating modules: Could not fetch current course data",
-            variant: "error"
-          }));
+          dispatch(
+            showMessage({
+              message:
+                'Error updating modules: Could not fetch current course data',
+              variant: 'error',
+            })
+          )
         }
       }
 
       // Close module editor if needed
       if (setShowModuleEditor) {
-        setShowModuleEditor(false);
+        setShowModuleEditor(false)
       }
     } catch (error) {
-      dispatch(showMessage({
-        message: "Error updating modules",
-        variant: "error"
-      }));
+      dispatch(
+        showMessage({
+          message: 'Error updating modules',
+          variant: 'error',
+        })
+      )
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
   return (
     <Paper elevation={0} className={styles.container}>
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <SecondaryButton
+            name='Import Modules'
+            startIcon={<ImportExportIcon />}
+            onClick={()=>setIsOpenModule(true)}
+          />
           {!readOnly && (
             <SecondaryButton
               name="Add Module"
@@ -274,8 +312,9 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
           )}
         </Box>
 
+      
         {localModules.length === 0 ? (
-          <Typography align="center" color="textSecondary" sx={{ py: 4 }}>
+          <Typography align='center' color='textSecondary' sx={{ py: 4 }}>
             No Outcomes yet. Click the "Add Outcomes" button to create one.
           </Typography>
         ) : (
@@ -283,43 +322,63 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
             <Accordion
               key={module.id}
               expanded={expandedModule === module.id}
-              onChange={() => setExpandedModule(expandedModule === module.id ? null : module.id)}
+              onChange={() =>
+                setExpandedModule(
+                  expandedModule === module.id ? null : module.id
+                )
+              }
               sx={{ mb: 2 }}
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '100%',
+                    justifyContent: 'space-between',
+                  }}
+                >
                   <Box>
                     <Typography>
-                      <strong>Duty {module.component_ref}</strong> - {module.title}
+                      <strong>Duty {module.component_ref}</strong> -{' '}
+                      {module.title}
                     </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      {module.moduleType === 'core' ? 'Core Module' :
-                       module.moduleType === 'optional' ? 'Optional Module' :
-                       module.moduleType === 'behaviour' ? 'Behaviour' :
-                       module.moduleType === 'knowledge' ? 'Knowledge' :
-                       module.moduleType === 'skill' ? 'Skill' : 'Module'}
-                      {module.mandatory === 'true' ? ' • Mandatory' : ' • Optional'}
+                    <Typography variant='caption' color='textSecondary'>
+                      {module.moduleType === 'core'
+                        ? 'Core Module'
+                        : module.moduleType === 'optional'
+                        ? 'Optional Module'
+                        : module.moduleType === 'behaviour'
+                        ? 'Behaviour'
+                        : module.moduleType === 'knowledge'
+                        ? 'Knowledge'
+                        : module.moduleType === 'skill'
+                        ? 'Skill'
+                        : 'Module'}
+                      {module.mandatory === 'true'
+                        ? ' • Mandatory'
+                        : ' • Optional'}
                     </Typography>
                   </Box>
                   {!readOnly && (
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       <IconButton
-                        size="small"
+                        size='small'
                         onClick={(e) => {
-                          e.stopPropagation();
-                          openEditModuleDialog(module);
+                          e.stopPropagation()
+                          openEditModuleDialog(module)
                         }}
                       >
-                        <EditIcon fontSize="small" />
+                        <EditIcon fontSize='small' />
                       </IconButton>
                       <IconButton
-                        size="small"
+                        size='small'
                         onClick={(e) => {
-                          e.stopPropagation();
-                          deleteModule(module.id);
+                          e.stopPropagation()
+                          deleteModule(module.id)
                         }}
                       >
-                        <DeleteIcon fontSize="small" />
+                        <DeleteIcon fontSize='small' />
                       </IconButton>
                     </Box>
                   )}
@@ -344,22 +403,29 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
 
                   <Box sx={{ display: 'flex', gap: 2 }}>
                     <Typography sx={{ width: '50%' }}>
-                      <strong>Module Type:</strong> {
-                        module.moduleType === 'core' ? 'Core Module' :
-                        module.moduleType === 'optional' ? 'Optional Module' :
-                        module.moduleType === 'behaviour' ? 'Behaviour' :
-                        module.moduleType === 'knowledge' ? 'Knowledge' :
-                        module.moduleType === 'skill' ? 'Skill' : 'Module'
-                      }
+                      <strong>Module Type:</strong>{' '}
+                      {module.moduleType === 'core'
+                        ? 'Core Module'
+                        : module.moduleType === 'optional'
+                        ? 'Optional Module'
+                        : module.moduleType === 'behaviour'
+                        ? 'Behaviour'
+                        : module.moduleType === 'knowledge'
+                        ? 'Knowledge'
+                        : module.moduleType === 'skill'
+                        ? 'Skill'
+                        : 'Module'}
                     </Typography>
                     <Typography sx={{ width: '50%' }}>
-                      <strong>Mandatory:</strong> {module.mandatory === 'true' ? 'Yes' : 'No'}
+                      <strong>Mandatory:</strong>{' '}
+                      {module.mandatory === 'true' ? 'Yes' : 'No'}
                     </Typography>
                   </Box>
 
                   {module.delivery_method && (
                     <Typography>
-                      <strong>Delivery Method/Evidence Requirement:</strong> {module.delivery_method}
+                      <strong>Delivery Method/Evidence Requirement:</strong>{' '}
+                      {module.delivery_method}
                     </Typography>
                   )}
 
@@ -391,24 +457,31 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
             </Accordion>
           ))
         )}
+          <ModuleAccordion />
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
-        {/* <SecondaryButtonOutlined
-          name="Cancel"
-          onClick={() => setShowModuleEditor && setShowModuleEditor(false)}
-        /> */}
-        {!readOnly && (
-          isSaving ? (
+        {!readOnly &&
+          (isSaving ? (
             <LoadingButton />
           ) : (
-            <SecondaryButton
-              name="Save Outcomes"
-              onClick={handleSave}
-            />
-          )
-        )}
+            <SecondaryButton name='Save Outcomes' onClick={handleSave} />
+          ))}
       </Box>
+      <Dialog
+        open={isOpenModule}
+        onClose={()=>setIsOpenModule(false)}
+        fullWidth
+        maxWidth='md'
+        sx={{
+          '.MuiDialog-paper': {
+            borderRadius: '4px',
+            padding: '1rem',
+          },
+        }}
+      >
+        <ImportModuleDialog handleCloseModal={()=>setIsOpenModule(false)} />
+      </Dialog>
       <ModuleFormDialog
         open={moduleFormOpen}
         onClose={closeModuleDialog}
@@ -418,7 +491,7 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
         isEdit={isEditMode}
       />
     </Paper>
-  );
-};
+  )
+}
 
-export default ModuleEditor;
+export default ModuleEditor
