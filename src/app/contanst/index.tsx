@@ -10,6 +10,10 @@ import RemoveFromQueueOutlinedIcon from '@mui/icons-material/RemoveFromQueueOutl
 import DomainVerificationOutlinedIcon from '@mui/icons-material/DomainVerificationOutlined';
 import { UserRole } from 'src/enum';
 
+import { TableCellProps } from '@mui/material';
+
+type AlignType = TableCellProps['align'];
+
 export const HomePageData = [
   {
     name: '30',
@@ -411,4 +415,17 @@ export const fundingBodyData = [
   'Self',
   'SFA',
   'Student Loan',
+];
+
+export interface ModuleColumn {
+  id: string;
+  label: string;
+  align: AlignType;
+}
+
+export const modulesTableColumn: ModuleColumn[] = [
+  { id: 'type', label: 'Type', align: 'left' },
+  { id: 'title', label: 'Title', align: 'left' },
+  { id: 'description', label: 'Description', align: 'left' },
+  { id: 'actions', label: 'Actions', align: 'center' },
 ];
