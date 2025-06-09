@@ -276,7 +276,7 @@ const ModuleFormDialog: React.FC<ModuleFormDialogProps> = ({
             </AccordionDetails>
           </Accordion>
 
-          <Accordion expanded={activeTab === 'copy'} onChange={() => setActiveTab(activeTab === 'copy' ? '' : 'copy')}>
+          {/* <Accordion expanded={activeTab === 'copy'} onChange={() => setActiveTab(activeTab === 'copy' ? '' : 'copy')}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography>Copy Modules From Existing Course</Typography>
             </AccordionSummary>
@@ -285,7 +285,7 @@ const ModuleFormDialog: React.FC<ModuleFormDialogProps> = ({
                 This feature will be implemented in a future update.
               </Typography>
             </AccordionDetails>
-          </Accordion>
+          </Accordion> */}
         </Box>
       </DialogContent>
       <DialogActions sx={{ p: 3 }}>

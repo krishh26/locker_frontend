@@ -13,6 +13,7 @@ import {
   SecondaryButton,
   SecondaryButtonOutlined,
   LoadingButton,
+  DangerButton,
 } from '../Buttons'
 import AddIcon from '@mui/icons-material/Add'
 import ImportExportIcon from '@mui/icons-material/ImportExport'
@@ -30,6 +31,8 @@ import { ModuleEditorProps } from './componentTypes'
 import ModuleFormDialog from './ModuleFormDialog'
 import ImportModuleDialog from './import-module-dialog'
 import ModuleAccordion from './module-accordion'
+import AlertDialog from '../Dialogs/AlertDialog'
+import { ca } from 'date-fns/locale'
 
 const ModuleEditor: React.FC<ModuleEditorProps> = ({
   courseId,
@@ -44,6 +47,7 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
   const modules = Object.values(mandatoryUnit)
   const readOnly = edit === 'view'
   const [localModules, setLocalModules] = useState<any[]>([])
+  const [deleteId, setDeleteId] = useState('')
   const [expandedModule, setExpandedModule] = useState<string | null>(null)
   const [moduleFormOpen, setModuleFormOpen] = useState(false)
   const [isOpenModule, setIsOpenModule] = useState(false)
@@ -150,27 +154,35 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
     }
   }
 
-  const deleteModule = (moduleId: string) => {
-    const updatedModules = localModules.filter(
-      (module) => module.id !== moduleId
-    )
-    setLocalModules(updatedModules)
+  const deleteModule = async () => {
+    try {
+      const updatedModules = localModules.filter(
+        (module) => module.id !== deleteId
+      )
+      const payload = {
+        units: updatedModules,
+      }
+      await dispatch(updateCourseAPI(courseId, payload))
+      setLocalModules(updatedModules)
+      setDeleteId('')
+      if (expandedModule === deleteId) {
+        setExpandedModule(null)
+      }
 
-    if (expandedModule === moduleId) {
-      setExpandedModule(null)
-    }
+      // If the module form is open and we're deleting the current module, close it
+      if (moduleFormOpen && currentModule && currentModule.id === deleteId) {
+        closeModuleDialog()
+      }
 
-    // If the module form is open and we're deleting the current module, close it
-    if (moduleFormOpen && currentModule && currentModule.id === moduleId) {
-      closeModuleDialog()
-    }
-
-    // Remove the module from the parent component's state
-    if (courseDispatch) {
-      courseDispatch({
-        type: 'REMOVE_UNIT',
-        unitId: moduleId,
-      })
+      // Remove the module from the parent component's state
+      if (courseDispatch) {
+        courseDispatch({
+          type: 'REMOVE_UNIT',
+          unitId: deleteId,
+        })
+      }
+    } catch (error) {
+      console.log(error)
     }
   }
 
@@ -217,7 +229,7 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
 
       // Format modules for API
       const units = localModules.map((module: any) => {
-        const moduleId = module.id.startsWith('module_')
+        const moduleId = module?.id?.startsWith('module_')
           ? module.id
           : `module_${module.id}`
         return {
@@ -297,22 +309,23 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
   return (
     <Paper elevation={0} className={styles.container}>
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <SecondaryButton
-            name='Import Modules'
-            startIcon={<ImportExportIcon />}
-            onClick={()=>setIsOpenModule(true)}
-          />
-          {!readOnly && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          {/* {!readOnly && (
             <SecondaryButton
               name="Add Module"
               startIcon={<AddIcon />}
               onClick={openAddModuleDialog}
             />
+          )} */}
+          {!readOnly && (
+            <SecondaryButton
+              name='Import Modules'
+              startIcon={<ImportExportIcon />}
+              onClick={() => setIsOpenModule(true)}
+            />
           )}
         </Box>
 
-      
         {localModules.length === 0 ? (
           <Typography align='center' color='textSecondary' sx={{ py: 4 }}>
             No Outcomes yet. Click the "Add Outcomes" button to create one.
@@ -375,7 +388,7 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
                         size='small'
                         onClick={(e) => {
                           e.stopPropagation()
-                          deleteModule(module.id)
+                          setDeleteId(module.id)
                         }}
                       >
                         <DeleteIcon fontSize='small' />
@@ -457,20 +470,20 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
             </Accordion>
           ))
         )}
-          <ModuleAccordion />
+        {/* <ModuleAccordion /> */}
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
+      {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
         {!readOnly &&
           (isSaving ? (
             <LoadingButton />
           ) : (
             <SecondaryButton name='Save Outcomes' onClick={handleSave} />
           ))}
-      </Box>
+      </Box> */}
       <Dialog
         open={isOpenModule}
-        onClose={()=>setIsOpenModule(false)}
+        onClose={() => setIsOpenModule(false)}
         fullWidth
         maxWidth='md'
         sx={{
@@ -480,8 +493,32 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
           },
         }}
       >
-        <ImportModuleDialog handleCloseModal={()=>setIsOpenModule(false)} />
+        <ImportModuleDialog
+          handleCloseModal={() => setIsOpenModule(false)}
+          courseId={courseId}
+          localModules={localModules}
+        />
       </Dialog>
+      <AlertDialog
+        open={Boolean(deleteId)}
+        close={() => setDeleteId('')}
+        title='Delete module?'
+        content='Deleting this module will also remove all associated data and relationships. Proceed with deletion?'
+        actionButton={
+          // dataUpdatingLoadding ? (
+          //   <LoadingButton />
+          // ) : (
+          <DangerButton onClick={deleteModule} name='Delete module' />
+          // )
+        }
+        cancelButton={
+          <SecondaryButtonOutlined
+            className='px-24'
+            onClick={() => setDeleteId('')}
+            name='Cancel'
+          />
+        }
+      />
       <ModuleFormDialog
         open={moduleFormOpen}
         onClose={closeModuleDialog}
