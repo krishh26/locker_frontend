@@ -5,7 +5,7 @@ export type FormValues = {
   points_for_improvement: string
   file: File | null
   learner_comments: string
-  doYouLike: string
+  evidence_time_log: boolean
   session: string
   grade: string
   declaration: boolean

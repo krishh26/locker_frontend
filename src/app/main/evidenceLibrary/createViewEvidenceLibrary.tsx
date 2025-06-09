@@ -89,7 +89,7 @@ const CreateViewEvidenceLibrary = () => {
       points_for_improvement: '',
       file: null,
       learner_comments: '',
-      doYouLike: '',
+      evidence_time_log: false,
       session: '',
       grade: '',
       declaration: false,
@@ -185,7 +185,7 @@ const CreateViewEvidenceLibrary = () => {
     if (sessionsData && sessionsData?.data?.length > 0) {
       const payload = sessionsData?.data.map((time) => ({
         id: time.session_id,
-        label: formatSessionTime(time.startDate, time.Duration)
+        label: formatSessionTime(time.startDate, time.Duration),
       }))
       setSessions(payload)
     }
@@ -630,11 +630,24 @@ const CreateViewEvidenceLibrary = () => {
               Evidence to be used in time log?
             </Typography>
             <Controller
-              name='doYouLike'
+              name='evidence_time_log'
               control={control}
               render={({ field }) => (
-                <FormControl component='fieldset' error={!!errors.doYouLike}>
-                  <RadioGroup row {...field}>
+                <FormControl
+                  component='fieldset'
+                  error={!!errors.evidence_time_log}
+                >
+                  <RadioGroup
+                    row
+                    value={
+                      field.value === true
+                        ? 'yes'
+                        : field.value === false
+                        ? 'no'
+                        : ''
+                    }
+                    onChange={(e) => field.onChange(e.target.value === 'yes')}
+                  >
                     <FormControlLabel
                       value='yes'
                       control={<Radio disabled={isEditMode} />}
@@ -644,11 +657,12 @@ const CreateViewEvidenceLibrary = () => {
                       value='no'
                       control={<Radio disabled={isEditMode} />}
                       label='No'
-                      defaultChecked
                     />
                   </RadioGroup>
-                  {errors.doYouLike && (
-                    <FormHelperText>{errors.doYouLike.message}</FormHelperText>
+                  {errors.evidence_time_log && (
+                    <FormHelperText>
+                      {errors.evidence_time_log.message}
+                    </FormHelperText>
                   )}
                 </FormControl>
               )}
@@ -715,7 +729,7 @@ const CreateViewEvidenceLibrary = () => {
                   control={
                     <Checkbox
                       checked={unitsWatch?.some(
-                        (unit) => unit.id === method.id
+                        (unit) => `module_${unit.id}` === method.id
                       )}
                       onChange={(e) => handleCheckboxUnits(e, method)}
                       name='units'
