@@ -38,6 +38,7 @@ import {
   useGetEvidenceDetailsQuery,
   useGetSessionListQuery,
   useUpdateEvidenceIdMutation,
+  useUploadExternalEvidenceFileMutation,
 } from 'app/store/api/evidence-api'
 import { assessmentMethod, fileTypes, sessions } from 'src/utils/constants'
 import { selectUser } from 'app/store/userSlice'
@@ -87,7 +88,7 @@ const CreateViewEvidenceLibrary = () => {
       description: '',
       trainer_feedback: '',
       points_for_improvement: '',
-      file: null,
+      audio: null,
       learner_comments: '',
       evidence_time_log: false,
       session: '',
@@ -193,6 +194,7 @@ const CreateViewEvidenceLibrary = () => {
 
   const [updateEvidenceId, { isLoading: isUpdateLoading }] =
     useUpdateEvidenceIdMutation()
+  const [uploadExternalEvidenceFile] = useUploadExternalEvidenceFileMutation()
 
   useEffect(() => {
     if (!id) return navigate('/evidenceLibrary') // Redirect if no ID is provided
@@ -322,12 +324,21 @@ const CreateViewEvidenceLibrary = () => {
   }
 
   const onSubmit = async (data: FormValues) => {
-    console.log('Submitted Data:', data)
     const payload = {
       ...data,
       id,
     }
     try {
+     
+      const externalPayload = {
+        id,
+        audio: data.audio,
+      }
+      
+      if (roles.includes('Trainer')) {
+        await uploadExternalEvidenceFile(externalPayload).unwrap()
+      }
+
       await updateEvidenceId(payload).unwrap()
 
       dispatch(
@@ -508,7 +519,7 @@ const CreateViewEvidenceLibrary = () => {
               Upload External Feedback
             </Typography>
             <Controller
-              name='file'
+              name='audio'
               control={control}
               render={({ field }) => (
                 <FileUploader
@@ -523,7 +534,7 @@ const CreateViewEvidenceLibrary = () => {
                 >
                   <div
                     className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[100px] flex flex-col items-center justify-center ${
-                      errors.file ? 'border-red-500' : ''
+                      errors.audio ? 'border-red-500' : ''
                     }`}
                     style={
                       !roles.includes('Trainer') || isEditMode
@@ -561,9 +572,9 @@ const CreateViewEvidenceLibrary = () => {
                 </FileUploader>
               )}
             />
-            {errors.file && (
+            {errors.audio && (
               <FormHelperText error className='mt-2'>
-                {errors.file.message}
+                {errors.audio.message}
               </FormHelperText>
             )}
           </Grid>
