@@ -10,11 +10,11 @@ export const getValidationSchema = (isTrainer: boolean) => {
     points_for_improvement: isTrainer
       ? Yup.string().required('Required')
       : Yup.string(),
-    file: isTrainer
+    audio: isTrainer
       ? Yup.mixed().required('File is required')
       : Yup.mixed().nullable(),
     learner_comments: Yup.string(),
-    doYouLike: Yup.string().required('Please select one option'),
+    evidence_time_log: Yup.boolean().required('Please select one option'),
     session: Yup.string().required('Session is required'),
     grade: Yup.string(),
     declaration: Yup.bool().oneOf([true], 'You must accept the declaration'),
@@ -37,14 +37,14 @@ export const getValidationSchema = (isTrainer: boolean) => {
               })
             )
             .min(1, 'Each unit must have at least one subunit')
-     .test(
-            'at-least-one-learnerMap',
-            'Each unit must have at least one subunit where Learner\'s Map is selected',
-            function (subUnits) {
-              if (!Array.isArray(subUnits)) return false
-              return subUnits.some((s) => s?.learnerMap === true)
-            }
-          ),
+            .test(
+              'at-least-one-learnerMap',
+              "Each unit must have at least one subunit where Learner's Map is selected",
+              function (subUnits) {
+                if (!Array.isArray(subUnits)) return false
+                return subUnits.some((s) => s?.learnerMap === true)
+              }
+            ),
         })
       )
       .min(1, 'Select at least one unit with at least one subunit'),

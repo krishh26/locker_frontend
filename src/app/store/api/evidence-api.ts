@@ -66,6 +66,13 @@ export const evidenceAPI = createApi({
         return { url }
       },
     }),
+    uploadExternalEvidenceFile: builder.mutation({
+      query: ({ id, data }) => ({
+        url: `/assignment/${id}/external-feedback`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
   }),
 })
 export const {
@@ -75,5 +82,6 @@ export const {
   useUpdateEvidenceIdMutation,
   useDeleteEvidenceMutation,
   useReuploadEvidenceDocumentMutation,
-  useGetSessionListQuery
+  useGetSessionListQuery,
+  useUploadExternalEvidenceFileMutation
 } = evidenceAPI
