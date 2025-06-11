@@ -10,7 +10,7 @@ import { useSelector } from 'react-redux';
 import LogoIcon from 'app/theme-layouts/shared-components/LogoIcon';
 
 const Root = styled('div')(({ theme }) => ({
-  backgroundColor: theme.palette.background.default,
+  backgroundColor: '#5B718F',
   color: theme.palette.text.primary,
   '& ::-webkit-scrollbar-thumb': {
     boxShadow: `inset 0 0 0 20px ${theme.palette.mode === 'light' ? 'rgba(0, 0, 0, 0.24)' : 'rgba(255, 255, 255, 0.24)'
@@ -27,8 +27,8 @@ const StyledContent = styled(FuseScrollbars)(({ theme }) => ({
   overflowX: 'hidden',
   overflowY: 'auto',
   WebkitOverflowScrolling: 'touch',
-  background:
-    'linear-gradient(rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0) 30%), linear-gradient(rgba(0, 0, 0, 0.25) 0, rgba(0, 0, 0, 0) 40%)',
+  // background:
+  //   'linear-gradient(rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0) 30%), linear-gradient(rgba(0, 0, 0, 0.25) 0, rgba(0, 0, 0, 0) 40%)',
   backgroundRepeat: 'no-repeat',
   backgroundSize: '100% 40px, 100% 10px',
   backgroundAttachment: 'local, scroll',
@@ -41,7 +41,7 @@ function NavbarStyle2Content(props) {
   const { foldedOpen } = navbar
   return (
     <Root className={clsx('flex flex-auto flex-col overflow-hidden h-full', props.className)}>
-      <div className="flex flex-row items-center shrink-0 h-64 md:h-64 px-12">
+      <div className="flex flex-row items-center shrink-0 h-64 md:h-64 px-12 border-r border-[#FBFBFE] border-b">
         <div className="flex flex-1 mx-4">
 
         {foldedOpen ?

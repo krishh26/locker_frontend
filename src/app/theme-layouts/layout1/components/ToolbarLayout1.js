@@ -31,13 +31,13 @@ function ToolbarLayout1(props) {
         sx={{
           backgroundColor: (theme) =>
             theme.palette.mode === 'light'
-              ? toolbarTheme.palette.background.navbar
+              ? '#5B718F'
               : toolbarTheme.palette.background.default,
         }}
         position="static"
       >
         <Toolbar className="p-0 min-h-64 md:min-h-64">
-          <Typography className="ml-12" variant="h6">
+          <Typography className="ml-12 text-white" variant="h6">
             Welcome
             {`, ${currentUser?.first_name} ${currentUser?.last_name} ` +
               `(${RoleShortForm[currentUser?.role]})`}
