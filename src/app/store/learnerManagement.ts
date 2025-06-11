@@ -20,7 +20,7 @@ const initialState = {
         page_size: userTableMetaData.page_size,
         pages: 1
     },
-    learner: {},
+    learner: false,
     singleData: {},
     learnerDetails: {},
     courseData: {},
@@ -180,7 +180,7 @@ export const getLearnerDetails = (learner_id = "") => async (dispatch, getStore)
         dispatch(slice.learnerDetails(response.data.data));
         return response.data.data;
     } catch (err) {
-        dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
+        dispatch(showMessage({ message: err.response?.data?.message, variant: "error" }))
         return false;
     } finally {
         dispatch(slice.setUpdatingLoader(false));

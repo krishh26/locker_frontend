@@ -258,7 +258,7 @@ const Calendar = () => {
                       Location
                     </TableCell>
                     <TableCell align="left" sx={{ width: "15rem" }}>
-                      Start Date
+                      Visit Date
                     </TableCell>
                     <TableCell align="left" sx={{ width: "10rem" }}>
                       Duration
