@@ -10,9 +10,7 @@ export const getValidationSchema = (isTrainer: boolean) => {
     points_for_improvement: isTrainer
       ? Yup.string().required('Required')
       : Yup.string(),
-    audio: isTrainer
-      ? Yup.mixed().required('File is required')
-      : Yup.mixed().nullable(),
+    audio: Yup.mixed().required('File is required'),
     learner_comments: Yup.string(),
     evidence_time_log: Yup.boolean().required('Please select one option'),
     session: Yup.string().required('Session is required'),

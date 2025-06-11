@@ -127,7 +127,7 @@ function NavbarStyle2(props) {
       folded={folded ? 1 : 0}
       open={navbar.open}
       id="fuse-navbar"
-      className="sticky top-0 h-screen shrink-0 z-20 shadow-5"
+      className="sticky top-0 h-screen shrink-0 z-20"
     >
       <Hidden lgDown>
         <StyledNavbar
