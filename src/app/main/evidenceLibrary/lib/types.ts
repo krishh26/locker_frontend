@@ -3,7 +3,7 @@ export type FormValues = {
   description: string
   trainer_feedback: string
   points_for_improvement: string
-  audio: File | null
+  audio: (File & { url?: string }) | null;
   learner_comments: string
   evidence_time_log: boolean
   session: string

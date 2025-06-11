@@ -105,6 +105,7 @@ const CreateViewEvidenceLibrary = () => {
       key: string
       name: string
       url: string
+      size:number
     }
     created_at: string
     user: {
@@ -132,6 +133,7 @@ const CreateViewEvidenceLibrary = () => {
       key: '',
       name: '',
       url: '',
+      size:0
     },
     created_at: '',
     user: {
@@ -217,6 +219,7 @@ const CreateViewEvidenceLibrary = () => {
         learner_comments,
         points_for_improvement,
         assessment_method,
+        external_feedback,
         title,
         units,
         trainer_feedback,
@@ -229,6 +232,7 @@ const CreateViewEvidenceLibrary = () => {
           key: file.key,
           name: file.name,
           url: file.url,
+          size:file.size
         },
         course_id: '',
         user: {
@@ -249,6 +253,7 @@ const CreateViewEvidenceLibrary = () => {
       setValue('assessment_method', assessment_method ? assessment_method : [])
       setValue('units', units ? units : [])
       setValue('session', session ? session : '')
+      setValue('audio', external_feedback ? external_feedback : '')
     }
   }, [evidenceDetails, setValue, isError, id, isLoading])
 
@@ -262,9 +267,9 @@ const CreateViewEvidenceLibrary = () => {
     )
   }
 
-  const openFilePreview = () => {
-    if (evidenceData.file && evidenceData.file.url) {
-      window.open(evidenceData.file.url, '_blank')
+  const openFilePreview = (url) => {
+    if (url) {
+      window.open(url, '_blank')
     } else {
       console.error('File URL is not available')
     }
@@ -329,13 +334,13 @@ const CreateViewEvidenceLibrary = () => {
       id,
     }
     try {
-     
-      const externalPayload = {
-        id,
-        audio: data.audio,
-      }
-      
-      if (roles.includes('Trainer')) {
+      if (data.audio && !data.audio?.url) {
+        const formData = new FormData()
+        formData.append('audio', data.audio)
+        const externalPayload = {
+          id,
+          data: formData,
+        }
         await uploadExternalEvidenceFile(externalPayload).unwrap()
       }
 
@@ -394,7 +399,7 @@ const CreateViewEvidenceLibrary = () => {
           display='flex'
           alignItems='center'
           gap={2}
-          onClick={openFilePreview}
+          onClick={() => openFilePreview(evidenceData.file.url)}
           sx={{ cursor: 'pointer' }}
         >
           <InsertDriveFileOutlinedIcon color='action' />
@@ -407,7 +412,7 @@ const CreateViewEvidenceLibrary = () => {
               {evidenceData.file?.name}
             </Typography>
             <Typography variant='caption' color='text.secondary'>
-              {/* {Math.round(file.size / 1024)} KB */}
+              {Math.round(evidenceData.file.size / 1024)} KB
             </Typography>
             <Typography
               variant='caption'
@@ -516,6 +521,27 @@ const CreateViewEvidenceLibrary = () => {
           </Grid>
           <Grid item xs={12}>
             <Typography variant='body1' gutterBottom>
+              Learner Comments
+            </Typography>
+            <Controller
+              name='learner_comments'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  name='title'
+                  size='small'
+                  fullWidth
+                  multiline
+                  rows={4}
+                  disabled={isEditMode}
+                  error={!!errors.learner_comments}
+                  {...field}
+                />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant='body1' gutterBottom>
               Upload External Feedback
             </Typography>
             <Controller
@@ -530,17 +556,13 @@ const CreateViewEvidenceLibrary = () => {
                   types={fileTypes}
                   multiple={false}
                   maxSize={10}
-                  disabled={!roles.includes('Trainer') || isEditMode}
+                  disabled={isEditMode}
                 >
                   <div
                     className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[100px] flex flex-col items-center justify-center ${
                       errors.audio ? 'border-red-500' : ''
                     }`}
-                    style={
-                      !roles.includes('Trainer') || isEditMode
-                        ? { backgroundColor: 'whitesmoke' }
-                        : {}
-                    }
+                    style={isEditMode ? { backgroundColor: 'whitesmoke' } : {}}
                   >
                     <div className='flex justify-center mb-4'>
                       <img
@@ -578,27 +600,61 @@ const CreateViewEvidenceLibrary = () => {
               </FormHelperText>
             )}
           </Grid>
-          <Grid item xs={12}>
-            <Typography variant='body1' gutterBottom>
-              Learner Comments
-            </Typography>
-            <Controller
-              name='learner_comments'
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  name='title'
-                  size='small'
-                  fullWidth
-                  multiline
-                  rows={4}
-                  disabled={isEditMode}
-                  error={!!errors.learner_comments}
-                  {...field}
-                />
-              )}
-            />
-          </Grid>
+          {evidenceDetails &&
+            evidenceDetails.data &&
+            evidenceDetails.data.external_feedback && (
+              <Grid item xs={12}>
+                <Paper
+                  elevation={1}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderRadius: 2,
+                    marginBottom: 3,
+                    padding: 2,
+                    minHeight: 64,
+                    border: '1px solid #e0e0e0',
+                  }}
+                >
+                  <Box
+                    display='flex'
+                    alignItems='center'
+                    gap={2}
+                    onClick={() =>
+                      openFilePreview(
+                        evidenceDetails.data.external_feedback?.url
+                      )
+                    }
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    <InsertDriveFileOutlinedIcon color='action' />
+                    <Box>
+                      <Typography
+                        variant='body2'
+                        color='primary'
+                        sx={{ fontWeight: 500, cursor: 'pointer' }}
+                      >
+                        {evidenceDetails.data.external_feedback?.name}
+                      </Typography>
+                      <Typography variant='caption' color='text.secondary'>
+                        {Math.round(evidenceDetails.data.external_feedback.size / 1024)} KB
+                      </Typography>
+                      <Typography
+                        variant='caption'
+                        color='text.secondary'
+                        display='block'
+                      >
+                        {/* {evidenceData.user.name} on{' '} */}
+                        {new Date(
+                          evidenceDetails.data.external_feedback.uploaded_at
+                        ).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Paper>
+              </Grid>
+            )}
           <Grid item xs={12}>
             <Typography variant='body1' gutterBottom>
               Evidence Method
