@@ -16,6 +16,7 @@ import CreateAssignmentConfig from "../main/createAssignment/createAssignmentCon
 import PortfolioConfig from "../main/portfolio/portfolioConfig";
 import LearnerPortfolioConfig from "../main/learnerPortfolio/learnerPortfolioConfig";
 import AdminConfig from "../main/admin/adminConfig";
+import AdminCombinedConfig from "../main/admin/AdminCombinedConfig";
 import CourseBuilderConfig from "../main/courseBuilder/courseBuilderConfig";
 import FormsConfig from "../main/forms/formsConfig";
 import CommunicationsConfig from "../main/communications/communicationsConfig";
@@ -43,6 +44,7 @@ const routeConfigs = [
     PortfolioConfig,
     LearnerPortfolioConfig,
     AdminConfig,
+    AdminCombinedConfig,
     CourseBuilderConfig,
     FormsConfig,
     CommunicationsConfig,
