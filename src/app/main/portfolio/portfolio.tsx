@@ -127,16 +127,6 @@ const Portfolio = () => {
       handleCloseEmail()
     }
   }
-
-  const portfolioCard = [
-    { id: 1, name: 'Evidence Library', color: '#FCA14E' },
-    { id: 2, name: 'Unit Progress', color: '#8F78F4' },
-    { id: 3, name: 'Gap Analysis', color: '#F44771' },
-    { id: 4, name: 'Actions and Activities', color: '#009FB7' },
-    { id: 5, name: 'Time Log', color: '#E95ACB' },
-    { id: 6, name: 'Skill Scan', color: '#489E20' },
-  ]
-
   return (
     <div>
       <div className='m-10 flex flex-wrap justify-evenly gap-10 cursor-pointer'>
