@@ -134,7 +134,7 @@ const Portfolio = () => {
           <PortfolioCard data={value} index={index} key={value.id} />
         ))}
       </div>
-      {dataUpdatingLoadding || dataFetchLoading || !learner ? (
+      {!learner ? (
         <FuseLoading />
       ) : (
         <div className='rounded shadow-md m-24'>
