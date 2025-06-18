@@ -30,11 +30,10 @@ import {
 
 const ImportModuleDialog = ({
   handleCloseModal,
-  courseId,
   localModules = [],
 }) => {
   const dispatch: any = useDispatch()
-  const { data, dataFetchLoading, dataUpdatingLoadding } = useSelector(
+  const { data, dataFetchLoading, dataUpdatingLoadding,preFillData } = useSelector(
     selectCourseManagement
   )
   const [selectedModuleIds, setSelectedModuleIds] = useState([])
@@ -59,7 +58,7 @@ const ImportModuleDialog = ({
           course_name,
           modules: units,
         }))
-        .filter((course) => course.course_id != courseId)
+        .filter((course) => course.course_id != preFillData.course_id)
 
       setCourseList(courseList)
     }
@@ -101,7 +100,7 @@ const ImportModuleDialog = ({
     }
 
     try {
-      await dispatch(updateCourseAPI(courseId, payload))
+      await dispatch(updateCourseAPI(preFillData.course_id, payload))
       handleCloseModal()
     } catch (error) {
       console.error('Error copying modules:', error)

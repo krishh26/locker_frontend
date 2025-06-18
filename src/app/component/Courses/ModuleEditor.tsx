@@ -495,7 +495,6 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
       >
         <ImportModuleDialog
           handleCloseModal={() => setIsOpenModule(false)}
-          courseId={courseId}
           localModules={localModules}
         />
       </Dialog>
