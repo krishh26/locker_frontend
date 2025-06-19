@@ -14,6 +14,7 @@ const initialState = {
         page_size: userTableMetaData.page_size,
         pages: 1
     },
+    selectedCourse:null,
     singleData: {}
 };
 
@@ -35,11 +36,14 @@ const skillsScanSlice = createSlice({
         },
         setSingleData(state, action) {
             state.singleData = action.payload
+        },
+        setSelectedCourse(state,action){
+            state.selectedCourse = action.payload
         }
     }
 });
 
-export const slice = skillsScanSlice.actions;
+export const skillsScanAction = skillsScanSlice.actions;
 export const selectSkillsScan = ({ skillsScan }) => skillsScan;
 
 const URL_BASE_LINK = jsonData.API_LOCAL_URL;
@@ -48,7 +52,7 @@ export const updateCourseUnitSkillAPI = (data) => async (dispatch, getStore) => 
 
     try {
         const id = getStore()?.learnerManagement?.user_course_id || "";
-        dispatch(slice.setUpdatingLoader());
+        dispatch(skillsScanAction.setUpdatingLoader());
         const response = await axios.patch(`${URL_BASE_LINK}/course/user/update/${id}`, { course: data })
         dispatch(showMessage({ message: "Skill scan updated", variant: "success" }))
         return true;
@@ -56,7 +60,7 @@ export const updateCourseUnitSkillAPI = (data) => async (dispatch, getStore) => 
     } catch (err) {
 
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
-        dispatch(slice.setUpdatingLoader());
+        dispatch(skillsScanAction.setUpdatingLoader());
         return false;
     };
 }

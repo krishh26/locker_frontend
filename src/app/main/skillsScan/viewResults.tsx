@@ -235,7 +235,7 @@ const ViewResults = () => {
                             id="year-select"
                             name="year"
                         >
-                            {courseData.units?.map((row) => (
+                            {courseData && courseData.units?.map((row) => (
                                 <MenuItem key={row} value={row?.title}
                                     onClick={() => handleChangeYear(row)}
                                 >
@@ -267,7 +267,7 @@ const ViewResults = () => {
                             <Typography className='h4 font-600'>Legend</Typography>
                         </Card>
                         <Card className='rounded-0 p-10'>
-                            {courseData.units?.map((row) => (
+                            {courseData && courseData.units?.map((row) => (
                                 <Grid>
                                     <Typography>{row?.title}</Typography>
                                 </Grid>
