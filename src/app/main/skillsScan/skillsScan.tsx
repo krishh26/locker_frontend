@@ -1,25 +1,26 @@
-import { Box, Grid, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Grid, Tab, Tabs, Typography } from '@mui/material'
 import React, { useEffect, useState } from 'react'
-import TNAUnits from './tnaUnits';
-import TNAQuestionaire from './tnaQuestionaire';
-import ViewResults from './viewResults';
-import { useDispatch } from 'react-redux';
-import { getLearnerDetails } from 'app/store/learnerManagement';
-import { useSelector } from 'react-redux';
-import { selectGlobalUser } from 'app/store/globalUser';
+import TNAUnits from './tnaUnits'
+import TNAQuestionaire from './tnaQuestionaire'
+import ViewResults from './viewResults'
+import { useDispatch } from 'react-redux'
+import { getLearnerDetails } from 'app/store/learnerManagement'
+import { useSelector } from 'react-redux'
+import { selectGlobalUser } from 'app/store/globalUser'
+import { selectSkillsScan } from 'app/store/skillsScan'
 
 interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+  children?: React.ReactNode
+  index: number
+  value: number
 }
 
 function CustomTabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+  const { children, value, index, ...other } = props
 
   return (
     <div
-      role="tabpanel"
+      role='tabpanel'
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
@@ -31,25 +32,26 @@ function CustomTabPanel(props: TabPanelProps) {
         </Box>
       )}
     </div>
-  );
+  )
 }
 
 function a11yProps(index: number) {
   return {
     id: `simple-tab-${index}`,
-    "aria-controls": `simple-tabpanel-${index}`,
-  };
+    'aria-controls': `simple-tabpanel-${index}`,
+  }
 }
 
 const SkillsScan = () => {
-
-  const [value, setValue] = useState(0);
-  const dispatch: any = useDispatch();
-  const selectedUser = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectGlobalUser)?.selectedUser;
-
+  const [value, setValue] = useState(0)
+  const dispatch: any = useDispatch()
+  const selectedUser =
+    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
+    useSelector(selectGlobalUser)?.selectedUser
+  const { selectedCourse } = useSelector(selectSkillsScan)
   const handleTabChange = (event, newValue) => {
-    setValue(newValue);
-  };
+    setValue(newValue)
+  }
 
   useEffect(() => {
     if (selectedUser?.learner_id)
@@ -58,81 +60,95 @@ const SkillsScan = () => {
 
   return (
     <>
-      <Grid className="m-10" sx={{ minHeight: 600 }}>
-        <Typography className='h1 pl-10'>{selectedUser?.first_name + " " + selectedUser?.last_name}</Typography>
+      <Grid className='m-10' sx={{ minHeight: 600 }}>
+        <Typography className='h1 pl-10'>
+          {selectedUser?.first_name + ' ' + selectedUser?.last_name}
+        </Typography>
         <Box
           sx={{
             borderBottom: 1,
-            borderColor: "divider",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+            borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
           <Tabs
             value={value}
             onChange={handleTabChange}
-            aria-label="basic tabs example"
-            className="border-1 m-12 rounded-md"
+            aria-label='basic tabs example'
+            className='border-1 m-12 rounded-md'
             sx={{
-              "& .MuiTabs-indicator": {
-                display: "none",
+              '& .MuiTabs-indicator': {
+                display: 'none',
               },
             }}
           >
             <Tab
-              label="Step 1: Choose TNA units"
+              label='Step 1: Choose TNA units'
               {...a11yProps(0)}
               sx={{
-                borderRight: "1px solid #e5e7eb",
-                "&:last-child": { borderRight: "none" },
-                "&:hover": {
-                  backgroundColor: "#6D81A3",
-                  color: "#ffffff",
-                  borderRadius: "0px",
+                borderRight: '1px solid #e5e7eb',
+                '&:last-child': { borderRight: 'none' },
+                '&:hover': {
+                  backgroundColor: '#6D81A3',
+                  color: '#ffffff',
+                  borderRadius: '0px',
                 },
-                "&.Mui-selected": {
-                  backgroundColor: "#6D81A3",
-                  color: "#ffffff",
-                  borderRadius: "0px",
-                },
-              }}
-            />
-            <Tab
-              label="Step 2: TNA Questionaire"
-              {...a11yProps(1)}
-              sx={{
-                borderRight: "1px solid #e5e7eb",
-                "&:last-child": { borderRight: "none" },
-                "&.Mui-selected": {
-                  backgroundColor: "#6D81A3",
-                  color: "#ffffff",
-                  borderRadius: "0px",
+                '&.Mui-selected': {
+                  backgroundColor: '#6D81A3',
+                  color: '#ffffff',
+                  borderRadius: '0px',
                 },
               }}
             />
             <Tab
-              label="Step 3: View Results"
+              label='Step 2: TNA Questionaire'
               {...a11yProps(1)}
+              disabled={!selectedCourse}
               sx={{
-                borderRight: "1px solid #e5e7eb",
-                "&:last-child": { borderRight: "none" },
-                "&.Mui-selected": {
-                  backgroundColor: "#6D81A3",
-                  color: "#ffffff",
-                  borderRadius: "0px",
+                borderRight: '1px solid #e5e7eb',
+                '&:last-child': { borderRight: 'none' },
+                '&.Mui-selected': {
+                  backgroundColor: '#6D81A3',
+                  color: '#ffffff',
+                  borderRadius: '0px',
+                },
+                '&.Mui-disabled': {
+                  color: '#9ca3af',
+                  backgroundColor: '#f3f4f6',
+                  cursor: 'not-allowed',
+                },
+              }}
+            />
+            <Tab
+              label='Step 3: View Results'
+              {...a11yProps(1)}
+              disabled={!selectedCourse}
+              sx={{
+                borderRight: '1px solid #e5e7eb',
+                '&:last-child': { borderRight: 'none' },
+                '&.Mui-selected': {
+                  backgroundColor: '#6D81A3',
+                  color: '#ffffff',
+                  borderRadius: '0px',
+                },
+                '&.Mui-disabled': {
+                  color: '#9ca3af',
+                  backgroundColor: '#f3f4f6',
+                  cursor: 'not-allowed',
                 },
               }}
             />
           </Tabs>
         </Box>
 
-        <CustomTabPanel value={value} index={0} >
+        <CustomTabPanel value={value} index={0}>
           <TNAUnits handleTabChange={handleTabChange} />
           {/* <h1>TNA units</h1> */}
         </CustomTabPanel>
 
-        <CustomTabPanel value={value} index={1} >
+        <CustomTabPanel value={value} index={1}>
           {<TNAQuestionaire handleTabChange={handleTabChange} />}
           {/* <h1>TNA Questionaire</h1> */}
         </CustomTabPanel>
@@ -141,7 +157,7 @@ const SkillsScan = () => {
           {<ViewResults />}
           {/* <h1>View Results</h1> */}
         </CustomTabPanel>
-      </Grid >
+      </Grid>
     </>
   )
 }
