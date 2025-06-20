@@ -1,100 +1,111 @@
-import { Card, FormControl, Grid, MenuItem, Select, Typography } from '@mui/material'
-import { selectLearnerManagement } from 'app/store/learnerManagement';
+import {
+  Card,
+  FormControl,
+  Grid,
+  MenuItem,
+  Select,
+  Typography,
+} from '@mui/material'
+import { selectLearnerManagement } from 'app/store/learnerManagement'
 import { forwardRef, useRef, useState } from 'react'
-import { useSelector } from 'react-redux';
-import { SecondaryButton } from 'src/app/component/Buttons';
-import { Line } from 'react-chartjs-2';
-import 'chart.js/auto';
-import html2pdf from 'html2pdf.js';
-import { selectGlobalUser } from 'app/store/globalUser';
+import { useSelector } from 'react-redux'
+import { SecondaryButton } from 'src/app/component/Buttons'
+import { Line } from 'react-chartjs-2'
+import 'chart.js/auto'
+import html2canvas from 'html2canvas';
+import html2pdf from 'html2pdf.js'
+import { selectGlobalUser } from 'app/store/globalUser'
+import { selectSkillsScan } from 'app/store/skillsScan'
+import LearnerProgressChart from './LearnerProgressChart'
 
 interface LineChartProps {
-    data: { rating: any; name: any; }[];
+  data: { rating: any; name: any }[]
 }
 
 const LineChart = forwardRef<any, LineChartProps>(({ data }, ref) => {
-    const labels = data.map(a => a.name)
+  const labels = data.map((a) => a.name)
 
-    const chartData = {
-        labels,
-        datasets: [
-            {
-                label: 'Your rating',
-                data: data.map(a => a.rating),
-                fill: false,
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 1)',
-                tension: 0.1,
-                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                pointBorderColor: 'rgba(75, 192, 192, 1)',
-            },
-        ],
-    };
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: 'Your rating',
+        data: data.map((a) => a.rating),
+        fill: false,
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 1)',
+        tension: 0.1,
+        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+        pointBorderColor: 'rgba(75, 192, 192, 1)',
+      },
+    ],
+  }
 
-    const options = {
-        scales: {
-            y: {
-                beginAtZero: true,
-                min: 1,
-                max: 4,
-                ticks: {
-                    stepSize: 1,
-                    callback: (value) => {
-                        switch (value) {
-                            case 1:
-                                return '☹️';
-                            case 2:
-                                return '😖';
-                            case 3:
-                                return '🙂';
-                            case 4:
-                                return '😁';
-                            default:
-                                return value;
-                        }
-                    },
-                },
-            },
+  const options = {
+    scales: {
+      y: {
+        beginAtZero: true,
+        min: 1,
+        max: 4,
+        ticks: {
+          stepSize: 1,
+          callback: (value) => {
+            switch (value) {
+              case 1:
+                return '☹️'
+              case 2:
+                return '😖'
+              case 3:
+                return '🙂'
+              case 4:
+                return '😁'
+              default:
+                return value
+            }
+          },
         },
-        plugins: {
-            legend: {
-                display: true,
-                position: 'top' as const,
-            },
-        },
-    };
+      },
+    },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top' as const,
+      },
+    },
+  }
 
-    return (
-        <div>
-            <Line ref={ref} data={chartData} options={options} />
-        </div>
-    );
-});
-
+  return (
+    <div>
+      <Line ref={ref} data={chartData} options={options} />
+    </div>
+  )
+})
 
 const ViewResults = () => {
+  const selectedUser =
+    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
+    useSelector(selectGlobalUser)?.selectedUser
+  const { courseData } = useSelector(selectLearnerManagement)
+  const { selectedCourse } = useSelector(selectSkillsScan)
+  const chartRef = useRef<any>(null)
 
-    const selectedUser = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectGlobalUser)?.selectedUser;
-    const { courseData } = useSelector(selectLearnerManagement);
-    const chartRef = useRef<any>(null);
+  const legendData = courseData?.units?.map((row) => row?.title)
+  const [result, setResult] = useState([])
+  const [subTitle, setSubTitle] = useState('')
+  const [selectedTopic, setSelectedTopic] = useState(legendData[0])
 
-    const [result, setResult] = useState([]);
-    const [subTitle, setSubTitle] = useState("");
+  const handleChangeTopic = (data) => {
+    setResult(data.subUnit)
+    setSelectedTopic(data.title)
+    setSubTitle(data.title)
+  }
 
-    const legendData = courseData?.units?.map((row) => (row?.title))
-    console.log(legendData);
+  const downloadPdf = async () => {
+    if (chartRef.current) {
+      const canvas = await html2canvas(chartRef.current)
+      const chartImage = canvas.toDataURL('image/png')
 
-    const handleChangeYear = (data) => {
-        setResult(data.subUnit)
-        setSubTitle(data.title)
-    }
-
-    const downloadPdf = () => {
-        if (chartRef.current) {
-            const chartInstance = chartRef.current.chartInstance || chartRef.current;
-            const chartImage = chartInstance.toBase64Image();
-
-            const htmlContent = `
+      const htmlContent = `
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -162,7 +173,11 @@ const ViewResults = () => {
             <body class="bg-gray-100 flex justify-center items-center">
                 <div class="a4-container">
                     <div class="mb-6">
-                        <p class="text-base font-semibold">Results Chart for ${selectedUser?.first_name + " " + selectedUser.last_name}</p>
+                        <p class="text-base font-semibold">Results Chart for ${
+                          selectedUser?.first_name +
+                          ' ' +
+                          selectedUser.last_name
+                        }</p>
                         <p class="text-sm text-gray-600 mt-2">${subTitle}</p>
                     </div>
                     <div class="flex gap-8 w-full">
@@ -180,9 +195,13 @@ const ViewResults = () => {
                             </div>
                           <div class="p-4 border border-gray-300 rounded-lg bg-white shadow-sm" id="data-show">
                              <ul class="list-disc list-inside text-gray-800 space-y-2">
-                                 ${legendData.map(item => `
+                                 ${legendData
+                                   .map(
+                                     (item) => `
                                      <li>${item}</li>
-                                 `).join('')}
+                                 `
+                                   )
+                                   .join('')}
                              </ul>
                         </div>
 
@@ -207,77 +226,88 @@ const ViewResults = () => {
                 </div>
             </body>
             </html>
-        `;
+        `
 
+      const element = document.createElement('div')
+      element.innerHTML = htmlContent
 
-            const element = document.createElement('div');
-            element.innerHTML = htmlContent;
+      const opt = {
+        margin: 0.5,
+        filename: 'ResultsChart.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'A4', orientation: 'portrait' },
+      }
 
-            const opt = {
-                margin: 0.50,
-                filename: 'ResultsChart.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'A4', orientation: 'portrait' }
-            };
+      html2pdf().from(element).set(opt).save()
+    }
+  }
 
-            html2pdf().from(element).set(opt).save();
-        }
-    };
+  return (
+    <Grid className=' m-10 px-10 pt-10'>
+      <Grid className=' flex gap-28'>
+        <Grid className='w-1/2'>
+          <FormControl fullWidth size='small' className='pt-20'>
+            <Select
+              labelId='year-select-label'
+              id='year-select'
+              name='year'
+              value={selectedTopic}
+              onChange={(e) => {
+                const selectedRow = courseData.units.find(
+                  (row) => row.title === e.target.value
+                )
+                handleChangeTopic(selectedRow)
+              }}
+            >
+              {courseData &&
+                courseData.units?.map((row) => (
+                  <MenuItem key={row} value={row?.title}>
+                    {row?.title}
+                  </MenuItem>
+                ))}
+            </Select>
+          </FormControl>
 
-    return (
-        <Grid className=' m-10 px-10 pt-10'>
-            <Grid className=' flex gap-28'>
-                <Grid className='w-1/2'>
-                    <FormControl fullWidth size="small" className='pt-20'>
-                        <Select
-                            labelId="year-select-label"
-                            id="year-select"
-                            name="year"
-                        >
-                            {courseData && courseData.units?.map((row) => (
-                                <MenuItem key={row} value={row?.title}
-                                    onClick={() => handleChangeYear(row)}
-                                >
-                                    {row?.title}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-
-                    <div>
-                        <Card className=' mt-20 rounded-0 p-10 bg-grey-200'>
-                            <Typography className='h4 font-600'>Gap Analysis</Typography>
-                        </Card>
-
-                        <LineChart data={result.map(a => ({ rating: a.rating, name: a.subTitle }))} ref={chartRef} />
-                    </div>
-                </Grid>
-                <Grid className='w-1/2' >
-                    <Grid className="flex justify-start items-end my-20 mr-24 gap-10">
-                        <Grid>
-                            <SecondaryButton name="Download PDF" onClick={downloadPdf} />
-                        </Grid>
-                    </Grid>
-                    <Card className=' mt-20 rounded-0 p-10 bg-grey-200'>
-                        <Typography className='h4 font-600'>Resources</Typography>
-                    </Card>
-                    <Grid>
-                        <Card className=' mt-20 rounded-0 p-10 bg-grey-200'>
-                            <Typography className='h4 font-600'>Legend</Typography>
-                        </Card>
-                        <Card className='rounded-0 p-10'>
-                            {courseData && courseData.units?.map((row) => (
-                                <Grid>
-                                    <Typography>{row?.title}</Typography>
-                                </Grid>
-                            ))}
-                        </Card>
-                    </Grid>
-                </Grid>
-            </Grid>
+          <div>
+            <Card className=' mt-20 rounded-0 p-10 bg-grey-200'>
+              <Typography className='h4 font-600'>Gap Analysis</Typography>
+            </Card>
+            <div ref={chartRef}>
+              <LearnerProgressChart
+                learnerData={selectedCourse.course}
+                selectedTopic={selectedTopic}
+              />
+            </div>
+            {/* <LineChart data={result.map(a => ({ rating: a.rating, name: a.subTitle }))} ref={chartRef} /> */}
+          </div>
         </Grid>
-    )
+        <Grid className='w-1/2'>
+          <Grid className='flex justify-start items-end my-20 mr-24 gap-10'>
+            <Grid>
+              <SecondaryButton name='Download PDF' onClick={downloadPdf} />
+            </Grid>
+          </Grid>
+          <Card className=' mt-20 rounded-0 p-10 bg-grey-200'>
+            <Typography className='h4 font-600'>Resources</Typography>
+          </Card>
+          <Grid>
+            <Card className=' mt-20 rounded-0 p-10 bg-grey-200'>
+              <Typography className='h4 font-600'>Legend</Typography>
+            </Card>
+            <Card className='rounded-0 p-10'>
+              {courseData &&
+                courseData.units?.map((row) => (
+                  <Grid>
+                    <Typography>{row?.title}</Typography>
+                  </Grid>
+                ))}
+            </Card>
+          </Grid>
+        </Grid>
+      </Grid>
+    </Grid>
+  )
 }
 
 export default ViewResults
