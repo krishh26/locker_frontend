@@ -68,7 +68,7 @@ const TNAQuestionaire = (props) => {
       const firstRow = courseData.units[0]
       dispatch(skillsScanAction.setSingleData(firstRow))
     }
-  }, [courseData])
+  }, [])
 
   const radioHandler = (id, value) => {
     const data = JSON.parse(JSON.stringify(singleData))
@@ -113,6 +113,13 @@ const TNAQuestionaire = (props) => {
   }
   const saveData = () => {
     dispatch(updateCourseUnitSkillAPI(courseData))
+    const updatedCourseData = {
+      ...selectedCourse,
+      course: {
+        ...courseData
+      }
+    }
+    dispatch(skillsScanAction.setSelectedCourse(updatedCourseData))
   }
 
   const handleHighlightBlanksChange = (event) => {
