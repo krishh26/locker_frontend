@@ -288,9 +288,6 @@ const ViewResults = () => {
               <SecondaryButton name='Download PDF' onClick={downloadPdf} />
             </Grid>
           </Grid>
-          <Card className=' mt-20 rounded-0 p-10 bg-grey-200'>
-            <Typography className='h4 font-600'>Resources</Typography>
-          </Card>
           <Grid>
             <Card className=' mt-20 rounded-0 p-10 bg-grey-200'>
               <Typography className='h4 font-600'>Legend</Typography>
