@@ -2,8 +2,11 @@ import {
   Card,
   CardContent,
   Checkbox,
+  FormControl,
   Grid,
+  MenuItem,
   Radio,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -12,11 +15,6 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
-import Accordion from '@mui/material/Accordion'
-import AccordionSummary from '@mui/material/AccordionSummary'
-import AccordionDetails from '@mui/material/AccordionDetails'
-import AddIcon from '@mui/icons-material/Add'
-import RemoveIcon from '@mui/icons-material/Remove'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
 import {
   selectSkillsScan,
@@ -29,14 +27,12 @@ import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import { SecondaryButton } from 'src/app/component/Buttons'
 
-const isPastMonth = (dateString: string) => {
-  const [monthName, year] = dateString.split('-')
-  const targetDate = new Date(`${monthName} 1, ${year}`)
-  const now = new Date()
-
-  // Consider it past if it's before the first day of the current month
-  return targetDate < new Date(now.getFullYear(), now.getMonth(), 1)
-}
+const ratingOptions = [
+  { value: 1, label: '😖 - Never' },
+  { value: 2, label: '☹️ - Not sure' },
+  { value: 3, label: '🙂 - Sometimes' },
+  { value: 4, label: '😁 - Always' },
+]
 
 const TNAQuestionaire = (props) => {
   const { handleTabChange } = props
@@ -46,13 +42,6 @@ const TNAQuestionaire = (props) => {
     return selectedCourse?.progressByDate?.[0]?.date || false
   })
 
-  const handleChange =
-    (panel: string) => (event: SyntheticEvent, isExpanded: boolean) => {
-      setExpanded(isExpanded ? panel : false)
-    }
-
-  const expandIcon = (value: string) =>
-    expanded === value ? <RemoveIcon /> : <AddIcon />
 
   const dispatch: any = useDispatch()
 
@@ -116,14 +105,45 @@ const TNAQuestionaire = (props) => {
     const updatedCourseData = {
       ...selectedCourse,
       course: {
-        ...courseData
-      }
+        ...courseData,
+      },
     }
     dispatch(skillsScanAction.setSelectedCourse(updatedCourseData))
   }
 
   const handleHighlightBlanksChange = (event) => {
     setHighlightBlanks(event.target.checked)
+  }
+
+  const handleSelectChange = (rowId, reviewKey, value) => {
+    const updatedData = JSON.parse(JSON.stringify(singleData))
+    const subUnit = updatedData.subUnit.find((item) => item.id === rowId)
+
+    if (subUnit) {
+      subUnit.quarter_review = {
+        ...(subUnit.quarter_review || {}),
+        [reviewKey]: value,
+      }
+    }
+
+    dispatch(skillsScanAction.setSingleData(updatedData))
+
+    // Update courseData in global state
+    const updatedCourse = JSON.parse(JSON.stringify(courseData))
+    const unitUpdate = updatedCourse.units.find(
+      (item) => item.id === singleData.id
+    )
+
+    unitUpdate.subUnit = unitUpdate.subUnit.map((item) =>
+      item.id === rowId ? subUnit : item
+    )
+    console.log(
+      '🚀 ~ handleSelectChange ~ unitUpdate.subUnit:',
+      unitUpdate.subUnit
+    )
+
+    dispatch(courseSlice.setCourseData({ course: updatedCourse }))
+    setSampleData(updatedCourse?.units)
   }
 
   return (
@@ -159,170 +179,98 @@ const TNAQuestionaire = (props) => {
           ))}
         </Grid>
         <Grid className='w-full border-grey-600 border-2 h-fit my-20'>
-          <Card
-            variant='outlined'
-            className='rounded-0 bg-grey-200 border-b-grey-600 border-b-2 '
-            elevation={0}
-          >
-            <CardContent>
-              <Typography className='font-500 text-center'>
-                {singleData.standardUnits}
-              </Typography>
-            </CardContent>
-          </Card>
-
-          {selectedCourse &&
-            selectedCourse?.progressByDate?.map((date, index) => {
-              const isDisabled = date.isDisabled
-
-              return (
-                <Accordion
-                  key={index}
-                  expanded={!isDisabled && expanded === date.date}
-                  onChange={!isDisabled ? handleChange(date.date) : undefined}
-                  sx={{
-                    opacity: isDisabled ? 0.5 : 1,
-                    backgroundColor: isDisabled ? '#f3f4f6' : 'white',
-                    pointerEvents: isDisabled ? 'none' : 'auto',
-                  }}
-                >
-                  <AccordionSummary
-                    id={`controlled-panel-header-${index}`}
-                    aria-controls={`controlled-panel-content-${index}`}
-                    expandIcon={expandIcon(date.date)}
-                  >
-                    <Typography>{date.date}</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <TableContainer sx={{ maxHeight: 'auto' }}>
-                      <Table
-                        sx={{ minWidth: 650, heighFaddt: '100%' }}
-                        size='small'
-                        aria-label='simple table'
+          <TableContainer sx={{ maxHeight: 'auto' }}>
+            <Table
+              sx={{ minWidth: 650, heigh: '100%' }}
+              size='small'
+              aria-label='simple table'
+            >
+              <TableHead className='bg-grey-300 '>
+                <TableRow>
+                  <TableCell>Topic</TableCell>
+                  <TableCell align='center'>Skill To Be Demonstrated</TableCell>
+                  <TableCell align='center'>Induction</TableCell>
+                  <TableCell align='center'>First Review</TableCell>
+                  <TableCell align='center'>Second Review</TableCell>
+                  <TableCell align='center'>Third Review</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {singleData?.subUnit?.map((row, index) => {
+                  return (
+                    <TableRow
+                      key={row.id}
+                      sx={{
+                        '&:last-child td, &:last-child th': {
+                          border: 0,
+                        },
+                      }}
+                    >
+                      <TableCell
+                        component='th'
+                        scope='row'
+                        sx={{
+                          borderBottom: '2px solid #F8F8F8',
+                        }}
                       >
-                        <TableHead className='bg-grey-300 '>
-                          <TableRow>
-                            <TableCell>Topic</TableCell>
-                            <TableCell align='center'>
-                              Skill To Be Demonstrated
-                            </TableCell>
-                            <TableCell align='center'>☹️ - Not sure</TableCell>
-                            <TableCell align='center'>😖 - Never</TableCell>
-                            <TableCell align='center'>🙂 - Sometimes</TableCell>
-                            <TableCell align='center'>😁 - Always</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {singleData?.subUnit?.map((row, index) => {
-                            const selectedMonth =
-                              row?.progressByDate &&
-                              row.progressByDate?.find(
-                                (historyDate) => historyDate.date === date.date
-                              )
-                            return (
-                              <TableRow
-                                key={row.id}
-                                sx={{
-                                  '&:last-child td, &:last-child th': {
-                                    border: 0,
-                                  },
-                                }}
+                        {index === 0 ? singleData?.title : null}
+                      </TableCell>
+                      <TableCell
+                        align='center'
+                        width='30%'
+                        sx={{
+                          borderBottom: '2px solid #F8F8F8',
+                        }}
+                      >
+                        {row.subTitle}
+                      </TableCell>
+                      {['induction', 'first', 'second', 'third'].map(
+                        (reviewKey) => (
+                          <TableCell
+                            key={reviewKey}
+                            align='center'
+                            sx={{
+                              borderBottom: '2px solid #F8F8F8',
+                              backgroundColor: highlightBlanks
+                                ? 'yellow'
+                                : 'inherit',
+                            }}
+                          >
+                            <FormControl fullWidth size='small'>
+                              <Select
+                                displayEmpty
+                                value={
+                                  row.quarter_review?.[reviewKey] || ''
+                                }
+                                fullWidth
+                                size='small'
+                                onChange={(e) =>
+                                  handleSelectChange(
+                                    row.id,
+                                    reviewKey,
+                                    e.target.value
+                                  )
+                                }
                               >
-                                <TableCell
-                                  component='th'
-                                  scope='row'
-                                  sx={{
-                                    borderBottom: '2px solid #F8F8F8',
-                                  }}
-                                >
-                                  {index === 0 ? singleData?.title : null}
-                                </TableCell>
-                                <TableCell
-                                  align='center'
-                                  sx={{
-                                    borderBottom: '2px solid #F8F8F8',
-                                  }}
-                                >
-                                  {row.subTitle}
-                                </TableCell>
-                                <TableCell
-                                  align='center'
-                                  sx={{
-                                    borderBottom: '2px solid #F8F8F8',
-                                    backgroundColor:
-                                      highlightBlanks &&
-                                      selectedMonth.rating == null
-                                        ? 'yellow'
-                                        : 'inherit',
-                                  }}
-                                >
-                                  <Radio
-                                    checked={selectedMonth?.rating === 1}
-                                    onClick={() => radioHandler(row.id, 1)}
-                                    disabled={isPastMonth(date.date)}
-                                  />
-                                </TableCell>
-                                <TableCell
-                                  align='center'
-                                  sx={{
-                                    borderBottom: '2px solid #F8F8F8',
-                                    backgroundColor:
-                                      highlightBlanks &&
-                                      selectedMonth.rating == null
-                                        ? 'yellow'
-                                        : 'inherit',
-                                  }}
-                                >
-                                  <Radio
-                                    checked={selectedMonth?.rating === 2}
-                                    onClick={() => radioHandler(row.id, 2)}
-                                    disabled={isPastMonth(date.date)}
-                                  />
-                                </TableCell>
-                                <TableCell
-                                  align='center'
-                                  sx={{
-                                    borderBottom: '2px solid #F8F8F8',
-                                    backgroundColor:
-                                      highlightBlanks &&
-                                      selectedMonth.rating == null
-                                        ? 'yellow'
-                                        : 'inherit',
-                                  }}
-                                >
-                                  <Radio
-                                    checked={selectedMonth?.rating === 3}
-                                    onClick={() => radioHandler(row.id, 3)}
-                                    disabled={isPastMonth(date.date)}
-                                  />
-                                </TableCell>
-                                <TableCell
-                                  align='center'
-                                  sx={{
-                                    borderBottom: '2px solid #F8F8F8',
-                                    backgroundColor:
-                                      highlightBlanks &&
-                                      selectedMonth.rating == null
-                                        ? 'yellow'
-                                        : 'inherit',
-                                  }}
-                                >
-                                  <Radio
-                                    checked={selectedMonth?.rating === 4}
-                                    disabled={isPastMonth(date.date)}
-                                    onClick={() => radioHandler(row.id, 4)}
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </AccordionDetails>
-                </Accordion>
-              )
-            })}
+                                <MenuItem value='' disabled>
+                                  <em>Select a rating</em>
+                                </MenuItem>
+                                {ratingOptions.map((opt) => (
+                                  <MenuItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </TableCell>
+                        )
+                      )}
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
           <Grid className='flex justify-end items-end my-20 mr-24 gap-10'>
             <Grid>
