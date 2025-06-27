@@ -15,6 +15,7 @@ import SkillsScanConfig from "../main/skillsScan/skillsScanConfig";
 import CreateAssignmentConfig from "../main/createAssignment/createAssignmentConfig";
 import PortfolioConfig from "../main/portfolio/portfolioConfig";
 import LearnerPortfolioConfig from "../main/learnerPortfolio/learnerPortfolioConfig";
+import LearningPlanConfig from "../main/learning-plan/learning-plan-config";
 import AdminConfig from "../main/admin/adminConfig";
 import AdminCombinedConfig from "../main/admin/AdminCombinedConfig";
 import CourseBuilderConfig from "../main/courseBuilder/courseBuilderConfig";
@@ -43,6 +44,7 @@ const routeConfigs = [
     CreateAssignmentConfig,
     PortfolioConfig,
     LearnerPortfolioConfig,
+    LearningPlanConfig,
     AdminConfig,
     AdminCombinedConfig,
     CourseBuilderConfig,

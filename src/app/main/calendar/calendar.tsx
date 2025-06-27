@@ -198,11 +198,11 @@ const Calendar = () => {
               }}
             />
           </div>
-          <div className='items-end'>
+          {/* <div className='items-end'>
             <Link to='/newsession'>
               <SecondaryButton name='New Session' />
             </Link>
-          </div>
+          </div> */}
         </div>
       )}
 
