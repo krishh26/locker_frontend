@@ -87,6 +87,8 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
       navigate('/resources-card');
     } else if (id === 6) {
       navigate('/skillsScan');
+    }else if (id === 7) {
+      navigate(`/session-list/${learner?.learner_id}`);
     }
 
   };
@@ -100,7 +102,7 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
         <>
           <div
             className={Style.cardContain}
-            style={{ background: color }}
+            style={{ background: color ,cursor:'pointer'}}
             onClick={() => {
               handleClick();
             }}
@@ -131,7 +133,7 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
         <>
           <div
             className={Style.cardContain}
-            style={{ background: color }}
+            style={{ background: color ,cursor:'pointer' }}
             onClick={() => {
               handleClick();
             }}
