@@ -26,7 +26,7 @@ const LearningPlanConfig = {
       },
     },
   },
-  auth: [authRoles.Trainer ,authRoles.Admin],
+  auth: [authRoles.Trainer ,authRoles.Admin ,authRoles.Learner],
   routes: [
     {
       path: "/session-list/:id",

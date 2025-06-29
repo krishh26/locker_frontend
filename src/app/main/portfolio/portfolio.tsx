@@ -131,7 +131,7 @@ const Portfolio = () => {
     <div>
       <div className='m-10 flex flex-wrap justify-evenly gap-10 cursor-pointer'>
         {portfolioCard?.map((value, index) => (
-          <PortfolioCard data={value} index={index} key={value.id} />
+          <PortfolioCard data={value} index={index} key={value.id} learner={learner}/>
         ))}
       </div>
       {!learner ? (
