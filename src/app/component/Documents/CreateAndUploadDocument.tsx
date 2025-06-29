@@ -382,7 +382,7 @@ const CreateAndUploadDocument: React.FC = () => {
   const handlePowerPointSaveUpload = async () => {
     try {
       const blob = await generatePowerPointDocument();
-      const filename = `${presentationTitle || 'presentation'}.pptx`;
+      const filename = `${presentationTitle || 'presentation'}.pdf`;
       await uploadDocument(blob, filename);
     } catch (error) {
       console.error('PowerPoint generation error:', error);

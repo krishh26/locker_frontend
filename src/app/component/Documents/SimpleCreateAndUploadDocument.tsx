@@ -278,7 +278,7 @@ const SimpleCreateAndUploadDocument: React.FC = () => {
       }
 
       const blob = generateSimplePowerPointDocument();
-      const filename = `${presentationTitle}.txt`;
+      const filename = `${presentationTitle}.html`;
       await uploadDocument(blob, filename);
     } catch (error) {
       console.error('PowerPoint generation error:', error);

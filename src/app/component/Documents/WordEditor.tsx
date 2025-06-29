@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -50,50 +50,70 @@ const WordEditor: React.FC<WordEditorProps> = ({
   const [fontSize, setFontSize] = useState('12');
   const [fontFamily, setFontFamily] = useState('Calibri');
   const [textAlign, setTextAlign] = useState('left');
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Function to apply formatting to selected text
-  const applyFormatting = (formatType: string) => {
-    const textArea = textAreaRef.current;
-    if (!textArea) return;
-
-    const start = textArea.selectionStart;
-    const end = textArea.selectionEnd;
-    const selectedText = wordContent.substring(start, end);
-
-    if (selectedText.length === 0) return; // No text selected
-
-    let formattedText = '';
-    switch (formatType) {
-      case 'bold':
-        formattedText = `**${selectedText}**`;
-        break;
-      case 'italic':
-        formattedText = `*${selectedText}*`;
-        break;
-      case 'underline':
-        formattedText = `<u>${selectedText}</u>`;
-        break;
-      case 'bullet':
-        const bulletLines = selectedText.split('\n').map(line => line.trim() ? `• ${line}` : line).join('\n');
-        formattedText = bulletLines;
-        break;
-      case 'numbered':
-        const numberedLines = selectedText.split('\n').filter(line => line.trim()).map((line, index) => `${index + 1}. ${line}`).join('\n');
-        formattedText = numberedLines;
-        break;
-      default:
-        formattedText = selectedText;
+  // Apply font changes to the editor
+  const applyFontChanges = () => {
+    if (editorRef.current) {
+      editorRef.current.style.fontSize = `${fontSize}px`;
+      editorRef.current.style.fontFamily = fontFamily;
     }
+  };
 
-    const newContent = wordContent.substring(0, start) + formattedText + wordContent.substring(end);
-    setWordContent(newContent);
+  // Apply font changes when font settings change
+  useEffect(() => {
+    applyFontChanges();
+  }, [fontSize, fontFamily]);
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
 
-    // Restore cursor position
-    setTimeout(() => {
-      textArea.focus();
-      textArea.setSelectionRange(start, start + formattedText.length);
-    }, 0);
+  // Function to execute formatting commands
+  const executeCommand = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    updateContent();
+    updateFormatStates();
+  };
+
+  // Update content from contentEditable div
+  const updateContent = () => {
+    if (editorRef.current) {
+      setWordContent(editorRef.current.innerHTML);
+    }
+  };
+
+  // Update button states based on current selection
+  const updateFormatStates = () => {
+    setIsBold(document.queryCommandState('bold'));
+    setIsItalic(document.queryCommandState('italic'));
+    setIsUnderline(document.queryCommandState('underline'));
+  };
+
+  // Handle selection change to update button states
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      updateFormatStates();
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, []);
+
+  // Apply formatting functions
+  const applyBold = () => executeCommand('bold');
+  const applyItalic = () => executeCommand('italic');
+  const applyUnderline = () => executeCommand('underline');
+  const applyBulletList = () => executeCommand('insertUnorderedList');
+  const applyNumberedList = () => executeCommand('insertOrderedList');
+  const applyAlignment = (align: string) => {
+    setTextAlign(align);
+    executeCommand(`justify${align.charAt(0).toUpperCase() + align.slice(1)}`);
+    // Also update the editor's text alignment
+    if (editorRef.current) {
+      editorRef.current.style.textAlign = align;
+    }
   };
 
   return (
@@ -123,7 +143,13 @@ const WordEditor: React.FC<WordEditorProps> = ({
           <FormControl size="small" sx={{ minWidth: 100 }}>
             <Select
               value={fontFamily}
-              onChange={(e) => setFontFamily(e.target.value)}
+              onChange={(e) => {
+                setFontFamily(e.target.value);
+                // Apply immediately to editor
+                if (editorRef.current) {
+                  editorRef.current.style.fontFamily = e.target.value;
+                }
+              }}
               sx={{ height: 32 }}
             >
               <MenuItem value="Calibri">Calibri</MenuItem>
@@ -136,7 +162,13 @@ const WordEditor: React.FC<WordEditorProps> = ({
           <FormControl size="small" sx={{ minWidth: 60 }}>
             <Select
               value={fontSize}
-              onChange={(e) => setFontSize(e.target.value)}
+              onChange={(e) => {
+                setFontSize(e.target.value);
+                // Apply immediately to editor
+                if (editorRef.current) {
+                  editorRef.current.style.fontSize = `${e.target.value}px`;
+                }
+              }}
               sx={{ height: 32 }}
             >
               <MenuItem value="8">8</MenuItem>
@@ -155,34 +187,37 @@ const WordEditor: React.FC<WordEditorProps> = ({
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
           {/* Format Controls */}
-          <Tooltip title="Bold (Select text first)">
+          <Tooltip title="Bold">
             <IconButton
               size="small"
-              onClick={() => applyFormatting('bold')}
+              onClick={applyBold}
               sx={{
-                border: '1px solid #e0e0e0'
+                border: '1px solid #e0e0e0',
+                backgroundColor: isBold ? '#e3f2fd' : 'transparent'
               }}
             >
               <FormatBold fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Italic (Select text first)">
+          <Tooltip title="Italic">
             <IconButton
               size="small"
-              onClick={() => applyFormatting('italic')}
+              onClick={applyItalic}
               sx={{
-                border: '1px solid #e0e0e0'
+                border: '1px solid #e0e0e0',
+                backgroundColor: isItalic ? '#e3f2fd' : 'transparent'
               }}
             >
               <FormatItalic fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Underline (Select text first)">
+          <Tooltip title="Underline">
             <IconButton
               size="small"
-              onClick={() => applyFormatting('underline')}
+              onClick={applyUnderline}
               sx={{
-                border: '1px solid #e0e0e0'
+                border: '1px solid #e0e0e0',
+                backgroundColor: isUnderline ? '#e3f2fd' : 'transparent'
               }}
             >
               <FormatUnderlined fontSize="small" />
@@ -195,7 +230,7 @@ const WordEditor: React.FC<WordEditorProps> = ({
           <Tooltip title="Align Left">
             <IconButton
               size="small"
-              onClick={() => setTextAlign('left')}
+              onClick={() => applyAlignment('left')}
               sx={{
                 border: '1px solid #e0e0e0',
                 backgroundColor: textAlign === 'left' ? '#e3f2fd' : 'transparent'
@@ -207,7 +242,7 @@ const WordEditor: React.FC<WordEditorProps> = ({
           <Tooltip title="Align Center">
             <IconButton
               size="small"
-              onClick={() => setTextAlign('center')}
+              onClick={() => applyAlignment('center')}
               sx={{
                 border: '1px solid #e0e0e0',
                 backgroundColor: textAlign === 'center' ? '#e3f2fd' : 'transparent'
@@ -219,7 +254,7 @@ const WordEditor: React.FC<WordEditorProps> = ({
           <Tooltip title="Align Right">
             <IconButton
               size="small"
-              onClick={() => setTextAlign('right')}
+              onClick={() => applyAlignment('right')}
               sx={{
                 border: '1px solid #e0e0e0',
                 backgroundColor: textAlign === 'right' ? '#e3f2fd' : 'transparent'
@@ -232,19 +267,19 @@ const WordEditor: React.FC<WordEditorProps> = ({
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
           {/* List Controls */}
-          <Tooltip title="Bullet List (Select text first)">
+          <Tooltip title="Bullet List">
             <IconButton
               size="small"
-              onClick={() => applyFormatting('bullet')}
+              onClick={applyBulletList}
               sx={{ border: '1px solid #e0e0e0' }}
             >
               <FormatListBulleted fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Numbered List (Select text first)">
+          <Tooltip title="Numbered List">
             <IconButton
               size="small"
-              onClick={() => applyFormatting('numbered')}
+              onClick={applyNumberedList}
               sx={{ border: '1px solid #e0e0e0' }}
             >
               <FormatListNumbered fontSize="small" />
@@ -254,7 +289,7 @@ const WordEditor: React.FC<WordEditorProps> = ({
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
           {/* Undo/Redo */}
-          <Tooltip title="Undo">
+          {/* <Tooltip title="Undo">
             <IconButton size="small" sx={{ border: '1px solid #e0e0e0' }}>
               <Undo fontSize="small" />
             </IconButton>
@@ -263,7 +298,7 @@ const WordEditor: React.FC<WordEditorProps> = ({
             <IconButton size="small" sx={{ border: '1px solid #e0e0e0' }}>
               <Redo fontSize="small" />
             </IconButton>
-          </Tooltip>
+          </Tooltip> */}
         </Toolbar>
       </Paper>
 
@@ -314,31 +349,29 @@ const WordEditor: React.FC<WordEditorProps> = ({
           }}
         >
           {/* Page Content */}
-          <TextField
-            fullWidth
-            multiline
-            variant="standard"
-            placeholder="Start typing your evidence document here... (Select text and use toolbar buttons to format)"
-            value={wordContent}
-            onChange={(e) => setWordContent(e.target.value)}
-            inputRef={textAreaRef}
-            InputProps={{
-              disableUnderline: true,
-              sx: {
-                fontSize: `${fontSize}px`,
-                fontFamily: fontFamily,
-                textAlign: textAlign,
-                lineHeight: 1.6,
-                '& textarea': {
-                  resize: 'none',
-                  textAlign: textAlign
-                }
-              }
-            }}
+          <Box
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={updateContent}
+            onMouseUp={updateFormatStates}
+            onKeyUp={updateFormatStates}
             sx={{
-              '& .MuiInputBase-root': {
-                minHeight: 400,
-                alignItems: 'flex-start'
+              minHeight: 400,
+              padding: 2,
+              border: 'none',
+              outline: 'none',
+              fontSize: `${fontSize}px`,
+              fontFamily: fontFamily,
+              lineHeight: 1.6,
+              backgroundColor: 'white',
+              '&:focus': {
+                outline: 'none'
+              },
+              '&:empty:before': {
+                content: '"Start typing your evidence document here..."',
+                color: '#999',
+                fontStyle: 'italic'
               }
             }}
           />
@@ -372,15 +405,17 @@ const WordEditor: React.FC<WordEditorProps> = ({
           variant="contained"
           startIcon={<CloudUpload />}
           onClick={() => {
+            // Get plain text content for validation
+            const plainTextContent = editorRef.current?.innerText || '';
             console.log('Word upload button clicked', {
               documentTitle,
-              wordContent: wordContent.substring(0, 50) + '...',
+              wordContent: plainTextContent.substring(0, 50) + '...',
               loading,
               disabled
             });
             onSaveUpload();
           }}
-          disabled={loading || disabled || !documentTitle.trim() || !wordContent.trim()}
+          disabled={loading || disabled || !documentTitle.trim() || !(editorRef.current?.innerText?.trim())}
           sx={{
             backgroundColor: '#0078d4',
             '&:hover': {

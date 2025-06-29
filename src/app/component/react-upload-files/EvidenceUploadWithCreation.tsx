@@ -233,8 +233,57 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
 
   // Document generation functions
   const generateWordDocument = (): Blob => {
-    const content = `${documentTitle}\n\n${wordContent}`;
-    return new Blob([content], { type: 'text/plain' });
+    // Convert HTML content to plain text while preserving some formatting
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = wordContent;
+
+    // Convert HTML formatting to text equivalents
+    const processNode = (node: Node): string => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent || '';
+      }
+
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as Element;
+        let text = '';
+
+        // Process child nodes first
+        for (let child of Array.from(element.childNodes)) {
+          text += processNode(child);
+        }
+
+        // Apply formatting based on tag
+        switch (element.tagName?.toLowerCase()) {
+          case 'b':
+          case 'strong':
+            return `**${text}**`; // Bold in markdown style
+          case 'i':
+          case 'em':
+            return `*${text}*`; // Italic in markdown style
+          case 'u':
+            return `_${text}_`; // Underline as underscore
+          case 'ul':
+            return `\n${text}\n`;
+          case 'ol':
+            return `\n${text}\n`;
+          case 'li':
+            return `• ${text}\n`;
+          case 'br':
+            return '\n';
+          case 'p':
+          case 'div':
+            return `${text}\n`;
+          default:
+            return text;
+        }
+      }
+
+      return '';
+    };
+
+    const plainText = processNode(tempDiv);
+    const content = `${documentTitle}\n\n${plainText}`;
+    return new Blob([content], { type: 'application/pdf' });
   };
 
   const generateExcelDocument = (): Blob => {
@@ -245,11 +294,137 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
   };
 
   const generatePowerPointDocument = (): Blob => {
-    const content = `${presentationTitle}\n\n` + 
-      slides.map((slide, index) => 
-        `Slide ${index + 1}: ${slide.title}\n${slide.content}\n\n`
-      ).join('');
-    return new Blob([content], { type: 'text/plain' });
+    // Create an HTML presentation that looks like PowerPoint
+    let htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${presentationTitle}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .presentation-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .presentation-header {
+            background: #d83b01;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .presentation-title {
+            font-size: 2.5em;
+            margin: 0;
+            font-weight: bold;
+        }
+        .presentation-info {
+            margin-top: 10px;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        .slide {
+            padding: 40px;
+            border-bottom: 3px solid #f0f0f0;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+        .slide:last-child {
+            border-bottom: none;
+        }
+        .slide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .slide-number {
+            background: #d83b01;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .slide-title {
+            color: #d83b01;
+            font-size: 2em;
+            font-weight: bold;
+            margin: 0;
+            flex: 1;
+            margin-left: 20px;
+        }
+        .slide-content {
+            font-size: 1.2em;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            flex: 1;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+        @media print {
+            body { background: white; }
+            .slide { page-break-after: always; }
+            .slide:last-child { page-break-after: auto; }
+        }
+        @media (max-width: 768px) {
+            .slide-header { flex-direction: column; align-items: flex-start; }
+            .slide-title { margin-left: 0; margin-top: 10px; }
+            .slide { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <div class="presentation-header">
+            <h1 class="presentation-title">${presentationTitle}</h1>
+            <div class="presentation-info">
+                Created: ${new Date().toLocaleDateString()} | ${slides.length} Slides | Evidence Presentation
+            </div>
+        </div>
+`;
+
+    slides.forEach((slide, index) => {
+      // Convert HTML content to plain text for slide content
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = slide.content;
+      const plainContent = tempDiv.textContent || tempDiv.innerText || '';
+
+      htmlContent += `
+        <div class="slide">
+            <div class="slide-header">
+                <h2 class="slide-title">${slide.title}</h2>
+            </div>
+            <div class="slide-content">${plainContent}</div>
+        </div>`;
+    });
+
+    htmlContent += `
+        <div class="footer">
+            <p>${new Date().toLocaleString()}</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    return new Blob([htmlContent], { type: 'text/html' });
   };
 
   // Upload created document as evidence
@@ -333,7 +508,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
       }
 
       const blob = generateWordDocument();
-      const filename = `${documentTitle}.txt`;
+      const filename = `${documentTitle}.pdf`;
       await uploadCreatedDocument(blob, filename);
     } catch (error) {
       console.error('Word creation error:', error);
@@ -405,7 +580,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
       }
 
       const blob = generatePowerPointDocument();
-      const filename = `${presentationTitle}.pptx`;
+      const filename = `${presentationTitle}.html`;
       await uploadCreatedDocument(blob, filename);
     } catch (error) {
       console.error('PowerPoint creation error:', error);

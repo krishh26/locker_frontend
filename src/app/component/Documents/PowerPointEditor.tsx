@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -60,44 +60,58 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
   disabled
 }) => {
   const [selectedSlideIndex, setSelectedSlideIndex] = useState(0);
-  const [textAlign, setTextAlign] = useState('left');
-  const contentTextAreaRef = useRef<HTMLTextAreaElement>(null);
+  const [textAlign, setTextAlign] = useState('left'); // Default to left alignment
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const contentEditorRef = useRef<HTMLDivElement>(null);
 
-  // Function to apply formatting to selected text in slide content
-  const applySlideFormatting = (formatType: string) => {
-    const textArea = contentTextAreaRef.current;
-    if (!textArea) return;
+  // Function to execute formatting commands
+  const executeCommand = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    updateSlideContent();
+    updateFormatStates();
+  };
 
-    const start = textArea.selectionStart;
-    const end = textArea.selectionEnd;
-    const currentSlide = slides[selectedSlideIndex];
-    const selectedText = currentSlide.content.substring(start, end);
-
-    if (selectedText.length === 0) return; // No text selected
-
-    let formattedText = '';
-    switch (formatType) {
-      case 'bold':
-        formattedText = `**${selectedText}**`;
-        break;
-      case 'italic':
-        formattedText = `*${selectedText}*`;
-        break;
-      case 'underline':
-        formattedText = `<u>${selectedText}</u>`;
-        break;
-      default:
-        formattedText = selectedText;
+  // Update slide content from contentEditable div
+  const updateSlideContent = () => {
+    if (contentEditorRef.current && slides[selectedSlideIndex]) {
+      const newSlides = [...slides];
+      newSlides[selectedSlideIndex].content = contentEditorRef.current.innerHTML;
+      setSlides(newSlides);
     }
+  };
 
-    const newContent = currentSlide.content.substring(0, start) + formattedText + currentSlide.content.substring(end);
-    updateSlide(selectedSlideIndex, 'content', newContent);
+  // Update button states based on current selection
+  const updateFormatStates = () => {
+    setIsBold(document.queryCommandState('bold'));
+    setIsItalic(document.queryCommandState('italic'));
+    setIsUnderline(document.queryCommandState('underline'));
+  };
 
-    // Restore cursor position
-    setTimeout(() => {
-      textArea.focus();
-      textArea.setSelectionRange(start, start + formattedText.length);
-    }, 0);
+  // Handle selection change to update button states
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      if (contentEditorRef.current && document.activeElement === contentEditorRef.current) {
+        updateFormatStates();
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, []);
+
+  // Apply formatting functions
+  const applyBold = () => executeCommand('bold');
+  const applyItalic = () => executeCommand('italic');
+  const applyUnderline = () => executeCommand('underline');
+  const applyAlignment = (align: string) => {
+    setTextAlign(align);
+    executeCommand(`justify${align.charAt(0).toUpperCase() + align.slice(1)}`);
+    // Also update the editor's text alignment
+    
   };
 
   const addSlide = () => {
@@ -145,12 +159,14 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
               }
             }}
           />
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+            💡 Creates an HTML presentation that opens in any browser</Typography>
         </Box>
 
         {/* PowerPoint-like Toolbar */}
         <Toolbar sx={{ minHeight: '48px !important', backgroundColor: '#d83b01', color: 'white', gap: 1 }}>
           {/* File Operations */}
-          <Tooltip title="Save">
+          {/* <Tooltip title="Save">
             <IconButton size="small" sx={{ color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
               <Save fontSize="small" />
             </IconButton>
@@ -159,7 +175,7 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
             <IconButton size="small" sx={{ color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
               <PlayArrow fontSize="small" />
             </IconButton>
-          </Tooltip>
+          </Tooltip> */}
 
           <Divider orientation="vertical" flexItem sx={{ mx: 1, backgroundColor: 'rgba(255,255,255,0.3)' }} />
 
@@ -187,37 +203,49 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
           <Divider orientation="vertical" flexItem sx={{ mx: 1, backgroundColor: 'rgba(255,255,255,0.3)' }} />
 
           {/* Format Controls */}
-          <Tooltip title="Bold (Select text first)">
+          <Tooltip title="Bold">
             <IconButton
               size="small"
-              onClick={() => applySlideFormatting('bold')}
+              onClick={() => {
+                console.log('Bold button clicked');
+                applyBold();
+              }}
               sx={{
                 color: 'white',
-                border: '1px solid rgba(255,255,255,0.3)'
+                border: '1px solid rgba(255,255,255,0.3)',
+                backgroundColor: isBold ? 'rgba(255,255,255,0.2)' : 'transparent'
               }}
             >
               <FormatBold fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Italic (Select text first)">
+          <Tooltip title="Italic">
             <IconButton
               size="small"
-              onClick={() => applySlideFormatting('italic')}
+              onClick={() => {
+                console.log('Italic button clicked');
+                applyItalic();
+              }}
               sx={{
                 color: 'white',
-                border: '1px solid rgba(255,255,255,0.3)'
+                border: '1px solid rgba(255,255,255,0.3)',
+                backgroundColor: isItalic ? 'rgba(255,255,255,0.2)' : 'transparent'
               }}
             >
               <FormatItalic fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Underline (Select text first)">
+          <Tooltip title="Underline">
             <IconButton
               size="small"
-              onClick={() => applySlideFormatting('underline')}
+              onClick={() => {
+                console.log('Underline button clicked');
+                applyUnderline();
+              }}
               sx={{
                 color: 'white',
-                border: '1px solid rgba(255,255,255,0.3)'
+                border: '1px solid rgba(255,255,255,0.3)',
+                backgroundColor: isUnderline ? 'rgba(255,255,255,0.2)' : 'transparent'
               }}
             >
               <FormatUnderlined fontSize="small" />
@@ -230,7 +258,7 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
           <Tooltip title="Align Left">
             <IconButton
               size="small"
-              onClick={() => setTextAlign('left')}
+              onClick={() => applyAlignment('left')}
               sx={{
                 color: 'white',
                 border: '1px solid rgba(255,255,255,0.3)',
@@ -243,7 +271,7 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
           <Tooltip title="Align Center">
             <IconButton
               size="small"
-              onClick={() => setTextAlign('center')}
+              onClick={() => applyAlignment('center')}
               sx={{
                 color: 'white',
                 border: '1px solid rgba(255,255,255,0.3)',
@@ -256,7 +284,7 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
           <Tooltip title="Align Right">
             <IconButton
               size="small"
-              onClick={() => setTextAlign('right')}
+              onClick={() => applyAlignment('right')}
               sx={{
                 color: 'white',
                 border: '1px solid rgba(255,255,255,0.3)',
@@ -270,7 +298,7 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
           <Divider orientation="vertical" flexItem sx={{ mx: 1, backgroundColor: 'rgba(255,255,255,0.3)' }} />
 
           {/* Media */}
-          <Tooltip title="Insert Image">
+          {/* <Tooltip title="Insert Image">
             <IconButton size="small" sx={{ color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
               <Image fontSize="small" />
             </IconButton>
@@ -279,7 +307,7 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
             <IconButton size="small" sx={{ color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
               <VideoLibrary fontSize="small" />
             </IconButton>
-          </Tooltip>
+          </Tooltip> */}
 
           <Box sx={{ flexGrow: 1 }} />
 
@@ -405,26 +433,14 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
             />
 
             {/* Slide Content */}
-            <TextField
-              fullWidth
-              multiline
-              variant="standard"
-              placeholder="Click to add content (Select text and use toolbar to format)"
-              value={currentSlide?.content || ''}
-              onChange={(e) => updateSlide(selectedSlideIndex, 'content', e.target.value)}
-              inputRef={contentTextAreaRef}
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  fontSize: '18px',
-                  textAlign: textAlign,
-                  lineHeight: 1.6,
-                  '& textarea': {
-                    resize: 'none',
-                    textAlign: textAlign
-                  }
-                }
-              }}
+            <Box
+              ref={contentEditorRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={updateSlideContent}
+              onMouseUp={updateFormatStates}
+              onKeyUp={updateFormatStates}
+              onFocus={() => console.log('Content editor focused')}
               sx={{
                 flex: 1,
                 '& .MuiInputBase-root': {
@@ -501,7 +517,7 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
             }
           }}
         >
-          {loading ? 'Creating & Uploading...' : 'Create & Upload as Evidence'}
+          {loading ? 'Creating & Uploading...' : 'Create & Upload HTML Presentation'}
         </Button>
       </Box>
 
