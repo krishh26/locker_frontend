@@ -25,6 +25,7 @@ import broadcast from './broadcast';
 import contractWork from './contractedWork';
 
 import {evidenceAPI} from './api/evidence-api'
+import {learnerPlanAPI} from './api/learner-plan-api'
 
 const createReducer = (asyncReducers) => (state, action) => {
     const combinedReducer = combineReducers({
@@ -55,6 +56,7 @@ const createReducer = (asyncReducers) => (state, action) => {
 
         // Add the API reducer
         [evidenceAPI.reducerPath]: evidenceAPI.reducer,
+        [learnerPlanAPI.reducerPath]: learnerPlanAPI.reducer,
 
         ...asyncReducers,
     });
@@ -70,6 +72,7 @@ const createReducer = (asyncReducers) => (state, action) => {
 export const concatMiddleware = [
     // Add the API middleware
     evidenceAPI.middleware,
+    learnerPlanAPI.middleware
 ]
 
 
