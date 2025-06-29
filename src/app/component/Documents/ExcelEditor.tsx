@@ -344,14 +344,6 @@ const ExcelEditor: React.FC<ExcelEditorProps> = ({
       {/* Action Buttons */}
       <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         <Button
-          variant="outlined"
-          startIcon={<Save />}
-          disabled={loading || disabled}
-          sx={{ color: '#217346', borderColor: '#217346' }}
-        >
-          Save Draft
-        </Button>
-        <Button
           variant="contained"
           startIcon={<CloudUpload />}
           onClick={() => {

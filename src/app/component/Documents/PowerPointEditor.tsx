@@ -490,14 +490,6 @@ const PowerPointEditor: React.FC<PowerPointEditorProps> = ({
       {/* Action Buttons */}
       <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         <Button
-          variant="outlined"
-          startIcon={<Save />}
-          disabled={loading || disabled}
-          sx={{ color: '#d83b01', borderColor: '#d83b01' }}
-        >
-          Save Draft
-        </Button>
-        <Button
           variant="contained"
           startIcon={<CloudUpload />}
           onClick={() => {
