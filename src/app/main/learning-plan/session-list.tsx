@@ -46,7 +46,7 @@ const SessionList = () => {
   const { id: learner_id } = useParams()
   const navigate = useNavigate()
   const dispatch: any = useDispatch()
-  const { learner } = useSelector(selectLearnerManagement)
+  const { learner ,trainer} = useSelector(selectLearnerManagement)
   const user =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectUser)?.data
@@ -59,7 +59,6 @@ const SessionList = () => {
 
   const { data, isLoading, isError, error } = useGetLearnerPlanListQuery(
     {
-      assessor_id: user.user_id,
       learners: learner_id,
       type: typeFilter,
     },
