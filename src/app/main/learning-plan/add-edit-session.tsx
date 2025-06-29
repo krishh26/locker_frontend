@@ -370,7 +370,7 @@ const AddEditSession = (props) => {
                         </MenuItem>
                         {session.trainer.map((data) => (
                           <MenuItem key={data.id} value={data.user_id}>
-                            {data.user_name}
+                            {data.first_name} {data.last_name}
                           </MenuItem>
                         ))}
                       </Select>
@@ -412,7 +412,7 @@ const AddEditSession = (props) => {
                               key={learner.learner_id}
                               value={learner.learner_id}
                             >
-                              {learner.user_name}
+                              {learner.first_name} {learner.last_name}
                             </MenuItem>
                           ))
                         )}
