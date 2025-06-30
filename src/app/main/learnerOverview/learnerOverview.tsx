@@ -18,7 +18,7 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData }) => {
   return (
     <>
       <div className="m-24 flex flex-col items-center border-1 rounded-8 py-12 bg-[#e8e8e882]">
-        <div className="flex w-full justify-evenly items-center border-r-1">
+        <div className="flex flex-wrap w-full justify-evenly items-center border-r-1">
           <div>
             <Avatar sx={{ width: 70, height: 70, bgcolor: getRandomColor(learner?.first_name?.toLowerCase().charAt(0)) }}
               src={learner?.learner_id ? learner?.avatar : learner.data.avatar?.url}

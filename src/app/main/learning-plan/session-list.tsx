@@ -17,8 +17,9 @@ import {
   TableHead,
   TableRow,
   Tooltip,
-  Typography
+  Typography,
 } from '@mui/material'
+
 import {
   useGetLearnerPlanListQuery,
   useUpdateSessionMutation,
@@ -32,11 +33,7 @@ import { selectUser } from 'app/store/userSlice'
 import { addMinutes, format } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import {
-  redirect,
-  useNavigate,
-  useParams
-} from 'react-router-dom'
+import { Link, redirect, useNavigate, useParams } from 'react-router-dom'
 
 const SessionList = () => {
   const [feedback, setFeedback] = useState({})
@@ -46,7 +43,7 @@ const SessionList = () => {
   const { id: learner_id } = useParams()
   const navigate = useNavigate()
   const dispatch: any = useDispatch()
-  const { learner ,trainer} = useSelector(selectLearnerManagement)
+  const { learner, trainer } = useSelector(selectLearnerManagement)
   const user =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectUser)?.data
@@ -166,9 +163,7 @@ const SessionList = () => {
             <Button
               variant='contained'
               color='primary'
-              onClick={() =>
-                navigate(`/add-session`)
-              }
+              onClick={() => navigate(`/add-session`)}
             >
               Add Session
             </Button>
@@ -283,12 +278,13 @@ const SessionList = () => {
                       <TableCell style={{ width: 150 }}>
                         <Select
                           size='small'
-                          value={session.Attended}
+                          value={session.Attended === null ? '' : session.Attended}
                           displayEmpty
                           fullWidth
+                          disabled={!user.roles.includes('Trainer')}
                           onChange={(e) =>
                             handleUpdateSubmit({
-                              Attended: e.target.value,
+                              Attended: e.target.value === '' ? null : e.target.value,
                               id: session.sessionNo,
                             })
                           }
@@ -319,11 +315,13 @@ const SessionList = () => {
                                 : 'default'
                             }
                             onClick={() => {
-                              if (user.user_id !== session.learner?.learner_id)
+                              if (
+                                user.learner_id !== session.learner?.learner_id
+                              )
                                 return
-                              updateSession({
-                                id: session.id,
+                              handleUpdateSubmit({
                                 feedback: 'Good',
+                                id: session.sessionNo,
                               })
                             }}
                           >
@@ -340,11 +338,13 @@ const SessionList = () => {
                                 : 'default'
                             }
                             onClick={() => {
-                              if (user.user_id !== session.learner?.learner_id)
+                              if (
+                                user.learner_id !== session.learner?.learner_id
+                              )
                                 return
-                              updateSession({
-                                id: session.id,
+                              handleUpdateSubmit({
                                 feedback: 'Neutral',
+                                id: session.sessionNo,
                               })
                             }}
                           >
@@ -359,11 +359,13 @@ const SessionList = () => {
                               session.feedback === 'Bad' ? 'error' : 'default'
                             }
                             onClick={() => {
-                              if (user.user_id !== session.learner?.learner_id)
+                              if (
+                                user.learner_id !== session.learner?.learner_id
+                              )
                                 return
-                              updateSession({
-                                id: session.id,
+                              handleUpdateSubmit({
                                 feedback: 'Bad',
+                                id: session.sessionNo,
                               })
                             }}
                           >
