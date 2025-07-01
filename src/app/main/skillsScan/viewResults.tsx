@@ -12,7 +12,7 @@ import { useSelector } from 'react-redux'
 import { SecondaryButton } from 'src/app/component/Buttons'
 import { Line } from 'react-chartjs-2'
 import 'chart.js/auto'
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas'
 import html2pdf from 'html2pdf.js'
 import { selectGlobalUser } from 'app/store/globalUser'
 import { selectSkillsScan } from 'app/store/skillsScan'
@@ -86,6 +86,7 @@ const ViewResults = () => {
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectGlobalUser)?.selectedUser
   const { courseData } = useSelector(selectLearnerManagement)
+  console.log("🚀 ~ ViewResults ~ courseData:", courseData)
   const { selectedCourse } = useSelector(selectSkillsScan)
   const chartRef = useRef<any>(null)
 
@@ -295,8 +296,13 @@ const ViewResults = () => {
             <Card className='rounded-0 p-10'>
               {courseData &&
                 courseData.units?.map((row) => (
-                  <Grid>
+                  <Grid classes="mb-4" key={row.id}>
                     <Typography>{row?.title}</Typography>
+                    <ul className='list-disc list-inside text-gray-800 space-y-2'>
+                      {row?.subUnit?.map((item) => (
+                        <li key={item.id}>{item?.subTitle}</li>
+                      ))}
+                      </ul>
                   </Grid>
                 ))}
             </Card>
