@@ -507,8 +507,19 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
         throw new Error('Document content cannot be empty');
       }
 
-      const blob = generateWordDocument();
-      const filename = `${documentTitle}.pdf`;
+      const header = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+          xmlns:w='urn:schemas-microsoft-com:office:word' 
+          xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><title>${documentTitle}</title></head><body>`
+      const footer = '</body></html>'
+      const html = `${header}<h2>${documentTitle}</h2>${wordContent}${footer}`
+
+      const blob = new Blob([html], {
+        type: 'application/msword;charset=utf-8',
+      })
+
+      const filename = `${documentTitle || 'document'}.doc`;
       await uploadCreatedDocument(blob, filename);
     } catch (error) {
       console.error('Word creation error:', error);

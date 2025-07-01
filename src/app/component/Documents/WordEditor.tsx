@@ -395,21 +395,14 @@ const WordEditor: React.FC<WordEditorProps> = ({
       {/* Action Buttons */}
       <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
         <Button
-          variant="outlined"
-          startIcon={<Save />}
-          disabled={loading || disabled}
-        >
-          Save Draft
-        </Button>
-        <Button
           variant="contained"
           startIcon={<CloudUpload />}
           onClick={() => {
             // Get plain text content for validation
-            const plainTextContent = editorRef.current?.innerText || '';
+            const plainTextContent = editorRef.current?.innerHTML || '';
             console.log('Word upload button clicked', {
               documentTitle,
-              wordContent: plainTextContent.substring(0, 50) + '...',
+              wordContent: plainTextContent,
               loading,
               disabled
             });
