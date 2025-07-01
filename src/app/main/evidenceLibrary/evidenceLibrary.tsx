@@ -35,6 +35,7 @@ import FileCopyIcon from '@mui/icons-material/FileCopy'
 import { useSelector } from 'react-redux'
 
 import ReactUploadFile from 'src/app/component/react-upload-files'
+import EvidenceUploadWithCreation from 'src/app/component/react-upload-files/EvidenceUploadWithCreation'
 import { fuzzyFilter } from 'src/utils/string'
 import TablePaginationComponent from 'src/app/component/TablePagination'
 import ReactTable from 'src/app/component/react-table'
@@ -355,7 +356,7 @@ const EvidenceLibrary: FC = () => {
           color='primary'
           sx={{ mb: 2 }}
           onClick={() => setIsOpenFileUpload(true)}
-          startIcon={<i className='material-icons'>upload</i>}
+          startIcon={<i className='material-icons'>add</i>}
         >
           Add Evidence
         </Button>
@@ -535,14 +536,18 @@ const EvidenceLibrary: FC = () => {
       <Dialog
         open={isOpenFileUpload}
         onClose={() => setIsOpenFileUpload(false)}
+        maxWidth="xl"
+        fullWidth
         sx={{
           '.MuiDialog-paper': {
             borderRadius: '4px',
             padding: '1rem',
+            height: '90vh',
+            maxHeight: '90vh'
           },
         }}
       >
-        <ReactUploadFile handleClose={handleClose} />
+        <EvidenceUploadWithCreation handleClose={handleClose} />
       </Dialog>
       <Dialog
         open={isOpenReupload}
