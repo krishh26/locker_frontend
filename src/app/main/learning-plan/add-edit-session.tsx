@@ -89,55 +89,16 @@ const schema = yup.object().shape({
         .min(1, 'Repeat days must be at least 1'),
     otherwise: (schema) => schema.notRequired(),
   }),
-  include_holidays: yup.boolean(),
   include_weekends: yup.boolean(),
   end_date: yup.string().when('repeat_session', {
     is: true,
     then: (schema) => schema.required('End date is required'),
     otherwise: (schema) => schema.notRequired(),
   }),
-  upload_attachment: yup.boolean(),
-  file: yup.mixed<File>().when('upload_attachment', {
-    is: true,
-    then: (schema) =>
-      schema
-        .required('A file is required')
-        .test('fileSize', 'File is too large', (value): value is File => {
-          return value instanceof File && value.size <= 10 * 1024 * 1024 // 10MB
-        })
-        .test('fileType', 'Unsupported file format', (value): value is File => {
-          const extension = value?.name?.split('.').pop()?.toUpperCase()
-          return (
-            value instanceof File &&
-            !!extension &&
-            FileTypes.includes(extension)
-          )
-        }),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  file_type: yup.string().when('upload_attachment', {
-    is: true,
-    then: (schema) => schema.required('File type is required'),
-  }),
-  session_type: yup.string().when('upload_attachment', {
-    is: true,
-    then: (schema) => schema.required('Session type is required'),
-  }),
 })
 
 const AddEditSession = (props) => {
-  const [sessionData, setSessionData] = useState({
-    trainer_id: '',
-    learners: [],
-    title: '',
-    description: '',
-    method: 'Traditional',
-    location: '',
-    startDate: '',
-    Duration: '0:0',
-    type: '',
-  })
-  const { edit, handleCloseDialog } = props
+
   const dispatch: any = useDispatch()
   const navigate = useNavigate()
   const session = useSelector(selectSession)
@@ -166,10 +127,8 @@ const AddEditSession = (props) => {
       repeat_session: false,
       repeat_frequency: '',
       repeat_every: '',
-      include_holidays: false,
       include_weekends: false,
       end_date: '',
-      upload_attachment: false,
       file: null,
       file_type: '',
       session_type: '',
@@ -248,47 +207,11 @@ const AddEditSession = (props) => {
       ...(data.repeat_session && {
         repeat_frequency: data.repeat_frequency,
         repeat_every: data.repeat_every,
-        include_holidays: data.include_holidays,
         include_weekends: data.include_weekends,
         repeat_end_date: data.end_date,
-        upload_attachment: data.upload_attachment,
-        ...(data.upload_attachment && {
-          file_attachments: [],
-        }),
       }),
     }
 
-    let fileResponse
-
-    if (data.upload_attachment) {
-      const formData = new FormData()
-      formData.append('assessor_id', data.trainer_id)
-      formData.append('file', data.file)
-      formData.append('file_type', data.file_type)
-      formData.append('session_type', data.session_type)
-
-      try {
-        fileResponse = await fileUploadSession(formData).unwrap()
-      } catch (error) {
-        console.error('Error uploading file:', error)
-        return
-      }
-
-      if (fileResponse.status) {
-        const { data } = fileResponse
-        const file_attachments = []
-        file_attachments.push({
-          file_type: data.uploaded_file.file_type,
-          session_type: data.uploaded_file.session_type,
-          file_url: data.uploaded_file.file_url,
-          file_name: data.uploaded_file.file_name,
-          file_size: data.uploaded_file.file_size,
-          s3_key: data.s3_key,
-          uploaded_at: data.uploaded_file.uploaded_at,
-        })
-        payload.file_attachments = file_attachments
-      }
-    }
 
     try {
       await createNewSession(payload).unwrap()
@@ -320,25 +243,6 @@ const AddEditSession = (props) => {
     sessionStorage.getItem('learnerToken')
   )?.user
   const selectedLearnerId = sessionDataFromStorage?.learner_id || null
-
-  useEffect(() => {
-    if (session.update) {
-      setSessionData({
-        ...session.singleData,
-        trainer_id: session.singleData?.trainer_id?.user_id,
-        learners: session.singleData?.learners.map(
-          (learner) => learner.learner_id
-        ),
-        startDate: new Date(session.singleData?.startDate),
-      })
-    }
-    if (selectedLearnerId) {
-      setSessionData((prevState) => ({
-        ...prevState,
-        learners: [selectedLearnerId],
-      }))
-    }
-  }, [])
 
   return (
     <Grid>
@@ -716,18 +620,6 @@ const AddEditSession = (props) => {
 
                     <FormGroup>
                       <Controller
-                        name='include_holidays'
-                        control={control}
-                        render={({ field }) => (
-                          <FormControlLabel
-                            control={
-                              <Checkbox {...field} checked={field.value} />
-                            }
-                            label='Include holidays?'
-                          />
-                        )}
-                      />
-                      <Controller
                         name='include_weekends'
                         control={control}
                         render={({ field }) => (
@@ -761,135 +653,6 @@ const AddEditSession = (props) => {
                       <ErrorText>{errors.end_date?.message}</ErrorText>
                     </Grid>
 
-                    <FormGroup>
-                      <Controller
-                        name='upload_attachment'
-                        control={control}
-                        render={({ field }) => (
-                          <FormControlLabel
-                            control={
-                              <Checkbox {...field} checked={field.value} />
-                            }
-                            label='Upload session file attachment?'
-                          />
-                        )}
-                      />
-                      {watch('upload_attachment') && (
-                        <>
-                          {/* File type dropdown */}
-                          <Grid container spacing={2} className='my-2'>
-                            {/* File Type */}
-                            <Grid item xs={12} md={6}>
-                              <FormControl fullWidth size='small'>
-                                <InputLabel id='file-type-label'>
-                                  File Type
-                                </InputLabel>
-                                <Controller
-                                  name='file_type'
-                                  control={control}
-                                  render={({ field }) => (
-                                    <Select
-                                      {...field}
-                                      labelId='file-type-label'
-                                      label='File Type'
-                                    >
-                                      {fileTypes.map((type) => (
-                                        <MenuItem key={type} value={type}>
-                                          {type}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  )}
-                                />
-                              </FormControl>
-                              <ErrorText>{errors.file_type?.message}</ErrorText>
-                            </Grid>
-
-                            {/* Session Type */}
-                            <Grid item xs={12} md={6}>
-                              <FormControl fullWidth size='small'>
-                                <InputLabel id='session-type-label'>
-                                  Session Type
-                                </InputLabel>
-                                <Controller
-                                  name='session_type'
-                                  control={control}
-                                  render={({ field }) => (
-                                    <Select
-                                      {...field}
-                                      labelId='session-type-label'
-                                      label='Session Type'
-                                    >
-                                      {sessionTypes.map((type) => (
-                                        <MenuItem key={type} value={type}>
-                                          {type}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  )}
-                                />
-                              </FormControl>
-                              <ErrorText>
-                                {errors.session_type?.message}
-                              </ErrorText>
-                            </Grid>
-                          </Grid>
-                          <Grid className='w-full mt-4'>
-                            {/* File upload */}
-
-                            <Controller
-                              name='file'
-                              control={control}
-                              render={({ field }) => (
-                                <FileUploader
-                                  handleChange={(file: File) => {
-                                    field.onChange(file)
-                                  }}
-                                  name='file'
-                                  types={FileTypes}
-                                  multiple={false}
-                                  maxSize={10}
-                                >
-                                  <div
-                                    className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[200px] flex flex-col items-center justify-center ${
-                                      errors.file ? 'border-red-500' : ''
-                                    }`}
-                                  >
-                                    <div className='flex justify-center mb-4'>
-                                      <img
-                                        src='assets/images/svgImage/uploadimage.svg'
-                                        alt='Upload'
-                                        className='w-36 h-36 object-contain mx-auto'
-                                      />
-                                    </div>
-                                    {field.value ? (
-                                      <>
-                                        <div className='text-center text-gray-700 font-medium '>
-                                          <p>{field.value.name}</p>
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <p className='text-center mb-2 text-gray-600'>
-                                          Drag and drop your files here or{' '}
-                                          <span className='text-blue-500 underline'>
-                                            Browse
-                                          </span>
-                                        </p>
-                                        <p className='text-center text-sm text-gray-500'>
-                                          Max 10MB files are allowed
-                                        </p>
-                                      </>
-                                    )}
-                                  </div>
-                                </FileUploader>
-                              )}
-                            />
-                            <ErrorText>{errors.file?.message}</ErrorText>
-                          </Grid>
-                        </>
-                      )}
-                    </FormGroup>
                   </>
                 )}
               </Box>
