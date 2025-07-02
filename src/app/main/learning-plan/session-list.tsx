@@ -31,7 +31,10 @@ import {
   FormLabel,
   Stack,
   FormHelperText,
+  DialogActions,
 } from '@mui/material'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
@@ -79,12 +82,26 @@ const schema = yup.object().shape({
   unit: yup.string().optional(),
 })
 
+const editSchema = yup.object().shape({
+  actionDescription: yup
+    .string()
+    .max(1000, 'Max 1000 characters')
+    .required('Action Description is required'),
+  assessorFeedback: yup.string().optional(),
+  learnerFeedback: yup.string().optional(),
+  learnerStatus: yup.string().required(),
+  onOffJob: yup.string().required('Select On/Off the Job'),
+  targetDate: yup.date().typeError('Target date is required').nullable().required('Target Date is required'),
+})
+
 const SessionList = () => {
   const [feedback, setFeedback] = useState({})
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [sessionListData, setSessionListData] = useState([])
   const [isOpenAction, setIsOpenAction] = useState(false)
+  const [openDeleteSession, setOpenDeleteSession] = useState(false)
+  const [openEditSession, setOpenEditSession] = useState(false)
   const { id: learner_id } = useParams()
   const navigate = useNavigate()
   const dispatch: any = useDispatch()
@@ -107,6 +124,23 @@ const SessionList = () => {
       onOffJob: '',
       actionType: 'Action Learner',
       unit: '',
+    },
+  })
+
+  const {
+    handleSubmit: editSubmit,
+    control: editControl,
+    watch: editWatch,
+    formState: { errors: editErrors },
+  } = useForm({
+    resolver: yupResolver(editSchema),
+    defaultValues: {
+      actionDescription: '',
+      assessorFeedback: '',
+      learnerFeedback: '',
+      learnerStatus: '',
+      onOffJob: '',
+      targetDate: null,
     },
   })
 
@@ -218,6 +252,46 @@ const SessionList = () => {
     console.log('Form Data:', data)
   }
 
+  const handleDeleteSession = async (sessionNo) => {
+    try {
+      // await deleteSession(sessionNo).unwrap()
+      dispatch(
+        showMessage({
+          message: 'Session deleted successfully',
+          variant: 'success',
+        })
+      )
+      setOpenDeleteSession(false)
+    } catch (error) {
+      console.log(error)
+      dispatch(
+        showMessage({ message: 'Failed to delete session', variant: 'error' })
+      )
+    }
+  }
+
+  const handleOpenDeleteSession = (sessionNo) => {
+    setOpenDeleteSession(sessionNo)
+  }
+
+  const handleCloseDeleteSession = () => {
+    setOpenDeleteSession(false)
+  }
+
+  const handleOpenEditSession = (session) => {
+    setOpenEditSession(session)
+  }
+
+  const handleCloseEditSession = () => {
+    setOpenEditSession(null)
+  }
+
+  const handleEditSession = () => {
+    try {
+    } catch (error) {}
+  }
+
+  const desc = editWatch('actionDescription') || ''
   return (
     <Box p={3}>
       <div className='flex justify-between items-center'>
@@ -456,7 +530,7 @@ const SessionList = () => {
                   </AccordionSummary>
 
                   <AccordionDetails className='px-6'>
-                    <div className='flex items-end justify-end'>
+                    <div className='flex items-end justify-end mb-8'>
                       <Button
                         variant='contained'
                         className='rounded-md'
@@ -467,6 +541,47 @@ const SessionList = () => {
                         Add Action
                       </Button>
                     </div>
+                    <Table size='small'>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Who</TableCell>
+                          <TableCell>Action</TableCell>
+                          <TableCell>Description</TableCell>
+                          <TableCell>Files</TableCell>
+                          <TableCell>Units</TableCell>
+                          <TableCell>Target Date</TableCell>
+                          <TableCell>Feedback</TableCell>
+                          <TableCell>Duration</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Action</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        <TableCell>Learner</TableCell>
+                        <TableCell>Dev</TableCell>
+                        <TableCell>Test</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell>03/09/2025</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell>
+                          <IconButton
+                            onClick={() => handleOpenEditSession(session)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            onClick={() =>
+                              handleOpenDeleteSession(session.sessionNo)
+                            }
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableBody>
+                    </Table>
                   </AccordionDetails>
                 </Accordion>
               </CardContent>
@@ -488,7 +603,11 @@ const SessionList = () => {
         <DialogContent>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <form onSubmit={handleSubmit(onSubmit)} noValidate>
-              <Stack spacing={3} sx={{ maxWidth: 500, mx: 'auto' }} className='mt-8'>
+              <Stack
+                spacing={3}
+                sx={{ maxWidth: 500, mx: 'auto' }}
+                className='mt-8'
+              >
                 <Controller
                   name='actionName'
                   control={control}
@@ -615,6 +734,164 @@ const SessionList = () => {
                   Measurable, Achievable, Realistic and does it have a Target
                   date?
                 </div>
+              </Stack>
+            </form>
+          </LocalizationProvider>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(openDeleteSession)}
+        onClose={handleCloseDeleteSession}
+      >
+        <DialogTitle>Delete Session</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this session?
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant='outlined'
+            color='secondary'
+            onClick={handleCloseDeleteSession}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant='contained'
+            color='error'
+            onClick={handleDeleteSession}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={Boolean(openEditSession)}
+        onClose={handleCloseEditSession}
+        sx={{
+          '.MuiDialog-paper': {
+            borderRadius: '4px',
+            padding: '1rem',
+          },
+        }}
+      >
+        <DialogTitle>Edit Action</DialogTitle>
+        <DialogContent>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <form onSubmit={editSubmit(onSubmit)} noValidate>
+              <Stack
+                spacing={3}
+                sx={{ width: 500, mx: 'auto' }}
+                className='mt-8'
+              >
+                <Controller
+                  name='actionDescription'
+                  control={editControl}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label='Action Description'
+                      fullWidth
+                      multiline
+                      minRows={3}
+                      error={!!editErrors.actionDescription}
+                      helperText={
+                        editErrors.actionDescription?.message ||
+                        `Remaining left characters:- ${1000 - desc.length}`
+                      }
+                    />
+                  )}
+                />
+
+                <Controller
+                  name='assessorFeedback'
+                  control={editControl}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label='Assessor Feedback'
+                      fullWidth
+                      multiline
+                      minRows={2}
+                    />
+                  )}
+                />
+
+                <Controller
+                  name='learnerFeedback'
+                  control={editControl}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label='Learner Feedback'
+                      fullWidth
+                      multiline
+                      minRows={2}
+                    />
+                  )}
+                />
+
+                <Controller
+                  name='learnerStatus'
+                  control={editControl}
+                  render={({ field }) => (
+                    <FormControl fullWidth>
+                      <InputLabel>Learner Status</InputLabel>
+                      <Select {...field} label='Learner Status'>
+                        <MenuItem value='not started'>not started</MenuItem>
+                        <MenuItem value='in progress'>in progress</MenuItem>
+                        <MenuItem value='completed'>completed</MenuItem>
+                      </Select>
+                    </FormControl>
+                  )}
+                />
+
+                <Controller
+                  name='targetDate'
+                  control={editControl}
+                  render={({ field }) => (
+                    <DatePicker
+                      {...field}
+                      label='Target Date'
+                      format='dd/MM/yyyy'
+                      value={field.value ?? null}
+                      onChange={(date) => field.onChange(date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          error: !!editErrors.targetDate,
+                          helperText: editErrors.targetDate
+                            ?.message as React.ReactNode,
+                        },
+                      }}
+                    />
+                  )}
+                />
+
+                <Controller
+                  name='onOffJob'
+                  control={editControl}
+                  render={({ field }) => (
+                    <FormControl fullWidth error={!!editErrors.onOffJob}>
+                      <InputLabel>On/Off the Job</InputLabel>
+                      <Select {...field} label='On/Off the Job'>
+                        <MenuItem value='Not Applicable'>
+                          Not Applicable
+                        </MenuItem>
+                        <MenuItem value='On the Job'>On the Job</MenuItem>
+                        <MenuItem value='Off the Job'>Off the Job</MenuItem>
+                      </Select>
+                      <FormHelperText>
+                        {editErrors.onOffJob?.message}
+                      </FormHelperText>
+                    </FormControl>
+                  )}
+                />
+            
+                <Button variant='contained' type='submit'>
+                  Submit
+                </Button>
+
+              
               </Stack>
             </form>
           </LocalizationProvider>
