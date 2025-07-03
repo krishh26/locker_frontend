@@ -83,7 +83,27 @@ export const learnerPlanAPI = createApi({
         method: 'POST',
         body: data,
       }),
-    })
+    }),
+    addActionPlaner: builder.mutation({
+      query: (data) => ({
+        url: `/learner-action/create`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    editActionPlaner: builder.mutation({
+      query: (data) => ({
+        url: `/learner-action/update/${data.id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+    }),
+    deleteActionPlaner: builder.mutation({
+      query: (id) => ({
+        url: `/learner-action/delete/${id}`,
+        method: 'DELETE',
+      }),
+    }),
   }),
 })
 export const {
@@ -94,4 +114,7 @@ export const {
   useCreateNewSessionMutation,
   useUpdateSessionMutation,
   useFileUploadSessionMutation,
+  useAddActionPlanerMutation,
+  useEditActionPlanerMutation,
+  useDeleteActionPlanerMutation,
 } = learnerPlanAPI
