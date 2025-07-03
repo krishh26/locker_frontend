@@ -35,12 +35,16 @@ import {
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
+import AddFile from '@mui/icons-material/NoteAdd'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import * as yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import {
+  useAddActionPlanerMutation,
+  useDeleteActionPlanerMutation,
+  useEditActionPlanerMutation,
   useGetLearnerPlanListQuery,
   useUpdateSessionMutation,
 } from 'app/store/api/learner-plan-api'
@@ -55,6 +59,8 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, redirect, useNavigate, useParams } from 'react-router-dom'
 import { Controller, useForm } from 'react-hook-form'
+import { UserRole } from 'src/enum'
+import { FileUploader } from 'react-drag-drop-files'
 
 const schema = yup.object().shape({
   actionName: yup.string().required('Action name is required'),
@@ -83,15 +89,40 @@ const schema = yup.object().shape({
 })
 
 const editSchema = yup.object().shape({
-  actionDescription: yup
-    .string()
-    .max(1000, 'Max 1000 characters')
-    .required('Action Description is required'),
-  assessorFeedback: yup.string().optional(),
-  learnerFeedback: yup.string().optional(),
+  actionDescription: yup.string().max(1000, 'Max 1000 characters'),
+  trainer_feedback: yup.string().optional(),
+  learner_feedback: yup.string().optional(),
   learnerStatus: yup.string().required(),
-  onOffJob: yup.string().required('Select On/Off the Job'),
-  targetDate: yup.date().typeError('Target date is required').nullable().required('Target Date is required'),
+  onOffJob: yup.string(),
+  targetDate: yup.date().typeError('Target date is required').nullable(),
+  time_spent: yup.number().optional(),
+  status: yup.string(),
+})
+
+const FileTypes = [
+  'JPG',
+  'PNG',
+  'GIF',
+  'PDF',
+  'DOCX',
+  'XLSX',
+  'PPTX',
+  'TXT',
+  'ZIP',
+  'MP4',
+]
+const fileSchema = yup.object().shape({
+  file: yup
+    .mixed<File>()
+    .test('fileSize', 'File is too large', (value): value is File => {
+      return value instanceof File && value.size <= 10 * 1024 * 1024 // 10MB
+    })
+    .test('fileType', 'Unsupported file format', (value): value is File => {
+      const extension = value?.name?.split('.').pop()?.toUpperCase()
+      return (
+        value instanceof File && !!extension && FileTypes.includes(extension)
+      )
+    }),
 })
 
 const SessionList = () => {
@@ -99,12 +130,16 @@ const SessionList = () => {
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [sessionListData, setSessionListData] = useState([])
-  const [isOpenAction, setIsOpenAction] = useState(false)
-  const [openDeleteSession, setOpenDeleteSession] = useState(false)
+  const [isOpenAction, setIsOpenAction] = useState('')
+  const [openDeleteSession, setOpenDeleteSession] = useState('')
   const [openEditSession, setOpenEditSession] = useState(false)
+  const [openAddFile, setOpenAddFile] = useState('')
+  const [unitList, setUnitList] = useState([])
+
   const { id: learner_id } = useParams()
   const navigate = useNavigate()
   const dispatch: any = useDispatch()
+
   const { learner, trainer } = useSelector(selectLearnerManagement)
   const user =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
@@ -136,11 +171,24 @@ const SessionList = () => {
     resolver: yupResolver(editSchema),
     defaultValues: {
       actionDescription: '',
-      assessorFeedback: '',
-      learnerFeedback: '',
+      trainer_feedback: '',
+      learner_feedback: '',
       learnerStatus: '',
       onOffJob: '',
       targetDate: null,
+      time_spent: 0,
+      status: 'not_started',
+    },
+  })
+
+  const {
+    handleSubmit: fileSubmit,
+    control: fileControl,
+    formState: { errors: fileErrors },
+  } = useForm({
+    resolver: yupResolver(fileSchema),
+    defaultValues: {
+      file: null,
     },
   })
 
@@ -154,6 +202,7 @@ const SessionList = () => {
     {
       learners: learner_id,
       type: typeFilter,
+      Attended: statusFilter,
     },
     {
       skip: !user && !learner_id,
@@ -161,6 +210,9 @@ const SessionList = () => {
   )
 
   const [updateSession] = useUpdateSessionMutation()
+  const [addActionPlaner] = useAddActionPlanerMutation()
+  const [editActionPlaner] = useEditActionPlanerMutation()
+  const [deleteActionPlaner] = useDeleteActionPlanerMutation()
 
   useEffect(() => {
     dispatch(getLearnerDetails(learner_id))
@@ -248,20 +300,47 @@ const SessionList = () => {
     }
   }
 
-  const onSubmit = (data: any) => {
-    console.log('Form Data:', data)
+  const onSubmit = async (data: any) => {
+    const payload = {
+      learner_plan_id: isOpenAction,
+      action_name: data.actionName,
+      action_description: data.actionDescription,
+      target_date: format(data.targetDate, 'dd-MM-yyyy'),
+      job_type: data.onOffJob,
+    }
+
+    try {
+      await addActionPlaner({
+        ...payload,
+      }).unwrap()
+      dispatch(
+        showMessage({
+          message: 'Action Planer added successfully',
+          variant: 'success',
+        })
+      )
+      setIsOpenAction('')
+    } catch (error) {
+      console.log(error)
+      dispatch(
+        showMessage({
+          message: 'Failed to add action planer',
+          variant: 'error',
+        })
+      )
+    }
   }
 
-  const handleDeleteSession = async (sessionNo) => {
+  const handleDeleteSession = async () => {
     try {
-      // await deleteSession(sessionNo).unwrap()
+      await deleteActionPlaner(openDeleteSession).unwrap()
       dispatch(
         showMessage({
           message: 'Session deleted successfully',
           variant: 'success',
         })
       )
-      setOpenDeleteSession(false)
+      setOpenDeleteSession('')
     } catch (error) {
       console.log(error)
       dispatch(
@@ -275,7 +354,7 @@ const SessionList = () => {
   }
 
   const handleCloseDeleteSession = () => {
-    setOpenDeleteSession(false)
+    setOpenDeleteSession('')
   }
 
   const handleOpenEditSession = (session) => {
@@ -286,12 +365,26 @@ const SessionList = () => {
     setOpenEditSession(null)
   }
 
-  const handleEditSession = () => {
+  const handleEditSession = async (data) => {
+    console.log('🚀 ~ handleEditSession ~ data:', data)
     try {
     } catch (error) {}
   }
 
   const desc = editWatch('actionDescription') || ''
+
+  const handleAddFile = async (data) => {
+    console.log("🚀 ~ handleAddFile ~ data:", data)
+    try {
+      // const formData = new FormData()
+      // formData.append('file', file)
+      // const response = await uploadFile(formData)
+      // console.log(response)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   return (
     <Box p={3}>
       <div className='flex justify-between items-center'>
@@ -530,17 +623,23 @@ const SessionList = () => {
                   </AccordionSummary>
 
                   <AccordionDetails className='px-6'>
-                    <div className='flex items-end justify-end mb-8'>
-                      <Button
-                        variant='contained'
-                        className='rounded-md'
-                        color='primary'
-                        size='small'
-                        onClick={() => setIsOpenAction(session.sessionNo)}
-                      >
-                        Add Action
-                      </Button>
-                    </div>
+                    {(user.roles.includes('Trainer') ||
+                      user.roles.includes('Admin')) && (
+                      <div className='flex items-end justify-end mb-8'>
+                        <Button
+                          variant='contained'
+                          className='rounded-md'
+                          color='primary'
+                          size='small'
+                          onClick={() =>
+                            setIsOpenAction(session.learner?.learner_id)
+                          }
+                        >
+                          Add Action
+                        </Button>
+                      </div>
+                    )}
+
                     <Table size='small'>
                       <TableHead>
                         <TableRow>
@@ -573,6 +672,12 @@ const SessionList = () => {
                             <EditIcon />
                           </IconButton>
                           <IconButton
+                            onClick={() => setOpenAddFile(session.sessionNo)}
+                          >
+                            <AddFile />
+                          </IconButton>
+
+                          <IconButton
                             onClick={() =>
                               handleOpenDeleteSession(session.sessionNo)
                             }
@@ -591,7 +696,7 @@ const SessionList = () => {
       )}
       <Dialog
         open={Boolean(isOpenAction)}
-        onClose={() => setIsOpenAction(false)}
+        onClose={() => setIsOpenAction('')}
         sx={{
           '.MuiDialog-paper': {
             borderRadius: '4px',
@@ -672,11 +777,9 @@ const SessionList = () => {
                     <FormControl fullWidth error={!!errors.onOffJob}>
                       <InputLabel>On/Off the Job</InputLabel>
                       <Select {...field} label='On/Off the Job'>
-                        <MenuItem value='Not Applicable'>
-                          Not Applicable
-                        </MenuItem>
-                        <MenuItem value='On the Job'>On the Job</MenuItem>
-                        <MenuItem value='Off the Job'>Off the Job</MenuItem>
+                        <MenuItem value=''>Not Applicable</MenuItem>
+                        <MenuItem value='On-the-job'>On the Job</MenuItem>
+                        <MenuItem value='Off-the-job'>Off the Job</MenuItem>
                       </Select>
                       <FormHelperText>
                         {errors.onOffJob?.message}
@@ -777,7 +880,7 @@ const SessionList = () => {
         <DialogTitle>Edit Action</DialogTitle>
         <DialogContent>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <form onSubmit={editSubmit(onSubmit)} noValidate>
+            <form onSubmit={editSubmit(handleEditSession)} noValidate>
               <Stack
                 spacing={3}
                 sx={{ width: 500, mx: 'auto' }}
@@ -803,21 +906,25 @@ const SessionList = () => {
                 />
 
                 <Controller
-                  name='assessorFeedback'
+                  name='trainer_feedback'
                   control={editControl}
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      label='Assessor Feedback'
+                      label='Trainer Feedback'
                       fullWidth
                       multiline
+                      disabled={
+                        !user.roles.includes(UserRole.Trainer) ||
+                        !user.roles.includes(UserRole.Admin)
+                      }
                       minRows={2}
                     />
                   )}
                 />
 
                 <Controller
-                  name='learnerFeedback'
+                  name='learner_feedback'
                   control={editControl}
                   render={({ field }) => (
                     <TextField
@@ -826,6 +933,7 @@ const SessionList = () => {
                       fullWidth
                       multiline
                       minRows={2}
+                      disabled={!user.roles.includes(UserRole.Learner)}
                     />
                   )}
                 />
@@ -834,11 +942,14 @@ const SessionList = () => {
                   name='learnerStatus'
                   control={editControl}
                   render={({ field }) => (
-                    <FormControl fullWidth>
+                    <FormControl
+                      fullWidth
+                      disabled={!user.roles.includes(UserRole.Learner)}
+                    >
                       <InputLabel>Learner Status</InputLabel>
                       <Select {...field} label='Learner Status'>
-                        <MenuItem value='not started'>not started</MenuItem>
-                        <MenuItem value='in progress'>in progress</MenuItem>
+                        <MenuItem value='not_started'>not started</MenuItem>
+                        <MenuItem value='in_progress'>in progress</MenuItem>
                         <MenuItem value='completed'>completed</MenuItem>
                       </Select>
                     </FormControl>
@@ -886,16 +997,120 @@ const SessionList = () => {
                     </FormControl>
                   )}
                 />
-            
+
+                <Controller
+                  name='time_spent'
+                  control={editControl}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label='Time Spent'
+                      fullWidth
+                      type='number'
+                      error={!!editErrors.time_spent}
+                      helperText={editErrors.time_spent?.message}
+                    />
+                  )}
+                />
+
+                <Controller
+                  name='status'
+                  control={editControl}
+                  render={({ field }) => (
+                    <FormControl fullWidth error={!!editErrors.status}>
+                      <InputLabel>Status</InputLabel>
+                      <Select {...field} label='Status'>
+                        <MenuItem value='not_started'>Not Started</MenuItem>
+                        <MenuItem value='in-progress'>In Progress</MenuItem>
+                        <MenuItem value='completed'>Completed</MenuItem>
+                      </Select>
+                    </FormControl>
+                  )}
+                />
+
                 <Button variant='contained' type='submit'>
                   Submit
                 </Button>
-
-              
               </Stack>
             </form>
           </LocalizationProvider>
         </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(openAddFile)}
+        onClose={() => setOpenAddFile('')}
+        aria-labelledby='alert-dialog-title'
+        aria-describedby='alert-dialog-description'
+      >
+        <form onSubmit={handleSubmit(handleAddFile)}>
+          <DialogTitle id='alert-dialog-title'>
+            Manage Actions Files
+          </DialogTitle>
+          <DialogContent  sx={{ width: 500, mx: 'auto' }}>
+            <Grid className='w-full mt-4'>
+              {/* File upload */}
+              <Controller
+                name='file'
+                control={fileControl}
+                render={({ field }) => (
+                  <FileUploader
+                    handleChange={(file: File) => {
+                      field.onChange(file)
+                    }}
+                    name='file'
+                    types={FileTypes}
+                    multiple={false}
+                    maxSize={10}
+                  >
+                    <div
+                      className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[200px] flex flex-col items-center justify-center ${
+                        fileErrors.file ? 'border-red-500' : ''
+                      }`}
+                    >
+                      <div className='flex justify-center mb-4'>
+                        <img
+                          src='assets/images/svgImage/uploadimage.svg'
+                          alt='Upload'
+                          className='w-36 h-36 object-contain mx-auto'
+                        />
+                      </div>
+                      {field.value ? (
+                        <>
+                          <div className='text-center text-gray-700 font-medium '>
+                            <p>{field.value.name}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className='text-center mb-2 text-gray-600'>
+                            Drag and drop your files here or{' '}
+                            <span className='text-blue-500 underline'>
+                              Browse
+                            </span>
+                          </p>
+                          <p className='text-center text-sm text-gray-500'>
+                            Max 10MB files are allowed
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </FileUploader>
+                )}
+              />
+              <FormHelperText>
+                {fileErrors.file?.message?.toString() || ''}
+              </FormHelperText>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenAddFile('')} color='secondary'>
+              Cancel
+            </Button>
+            <Button type='submit' color='primary' autoFocus>
+              Upload
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
     </Box>
   )
