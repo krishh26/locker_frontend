@@ -13,7 +13,7 @@ import {
   Select,
   Skeleton,
   TextField,
-  Typography
+  Typography,
 } from '@mui/material'
 import {
   useCreateNewSessionMutation,
@@ -23,19 +23,13 @@ import {
   useGetOptionsListQuery,
 } from 'app/store/api/learner-plan-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
-import {
-  getLearnerAPI,
-  getTrainerAPI,
-  selectSession
-} from 'app/store/session'
+import { getLearnerAPI, getTrainerAPI, selectSession } from 'app/store/session'
 import { useEffect, useState } from 'react'
 import { FileUploader } from 'react-drag-drop-files'
 import { Controller, useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import {
-  LoadingButton
-} from 'src/app/component/Buttons'
+import { LoadingButton } from 'src/app/component/Buttons'
 import * as yup from 'yup'
 
 const repeatOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 20, 24]
@@ -53,7 +47,7 @@ const FileTypes = [
 ]
 const schema = yup.object().shape({
   trainer_id: yup.string().required('Trainer is required'),
-  learners: yup.string().required('Learner is required'),
+  learners: yup.array().min(1, 'At least one learner must be selected'),
   title: yup.string().required('Title is required'),
   description: yup.string().optional(),
   location: yup.string().required('Location is required'),
@@ -98,7 +92,6 @@ const schema = yup.object().shape({
 })
 
 const AddEditSession = (props) => {
-
   const dispatch: any = useDispatch()
   const navigate = useNavigate()
   const session = useSelector(selectSession)
@@ -157,18 +150,11 @@ const AddEditSession = (props) => {
   )
 
   const learnerList = learnerListData?.data ?? []
+  const selectedNames = learnerList.filter((learner) =>
+    selectedLearner.includes(learner.learner_id)
+  )
 
-  const { data: courseListData, isLoading: isCourseLoading } =
-    useGetCourseListQuery(
-      {
-        trainer_id: selectedTrainer,
-        learner_id: selectedLearner,
-      },
-      {
-        skip: !selectedTrainer || !selectedLearner,
-      }
-    )
-  const courseList = courseListData?.data?.courses ?? []
+  const courseList = selectedNames ?? []
 
   const { data: optionsList, isLoading: isOptionsLoading } =
     useGetOptionsListQuery(
@@ -190,6 +176,7 @@ const AddEditSession = (props) => {
   const { dataUpdatingLoadding } = props
 
   const onSubmit = async (data) => {
+    console.log('🚀 ~ onSubmit ~ data:', data)
     const Duration = `${data.hours}:${data.minutes}`
     const [hours, minutes] = Duration.split(':').map(Number)
     const totalMinutes = hours * 60 + minutes
@@ -211,7 +198,6 @@ const AddEditSession = (props) => {
         repeat_end_date: data.end_date,
       }),
     }
-
 
     try {
       await createNewSession(payload).unwrap()
@@ -291,7 +277,32 @@ const AddEditSession = (props) => {
                     name='learners'
                     control={control}
                     render={({ field }) => (
-                      <Select {...field} fullWidth size='small' displayEmpty>
+                      <Select
+                        {...field}
+                        fullWidth
+                        size='small'
+                        displayEmpty
+                        multiple
+                        value={field.value || []} // ensure array
+                        onChange={(e) => field.onChange(e.target.value)} // update value
+                        renderValue={(selected) => {
+                          if (selected.length === 0) {
+                            return <em>Select Learners</em>
+                          }
+
+                          const selectedNames = learnerList
+                            .filter((learner) =>
+                              selected.includes(learner.learner_id)
+                            )
+                            .map(
+                              (learner) =>
+                                `${learner.first_name} ${learner.last_name}`
+                            )
+                            .join(', ')
+
+                          return selectedNames
+                        }}
+                      >
                         {!selectedTrainer ? (
                           <MenuItem disabled>
                             Please select a trainer first
@@ -372,29 +383,57 @@ const AddEditSession = (props) => {
                     name='courses'
                     control={control}
                     render={({ field }) => {
-                      const { value, onChange } = field
+                      const { value = [], onChange } = field
                       const trainerId = watch('trainer_id')
                       const learners = watch('learners')
 
-                      const handleToggle = (id: number) => {
-                        if (value.includes(id)) {
-                          onChange(value.filter((v) => v !== id))
-                        } else {
-                          onChange([...value, id])
-                        }
+                      const selectedLearners = learnerList.filter((l) =>
+                        learners.includes(l.learner_id)
+                      )
+
+                      const getCoursesForLearner = (learnerId) =>
+                        value.find((entry) => entry.learner_id === learnerId)
+                          ?.course || []
+
+                      const updateCoursesForLearner = (
+                        learnerId,
+                        updatedCourses
+                      ) => {
+                        const newValue = value.some(
+                          (entry) => entry.learner_id === learnerId
+                        )
+                          ? value.map((entry) =>
+                              entry.learner_id === learnerId
+                                ? { ...entry, course: updatedCourses }
+                                : entry
+                            )
+                          : [
+                              ...value,
+                              { learner_id: learnerId, course: updatedCourses },
+                            ]
+
+                        onChange(newValue)
                       }
 
-                      const handleToggleAll = () => {
-                        if (value.length === courseList.length) {
-                          onChange([])
-                        } else {
-                          onChange(courseList.map((c) => c.course_id))
-                        }
+                      const handleToggle = (learnerId, courseId) => {
+                        const selected = getCoursesForLearner(learnerId)
+                        const updated = selected.includes(courseId)
+                          ? selected.filter((id) => id !== courseId)
+                          : [...selected, courseId]
+
+                        updateCoursesForLearner(learnerId, updated)
                       }
 
-                      const showCourseCheckboxes = trainerId && learners
+                      const handleToggleAll = (learnerId, allCourseIds) => {
+                        const selected = getCoursesForLearner(learnerId)
+                        const alreadyAllSelected =
+                          selected.length === allCourseIds.length
+                        const updated = alreadyAllSelected ? [] : allCourseIds
 
-                      if (!showCourseCheckboxes) {
+                        updateCoursesForLearner(learnerId, updated)
+                      }
+
+                      if (!trainerId || learners?.length === 0) {
                         return (
                           <Typography color='Highlight' fontSize='14px'>
                             Please select trainer and learner first
@@ -402,45 +441,74 @@ const AddEditSession = (props) => {
                         )
                       }
 
-                      if (courseList.length === 0) {
-                        return (
-                          <Typography color='Highlight' fontSize='14px'>
-                            No courses available for this selection
-                          </Typography>
-                        )
-                      }
-
                       return (
                         <FormGroup>
-                          {courseList.length > 0 && (
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={value.length === courseList.length}
-                                  onChange={handleToggleAll}
-                                />
-                              }
-                              label='Select All'
-                            />
-                          )}
-                          {courseList.map((course) => (
-                            <FormControlLabel
-                              key={course.course_id}
-                              control={
-                                <Checkbox
-                                  checked={value.includes(course.course_id)}
-                                  onChange={() =>
-                                    handleToggle(course.course_id)
-                                  }
-                                />
-                              }
-                              label={course.course_name}
-                            />
-                          ))}
+                          {selectedLearners.map((learner) => {
+                            const courseList = learner.course.map(
+                              (c) => c.course
+                            )
+                            const selected = getCoursesForLearner(
+                              learner.learner_id
+                            )
+
+                            return (
+                              <div
+                                key={learner.learner_id}
+                                style={{ marginBottom: '1rem' }}
+                              >
+                                <Typography
+                                  variant='subtitle1'
+                                  fontWeight='bold'
+                                >
+                                  {learner.first_name} {learner.last_name}
+                                </Typography>
+
+                                {courseList.length > 0 && (
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={
+                                          selected.length === courseList.length
+                                        }
+                                        onChange={() =>
+                                          handleToggleAll(
+                                            learner.learner_id,
+                                            courseList.map((c) => c.course_id)
+                                          )
+                                        }
+                                      />
+                                    }
+                                    label='Select All'
+                                  />
+                                )}
+
+                                {courseList.map((course) => (
+                                  <FormControlLabel
+                                    key={course.course_id}
+                                    control={
+                                      <Checkbox
+                                        checked={selected.includes(
+                                          course.course_id
+                                        )}
+                                        onChange={() =>
+                                          handleToggle(
+                                            learner.learner_id,
+                                            course.course_id
+                                          )
+                                        }
+                                      />
+                                    }
+                                    label={course.course_name}
+                                  />
+                                ))}
+                              </div>
+                            )
+                          })}
                         </FormGroup>
                       )
                     }}
                   />
+                  <ErrorText>{errors.courses?.message}</ErrorText>
                   <ErrorText>{errors.courses?.message}</ErrorText>
                 </Grid>
 
@@ -652,7 +720,6 @@ const AddEditSession = (props) => {
                       />
                       <ErrorText>{errors.end_date?.message}</ErrorText>
                     </Grid>
-
                   </>
                 )}
               </Box>

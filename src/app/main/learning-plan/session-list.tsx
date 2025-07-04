@@ -92,7 +92,7 @@ const editSchema = yup.object().shape({
   actionDescription: yup.string().max(1000, 'Max 1000 characters'),
   trainer_feedback: yup.string().optional(),
   learner_feedback: yup.string().optional(),
-  learnerStatus: yup.string().required(),
+  learnerStatus: yup.string(),
   onOffJob: yup.string(),
   targetDate: yup.date().typeError('Target date is required').nullable(),
   time_spent: yup.number().optional(),
@@ -114,6 +114,7 @@ const FileTypes = [
 const fileSchema = yup.object().shape({
   file: yup
     .mixed<File>()
+    .required('A file is required')
     .test('fileSize', 'File is too large', (value): value is File => {
       return value instanceof File && value.size <= 10 * 1024 * 1024 // 10MB
     })
@@ -132,7 +133,7 @@ const SessionList = () => {
   const [sessionListData, setSessionListData] = useState([])
   const [isOpenAction, setIsOpenAction] = useState('')
   const [openDeleteSession, setOpenDeleteSession] = useState('')
-  const [openEditSession, setOpenEditSession] = useState(false)
+  const [openEditSession, setOpenEditSession] = useState('')
   const [openAddFile, setOpenAddFile] = useState('')
   const [unitList, setUnitList] = useState([])
 
@@ -149,6 +150,7 @@ const SessionList = () => {
     handleSubmit,
     control,
     watch,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(schema),
@@ -167,6 +169,7 @@ const SessionList = () => {
     control: editControl,
     watch: editWatch,
     formState: { errors: editErrors },
+    reset: editReset,
   } = useForm({
     resolver: yupResolver(editSchema),
     defaultValues: {
@@ -198,16 +201,17 @@ const SessionList = () => {
     }
   }, [learner_id])
 
-  const { data, isLoading, isError, error } = useGetLearnerPlanListQuery(
-    {
-      learners: learner_id,
-      type: typeFilter,
-      Attended: statusFilter,
-    },
-    {
-      skip: !user && !learner_id,
-    }
-  )
+  const { data, isLoading, isError, error, refetch } =
+    useGetLearnerPlanListQuery(
+      {
+        learners: learner_id,
+        type: typeFilter,
+        Attended: statusFilter,
+      },
+      {
+        skip: !user && !learner_id,
+      }
+    )
 
   const [updateSession] = useUpdateSessionMutation()
   const [addActionPlaner] = useAddActionPlanerMutation()
@@ -246,6 +250,13 @@ const SessionList = () => {
           learner: Array.isArray(item.learners) ? item.learners[0] : '',
           courses: item.courses?.map((course) => course.course_name).join(', '),
           feedback: item.feedback ? item.feedback : 'Neutral',
+          units: item.courses.flatMap((course) =>
+            (course.units || []).map((unit) => ({
+              unit_id: unit.unit_id || null,
+              unit_name: unit.unit_name || null,
+            }))
+          ),
+          actionList: item.sessionLearnerActionDetails,
         }
       })
       setSessionListData(payload)
@@ -319,6 +330,7 @@ const SessionList = () => {
           variant: 'success',
         })
       )
+      refetch()
       setIsOpenAction('')
     } catch (error) {
       console.log(error)
@@ -341,6 +353,7 @@ const SessionList = () => {
         })
       )
       setOpenDeleteSession('')
+      refetch()
     } catch (error) {
       console.log(error)
       dispatch(
@@ -358,7 +371,12 @@ const SessionList = () => {
   }
 
   const handleOpenEditSession = (session) => {
-    setOpenEditSession(session)
+    editReset({
+      actionDescription: session.action_description,
+      onOffJob: session.job_type,
+      // targetDate: format(new Date(session.target_date), 'dd-MM-yyyy'),
+    })
+    setOpenEditSession(session.action_id)
   }
 
   const handleCloseEditSession = () => {
@@ -366,15 +384,42 @@ const SessionList = () => {
   }
 
   const handleEditSession = async (data) => {
-    console.log('🚀 ~ handleEditSession ~ data:', data)
+    const payload = {
+      id: openEditSession,
+      learner_plan_id: openEditSession,
+      trainer_feedback: data.trainer_feedback,
+      learner_feedback: data.learner_feedback,
+      action_description: data.actionDescription,
+      target_date:data.targetDate ? format(new Date(data.targetDate), 'dd-MM-yyyy') : '',
+      job_type: data.onOffJob,
+      time_spent: data.time_spent,
+      status: data.learnerStatus,
+    }
+
     try {
-    } catch (error) {}
+      await updateSession(payload).unwrap()
+      dispatch(
+        showMessage({
+          message: 'Session updated successfully',
+          variant: 'success',
+        })
+      )
+      setOpenEditSession(null)
+      refetch()
+    } catch (error) {
+      console.log(error)
+      dispatch(
+        showMessage({ message: 'Failed to update session', variant: 'error' })
+      )
+    }
+
+
   }
 
   const desc = editWatch('actionDescription') || ''
 
   const handleAddFile = async (data) => {
-    console.log("🚀 ~ handleAddFile ~ data:", data)
+    console.log('🚀 ~ handleAddFile ~ data:', data)
     try {
       // const formData = new FormData()
       // formData.append('file', file)
@@ -631,9 +676,11 @@ const SessionList = () => {
                           className='rounded-md'
                           color='primary'
                           size='small'
-                          onClick={() =>
-                            setIsOpenAction(session.learner?.learner_id)
-                          }
+                          onClick={() => {
+                            setUnitList(session.units)
+                            setIsOpenAction(session.sessionNo)
+                            reset()
+                          }}
                         >
                           Add Action
                         </Button>
@@ -656,35 +703,47 @@ const SessionList = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        <TableCell>Learner</TableCell>
-                        <TableCell>Dev</TableCell>
-                        <TableCell>Test</TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell>03/09/2025</TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell></TableCell>
-                        <TableCell>
-                          <IconButton
-                            onClick={() => handleOpenEditSession(session)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            onClick={() => setOpenAddFile(session.sessionNo)}
-                          >
-                            <AddFile />
-                          </IconButton>
-
-                          <IconButton
-                            onClick={() =>
-                              handleOpenDeleteSession(session.sessionNo)
-                            }
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
+                        {session.actionList.map((action) => (
+                          <TableRow key={action.action_id}>
+                            <TableCell>{action.action_name}</TableCell>
+                            <TableCell>{action.action}</TableCell>
+                            <TableCell>{action.action_description}</TableCell>
+                            <TableCell>{action.files}</TableCell>
+                            <TableCell>{action.units}</TableCell>
+                            <TableCell>
+                              {action?.target_date
+                                ? format(
+                                    new Date(action.target_date),
+                                    'dd/MM/yyyy'
+                                  )
+                                : ''}
+                            </TableCell>
+                            <TableCell>{action.feedback}</TableCell>
+                            <TableCell>{action.duration}</TableCell>
+                            <TableCell>{action.status}</TableCell>
+                            <TableCell>
+                              <IconButton
+                                onClick={() => handleOpenEditSession(action)}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton
+                                onClick={() =>
+                                  setOpenAddFile(session.sessionNo)
+                                }
+                              >
+                                <AddFile />
+                              </IconButton>
+                              <IconButton
+                                onClick={() =>
+                                  handleOpenDeleteSession(action.action_id)
+                                }
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </AccordionDetails>
@@ -819,12 +878,32 @@ const SessionList = () => {
                     </FormControl>
                   )}
                 />
-
                 <Controller
                   name='unit'
                   control={control}
-                  render={({ field }) => (
-                    <TextField {...field} label='Unit (Optional)' fullWidth />
+                  render={({ field, fieldState }) => (
+                    <FormControl fullWidth error={!!fieldState.error}>
+                      <InputLabel id='unit-select-label'>
+                        Unit (Optional)
+                      </InputLabel>
+                      <Select
+                        {...field}
+                        labelId='unit-select-label'
+                        label='Unit (Optional)'
+                      >
+                        <MenuItem value=''>
+                          <em>None</em>
+                        </MenuItem>
+                        {unitList.map((unit) => (
+                          <MenuItem key={unit.unit_id} value={unit.unit_id}>
+                            {unit.unit_name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                      <FormHelperText>
+                        {fieldState.error?.message}
+                      </FormHelperText>
+                    </FormControl>
                   )}
                 />
 
@@ -880,7 +959,7 @@ const SessionList = () => {
         <DialogTitle>Edit Action</DialogTitle>
         <DialogContent>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <form onSubmit={editSubmit(handleEditSession)} noValidate>
+            <form onSubmit={editSubmit(handleEditSession)}>
               <Stack
                 spacing={3}
                 sx={{ width: 500, mx: 'auto' }}
@@ -985,11 +1064,9 @@ const SessionList = () => {
                     <FormControl fullWidth error={!!editErrors.onOffJob}>
                       <InputLabel>On/Off the Job</InputLabel>
                       <Select {...field} label='On/Off the Job'>
-                        <MenuItem value='Not Applicable'>
-                          Not Applicable
-                        </MenuItem>
-                        <MenuItem value='On the Job'>On the Job</MenuItem>
-                        <MenuItem value='Off the Job'>Off the Job</MenuItem>
+                        <MenuItem value=''>Not Applicable</MenuItem>
+                        <MenuItem value='On-the-job'>On the Job</MenuItem>
+                        <MenuItem value='Off-the-job'>Off the Job</MenuItem>
                       </Select>
                       <FormHelperText>
                         {editErrors.onOffJob?.message}
@@ -1042,11 +1119,11 @@ const SessionList = () => {
         aria-labelledby='alert-dialog-title'
         aria-describedby='alert-dialog-description'
       >
-        <form onSubmit={handleSubmit(handleAddFile)}>
+        <form onSubmit={fileSubmit(handleAddFile)}>
           <DialogTitle id='alert-dialog-title'>
             Manage Actions Files
           </DialogTitle>
-          <DialogContent  sx={{ width: 500, mx: 'auto' }}>
+          <DialogContent sx={{ width: 500, mx: 'auto' }}>
             <Grid className='w-full mt-4'>
               {/* File upload */}
               <Controller
@@ -1097,7 +1174,7 @@ const SessionList = () => {
                   </FileUploader>
                 )}
               />
-              <FormHelperText>
+              <FormHelperText className='text-red-500'>
                 {fileErrors.file?.message?.toString() || ''}
               </FormHelperText>
             </Grid>
