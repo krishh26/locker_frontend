@@ -189,7 +189,6 @@ const SessionList = () => {
       status: 'not_started',
     },
   })
-  console.log('🚀 ~ SessionList ~ editErrors:', editErrors)
 
   const {
     handleSubmit: fileSubmit,
