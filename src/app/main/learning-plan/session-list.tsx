@@ -37,6 +37,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddFile from '@mui/icons-material/NoteAdd'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import FileIcon from '@mui/icons-material/FilePresent'
+import NotStartedIcon from '@mui/icons-material/StopCircle'
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import * as yup from 'yup'
@@ -47,6 +49,7 @@ import {
   useEditActionPlanerMutation,
   useGetLearnerPlanListQuery,
   useUpdateSessionMutation,
+  useUploadActionFileMutation,
 } from 'app/store/api/learner-plan-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import {
@@ -54,7 +57,7 @@ import {
   selectLearnerManagement,
 } from 'app/store/learnerManagement'
 import { selectUser } from 'app/store/userSlice'
-import { addMinutes, format } from 'date-fns'
+import { addDays, addMinutes, format } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, redirect, useNavigate, useParams } from 'react-router-dom'
@@ -72,16 +75,11 @@ const schema = yup.object().shape({
     .typeError('Target date is required')
     .nullable()
     .required('Target date is required'),
-  onOffJob: yup.string().required('Please select On/Off the Job'),
-  actionType: yup
+  onOffJob: yup.string(),
+  who: yup
     .string()
     .oneOf(
-      [
-        'Action myself',
-        'Action Learner',
-        'Action employer',
-        'Session Learner Action',
-      ],
+      ['learner', 'assessor', 'employer', 'sessionLearner'],
       'Invalid action type'
     )
     .required('Please select an action type'),
@@ -90,12 +88,20 @@ const schema = yup.object().shape({
 
 const editSchema = yup.object().shape({
   actionDescription: yup.string().max(1000, 'Max 1000 characters'),
-  trainer_feedback: yup.string().optional(),
-  learner_feedback: yup.string().optional(),
-  learnerStatus: yup.string(),
+  trainer_feedback: yup.string().optional().nullable(),
+  learner_feedback: yup.string().optional().nullable(),
+  learner_status: yup.string(),
   onOffJob: yup.string(),
   targetDate: yup.date().typeError('Target date is required').nullable(),
-  time_spent: yup.number().optional(),
+  time_spent: yup
+    .number()
+    .transform((value, originalValue) =>
+      originalValue === '' || originalValue == null
+        ? undefined
+        : Number(originalValue)
+    )
+    .optional()
+    .typeError('Time spent must be a number'),
   status: yup.string(),
 })
 
@@ -158,8 +164,8 @@ const SessionList = () => {
       actionName: '',
       actionDescription: '',
       targetDate: null,
-      onOffJob: '',
-      actionType: 'Action Learner',
+      onOffJob: 'Not-applicable',
+      who: 'learner',
       unit: '',
     },
   })
@@ -176,13 +182,14 @@ const SessionList = () => {
       actionDescription: '',
       trainer_feedback: '',
       learner_feedback: '',
-      learnerStatus: '',
+      learner_status: '',
       onOffJob: '',
       targetDate: null,
       time_spent: 0,
       status: 'not_started',
     },
   })
+  console.log('🚀 ~ SessionList ~ editErrors:', editErrors)
 
   const {
     handleSubmit: fileSubmit,
@@ -217,6 +224,7 @@ const SessionList = () => {
   const [addActionPlaner] = useAddActionPlanerMutation()
   const [editActionPlaner] = useEditActionPlanerMutation()
   const [deleteActionPlaner] = useDeleteActionPlanerMutation()
+  const [uploadActionFile] = useUploadActionFileMutation()
 
   useEffect(() => {
     dispatch(getLearnerDetails(learner_id))
@@ -237,6 +245,20 @@ const SessionList = () => {
     if (data && data?.data.length > 0) {
       const payload = data?.data.map((item) => {
         const minutes = Number(item.Duration)
+
+        // Step 1: Get allowed course IDs for the target learner
+        const learnerMapping = item.participant_course_mapping?.find(
+          (mapping) => mapping.learner_id.toString() === learner_id.toString()
+        )
+
+        const allowedCourseIds = learnerMapping?.courses || []
+
+        // Step 2: Filter courses for the learner
+        const learnerCourses =
+          item.courses?.filter((course) =>
+            allowedCourseIds.includes(course.course_id)
+          ) || []
+
         return {
           sessionNo: item.learner_plan_id,
           title: item.title,
@@ -247,10 +269,14 @@ const SessionList = () => {
           type: item?.type,
           assessor: item.assessor_id?.user_name,
           Attended: item.Attended ? item.Attended : '',
-          learner: Array.isArray(item.learners) ? item.learners[0] : '',
-          courses: item.courses?.map((course) => course.course_name).join(', '),
+          learner: Array.isArray(item.learners)
+            ? item.learners.find((l) => l.learner_id === learner_id)
+            : '',
+          courses: learnerCourses
+            .map((course) => course.course_name)
+            .join(', '),
           feedback: item.feedback ? item.feedback : 'Neutral',
-          units: item.courses.flatMap((course) =>
+          units: learnerCourses.flatMap((course) =>
             (course.units || []).map((unit) => ({
               unit_id: unit.unit_id || null,
               unit_name: unit.unit_name || null,
@@ -318,6 +344,8 @@ const SessionList = () => {
       action_description: data.actionDescription,
       target_date: format(data.targetDate, 'dd-MM-yyyy'),
       job_type: data.onOffJob,
+      unit: data.unit,
+      who: data.who,
     }
 
     try {
@@ -374,7 +402,10 @@ const SessionList = () => {
     editReset({
       actionDescription: session.action_description,
       onOffJob: session.job_type,
-      // targetDate: format(new Date(session.target_date), 'dd-MM-yyyy'),
+      targetDate: session.target_date ? new Date(session.target_date) : '',
+      time_spent: session.time_spent,
+      trainer_feedback: session.trainer_feedback,
+      learner_feedback: session.learner_feedback,
     })
     setOpenEditSession(session.action_id)
   }
@@ -390,14 +421,16 @@ const SessionList = () => {
       trainer_feedback: data.trainer_feedback,
       learner_feedback: data.learner_feedback,
       action_description: data.actionDescription,
-      target_date:data.targetDate ? format(new Date(data.targetDate), 'dd-MM-yyyy') : '',
+      target_date: data.targetDate
+        ? format(new Date(data.targetDate), 'dd-MM-yyyy')
+        : '',
       job_type: data.onOffJob,
       time_spent: data.time_spent,
-      status: data.learnerStatus,
+      status: data.status,
     }
 
     try {
-      await updateSession(payload).unwrap()
+      await editActionPlaner(payload).unwrap()
       dispatch(
         showMessage({
           message: 'Session updated successfully',
@@ -412,21 +445,33 @@ const SessionList = () => {
         showMessage({ message: 'Failed to update session', variant: 'error' })
       )
     }
-
-
   }
 
   const desc = editWatch('actionDescription') || ''
 
   const handleAddFile = async (data) => {
-    console.log('🚀 ~ handleAddFile ~ data:', data)
     try {
-      // const formData = new FormData()
-      // formData.append('file', file)
-      // const response = await uploadFile(formData)
-      // console.log(response)
+      const formData = new FormData()
+      formData.append('file', data.file)
+      const payload = {
+        id: openAddFile,
+        data: formData,
+      }
+      await uploadActionFile(payload).unwrap()
+
+      dispatch(
+        showMessage({
+          message: 'File uploaded successfully',
+          variant: 'success',
+        })
+      )
+      refetch()
+      setOpenAddFile('')
     } catch (error) {
       console.log(error)
+      dispatch(
+        showMessage({ message: 'Failed to upload file', variant: 'error' })
+      )
     }
   }
 
@@ -668,24 +713,21 @@ const SessionList = () => {
                   </AccordionSummary>
 
                   <AccordionDetails className='px-6'>
-                    {(user.roles.includes('Trainer') ||
-                      user.roles.includes('Admin')) && (
-                      <div className='flex items-end justify-end mb-8'>
-                        <Button
-                          variant='contained'
-                          className='rounded-md'
-                          color='primary'
-                          size='small'
-                          onClick={() => {
-                            setUnitList(session.units)
-                            setIsOpenAction(session.sessionNo)
-                            reset()
-                          }}
-                        >
-                          Add Action
-                        </Button>
-                      </div>
-                    )}
+                    <div className='flex items-end justify-end mb-8'>
+                      <Button
+                        variant='contained'
+                        className='rounded-md'
+                        color='primary'
+                        size='small'
+                        onClick={() => {
+                          setUnitList(session.units)
+                          setIsOpenAction(session.sessionNo)
+                          reset()
+                        }}
+                      >
+                        Add Action
+                      </Button>
+                    </div>
 
                     <Table size='small'>
                       <TableHead>
@@ -693,7 +735,7 @@ const SessionList = () => {
                           <TableCell>Who</TableCell>
                           <TableCell>Action</TableCell>
                           <TableCell>Description</TableCell>
-                          <TableCell>Files</TableCell>
+                          <TableCell>File</TableCell>
                           <TableCell>Units</TableCell>
                           <TableCell>Target Date</TableCell>
                           <TableCell>Feedback</TableCell>
@@ -705,11 +747,35 @@ const SessionList = () => {
                       <TableBody>
                         {session.actionList.map((action) => (
                           <TableRow key={action.action_id}>
+                            <TableCell>
+                              {action.who === 'learner' ||
+                              action.who === 'assessor' ||
+                              action.sessionLearner === 'sessionLearner'
+                                ? 'Learner'
+                                : action.employer
+                                ? 'Employer'
+                                : ''}
+                            </TableCell>
                             <TableCell>{action.action_name}</TableCell>
-                            <TableCell>{action.action}</TableCell>
                             <TableCell>{action.action_description}</TableCell>
-                            <TableCell>{action.files}</TableCell>
-                            <TableCell>{action.units}</TableCell>
+                            <TableCell>
+                              {action.file_attachment ? (
+                                <>
+                                  <IconButton
+                                    LinkComponent={'a'}
+                                    href={action.file_attachment.file_url}
+                                    target='_blank'
+                                  >
+                                    <FileIcon />
+                                  </IconButton>
+                                </>
+                              ) : (
+                                ''
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {action.unit ? `Unit ${action.unit}` : ''}
+                            </TableCell>
                             <TableCell>
                               {action?.target_date
                                 ? format(
@@ -718,9 +784,46 @@ const SessionList = () => {
                                   )
                                 : ''}
                             </TableCell>
-                            <TableCell>{action.feedback}</TableCell>
-                            <TableCell>{action.duration}</TableCell>
-                            <TableCell>{action.status}</TableCell>
+                            <TableCell
+                              sx={{
+                                width: '200px',
+                              }}
+                            >
+                              {action.trainer_feedback ? (
+                                <Typography>
+                                  Feedback from Trainer :{' '}
+                                  {action.trainer_feedback}
+                                </Typography>
+                              ) : (
+                                ''
+                              )}
+                              {action.learner_feedback ? (
+                                <Typography>
+                                  Feedback from Leaner :{' '}
+                                  {action.learner_feedback}
+                                </Typography>
+                              ) : (
+                                ''
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {action.time_spent
+                                ? `${action.time_spent} mins`
+                                : ''}
+                            </TableCell>
+                            <TableCell>
+                              {action.status === false ? (
+                                <>
+                                  <Tooltip title='Not Started'>
+                                    <IconButton>
+                                      <NotStartedIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
+                              ) : (
+                                <></>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <IconButton
                                 onClick={() => handleOpenEditSession(action)}
@@ -728,19 +831,20 @@ const SessionList = () => {
                                 <EditIcon />
                               </IconButton>
                               <IconButton
-                                onClick={() =>
-                                  setOpenAddFile(session.sessionNo)
-                                }
+                                onClick={() => setOpenAddFile(action.action_id)}
                               >
                                 <AddFile />
                               </IconButton>
-                              <IconButton
-                                onClick={() =>
-                                  handleOpenDeleteSession(action.action_id)
-                                }
-                              >
-                                <DeleteIcon />
-                              </IconButton>
+                              {(user.roles.includes(UserRole.Admin) ||
+                                user.roles.includes(UserRole.Trainer)) && (
+                                <IconButton
+                                  onClick={() =>
+                                    handleOpenDeleteSession(action.action_id)
+                                  }
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -817,6 +921,7 @@ const SessionList = () => {
                       format='dd/MM/yyyy'
                       value={field.value ?? null}
                       onChange={(date) => field.onChange(date)}
+                      minDate={addDays(new Date(), 1)}
                       slotProps={{
                         textField: {
                           fullWidth: true,
@@ -836,7 +941,9 @@ const SessionList = () => {
                     <FormControl fullWidth error={!!errors.onOffJob}>
                       <InputLabel>On/Off the Job</InputLabel>
                       <Select {...field} label='On/Off the Job'>
-                        <MenuItem value=''>Not Applicable</MenuItem>
+                        <MenuItem value='Not-applicable'>
+                          Not Applicable
+                        </MenuItem>
                         <MenuItem value='On-the-job'>On the Job</MenuItem>
                         <MenuItem value='Off-the-job'>Off the Job</MenuItem>
                       </Select>
@@ -848,29 +955,29 @@ const SessionList = () => {
                 />
 
                 <Controller
-                  name='actionType'
+                  name='who'
                   control={control}
                   render={({ field }) => (
-                    <FormControl error={!!errors.actionType}>
+                    <FormControl error={!!errors.who}>
                       <FormLabel>Action</FormLabel>
                       <RadioGroup {...field}>
                         <FormControlLabel
-                          value='Action myself'
+                          value='assessor'
                           control={<Radio />}
                           label='Action myself'
                         />
                         <FormControlLabel
-                          value='Action Learner'
+                          value='learner'
                           control={<Radio />}
                           label='Action Learner'
                         />
                         <FormControlLabel
-                          value='Action employer'
+                          value='employer'
                           control={<Radio />}
                           label='Action employer'
                         />
                         <FormControlLabel
-                          value='Session Learner Action'
+                          value='sessionLearner'
                           control={<Radio />}
                           label='Session Learner Action'
                         />
@@ -1018,7 +1125,7 @@ const SessionList = () => {
                 />
 
                 <Controller
-                  name='learnerStatus'
+                  name='learner_status'
                   control={editControl}
                   render={({ field }) => (
                     <FormControl
@@ -1045,6 +1152,7 @@ const SessionList = () => {
                       format='dd/MM/yyyy'
                       value={field.value ?? null}
                       onChange={(date) => field.onChange(date)}
+                      minDate={addDays(new Date(), 1)}
                       slotProps={{
                         textField: {
                           fullWidth: true,
@@ -1064,7 +1172,9 @@ const SessionList = () => {
                     <FormControl fullWidth error={!!editErrors.onOffJob}>
                       <InputLabel>On/Off the Job</InputLabel>
                       <Select {...field} label='On/Off the Job'>
-                        <MenuItem value=''>Not Applicable</MenuItem>
+                        <MenuItem value='Not-applicable'>
+                          Not Applicable
+                        </MenuItem>
                         <MenuItem value='On-the-job'>On the Job</MenuItem>
                         <MenuItem value='Off-the-job'>Off the Job</MenuItem>
                       </Select>
@@ -1094,7 +1204,14 @@ const SessionList = () => {
                   name='status'
                   control={editControl}
                   render={({ field }) => (
-                    <FormControl fullWidth error={!!editErrors.status}>
+                    <FormControl
+                      fullWidth
+                      error={!!editErrors.status}
+                      disabled={
+                        !user.roles.includes(UserRole.Trainer) ||
+                        !user.roles.includes(UserRole.Admin)
+                      }
+                    >
                       <InputLabel>Status</InputLabel>
                       <Select {...field} label='Status'>
                         <MenuItem value='not_started'>Not Started</MenuItem>
