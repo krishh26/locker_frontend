@@ -176,14 +176,11 @@ const AddEditSession = (props) => {
   const { dataUpdatingLoadding } = props
 
   const onSubmit = async (data) => {
-    console.log('🚀 ~ onSubmit ~ data:', data)
     const Duration = `${data.hours}:${data.minutes}`
     const [hours, minutes] = Duration.split(':').map(Number)
     const totalMinutes = hours * 60 + minutes
     const payload = {
       assessor_id: data.trainer_id,
-      learners: [parseInt(data.learners, 10)],
-      courses: data.courses,
       title: data.title,
       description: data.description,
       location: data.location,
@@ -191,6 +188,8 @@ const AddEditSession = (props) => {
       Duration: totalMinutes.toString(),
       type: data.type,
       repeatSession: data.repeat_session,
+      number_of_participants: data.courses.length,
+      participants: data.courses,
       ...(data.repeat_session && {
         repeat_frequency: data.repeat_frequency,
         repeat_every: data.repeat_every,
@@ -198,7 +197,6 @@ const AddEditSession = (props) => {
         repeat_end_date: data.end_date,
       }),
     }
-
     try {
       await createNewSession(payload).unwrap()
 
@@ -393,7 +391,7 @@ const AddEditSession = (props) => {
 
                       const getCoursesForLearner = (learnerId) =>
                         value.find((entry) => entry.learner_id === learnerId)
-                          ?.course || []
+                          ?.courses || []
 
                       const updateCoursesForLearner = (
                         learnerId,
@@ -404,12 +402,12 @@ const AddEditSession = (props) => {
                         )
                           ? value.map((entry) =>
                               entry.learner_id === learnerId
-                                ? { ...entry, course: updatedCourses }
+                                ? { ...entry, courses: updatedCourses }
                                 : entry
                             )
                           : [
                               ...value,
-                              { learner_id: learnerId, course: updatedCourses },
+                              { learner_id: learnerId, courses: updatedCourses },
                             ]
 
                         onChange(newValue)

@@ -104,6 +104,13 @@ export const learnerPlanAPI = createApi({
         method: 'DELETE',
       }),
     }),
+    uploadActionFile: builder.mutation({
+      query: (payload) => ({
+        url: `/learner-action/upload/${payload.id}`,
+        method: 'POST',
+        body: payload.data,
+      }),
+    }),
   }),
 })
 export const {
@@ -117,4 +124,5 @@ export const {
   useAddActionPlanerMutation,
   useEditActionPlanerMutation,
   useDeleteActionPlanerMutation,
+  useUploadActionFileMutation,
 } = learnerPlanAPI
