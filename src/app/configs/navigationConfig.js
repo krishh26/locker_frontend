@@ -154,7 +154,7 @@ const navigationConfig = [{
 },
 {
     id: 'dashboards.enrollments',
-    title: 'Enrollments',
+    title: 'Enrolments',
     type: 'item',
     icon: 'heroicons-outline:user-add',
     // url: '/criteria-demo',
@@ -202,7 +202,7 @@ const navigationConfig = [{
 },
 {
     id: 'dashboards.createResources',
-    title: 'Create Assignment',
+    title: 'Create Resources',
     type: 'item',
     icon: 'heroicons-outline:clipboard-list',
     // url: '/criteria-demo',

@@ -796,7 +796,7 @@ const CreateViewEvidenceLibrary = () => {
                   control={
                     <Checkbox
                       checked={unitsWatch?.some(
-                        (unit) => `module_${unit.id}` === method.id
+                        (unit) => unit.id === method.id
                       )}
                       onChange={(e) => handleCheckboxUnits(e, method)}
                       name='units'

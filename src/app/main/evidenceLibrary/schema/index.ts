@@ -13,7 +13,7 @@ export const getValidationSchema = (isTrainer: boolean) => {
     audio: Yup.mixed().required('File is required'),
     learner_comments: Yup.string(),
     evidence_time_log: Yup.boolean().required('Please select one option'),
-    session: Yup.string().required('Session is required'),
+    session: Yup.string(),
     grade: Yup.string(),
     declaration: Yup.bool().oneOf([true], 'You must accept the declaration'),
     assessment_method: Yup.array()
@@ -45,6 +45,6 @@ export const getValidationSchema = (isTrainer: boolean) => {
             ),
         })
       )
-      .min(1, 'Select at least one unit with at least one subunit'),
+      .min(1, 'Select at least one unit with at least one sub unit'),
   })
 }
