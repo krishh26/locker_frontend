@@ -54,8 +54,9 @@ export const getInitials = (first_name, last_name) => {
 export function formatSessionTime(startDate: string, duration: string): string {
   const start = new Date(startDate);
 
-  const [hours, minutes] = duration.split(':').map(Number);
-  const end = new Date(start.getTime() + (hours * 60 + minutes) * 60000);
+  // Convert duration string to number of minutes
+  const durationInMinutes = parseInt(duration, 10);
+  const end = new Date(start.getTime() + durationInMinutes * 60000);
 
   const formatOptions: Intl.DateTimeFormatOptions = {
     day: 'numeric',
@@ -74,4 +75,3 @@ export function formatSessionTime(startDate: string, duration: string): string {
 
   return `${dateString}, ${formatTime(start)} - ${formatTime(end)}`;
 }
-

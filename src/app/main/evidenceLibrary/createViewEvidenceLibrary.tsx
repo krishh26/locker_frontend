@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
+import { yupResolver } from '@hookform/resolvers/yup'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import {
   Box,
+  Button,
   Checkbox,
+  CircularProgress,
   Container,
   FormControl,
   FormControlLabel,
@@ -16,7 +19,6 @@ import {
   Paper,
   Radio,
   RadioGroup,
-  Button,
   Select,
   Table,
   TableBody,
@@ -27,12 +29,10 @@ import {
   TextField,
   Tooltip,
   Typography,
-  CircularProgress,
 } from '@mui/material'
-import { useSelector } from 'react-redux'
-import { Controller, useForm } from 'react-hook-form'
 import { FileUploader } from 'react-drag-drop-files'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { Controller, useForm } from 'react-hook-form'
+import { useSelector } from 'react-redux'
 
 import {
   useGetEvidenceDetailsQuery,
@@ -40,18 +40,19 @@ import {
   useUpdateEvidenceIdMutation,
   useUploadExternalEvidenceFileMutation,
 } from 'app/store/api/evidence-api'
-import { assessmentMethod, fileTypes, sessions } from 'src/utils/constants'
 import { selectUser } from 'app/store/userSlice'
+import { assessmentMethod, fileTypes } from 'src/utils/constants'
 
-import { FormValues } from './lib/types'
-import { getValidationSchema } from './schema'
+import { useGetLearnerPlanListQuery } from 'app/store/api/learner-plan-api'
 import {
   fetchCourseById,
   selectCourseManagement,
 } from 'app/store/courseManagement'
-import { useDispatch } from 'react-redux'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import { useDispatch } from 'react-redux'
 import { formatSessionTime } from 'src/utils/string'
+import { FormValues } from './lib/types'
+import { getValidationSchema } from './schema'
 
 const CreateViewEvidenceLibrary = () => {
   const navigate = useNavigate()
@@ -105,7 +106,7 @@ const CreateViewEvidenceLibrary = () => {
       key: string
       name: string
       url: string
-      size:number
+      size: number
     }
     created_at: string
     user: {
@@ -133,7 +134,7 @@ const CreateViewEvidenceLibrary = () => {
       key: '',
       name: '',
       url: '',
-      size:0
+      size: 0,
     },
     created_at: '',
     user: {
@@ -184,15 +185,33 @@ const CreateViewEvidenceLibrary = () => {
     }
   )
 
-  useEffect(() => {
-    if (sessionsData && sessionsData?.data?.length > 0) {
-      const payload = sessionsData?.data.map((time) => ({
-        id: time.session_id,
-        label: formatSessionTime(time.startDate, time.Duration),
-      }))
-      setSessions(payload)
+  const { data, error, refetch } = useGetLearnerPlanListQuery(
+    {
+      learners: learner_id,
+    },
+    {
+      skip: !learner_id,
     }
-  }, [sessionsData])
+  )
+
+  useEffect(() => {
+    if (isError && error) {
+      setSessions([])
+      return
+    }
+
+    if (data && data?.data.length > 0) {
+      const payload = data?.data.map((time) => {
+        return {
+          id: time.learner_plan_id,
+          label: formatSessionTime(time.startDate, time.Duration),
+        }
+      })
+      setSessions(payload)
+    } else {
+      setSessions([])
+    }
+  }, [data, isLoading, isError, error])
 
   const [updateEvidenceId, { isLoading: isUpdateLoading }] =
     useUpdateEvidenceIdMutation()
@@ -232,7 +251,7 @@ const CreateViewEvidenceLibrary = () => {
           key: file.key,
           name: file.name,
           url: file.url,
-          size:file.size
+          size: file.size,
         },
         course_id: '',
         user: {
@@ -638,7 +657,10 @@ const CreateViewEvidenceLibrary = () => {
                         {evidenceDetails.data.external_feedback?.name}
                       </Typography>
                       <Typography variant='caption' color='text.secondary'>
-                        {Math.round(evidenceDetails.data.external_feedback.size / 1024)} KB
+                        {Math.round(
+                          evidenceDetails.data.external_feedback.size / 1024
+                        )}{' '}
+                        KB
                       </Typography>
                       <Typography
                         variant='caption'
