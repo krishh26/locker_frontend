@@ -179,12 +179,12 @@ function SettingsPanel() {
           </IconButton>
 
           <Typography className="mb-32" variant="h6">
-            Theme Color Schemes
+            Theme Colour Schemes
           </Typography>
 
           <Typography className="mb-24 text-12 italic text-justify" color="text.secondary">
-            * Selected color scheme will be applied to all theme layout elements (navbar, toolbar,
-            etc.). You can also select a different color scheme for each layout element at theme
+            * Selected colour scheme will be applied to all theme layout elements (navbar, toolbar,
+            etc.). You can also select a different colour scheme for each layout element at theme
             settings.
           </Typography>
 

@@ -269,7 +269,7 @@ const AddEditSession = (props) => {
 
                 <Grid className='w-full'>
                   <Typography variant='body1' gutterBottom>
-                    Select Learner
+                    Select Learner(s)
                   </Typography>
                   <Controller
                     name='learners'

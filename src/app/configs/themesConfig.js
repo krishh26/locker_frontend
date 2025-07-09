@@ -49,6 +49,9 @@ const themesConfig = {
     typography: {
       fontSize: 14,
     },
+    accessibility: {
+      name: 'Default',
+    }
   },
   defaultDark: {
     palette: {
@@ -87,6 +90,9 @@ const themesConfig = {
     typography: {
       fontSize: 14,
     },
+    accessibility: {
+      name: 'Dark Mode',
+    }
   },
   // Yellow & Black
   yellowBlackContrast: {

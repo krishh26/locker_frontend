@@ -139,7 +139,7 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
             }}
           >
             <div>
-              <div className={Style.index}>{index}</div>
+              <div className={Style.index}>{index + 1}</div>
               <div className={Style.emptyRing}></div>
               <div className={Style.filledRing}></div>
             </div>

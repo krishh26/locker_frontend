@@ -618,6 +618,7 @@ const SessionList = () => {
                           }
                         >
                           <MenuItem value=''>Select</MenuItem>
+                          <MenuItem value='Attended'>Attended</MenuItem>
                           <MenuItem value='Cancelled'>Cancelled</MenuItem>
                           <MenuItem value='Cancelled by Trainer'>
                             Cancelled by Trainer
