@@ -8,7 +8,7 @@ import TableRow from '@mui/material/TableRow';
 import { useDispatch } from 'react-redux';
 import { deleteTemplate, fetchTemplateData, selectFormData, slice } from 'app/store/formData';
 import { useSelector } from 'react-redux';
-import { IconButton, Tooltip, Typography } from '@mui/material';
+import { IconButton, Tooltip, Typography, Box } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -29,7 +29,34 @@ export default function Templates() {
 
     return (
         formTemplate?.length ?
-            <TableContainer>
+            <>
+                {/* Header with action buttons */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        Form Templates
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <SecondaryButton
+                            name="🚀 Super Easy Builder"
+                            startIcon={<AddIcon />}
+                            onClick={() => navigate('/forms/create-simple')}
+                        />
+                        <SecondaryButton
+                            name="🎨 Advanced Builder"
+                            variant="outlined"
+                            startIcon={<AddIcon />}
+                            onClick={() => navigate('/forms/create-improved')}
+                        />
+                        <SecondaryButton
+                            name="Classic Builder"
+                            variant="outlined"
+                            startIcon={<AddIcon />}
+                            onClick={() => navigate('/forms/create')}
+                        />
+                    </Box>
+                </Box>
+
+                <TableContainer>
                 <Table aria-label="simple table">
                     <TableHead>
                         <TableRow>
@@ -71,6 +98,7 @@ export default function Templates() {
                     </TableBody>
                 </Table>
             </TableContainer>
+            </>
             :
             <div
                 className="flex flex-col justify-center items-center gap-10 "
@@ -82,12 +110,28 @@ export default function Templates() {
                     It is a long established fact that a reader will be <br />
                     distracted by the readable content.
                 </Typography>
-                <SecondaryButton
-                    name="Create Template"
-                    className="p-12"
-                    startIcon={<AddIcon sx={{ mx: -0.5 }} />}
-                    onClick={() => navigate('/forms/create')}
-                />
+                <div className="flex gap-4">
+                    <SecondaryButton
+                        name="🚀 Super Easy Builder"
+                        className="p-12"
+                        startIcon={<AddIcon sx={{ mx: -0.5 }} />}
+                        onClick={() => navigate('/forms/create-simple')}
+                    />
+                    <SecondaryButton
+                        name="🎨 Advanced Builder"
+                        className="p-12"
+                        variant="outlined"
+                        startIcon={<AddIcon sx={{ mx: -0.5 }} />}
+                        onClick={() => navigate('/forms/create-improved')}
+                    />
+                    <SecondaryButton
+                        name="Classic Builder"
+                        className="p-12"
+                        variant="outlined"
+                        startIcon={<AddIcon sx={{ mx: -0.5 }} />}
+                        onClick={() => navigate('/forms/create')}
+                    />
+                </div>
             </div>
     );
 }
