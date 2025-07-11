@@ -11,6 +11,18 @@ import {
   Button,
   Chip,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  Checkbox,
+  FormGroup,
+  FormLabel,
+  Card,
+  CardContent,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -190,6 +202,222 @@ const UserFriendlyFormBuilder: React.FC = () => {
 
   const fieldCounts = getFieldCountByType();
 
+  // Form Preview Component for Simple Form Builder
+  const FormPreview: React.FC = () => {
+    const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
+
+    const handleFieldChange = (fieldId: string, value: any) => {
+      setFormValues(prev => ({ ...prev, [fieldId]: value }));
+    };
+
+    const renderField = (field: SimpleFormField) => {
+      const value = formValues[field.id] || '';
+
+      switch (field.type) {
+        case 'text':
+        case 'email':
+        case 'phone':
+        case 'number':
+          return (
+            <TextField
+              key={field.id}
+              label={field.label}
+              placeholder={field.placeholder}
+              type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'}
+              value={value}
+              onChange={(e) => handleFieldChange(field.id, e.target.value)}
+              fullWidth
+              required={field.required}
+              margin="normal"
+              variant="outlined"
+            />
+          );
+
+        case 'textarea':
+          return (
+            <TextField
+              key={field.id}
+              label={field.label}
+              placeholder={field.placeholder}
+              value={value}
+              onChange={(e) => handleFieldChange(field.id, e.target.value)}
+              fullWidth
+              required={field.required}
+              margin="normal"
+              variant="outlined"
+              multiline
+              rows={4}
+            />
+          );
+
+        case 'select':
+          return (
+            <FormControl key={field.id} fullWidth margin="normal" required={field.required}>
+              <InputLabel>{field.label}</InputLabel>
+              <Select
+                value={value}
+                onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                label={field.label}
+              >
+                {field.options?.map((option, index) => (
+                  <MenuItem key={index} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          );
+
+        case 'radio':
+          return (
+            <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
+              <FormLabel component="legend" required={field.required}>
+                {field.label}
+              </FormLabel>
+              <RadioGroup
+                value={value}
+                onChange={(e) => handleFieldChange(field.id, e.target.value)}
+              >
+                {field.options?.map((option, index) => (
+                  <FormControlLabel
+                    key={index}
+                    value={option}
+                    control={<Radio />}
+                    label={option}
+                  />
+                ))}
+              </RadioGroup>
+            </Box>
+          );
+
+        case 'checkbox':
+          return (
+            <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
+              <FormLabel component="legend" required={field.required}>
+                {field.label}
+              </FormLabel>
+              <FormGroup>
+                {field.options?.map((option, index) => (
+                  <FormControlLabel
+                    key={index}
+                    control={
+                      <Checkbox
+                        checked={Array.isArray(value) ? value.includes(option) : false}
+                        onChange={(e) => {
+                          const currentValues = Array.isArray(value) ? value : [];
+                          if (e.target.checked) {
+                            handleFieldChange(field.id, [...currentValues, option]);
+                          } else {
+                            handleFieldChange(field.id, currentValues.filter(v => v !== option));
+                          }
+                        }}
+                      />
+                    }
+                    label={option}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+          );
+
+        case 'date':
+          return (
+            <TextField
+              key={field.id}
+              label={field.label}
+              type="date"
+              value={value}
+              onChange={(e) => handleFieldChange(field.id, e.target.value)}
+              fullWidth
+              required={field.required}
+              margin="normal"
+              variant="outlined"
+              InputLabelProps={{ shrink: true }}
+            />
+          );
+
+        case 'file':
+          return (
+            <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                {field.label} {field.required && <span style={{ color: 'red' }}>*</span>}
+              </Typography>
+              <TextField
+                type="file"
+                onChange={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  handleFieldChange(field.id, target.files);
+                }}
+                fullWidth
+                variant="outlined"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
+          );
+
+        default:
+          return (
+            <TextField
+              key={field.id}
+              label={field.label}
+              placeholder={field.placeholder}
+              value={value}
+              onChange={(e) => handleFieldChange(field.id, e.target.value)}
+              fullWidth
+              required={field.required}
+              margin="normal"
+              variant="outlined"
+            />
+          );
+      }
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      console.log('Form submitted with values:', formValues);
+      alert('Form submitted successfully! Check console for form data.');
+    };
+
+    const handleClearForm = () => {
+      setFormValues({});
+    };
+
+    return (
+      <Card elevation={2} sx={{ maxWidth: 800, mx: 'auto' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: '#1976d2' }}>
+            {formMetadata.form_name || 'Untitled Form'}
+          </Typography>
+
+          {formMetadata.description && (
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              {formMetadata.description}
+            </Typography>
+          )}
+
+          {formFields.length === 0 ? (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              No fields added to the form yet. Switch to edit mode to add fields by dragging components from the palette.
+            </Alert>
+          ) : (
+            <Box component="form" onSubmit={handleSubmit}>
+              {formFields.map(renderField)}
+
+              <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                <Button variant="outlined" type="button" onClick={handleClearForm}>
+                  Clear Form
+                </Button>
+                <Button variant="contained" type="submit">
+                  Submit Form
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f5f5' }}>
       {/* Header */}
@@ -319,18 +547,22 @@ const UserFriendlyFormBuilder: React.FC = () => {
       {/* Form Builder */}
       <Box sx={{ flex: 1 }}>
         {isPreviewMode ? (
-          <Paper elevation={1} sx={{ p: 3, m: 2, height: 'calc(100% - 32px)', backgroundColor: 'white', borderRadius: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#1976d2' }}>
-              👀 Form Preview
+          <Box sx={{
+            p: 3,
+            m: 2,
+            height: 'calc(100% - 32px)',
+            backgroundColor: '#f5f5f5',
+            borderRadius: 3,
+            overflow: 'auto'
+          }}>
+            <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: '#1976d2', mb: 3 }}>
+              👀 Interactive Form Preview
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              This is how your form will look to users
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+              This is exactly how your form will appear to users. You can interact with all fields to test the user experience.
             </Typography>
-            {/* TODO: Add form preview component */}
-            <Typography color="text.secondary">
-              Preview functionality will be implemented here
-            </Typography>
-          </Paper>
+            <FormPreview />
+          </Box>
         ) : (
           <SimpleFormBuilder
             initialFields={formFields}
