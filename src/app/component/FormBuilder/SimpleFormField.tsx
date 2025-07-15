@@ -217,13 +217,26 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
               {field.label}{' '}
               {field.required && <span style={{ color: 'red' }}>*</span>}
             </Typography>
-            <TextField
-              type='file'
-              fullWidth
-              size='small'
-              disabled
-              InputLabelProps={{ shrink: true }}
-            />
+            <div
+              className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[200px] flex flex-col items-center justify-center`}
+            >
+              <div className='flex justify-center mb-4'>
+                <img
+                  src='assets/images/svgImage/uploadimage.svg'
+                  alt='Upload'
+                  className='w-36 h-36 object-contain mx-auto'
+                />
+              </div>
+              <>
+                <p className='text-center mb-2 text-gray-600'>
+                  Drag and drop your files here or{' '}
+                  <span className='text-blue-500 underline'>Browse</span>
+                </p>
+                <p className='text-center text-sm text-gray-500'>
+                  Max 10MB files are allowed
+                </p>
+              </>
+            </div>
           </Box>
         )
 
@@ -283,21 +296,22 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
           label='Required field'
         />
 
-        <FormControl size='small' fullWidth>
-          <InputLabel>Field Width</InputLabel>
-          <Select
-            value={localField.width || 'full'}
-            onChange={(e) =>
-              setLocalField({ ...localField, width: e.target.value as any })
-            }
-            label='Field Width'
-          >
-            <MenuItem value='full'>Full Width</MenuItem>
-            <MenuItem value='half'>Half Width</MenuItem>
-            <MenuItem value='third'>One Third</MenuItem>
-          </Select>
-        </FormControl>
-
+        {field.type !== 'file' && (
+          <FormControl size='small' fullWidth>
+            <InputLabel>Field Width</InputLabel>
+            <Select
+              value={localField.width || 'full'}
+              onChange={(e) =>
+                setLocalField({ ...localField, width: e.target.value as any })
+              }
+              label='Field Width'
+            >
+              <MenuItem value='full'>Full Width</MenuItem>
+              <MenuItem value='half'>Half Width</MenuItem>
+              <MenuItem value='third'>One Third</MenuItem>
+            </Select>
+          </FormControl>
+        )}
         {['select', 'radio', 'checkbox'].includes(field.type) && (
           <Box>
             <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>

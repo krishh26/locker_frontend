@@ -42,7 +42,6 @@ const TNAQuestionaire = (props) => {
     return selectedCourse?.progressByDate?.[0]?.date || false
   })
 
-
   const dispatch: any = useDispatch()
 
   const [sampleData, setSampleData] = useState(courseData?.units || [])
@@ -178,132 +177,152 @@ const TNAQuestionaire = (props) => {
             </Card>
           ))}
         </Grid>
-        <Grid className='w-full border-grey-600 border-2 h-fit my-20'>
-          <TableContainer sx={{ maxHeight: 'auto' }}>
-            <Table
-              sx={{ minWidth: 650, heigh: '100%' }}
-              size='small'
-              aria-label='simple table'
-            >
-              <TableHead className='bg-grey-300 '>
-                <TableRow>
-                  <TableCell>Topic</TableCell>
-                  <TableCell align='center'>Skill To Be Demonstrated</TableCell>
-                  <TableCell align='center'>Induction</TableCell>
-                  <TableCell align='center'>First Review</TableCell>
-                  <TableCell align='center'>Second Review</TableCell>
-                  <TableCell align='center'>Third Review</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {singleData?.subUnit?.map((row, index) => {
-                  return (
-                    <TableRow
-                      key={row.id}
-                      sx={{
-                        '&:last-child td, &:last-child th': {
-                          border: 0,
-                        },
-                      }}
-                    >
-                      <TableCell
-                        component='th'
-                        scope='row'
+        <Grid className='w-full h-fit my-20'>
+          <Typography variant='h6' className='text-20 font-bold uppercase'>
+            {singleData?.title}
+          </Typography>
+          <Grid className='w-full border-grey-600 border-2 h-fit'>
+            <TableContainer sx={{ maxHeight: 'auto' }}>
+              <Table
+                sx={{ minWidth: 650, heigh: '100%' }}
+                size='small'
+                aria-label='simple table'
+              >
+                <TableHead className='bg-grey-300 '>
+                  <TableRow>
+                    <TableCell align='left'>
+                      Skill To Be Demonstrated
+                    </TableCell>
+                    <TableCell align='center'>Induction</TableCell>
+                    <TableCell align='center'>First Review</TableCell>
+                    <TableCell align='center'>Second Review</TableCell>
+                    <TableCell align='center'>Third Review</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {singleData?.subUnit?.map((row, index) => {
+                    return (
+                      <TableRow
+                        key={row.id}
                         sx={{
-                          borderBottom: '2px solid #F8F8F8',
+                          '&:last-child td, &:last-child th': {
+                            border: 0,
+                          },
                         }}
                       >
-                        {index === 0 ? singleData?.title : null}
-                      </TableCell>
-                      <TableCell
-                        align='center'
-                        width='30%'
-                        sx={{
-                          borderBottom: '2px solid #F8F8F8',
-                        }}
-                      >
-                        {row.subTitle}
-                      </TableCell>
-                      {['induction', 'first', 'second', 'third'].map(
-                        (reviewKey) => (
-                          <TableCell
-                            key={reviewKey}
-                            align='center'
-                            sx={{
-                              borderBottom: '2px solid #F8F8F8',
-                              backgroundColor: highlightBlanks
-                                ? 'yellow'
-                                : 'inherit',
-                            }}
-                          >
-                            <FormControl fullWidth size='small'>
-                              <Select
-                                displayEmpty
-                                value={
-                                  row.quarter_review?.[reviewKey] || ''
-                                }
-                                fullWidth
-                                size='small'
-                                onChange={(e) =>
-                                  handleSelectChange(
-                                    row.id,
-                                    reviewKey,
-                                    e.target.value
-                                  )
-                                }
-                              >
-                                <MenuItem value='' disabled>
-                                  <em>Select a rating</em>
-                                </MenuItem>
-                                {ratingOptions.map((opt) => (
-                                  <MenuItem key={opt.value} value={opt.value}>
-                                    {opt.label}
+                        <TableCell
+                          align='left'
+                          width='30%'
+                          sx={{
+                            borderBottom: '2px solid #F8F8F8',
+                            minWidth: '200px',
+                          }}
+                        >
+                          {row.subTitle}
+                        </TableCell>
+                        {['induction', 'first', 'second', 'third'].map(
+                          (reviewKey) => (
+                            <TableCell
+                              key={reviewKey}
+                              align='center'
+                              sx={{
+                                borderBottom: '2px solid #F8F8F8',
+                                backgroundColor: highlightBlanks && !row.quarter_review?.[reviewKey]
+                                  ? 'yellow'
+                                  : 'inherit',
+                              }}
+                            >
+                              <FormControl fullWidth size='small'>
+                                <Select
+                                  displayEmpty
+                                  value={row.quarter_review?.[reviewKey] || ''}
+                                  fullWidth
+                                  size='small'
+                                  onChange={(e) =>
+                                    handleSelectChange(
+                                      row.id,
+                                      reviewKey,
+                                      e.target.value
+                                    )
+                                  }
+                                >
+                                  <MenuItem value='' disabled>
+                                    <em>Select a rating</em>
                                   </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </TableCell>
-                        )
-                      )}
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                                  {ratingOptions.map((opt) => (
+                                    <MenuItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </TableCell>
+                          )
+                        )}
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
 
-          <Grid className='flex justify-end items-end my-20 mr-24 gap-10'>
-            <Grid>
-              <SecondaryButton name='Save' onClick={saveData} />
-            </Grid>
-            <Grid>
-              <SecondaryButton
-                name='Next Topic'
-                disabled={
-                  sampleData?.findIndex(
-                    (item) => item.id === singleData?.id
-                  ) ===
-                  sampleData?.length - 1
-                }
-                onClick={() => {
-                  const currentIndex = sampleData?.findIndex(
-                    (item) => item.id === singleData?.id
-                  )
-                  if (
-                    currentIndex === -1 ||
-                    currentIndex === sampleData.length - 1
-                  )
-                    return
-                  const nextTopic = sampleData[currentIndex + 1]
-                  dispatch(skillsScanAction.setSingleData(nextTopic))
-                }}
-              />
-            </Grid>
-            <Grid>
-              <SecondaryButton
-                name='Next'
-                onClick={() => handleTabChange('', 2)}
-              />
+            <Grid className='flex justify-end items-end my-20 mr-24 gap-10'>
+              <Grid>
+                <SecondaryButton
+                  name='Previous Topic'
+                  disabled={
+                    sampleData?.findIndex(
+                      (item) => item.id === singleData?.id
+                    ) === 0 ||
+                    sampleData?.findIndex(
+                      (item) => item.id === singleData?.id
+                    ) ===
+                      sampleData?.length - 1
+                  }
+                  onClick={() => {
+                    const currentIndex = sampleData?.findIndex(
+                      (item) => item.id === singleData?.id
+                    )
+                    if (currentIndex === -1 || currentIndex === 0) {
+                      return
+                    }
+                    const previousData = sampleData[currentIndex - 1]
+                    dispatch(skillsScanAction.setSingleData(previousData))
+                  }}
+                />
+              </Grid>
+              <Grid>
+                <SecondaryButton name='Save' onClick={saveData} />
+              </Grid>
+              <Grid>
+                <SecondaryButton
+                  name='Next Topic'
+                  disabled={
+                    sampleData?.findIndex(
+                      (item) => item.id === singleData?.id
+                    ) ===
+                    sampleData?.length - 1
+                  }
+                  onClick={() => {
+                    const currentIndex = sampleData?.findIndex(
+                      (item) => item.id === singleData?.id
+                    )
+                    if (
+                      currentIndex === -1 ||
+                      currentIndex === sampleData.length - 1
+                    )
+                      return
+                    const nextTopic = sampleData[currentIndex + 1]
+                    dispatch(skillsScanAction.setSingleData(nextTopic))
+                  }}
+                />
+              </Grid>
+              <Grid>
+                <SecondaryButton
+                  name='Next'
+                  onClick={() => handleTabChange('', 2)}
+                />
+              </Grid>
             </Grid>
           </Grid>
         </Grid>

@@ -86,7 +86,7 @@ const ViewResults = () => {
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectGlobalUser)?.selectedUser
   const { courseData } = useSelector(selectLearnerManagement)
-  console.log("🚀 ~ ViewResults ~ courseData:", courseData)
+  console.log('🚀 ~ ViewResults ~ courseData:', courseData)
   const { selectedCourse } = useSelector(selectSkillsScan)
   const chartRef = useRef<any>(null)
 
@@ -195,16 +195,21 @@ const ViewResults = () => {
                                 <h4 class="text-sm font-semibold">Legend</h4>
                             </div>
                           <div class="p-4 border border-gray-300 rounded-lg bg-white shadow-sm" id="data-show">
-                             <ul class="list-disc list-inside text-gray-800 space-y-2">
-                                 ${legendData
-                                   .map(
-                                     (item) => `
-                                     <li>${item}</li>
-                                 `
-                                   )
-                                   .join('')}
-                             </ul>
-                        </div>
+  ${courseData?.units
+    ?.map(
+      (row) => `
+        <div class="mb-4">
+          <p class="font-semibold text-gray-900">${row?.title}</p>
+          <ul class="list-disc list-inside text-gray-800 space-y-2">
+            ${row?.subUnit
+              ?.map((item) => `<li>${item?.subTitle}</li>`)
+              .join('')}
+          </ul>
+        </div>
+      `
+    )
+    .join('')}
+</div>
 
                         </div>
                     </div>
@@ -296,13 +301,13 @@ const ViewResults = () => {
             <Card className='rounded-0 p-10'>
               {courseData &&
                 courseData.units?.map((row) => (
-                  <Grid classes="mb-4" key={row.id}>
+                  <Grid classes='mb-4' key={row.id}>
                     <Typography>{row?.title}</Typography>
                     <ul className='list-disc list-inside text-gray-800 space-y-2'>
                       {row?.subUnit?.map((item) => (
                         <li key={item.id}>{item?.subTitle}</li>
                       ))}
-                      </ul>
+                    </ul>
                   </Grid>
                 ))}
             </Card>
