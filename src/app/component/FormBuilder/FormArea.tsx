@@ -1,7 +1,7 @@
 import React from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Box, Typography, Grid } from '@mui/material'
+import { Box, Typography, Grid, Button } from '@mui/material'
 import SimpleFormFieldComponent from './SimpleFormField'
 import { SimpleFormField as FormFieldType } from './SimpleFormBuilder'
 
@@ -150,11 +150,20 @@ const FormArea: React.FC<FormAreaProps> = ({
           </Box>
         </SortableContext>
       )}
-      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+      <Box
+        sx={{
+          mt: 4,
+          display: 'flex',
+          gap: 2,
+          justifyContent: 'flex-end',
+        }}
+      >
+        <Button type='button' variant='outlined' disabled>
+          Clear Form
+        </Button>
         <Box
           component='button'
-          type='button'
-          disabled
+          type='submit'
           style={{
             padding: '8px 16px',
             fontSize: '16px',
@@ -164,12 +173,10 @@ const FormArea: React.FC<FormAreaProps> = ({
             backgroundColor: '#1976d2',
             color: '#fff',
             opacity: 0.6,
-            cursor: 'not-allowed',
           }}
         >
           Submit
         </Box>
-        
       </Box>
     </Box>
   )
