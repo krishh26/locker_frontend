@@ -109,10 +109,7 @@ const FormBuilder = (props) => {
     };
 
     const handleApply = (e, row, edit) => {
-        dispatch(slice.setSingleData(row));
-        setSelectedRow(row);
-        dispatch(slice.setMode(edit));
-        navigate("/forms/create");
+        navigate(`/forms/${row.id}/submit`);
     }
 
     const formdata = useSelector(selectFormData);
@@ -378,15 +375,13 @@ const FormBuilder = (props) => {
                     </MenuItem>
                     <MenuItem
                         onClick={() => {
-                            handleEdit("view");
-                            handleClose();
+                           navigate(`/forms/view-form/${selectedRow.id}`);
                         }}>
                         View
                     </MenuItem>
                     <MenuItem
                         onClick={() => {
-                            handleEdit("edit");
-                            handleClose();
+                            navigate(`/forms/edit/${selectedRow.id}`);
                         }}>
                         Edit
                     </MenuItem>

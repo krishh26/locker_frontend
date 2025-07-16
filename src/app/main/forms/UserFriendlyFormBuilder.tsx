@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react'
+
+import { useForm, Controller } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
 import {
   Box,
   Paper,
@@ -15,19 +19,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  Checkbox,
-  FormGroup,
-  FormLabel,
-  Card,
-  CardContent,
+  FormHelperText,
+  CircularProgress,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 import PreviewIcon from '@mui/icons-material/Preview'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { SimpleFormBuilder } from 'src/app/component/FormBuilder'
 import type { SimpleFormField } from 'src/app/component/FormBuilder'
@@ -39,42 +37,101 @@ import {
 } from 'app/store/formData'
 import { LoadingButton } from 'src/app/component/Buttons'
 import DynamicFormPreview from './DynamicFormPreview'
+import { useGetFormDetailsQuery } from 'app/store/api/form-api'
+import { showMessage } from 'app/store/fuse/messageSlice'
+
+const schema = yup.object().shape({
+  form_name: yup.string().required('Form name is required'),
+  type: yup.string().required('Form type is required'),
+  description: yup.string().notRequired(),
+})
+
+const formTypeOptions = [
+  'ILP',
+  'Review',
+  'Enrolment',
+  'Survey',
+  'Workbook',
+  'Test/Exams',
+  'Others',
+]
+
+type MetadataFormValues = {
+  form_name: string
+  type: string
+  description?: string
+}
 
 const UserFriendlyFormBuilder: React.FC = () => {
   const navigate = useNavigate()
+  const param = useParams()
+
+  const formId: string | boolean = param?.id ?? false
+
   const dispatch: any = useDispatch()
   const { singleData, mode, dataUpdatingLoadding } = useSelector(selectFormData)
 
-  const [formMetadata, setFormMetadata] = useState({
-    form_name: '',
-    description: '',
-    type: 'survey',
-  })
-
   const [formFields, setFormFields] = useState<SimpleFormField[]>([])
+  console.log('🚀 ~ formFields:', formFields)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
   const [saveStatus, setSaveStatus] = useState<
     'idle' | 'saving' | 'saved' | 'error'
   >('idle')
 
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    reset,
+    formState: { errors },
+  } = useForm<MetadataFormValues>({
+    defaultValues: {
+      form_name: '',
+      type: '',
+      description: '',
+    },
+    resolver: yupResolver(schema),
+    mode: 'onSubmit',
+  })
+
+  const {
+    data: formDetails,
+    isLoading: isFormDetailsLoading,
+    isError: isFormDetailsError,
+    error: formDetailsError,
+  } = useGetFormDetailsQuery(
+    {
+      id: formId,
+    },
+    {
+      skip: !formId,
+      refetchOnMountOrArgChange: false,
+    }
+  )
   useEffect(() => {
-    // Load existing form data if in edit mode
-    if (mode === 'edit' && singleData) {
-      setFormMetadata({
-        form_name: singleData.form_name || '',
-        description: singleData.description || '',
-        type: singleData.type || 'survey',
+    if (isFormDetailsError && formDetailsError) {
+      console.error('Error fetching form details:', formDetailsError)
+      dispatch(
+        showMessage({
+          message: 'Error fetching form details',
+          variant: 'error',
+        })
+      )
+      navigate('/forms')
+    }
+
+    if (formDetails && !isFormDetailsLoading) {
+      const { form_name, type, form_data, description } = formDetails.data
+
+      reset({
+        form_name,
+        type,
+        description,
       })
 
-      // Convert existing form data to our SimpleFormField format
-      if (singleData.form_data) {
-        const convertedFields = convertFormIOToSimpleFields(
-          singleData.form_data
-        )
-        setFormFields(convertedFields)
-      }
+      setFormFields(form_data)
     }
-  }, [mode, singleData])
+  }, [formDetails, isFormDetailsLoading, isFormDetailsError, formDetailsError])
 
   const convertFormIOToSimpleFields = (
     formIOComponents: any[]
@@ -88,7 +145,7 @@ const UserFriendlyFormBuilder: React.FC = () => {
       options:
         component.values?.map((v: any) => v.label || v.value) ||
         component.data?.values?.map((v: any) => v.label),
-      width: 'full', // Default to full width
+      width: 'full',
     }))
   }
 
@@ -121,17 +178,16 @@ const UserFriendlyFormBuilder: React.FC = () => {
         },
       }
 
-      // Add type-specific properties
       if (
         ['select', 'radio', 'checkbox'].includes(field.type) &&
         field.options
       ) {
         return {
           ...baseComponent,
-          values: field.options.map((option, index) => ({
-            label: option,
-            value: option.toLowerCase().replace(/\s+/g, '_'),
-          })),
+          // values: field.options.map((option, index) => ({
+          //   label: option,
+          //   value: option.toLowerCase().replace(/\s+/g, '_'),
+          // })),
         }
       }
 
@@ -156,7 +212,9 @@ const UserFriendlyFormBuilder: React.FC = () => {
   }
 
   const handleSave = async () => {
-    if (!formMetadata.form_name.trim()) {
+    const values = getValues()
+
+    if (!values.form_name.trim()) {
       alert('Please enter a form name')
       return
     }
@@ -169,16 +227,16 @@ const UserFriendlyFormBuilder: React.FC = () => {
     setSaveStatus('saving')
 
     const formData = {
-      id: singleData?.id || null,
-      form_name: formMetadata.form_name,
-      description: formMetadata.description,
-      type: formMetadata.type,
-      form_data: convertToFormIOFormat(formFields),
+      id: formId || null,
+      form_name: values.form_name,
+      description: values.description,
+      type: values.type,
+      form_data: formFields,
     }
 
     try {
       let response
-      if (mode === 'edit') {
+      if (formId) {
         response = await dispatch(updateFormDataAPI(formData))
       } else {
         response = await dispatch(createFormDataAPI(formData))
@@ -214,6 +272,26 @@ const UserFriendlyFormBuilder: React.FC = () => {
 
   const fieldCounts = getFieldCountByType()
 
+  if (isFormDetailsLoading) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          backgroundColor: '#f5f5f5',
+          fontSize: '24px',
+          fontWeight: 'bold',
+          gap: '10px',
+        }}
+      >
+        <CircularProgress />
+        please wait while we load the form details...
+      </div>
+    )
+  }
+
   return (
     <Box
       sx={{
@@ -223,7 +301,6 @@ const UserFriendlyFormBuilder: React.FC = () => {
         backgroundColor: '#f5f5f5',
       }}
     >
-      {/* Header */}
       <AppBar
         position='static'
         color='default'
@@ -237,7 +314,7 @@ const UserFriendlyFormBuilder: React.FC = () => {
 
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant='h6' sx={{ fontWeight: 600, color: '#1976d2' }}>
-              🎨 {mode === 'edit' ? 'Edit Form' : 'Create New Form'}
+              🎨 {formId ? 'Edit Form' : 'Create New Form'}
             </Typography>
             <Typography variant='body2' color='text.secondary'>
               Simply drag components to build your form - no complex setup
@@ -270,10 +347,7 @@ const UserFriendlyFormBuilder: React.FC = () => {
               <Button
                 variant='contained'
                 startIcon={<SaveIcon />}
-                onClick={handleSave}
-                disabled={
-                  formFields.length === 0 || !formMetadata.form_name.trim()
-                }
+                onClick={handleSubmit(handleSave)}
               >
                 Save Form
               </Button>
@@ -282,24 +356,17 @@ const UserFriendlyFormBuilder: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Save Status Alert */}
       {saveStatus === 'saved' && (
         <Alert severity='success' sx={{ m: 2 }}>
-          Form saved successfully! Redirecting to forms list...
+          Form saved successfully! Redirecting...
         </Alert>
       )}
-
       {saveStatus === 'error' && (
-        <Alert
-          severity='error'
-          sx={{ m: 2 }}
-          onClose={() => setSaveStatus('idle')}
-        >
+        <Alert severity='error' sx={{ m: 2 }}>
           Error saving form. Please try again.
         </Alert>
       )}
 
-      {/* Form Metadata */}
       <Paper
         elevation={1}
         sx={{ p: 3, m: 2, backgroundColor: 'white', borderRadius: 3 }}
@@ -311,55 +378,63 @@ const UserFriendlyFormBuilder: React.FC = () => {
         >
           📋 Form Information
         </Typography>
-        <Grid container spacing={3}>
+        <Grid container spacing={3} className='mt-4'>
           <Grid item xs={12} md={6}>
-            <TextField
-              label='Form Name'
-              value={formMetadata.form_name}
-              onChange={(e) =>
-                setFormMetadata({ ...formMetadata, form_name: e.target.value })
-              }
-              fullWidth
-              required
-              placeholder='e.g., Customer Feedback Form'
-              error={!formMetadata.form_name.trim() && formFields.length > 0}
-              helperText={
-                !formMetadata.form_name.trim() && formFields.length > 0
-                  ? 'Form name is required'
-                  : ''
-              }
+            <Controller
+              name='form_name'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label='Form Name'
+                  fullWidth
+                  required
+                  placeholder='e.g., Customer Feedback Form'
+                  error={!!errors.form_name}
+                  helperText={errors.form_name?.message}
+                />
+              )}
             />
           </Grid>
+
           <Grid item xs={12} md={6}>
-            <TextField
-              label='Form Type'
-              value={formMetadata.type}
-              onChange={(e) =>
-                setFormMetadata({ ...formMetadata, type: e.target.value })
-              }
-              fullWidth
-              placeholder='e.g., survey, feedback, assessment'
+            <Controller
+              name='type'
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth required error={!!errors.type}>
+                  <InputLabel>Form Type</InputLabel>
+                  <Select {...field} label='Form Type'>
+                    {formTypeOptions.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>{errors.type?.message}</FormHelperText>
+                </FormControl>
+              )}
             />
           </Grid>
+
           <Grid item xs={12}>
-            <TextField
-              label='Description (Optional)'
-              value={formMetadata.description}
-              onChange={(e) =>
-                setFormMetadata({
-                  ...formMetadata,
-                  description: e.target.value,
-                })
-              }
-              fullWidth
-              multiline
-              rows={2}
-              placeholder='Describe what this form is for...'
+            <Controller
+              name='description'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label='Description (Optional)'
+                  fullWidth
+                  multiline
+                  rows={2}
+                  placeholder='Describe what this form is for...'
+                />
+              )}
             />
           </Grid>
         </Grid>
 
-        {/* Form Statistics */}
         {formFields.length > 0 && (
           <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #e0e0e0' }}>
             <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
@@ -379,7 +454,6 @@ const UserFriendlyFormBuilder: React.FC = () => {
         )}
       </Paper>
 
-      {/* Form Builder */}
       <Box sx={{ flex: 1 }}>
         {isPreviewMode ? (
           <Box
@@ -403,11 +477,10 @@ const UserFriendlyFormBuilder: React.FC = () => {
               This is exactly how your form will appear to users. You can
               interact with all fields to test the user experience.
             </Typography>
-            {/* <FormPreview /> */}
             <DynamicFormPreview
               fields={formFields}
-              formName={formMetadata.form_name}
-              description={formMetadata.description}
+              formName={getValues('form_name')}
+              description={getValues('description')}
             />
           </Box>
         ) : (
