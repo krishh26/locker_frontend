@@ -75,24 +75,37 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
     setLocalField(field)
     onStopEdit()
   }
-
   const addOption = () => {
     const currentOptions = localField.options || []
+    const newIndex = currentOptions.length + 1
+    const newOption = {
+      label: `Option ${newIndex}`,
+      value: `option_${newIndex}`,
+    }
     setLocalField({
       ...localField,
-      options: [...currentOptions, `Option ${currentOptions.length + 1}`],
+      options: [...currentOptions, newOption],
     })
   }
 
-  const updateOption = (index: number, value: string) => {
-    const newOptions = [...(localField.options || [])]
-    newOptions[index] = value
-    setLocalField({ ...localField, options: newOptions })
+  const updateOption = (index: number, newLabel: string) => {
+    const currentOptions = [...(localField.options || [])]
+    currentOptions[index] = {
+      label: newLabel,
+      value: newLabel.toLowerCase().replace(/\s+/g, '_'), // auto-generate value from label
+    }
+    setLocalField({
+      ...localField,
+      options: currentOptions,
+    })
   }
 
   const removeOption = (index: number) => {
     const newOptions = (localField.options || []).filter((_, i) => i !== index)
-    setLocalField({ ...localField, options: newOptions })
+    setLocalField({
+      ...localField,
+      options: newOptions,
+    })
   }
 
   const renderFieldPreview = () => {
@@ -150,8 +163,8 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
             <InputLabel>{field.label}</InputLabel>
             <Select label={field.label}>
               {field.options?.map((option, index) => (
-                <MenuItem key={index} value={option}>
-                  {option}
+                <MenuItem key={index} value={option.value}>
+                  {option.label}
                 </MenuItem>
               ))}
             </Select>
@@ -169,9 +182,9 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
               {field.options?.map((option, index) => (
                 <FormControlLabel
                   key={index}
-                  value={option}
+                  value={option.value}
                   control={<Radio size='small' disabled />}
-                  label={option}
+                  label={option.label}
                 />
               ))}
             </RadioGroup>
@@ -190,7 +203,7 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
                 <FormControlLabel
                   key={index}
                   control={<Checkbox size='small' disabled />}
-                  label={option}
+                  label={option.label}
                 />
               ))}
             </FormGroup>
@@ -320,7 +333,7 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
             {(localField.options || []).map((option, index) => (
               <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1 }}>
                 <TextField
-                  value={option}
+                  value={option.label}
                   onChange={(e) => updateOption(index, e.target.value)}
                   size='small'
                   fullWidth
@@ -347,14 +360,17 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
             onClick={handleCancel}
             size='small'
             variant='outlined'
+            className='rounded-md'
           >
             Cancel
           </Button>
           <Button
             startIcon={<CheckIcon />}
             onClick={handleSave}
-            size='small'
+            color='primary'
             variant='contained'
+            size='small'
+            className='rounded-md'
           >
             Save
           </Button>

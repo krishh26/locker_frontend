@@ -23,6 +23,13 @@ import { useForm, Controller } from 'react-hook-form'
 import * as yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import FileUploadField from './FileUploadField'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useSelector } from 'react-redux'
+import { selectUser } from 'app/store/userSlice'
+import { selectGlobalUser } from 'app/store/globalUser'
+import { UserRole } from 'src/enum'
+import { useDispatch } from 'react-redux'
+import { createUserFormDataAPI } from 'app/store/formData'
 
 export interface SimpleFormField {
   id: string
@@ -30,7 +37,7 @@ export interface SimpleFormField {
   label: string
   placeholder?: string
   required?: boolean
-  options?: string[]
+  options?: { label: string; value: string }[]
   width?: 'full' | 'half' | 'third'
 }
 
@@ -132,8 +139,27 @@ const DynamicFormPreview: React.FC<Props> = ({
   formName,
   description,
 }) => {
+  const param = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const formId: string | boolean = param?.id ?? false
+  const isSubmitPath = location.pathname === `/forms/${formId}/submit`
+
+  if (!isSubmitPath) {
+    navigate(`/forms`)
+  }
+
+  const user =
+    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
+    useSelector(selectUser)?.data
+  const currentUser =
+    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
+    useSelector(selectGlobalUser)?.currentUser
+
   // Build Yup schema from fields
   const validationSchema = getDynamicYupSchema(fields)
+
+  const dispatch: any = useDispatch()
 
   const {
     handleSubmit,
@@ -149,9 +175,34 @@ const DynamicFormPreview: React.FC<Props> = ({
     }, {} as Record<string, any>),
   })
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     console.log('Form submitted:', data)
-    alert('Form submitted successfully!')
+
+    // if (isSubmitPath && formId) {
+    //   try {
+    //     if (user.role !== UserRole.Admin) {
+    //       await dispatch(
+    //         createUserFormDataAPI({
+    //           form_id: formId,
+    //           form_data: data,
+    //           user_id: currentUser.user_id,
+    //         })
+    //       )
+    //     }
+    //   } catch (err) {
+    //     console.log(err)
+    //   } finally {
+    //   }
+    // }
+  }
+
+  const onClear = () => {
+    reset({
+      ...fields.reduce((acc, field) => {
+        acc[field.id] = field.type === 'checkbox' ? [] : ''
+        return acc
+      }, {} as Record<string, any>),
+    })
   }
 
   return (
@@ -231,8 +282,8 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 value={controllerField.value || ''}
                               >
                                 {field.options?.map((opt, i) => (
-                                  <MenuItem key={i} value={opt}>
-                                    {opt}
+                                  <MenuItem key={i} value={opt.value}>
+                                    {opt.label}
                                   </MenuItem>
                                 ))}
                               </Select>
@@ -261,9 +312,9 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 {field.options?.map((opt, i) => (
                                   <FormControlLabel
                                     key={i}
-                                    value={opt}
+                                    value={opt.value}
                                     control={<Radio />}
-                                    label={opt}
+                                    label={opt.label}
                                   />
                                 ))}
                               </RadioGroup>
@@ -315,7 +366,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                         }}
                                       />
                                     }
-                                    label={opt}
+                                    label={opt.value}
                                   />
                                 ))}
                               </FormGroup>
@@ -380,7 +431,11 @@ const DynamicFormPreview: React.FC<Props> = ({
                 justifyContent: 'flex-end',
               }}
             >
-              <Button type='button' variant='outlined' onClick={() => reset()}>
+              <Button
+                type='button'
+                variant='outlined'
+                onClick={() => onClear()}
+              >
                 Clear Form
               </Button>
               <Box

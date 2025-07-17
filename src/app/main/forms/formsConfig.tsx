@@ -5,6 +5,7 @@ import AddForms from "./addForms";
 import ImprovedFormBuilder from "./ImprovedFormBuilder";
 import FormBuilderDemo from "./FormBuilderDemo";
 import UserFriendlyFormBuilder from "./UserFriendlyFormBuilder";
+import AddViewForm from "./add-view-form";
 
 const FormsConfig = {
   settings: {
@@ -35,10 +36,6 @@ const FormsConfig = {
       element: <FormsView />
     },
     {
-      path: "/forms/create",
-      element: <AddForms />
-    },
-    {
       path: "/forms/create-improved",
       element: <ImprovedFormBuilder />
     },
@@ -49,6 +46,18 @@ const FormsConfig = {
     {
       path: "/forms/create-simple",
       element: <UserFriendlyFormBuilder />
+    },
+    {
+      path: "/forms/edit/:id",
+      element:  <UserFriendlyFormBuilder />
+    },
+    {
+      path: "/forms/view-form/:id",
+      element: <AddViewForm />
+    },
+    {
+      path: "/forms/:id/submit",
+      element: <AddViewForm />
     },
   ],
 };
