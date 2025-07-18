@@ -1,6 +1,9 @@
 import { Box, CircularProgress } from '@mui/material'
 import DynamicFormPreview from './DynamicFormPreview'
-import { useGetFormDetailsQuery } from 'app/store/api/form-api'
+import {
+  useGetFormDetailsQuery,
+  useGetSavedFormDetailsQuery,
+} from 'app/store/api/form-api'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
@@ -12,17 +15,14 @@ const AddViewForm = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const formId: string | boolean = param?.id ?? false
+  const isSavedViewedPath = location.pathname === `/forms/view-saved-form/${formId}`
+  const isViewedPath = location.pathname === `/forms/view-form/${formId}`
 
   const [formFields, setFormFields] = useState<SimpleFormField[]>([])
   const [formData, setFormData] = useState<any>({})
+  const [savedFormData, setSavedFormData] = useState<any>({})
 
   const dispatch: any = useDispatch()
-
-  const isSubmitPath = location.pathname === `/forms/${formId}/submit`
-
-  if (!isSubmitPath) {
-    navigate(`/forms`)
-  }
 
   const {
     data: formDetails,
@@ -34,10 +34,26 @@ const AddViewForm = () => {
       id: formId,
     },
     {
-      skip: !formId,
+      skip: !formId || isSavedViewedPath,
       refetchOnMountOrArgChange: false,
     }
   )
+
+  const {
+    data: savedFormDetails,
+    isLoading: isSavedFormDetailsLoading,
+    isError: isSavedFormDetailsError,
+    error: savedFormDetailsError,
+  } = useGetSavedFormDetailsQuery(
+    {
+      id: formId,
+    },
+    {
+      skip: true,
+      refetchOnMountOrArgChange: false,
+    }
+  )
+
   useEffect(() => {
     if (isFormDetailsError && formDetailsError) {
       console.error('Error fetching form details:', formDetailsError)
@@ -63,7 +79,39 @@ const AddViewForm = () => {
     }
   }, [formDetails, isFormDetailsLoading, isFormDetailsError, formDetailsError])
 
-  if (isFormDetailsLoading) {
+  useEffect(() => {
+    if (isSavedFormDetailsError && savedFormDetailsError) {
+      console.error('Error fetching saved form details:', savedFormDetailsError)
+      dispatch(
+        showMessage({
+          message: 'Error fetching saved form details',
+          variant: 'error',
+        })
+      )
+      navigate('/forms')
+    }
+
+    if (savedFormDetails && !isSavedFormDetailsLoading) {
+      console.log('🚀 ~ useEffect ~ savedFormDetails:', savedFormDetails)
+
+      // const { form_name, type, form_data, description } = savedFormDetails.data
+
+      // setFormData({
+      //   form_name,
+      //   type,
+      //   description,
+      // })
+
+      // setFormFields(form_data)
+    }
+  }, [
+    savedFormDetails,
+    isSavedFormDetailsLoading,
+    isSavedFormDetailsError,
+    savedFormDetailsError,
+  ])
+
+  if (isFormDetailsLoading || isSavedFormDetailsLoading) {
     return (
       <div
         style={{
@@ -98,6 +146,7 @@ const AddViewForm = () => {
         fields={formFields}
         formName={formData.form_name}
         description={formData.description}
+        savedFormData={savedFormData}
       />
     </Box>
   )
