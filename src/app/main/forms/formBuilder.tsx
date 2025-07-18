@@ -89,7 +89,7 @@ const FormBuilder = (props) => {
     };
 
     const handleClickOpen = () => {
-        navigate("/forms/create");
+        navigate("/forms/create-simple");
     };
 
     const handleClick = (event, row) => {

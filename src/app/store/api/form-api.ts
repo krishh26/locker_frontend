@@ -9,8 +9,15 @@ export const formAPI = createApi({
         const url = `form/get/${params?.id}`
         return { url }
       },
-      keepUnusedDataFor:0,
+      keepUnusedDataFor: 0,
+    }),
+    getSavedFormDetails: builder.query({
+      query: (params) => {
+        const url = `form/get-saved-form/${params?.id}`
+        return { url }
+      },
+      keepUnusedDataFor: 0,
     }),
   }),
 })
-export const { useGetFormDetailsQuery } = formAPI
+export const { useGetFormDetailsQuery, useGetSavedFormDetailsQuery } = formAPI

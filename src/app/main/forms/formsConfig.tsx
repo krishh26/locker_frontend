@@ -56,6 +56,10 @@ const FormsConfig = {
       element: <AddViewForm />
     },
     {
+      path: '/forms/view-saved-form/:id',
+      element: <AddViewForm />
+    },
+    {
       path: "/forms/:id/submit",
       element: <AddViewForm />
     },

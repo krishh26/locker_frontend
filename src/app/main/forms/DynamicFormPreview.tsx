@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import {
   Grid,
   TextField,
@@ -30,6 +30,7 @@ import { selectGlobalUser } from 'app/store/globalUser'
 import { UserRole } from 'src/enum'
 import { useDispatch } from 'react-redux'
 import { createUserFormDataAPI } from 'app/store/formData'
+import { showMessage } from 'app/store/fuse/messageSlice'
 
 export interface SimpleFormField {
   id: string
@@ -45,6 +46,9 @@ interface Props {
   fields: SimpleFormField[]
   formName: string
   description?: string
+  savedFormData?: {
+    [key: string]: any
+  }
 }
 
 const widthToGrid = (width?: string) => {
@@ -138,16 +142,13 @@ const DynamicFormPreview: React.FC<Props> = ({
   fields,
   formName,
   description,
+  savedFormData,
 }) => {
   const param = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const formId: string | boolean = param?.id ?? false
   const isSubmitPath = location.pathname === `/forms/${formId}/submit`
-
-  if (!isSubmitPath) {
-    navigate(`/forms`)
-  }
 
   const user =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
@@ -176,25 +177,36 @@ const DynamicFormPreview: React.FC<Props> = ({
   })
 
   const onSubmit = async (data: any) => {
-    console.log('Form submitted:', data)
-
-    // if (isSubmitPath && formId) {
-    //   try {
-    //     if (user.role !== UserRole.Admin) {
-    //       await dispatch(
-    //         createUserFormDataAPI({
-    //           form_id: formId,
-    //           form_data: data,
-    //           user_id: currentUser.user_id,
-    //         })
-    //       )
-    //     }
-    //   } catch (err) {
-    //     console.log(err)
-    //   } finally {
-    //   }
-    // }
+    if (isSubmitPath && formId) {
+      try {
+        if (user.role !== UserRole.Admin) {
+          await dispatch(
+            createUserFormDataAPI({
+              form_id: formId,
+              form_data: data,
+              user_id: currentUser.user_id,
+            })
+          )
+          navigate('/forms')
+        }
+      } catch (err) {
+        console.log(err)
+        dispatch(
+          showMessage({
+            message: 'Something went wrong!',
+            variant: 'error',
+          })
+        )
+      } finally {
+      }
+    }
   }
+
+  useEffect(() => {
+    if (savedFormData && Object.keys(savedFormData).length == 0) return
+
+    reset(savedFormData)
+  }, [reset, savedFormData])
 
   const onClear = () => {
     reset({
