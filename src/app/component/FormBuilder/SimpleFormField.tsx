@@ -133,7 +133,6 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
             type='number'
             fullWidth
             size='small'
-            disabled
             required={field.required}
           />
         )
@@ -147,7 +146,6 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
             multiline
             rows={3}
             size='small'
-            disabled
             required={field.required}
           />
         )
@@ -157,7 +155,6 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
           <FormControl
             fullWidth
             size='small'
-            disabled
             required={field.required}
           >
             <InputLabel>{field.label}</InputLabel>
@@ -217,7 +214,6 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
             type='date'
             fullWidth
             size='small'
-            disabled
             required={field.required}
             InputLabelProps={{ shrink: true }}
           />
@@ -260,7 +256,6 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
             placeholder={field.placeholder}
             fullWidth
             size='small'
-            disabled
           />
         )
     }

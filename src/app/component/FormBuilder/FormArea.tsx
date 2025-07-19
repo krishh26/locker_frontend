@@ -85,8 +85,7 @@ const FormArea: React.FC<FormAreaProps> = ({
     <Box
       ref={setNodeRef}
       sx={{
-        minHeight: 400,
-        maxHeight: 'calc(100vh - 200px)',
+        minHeight: 'calc(100vh - 200px)',
         overflowY: 'auto',
         p: 3,
         border: '3px dashed',
@@ -103,7 +102,7 @@ const FormArea: React.FC<FormAreaProps> = ({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: 300,
+            height: 'calc(100vh - 500px)',
             color: 'text.secondary',
           }}
         >
