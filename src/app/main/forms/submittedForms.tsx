@@ -63,7 +63,7 @@ const SubmittedForms = (props) => {
         dispatch(slice.setSingleData(row.form));
         dispatch(slice.setFormDataDetails(row.form_data));
         dispatch(slice.setMode(edit));
-        navigate("/forms/view-saved-form/" + row.id);
+        navigate("/forms/view-saved-form/" + row.form.id);
     }
 
     const formdata = useSelector(selectFormData);

@@ -29,7 +29,7 @@ import { selectUser } from 'app/store/userSlice'
 import { selectGlobalUser } from 'app/store/globalUser'
 import { UserRole } from 'src/enum'
 import { useDispatch } from 'react-redux'
-import { createUserFormDataAPI } from 'app/store/formData'
+import { createUserFormDataAPI, selectFormData } from 'app/store/formData'
 import { showMessage } from 'app/store/fuse/messageSlice'
 
 export interface SimpleFormField {
@@ -149,6 +149,8 @@ const DynamicFormPreview: React.FC<Props> = ({
   const location = useLocation()
   const formId: string | boolean = param?.id ?? false
   const isSubmitPath = location.pathname === `/forms/${formId}/submit`
+  const isSavedViewedPath =
+    location.pathname === `/forms/view-saved-form/${formId}`
 
   const user =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
@@ -161,6 +163,15 @@ const DynamicFormPreview: React.FC<Props> = ({
   const validationSchema = getDynamicYupSchema(fields)
 
   const dispatch: any = useDispatch()
+  const {
+    data,
+    formDataDetails,
+    dataUpdatingLoadding,
+    singleData,
+    mode,
+    singleFrom = null,
+    modeTemaplate = '',
+  } = useSelector(selectFormData)
 
   const {
     handleSubmit,
@@ -203,10 +214,14 @@ const DynamicFormPreview: React.FC<Props> = ({
   }
 
   useEffect(() => {
-    if (savedFormData && Object.keys(savedFormData).length == 0) return
-
-    reset(savedFormData)
-  }, [reset, savedFormData])
+    if (
+      isSavedViewedPath &&
+      formDataDetails &&
+      Object.keys(formDataDetails).length > 0
+    ) {
+      reset(formDataDetails)
+    }
+  }, [reset, formDataDetails, isSavedViewedPath])
 
   const onClear = () => {
     reset({
@@ -345,7 +360,9 @@ const DynamicFormPreview: React.FC<Props> = ({
                               required={field.required}
                               error={error}
                             >
-                              <FormLabel>{field.label}</FormLabel>
+                              <FormLabel component='legend'>
+                                {field.label}
+                              </FormLabel>
                               <FormGroup>
                                 {field.options?.map((opt, i) => (
                                   <FormControlLabel
@@ -354,7 +371,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                       <Checkbox
                                         checked={
                                           controllerField.value?.includes(
-                                            opt
+                                            opt.value
                                           ) || false
                                         }
                                         onChange={(e) => {
@@ -368,17 +385,19 @@ const DynamicFormPreview: React.FC<Props> = ({
                                           if (checked) {
                                             controllerField.onChange([
                                               ...valueArr,
-                                              opt,
+                                              opt.value,
                                             ])
                                           } else {
                                             controllerField.onChange(
-                                              valueArr.filter((v) => v !== opt)
+                                              valueArr.filter(
+                                                (v) => v !== opt.value
+                                              )
                                             )
                                           }
                                         }}
                                       />
                                     }
-                                    label={opt.value}
+                                    label={opt.label}
                                   />
                                 ))}
                               </FormGroup>
@@ -446,6 +465,7 @@ const DynamicFormPreview: React.FC<Props> = ({
               <Button
                 type='button'
                 variant='outlined'
+                disabled={isSavedViewedPath}
                 onClick={() => onClear()}
               >
                 Clear Form
