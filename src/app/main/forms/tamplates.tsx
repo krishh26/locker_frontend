@@ -41,7 +41,7 @@ export default function Templates() {
                             startIcon={<AddIcon />}
                             onClick={() => navigate('/forms/create-simple')}
                         />
-                        <SecondaryButton
+                        {/* <SecondaryButton
                             name="🎨 Advanced Builder"
                             variant="outlined"
                             startIcon={<AddIcon />}
@@ -52,7 +52,7 @@ export default function Templates() {
                             variant="outlined"
                             startIcon={<AddIcon />}
                             onClick={() => navigate('/forms/create')}
-                        />
+                        /> */}
                     </Box>
                 </Box>
 
