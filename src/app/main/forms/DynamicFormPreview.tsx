@@ -40,6 +40,7 @@ export interface SimpleFormField {
   required?: boolean
   options?: { label: string; value: string }[]
   width?: 'full' | 'half' | 'third'
+  presetField?: string
 }
 
 interface Props {
@@ -76,6 +77,12 @@ export const getDynamicYupSchema = (fields: SimpleFormField[]) => {
 
         case 'number':
           schema = yup.number().typeError(`${label} must be a number`)
+          break
+
+        case 'phone':
+          schema = yup
+            .string()
+            .matches(/^\+?[0-9]*$/, `${label} must contain only numbers`)
           break
 
         case 'checkbox':
@@ -186,6 +193,29 @@ const DynamicFormPreview: React.FC<Props> = ({
       return acc
     }, {} as Record<string, any>),
   })
+  useEffect(() => {
+    if (isSubmitPath) {
+      const presetMap = {
+        learnerFullName: currentUser.displayName,
+        LearnerEmail: currentUser.email,
+        LearnerPhoneNumber: currentUser.mobile,
+      }
+
+      reset(
+        Object.fromEntries(
+          fields.map((field) => [
+            field.id,
+            currentUser.roles.includes(UserRole.Learner) && field.presetField
+              ? presetMap[field.presetField] ??
+                (field.type === 'checkbox' ? [] : '')
+              : field.type === 'checkbox'
+              ? []
+              : '',
+          ])
+        )
+      )
+    }
+  }, [isSubmitPath, fields])
 
   const onSubmit = async (data: any) => {
     if (isSubmitPath && formId) {

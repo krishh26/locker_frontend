@@ -34,8 +34,6 @@ const AddViewForm = () => {
     singleFrom = null,
     modeTemaplate = '',
   } = useSelector(selectFormData)
-  console.log('🚀 ~ AddViewForm ~ singleData:', singleData)
-  console.log('🚀 ~ AddViewForm ~ formDataDetails:', formDataDetails)
 
   const {
     data: formDetails,
