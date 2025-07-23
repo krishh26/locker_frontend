@@ -43,6 +43,7 @@ export interface FormField {
   options?: string[];
   validation?: any;
   properties?: any;
+  presetField?: string;
 }
 
 // Component palette items

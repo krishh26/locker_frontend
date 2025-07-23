@@ -38,9 +38,13 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import AddIcon from '@mui/icons-material/Add'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { v4 as uuidv4 } from 'uuid'
 import ComponentItem from './ComponentItem'
 import FormArea from './FormArea'
+import PresetItem from './PresetItem'
+import { PRESET_FIELDS } from './presetData'
 
 // Simple form field interface
 export interface SimpleFormField {
@@ -81,6 +85,9 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
   const [formFields, setFormFields] = useState<SimpleFormField[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [editingField, setEditingField] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'components' | 'presets'>(
+    'components'
+  )
 
   useEffect(() => {
     setFormFields(initialFields)
@@ -99,33 +106,41 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event
-
       if (!over) {
         setActiveId(null)
         return
       }
 
-      // Check if dragging from component palette
+      // Check if dragging from SIMPLE_COMPONENTS
       const componentType = SIMPLE_COMPONENTS.find(
         (comp) => comp.type === active.id
       )
-      if (componentType && over.id === 'form-area') {
-        // Add new field with smart defaults
-        const newField: SimpleFormField = {
-          id: uuidv4(),
-          type: componentType.type,
-          label: getDefaultLabel(componentType.type),
-          placeholder: getDefaultPlaceholder(componentType.type),
-          required: false,
-          width: 'full',
-          ...(needsOptions(componentType.type) && {
-            options: [
-              { label: 'Option 1', value: 'option_1' },
-              { label: 'Option 2', value: 'option_2' },
-              { label: 'Option 3', value: 'option_3' },
-            ],
-          }),
-        }
+
+      // Check if dragging from a preset (via `data`)
+      const isPresetDrag = active.data?.current?.type === 'preset'
+      const presetField = active.data?.current?.field
+
+      if ((componentType || isPresetDrag) && over.id === 'form-area') {
+        const newField: SimpleFormField = isPresetDrag
+          ? {
+              ...presetField,
+              id: uuidv4(), // ensure unique id
+            }
+          : {
+              id: uuidv4(),
+              type: componentType!.type,
+              label: getDefaultLabel(componentType!.type),
+              placeholder: getDefaultPlaceholder(componentType!.type),
+              required: false,
+              width: 'full',
+              ...(needsOptions(componentType!.type) && {
+                options: [
+                  { label: 'Option 1', value: 'option_1' },
+                  { label: 'Option 2', value: 'option_2' },
+                  { label: 'Option 3', value: 'option_3' },
+                ],
+              }),
+            }
 
         const updatedFields = [...formFields, newField]
         setFormFields(updatedFields)
@@ -135,7 +150,7 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
         active.id !== over.id &&
         formFields.find((f) => f.id === active.id)
       ) {
-        // Reorder existing fields
+        // Reordering existing fields
         const oldIndex = formFields.findIndex((f) => f.id === active.id)
         const newIndex = formFields.findIndex((f) => f.id === over.id)
 
@@ -249,25 +264,66 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
             borderRadius: 3,
             backgroundColor: 'white',
             height: 'fit-content',
+            position: 'relative',
           }}
         >
-          <Typography
-            variant='h6'
-            gutterBottom
-            sx={{ fontWeight: 600, color: '#1976d2' }}
+          {/* Header with toggle */}
+          <Box
+            display='flex'
+            alignItems='center'
+            justifyContent='space-between'
           >
-            📦 Form Components
-          </Typography>
-          <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-            Drag components to build your form
+            <IconButton
+              size='small'
+              onClick={() => setActiveTab('components')}
+              disabled={activeTab === 'components'}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            <Typography
+              variant='h6'
+              sx={{
+                fontWeight: 600,
+                color: '#1976d2',
+                flexGrow: 1,
+                textAlign: 'center',
+              }}
+            >
+              {activeTab === 'components' ? '📦 Form Components' : '✨ Presets'}
+            </Typography>
+            <IconButton
+              size='small'
+              onClick={() => setActiveTab('presets')}
+              disabled={activeTab === 'presets'}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+
+          <Typography
+            variant='body2'
+            color='text.secondary'
+            sx={{ mb: 2, textAlign: 'center' }}
+          >
+            {activeTab === 'components'
+              ? 'Drag components to build your form'
+              : 'Choose from saved presets'}
           </Typography>
 
+          <Divider sx={{ mb: 2 }} />
+
           <Grid container spacing={1}>
-            {SIMPLE_COMPONENTS.map((component) => (
-              <Grid item xs={12} key={component.type}>
-                <ComponentItem component={component} />
-              </Grid>
-            ))}
+            {activeTab === 'components' ? (
+              <>
+                {SIMPLE_COMPONENTS.map((item) => (
+                  <Grid item xs={12} key={item.type}>
+                    <ComponentItem component={item} />
+                  </Grid>
+                ))}
+              </>
+            ) : (
+              <PresetItem presets={PRESET_FIELDS} />
+            )}
           </Grid>
         </Paper>
 
@@ -301,7 +357,6 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
                   Drag components here to create your form
                 </Typography>
               </Box>
-
             </Box>
 
             <FormArea
