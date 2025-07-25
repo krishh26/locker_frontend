@@ -64,6 +64,8 @@ import { Link, redirect, useNavigate, useParams } from 'react-router-dom'
 import { Controller, useForm } from 'react-hook-form'
 import { UserRole } from 'src/enum'
 import { FileUploader } from 'react-drag-drop-files'
+import ManageSessionFilesDialog from './manage-session-files-dialog'
+import { getFormDataAPI } from 'app/store/formData'
 
 const schema = yup.object().shape({
   actionName: yup.string().required('Action name is required'),
@@ -138,6 +140,7 @@ const SessionList = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [sessionListData, setSessionListData] = useState([])
   const [isOpenAction, setIsOpenAction] = useState('')
+  const [isOpenForm, setIsOpenForm] = useState(false)
   const [openDeleteSession, setOpenDeleteSession] = useState('')
   const [openEditSession, setOpenEditSession] = useState('')
   const [openAddFile, setOpenAddFile] = useState('')
@@ -204,6 +207,8 @@ const SessionList = () => {
   useEffect(() => {
     if (!learner_id) {
       redirect('/home')
+    } else {
+      dispatch(getFormDataAPI({ page: 1, page_size: 25 }))
     }
   }, [learner_id])
 
@@ -713,7 +718,19 @@ const SessionList = () => {
                   </AccordionSummary>
 
                   <AccordionDetails className='px-6'>
-                    <div className='flex items-end justify-end mb-8'>
+                    <div className='flex items-end justify-end mb-8 gap-7'>
+                      <Button
+                        variant='contained'
+                        className='rounded-md'
+                        color='primary'
+                        size='small'
+                        onClick={() => {
+                          setIsOpenForm(session.sessionNo)
+                          reset()
+                        }}
+                      >
+                        Add Files
+                      </Button>
                       <Button
                         variant='contained'
                         className='rounded-md'
@@ -1306,6 +1323,10 @@ const SessionList = () => {
           </DialogActions>
         </form>
       </Dialog>
+      <ManageSessionFilesDialog
+        open={isOpenForm}
+        onClose={() => setIsOpenForm(false)}
+      />
     </Box>
   )
 }
