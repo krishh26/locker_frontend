@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Grid,
   TextField,
@@ -18,6 +18,8 @@ import {
   Card,
   CardContent,
   Alert,
+  CircularProgress,
+  Snackbar,
 } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import * as yup from 'yup'
@@ -31,6 +33,18 @@ import { UserRole } from 'src/enum'
 import { useDispatch } from 'react-redux'
 import { createUserFormDataAPI, selectFormData } from 'app/store/formData'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import {
+  generateFormSubmissionPDF,
+  generateFormSubmissionPDFFromHTML,
+  sendFormSubmissionEmail,
+  FormSubmissionData
+} from 'src/app/utils/pdfGenerator'
+import {
+  getFormAssignedUserIds,
+  getAdminTrainerUserIds,
+  formatUserForPDF,
+  getAuthToken
+} from 'src/app/utils/userHelpers'
 
 export interface SimpleFormField {
   id: string
@@ -166,6 +180,13 @@ const DynamicFormPreview: React.FC<Props> = ({
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectGlobalUser)?.currentUser
 
+  // State for PDF generation and email sending
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: 'success' | 'error' | null;
+    message: string;
+  }>({ type: null, message: '' })
+
   // Build Yup schema from fields
   const validationSchema = getDynamicYupSchema(fields)
 
@@ -219,8 +240,12 @@ const DynamicFormPreview: React.FC<Props> = ({
 
   const onSubmit = async (data: any) => {
     if (isSubmitPath && formId) {
+      setIsSubmitting(true)
+      setSubmitStatus({ type: null, message: '' })
+
       try {
-        if (user.role !== UserRole.Admin) {
+       // if (user.role !== UserRole.Admin) {
+          // First, submit the form data
           await dispatch(
             createUserFormDataAPI({
               form_id: formId,
@@ -228,10 +253,79 @@ const DynamicFormPreview: React.FC<Props> = ({
               user_id: currentUser.user_id,
             })
           )
-          navigate('/forms')
-        }
+
+          // Generate PDF of the submitted form
+          const formSubmissionData: FormSubmissionData = {
+            formName,
+            description,
+            submittedBy: formatUserForPDF(currentUser),
+            submissionDate: new Date().toLocaleString(),
+            formData: data,
+            fields: fields.map(field => ({
+              id: field.id,
+              type: field.type,
+              label: field.label,
+              required: field.required,
+              options: field.options,
+            })),
+          }
+
+          try {
+            // Try to generate PDF from HTML first (better visual representation)
+            let pdfBlob: Blob
+            try {
+              pdfBlob = await generateFormSubmissionPDFFromHTML('form-container', formSubmissionData)
+            } catch (htmlError) {
+              console.warn('HTML to PDF failed, falling back to text-based PDF:', htmlError)
+              pdfBlob = await generateFormSubmissionPDF(formSubmissionData)
+            }
+
+            // Get auth token
+            const authToken = getAuthToken()
+
+            if (authToken) {
+              // Get admin/trainer user IDs for this form
+              let adminUserIds: string[]
+              try {
+                // Try to get form-specific assigned users first
+                adminUserIds = await getFormAssignedUserIds(formId.toString(), authToken)
+              } catch (error) {
+                console.warn('Could not get form assigned users, falling back to general admin users:', error)
+                // Fallback to general admin/trainer users
+                adminUserIds = await getAdminTrainerUserIds(authToken)
+              }
+              console.log("??????????????????????????????????")
+              await sendFormSubmissionEmail(pdfBlob, formId.toString(), adminUserIds, authToken)
+
+              setSubmitStatus({
+                type: 'success',
+                message: 'Form submitted successfully and notification sent to admin!'
+              })
+            } else {
+              setSubmitStatus({
+                type: 'success',
+                message: 'Form submitted successfully, but could not send email notification.'
+              })
+            }
+          } catch (pdfError) {
+            console.error('PDF generation or email sending failed:', pdfError)
+            setSubmitStatus({
+              type: 'success',
+              message: 'Form submitted successfully, but PDF generation failed.'
+            })
+          }
+
+          // Navigate after a short delay to show the success message
+          setTimeout(() => {
+            navigate('/forms')
+          }, 2000)
+       // }
       } catch (err) {
         console.log(err)
+        setSubmitStatus({
+          type: 'error',
+          message: 'Failed to submit form. Please try again.'
+        })
         dispatch(
           showMessage({
             message: 'Something went wrong!',
@@ -239,6 +333,7 @@ const DynamicFormPreview: React.FC<Props> = ({
           })
         )
       } finally {
+        setIsSubmitting(false)
       }
     }
   }
@@ -263,15 +358,16 @@ const DynamicFormPreview: React.FC<Props> = ({
   }
 
   return (
-    <Card elevation={2} sx={{ maxWidth: 900, mx: 'auto' }}>
-      <CardContent sx={{ p: 4 }}>
-        <Typography
-          variant='h4'
-          gutterBottom
-          sx={{ fontWeight: 600, color: '#1976d2' }}
-        >
-          {formName || 'Untitled Form'}
-        </Typography>
+    <>
+      <Card elevation={2} sx={{ maxWidth: 900, mx: 'auto' }} id="form-container">
+        <CardContent sx={{ p: 4 }}>
+          <Typography
+            variant='h4'
+            gutterBottom
+            sx={{ fontWeight: 600, color: '#1976d2' }}
+          >
+            {formName || 'Untitled Form'}
+          </Typography>
 
         {description && (
           <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
@@ -500,27 +596,43 @@ const DynamicFormPreview: React.FC<Props> = ({
               >
                 Clear Form
               </Button>
-              <Box
-                component='button'
+              <Button
                 type='submit'
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                  borderRadius: 8,
-                  border: 'none',
+                variant='contained'
+                disabled={isSubmitting || isSavedViewedPath}
+                startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
+                sx={{
+                  minWidth: 120,
                   backgroundColor: '#1976d2',
-                  color: '#fff',
-                  opacity: 0.6,
+                  '&:hover': {
+                    backgroundColor: '#1565c0',
+                  },
                 }}
               >
-                Submit
-              </Box>
+                {isSubmitting ? 'Submitting...' : 'Submit'}
+              </Button>
             </Box>
           </form>
         )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Status Notification */}
+      <Snackbar
+        open={submitStatus.type !== null}
+        autoHideDuration={6000}
+        onClose={() => setSubmitStatus({ type: null, message: '' })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={submitStatus.type || 'info'}
+          onClose={() => setSubmitStatus({ type: null, message: '' })}
+          sx={{ width: '100%' }}
+        >
+          {submitStatus.message}
+        </Alert>
+      </Snackbar>
+    </>
   )
 }
 
