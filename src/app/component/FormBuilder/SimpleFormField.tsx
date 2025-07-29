@@ -152,11 +152,7 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
 
       case 'select':
         return (
-          <FormControl
-            fullWidth
-            size='small'
-            required={field.required}
-          >
+          <FormControl fullWidth size='small' required={field.required}>
             <InputLabel>{field.label}</InputLabel>
             <Select label={field.label}>
               {field.options?.map((option, index) => (
@@ -249,6 +245,37 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
           </Box>
         )
 
+      case 'signature':
+        return (
+          <Box>
+            <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>
+              {field.label}{' '}
+              {field.required && <span style={{ color: 'red' }}>*</span>}
+            </Typography>
+            <Box
+              sx={{
+                border: '1px solid #ccc',
+                borderRadius: 1,
+                height: 150,
+                backgroundColor: '#f9f9f9',
+              }}
+            >
+              <Typography
+                variant='caption'
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100%',
+                  color: 'text.disabled',
+                }}
+              >
+                Signature Pad (disabled preview)
+              </Typography>
+            </Box>
+          </Box>
+        )
+
       default:
         return (
           <TextField
@@ -304,7 +331,7 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
           label='Required field'
         />
 
-        {field.type !== 'file' && (
+        {!['file' ].includes(field.type) && (
           <FormControl size='small' fullWidth>
             <InputLabel>Field Width</InputLabel>
             <Select

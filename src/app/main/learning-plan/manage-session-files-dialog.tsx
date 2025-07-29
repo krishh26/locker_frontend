@@ -29,6 +29,13 @@ import RemoveIcon from '@mui/icons-material/Remove'
 import { selectFormData } from 'app/store/formData'
 import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
+import { format } from 'date-fns';
+import {
+  useAddFormToLearnerMutation,
+  useGetFormListOfLearnerQuery,
+} from 'app/store/api/learner-plan-api'
+import { useDispatch } from 'react-redux'
+import { showMessage } from 'app/store/fuse/messageSlice'
 
 interface FileData {
   name: string
@@ -76,15 +83,48 @@ export default function ManageSessionFilesDialog({
 }) {
   const { data } = useSelector(selectFormData)
 
-  const [who, setWho] = useState('this')
-  const [fileType, setFileType] = useState('general')
-  const [uploadMode, setUploadMode] = useState<'upload' | 'form'>('upload')
+  const [who, setWho] = useState('This Aim')
+  const [fileType, setFileType] = useState('General Files')
+  const [uploadMode, setUploadMode] = useState<
+    'File Upload' | 'Form Selection'
+  >('File Upload')
   const [selectedForm, setSelectedForm] = useState('')
   const [forms, setForms] = useState([])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
 
   const [uploadedFiles, setUploadedFiles] = useState<FileData[]>([])
+  const [FormList, setFormList] = useState([])
+
+  const dispatch: any = useDispatch()
+  const [addFormToLearner] = useAddFormToLearnerMutation()
+
+  const {
+    data: formList,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useGetFormListOfLearnerQuery(
+    {
+      id: open,
+    },
+    { skip: !open }
+  )
+
+  useEffect(() => {
+    if (isError) {
+      dispatch(
+        showMessage({ message: 'Failed to get form list', variant: 'error' })
+      )
+    }
+
+    if (formList) {
+      const { data } = formList
+
+      setFormList(data)
+    }
+  }, [formList, isLoading, isError, error])
 
   useEffect(() => {
     if (data) {
@@ -98,29 +138,103 @@ export default function ManageSessionFilesDialog({
     }
   }, [data])
 
-  const handleAddUpload = () => {
+  const handleAddUpload = async () => {
     if (selectedFile) {
-      const newEntry: FileData = {
+      const newEntry = {
         name: selectedFile.name,
         description: selectedFile.name,
-        dateUploaded: new Date().toLocaleString(),
-        signed: { asr: false, sasr: false, ler: false, emp: false, iqa: false },
+        who,
+        learner_plan_id: open,
+        upload_type: uploadMode,
+        file_type: fileType,
+        signature_roles: [
+          'Primary Assessor',
+          'Secondary Assessor',
+          'Learner',
+          'Employer',
+          // 'IQA',
+        ],
       }
-      setUploadedFiles([...uploadedFiles, newEntry])
-      setSelectedFile(null)
+
+      const formData = new FormData()
+      Object.entries(newEntry).forEach(([key, value]) => {
+        if (key === 'signature_roles' && Array.isArray(value)) {
+          value.forEach((role) => {
+            formData.append('signature_roles[]', role)
+          })
+        } else {
+          formData.append(key, String(value))
+        }
+      })
+
+      formData.append('files', selectedFile)
+
+      try {
+        await addFormToLearner(formData).unwrap()
+        refetch()
+        setSelectedFile(null)
+        dispatch(
+          showMessage({
+            message: 'File uploaded successfully',
+            variant: 'success',
+          })
+        )
+      } catch (error) {
+        console.log(error)
+        dispatch(
+          showMessage({ message: 'Failed to upload file', variant: 'error' })
+        )
+      }
     }
   }
 
-  const handleAddForm = () => {
+  const handleAddForm = async () => {
     if (selectedForm) {
-      const newEntry: FileData = {
-        name: selectedForm,
-        description: selectedForm,
-        dateUploaded: new Date().toLocaleString(),
-        signed: { asr: false, sasr: false, ler: false, emp: false, iqa: false },
+      const form = forms.find((form) => form.value === selectedForm)
+      const newEntry = {
+        name: form.label,
+        description: form.label,
+        who,
+        form_id: form.value,
+        learner_plan_id: open,
+        upload_type: uploadMode,
+        file_type: fileType,
+        signature_roles: [
+          'Primary Assessor',
+          'Secondary Assessor',
+          'Learner',
+          'Employer',
+        ],
       }
-      setUploadedFiles([...uploadedFiles, newEntry])
-      setSelectedForm('')
+
+      const formData = new FormData()
+      Object.entries(newEntry).forEach(([key, value]) => {
+        if (key === 'signature_roles' && Array.isArray(value)) {
+          value.forEach((role) => {
+            formData.append('signature_roles[]', role)
+          })
+        } else {
+          formData.append(key, String(value))
+        }
+      })
+
+      try {
+        const res = await addFormToLearner(formData).unwrap()
+        dispatch(
+          showMessage({
+            message: 'File uploaded successfully',
+            variant: 'success',
+          })
+        )
+        refetch()
+        setSelectedForm('')
+        console.log('🚀 ~ handleAddUpload ~ res:', res)
+      } catch (error) {
+        console.log(error)
+        dispatch(
+          showMessage({ message: 'Failed to upload file', variant: 'error' })
+        )
+      }
     }
   }
 
@@ -132,12 +246,12 @@ export default function ManageSessionFilesDialog({
           <Typography variant='subtitle1'>1. Who:</Typography>
           <RadioGroup row value={who} onChange={(e) => setWho(e.target.value)}>
             <FormControlLabel
-              value='this'
+              value='This Aim'
               control={<Radio />}
               label='This Aim'
             />
             <FormControlLabel
-              value='all'
+              value='All Aim'
               control={<Radio />}
               label='All Aims'
             />
@@ -152,22 +266,22 @@ export default function ManageSessionFilesDialog({
             onChange={(e) => setFileType(e.target.value)}
           >
             <FormControlLabel
-              value='ilp'
+              value='ILP File'
               control={<Radio />}
               label='ILP files'
             />
             <FormControlLabel
-              value='review'
+              value='Review Files'
               control={<Radio />}
               label='Review files'
             />
             <FormControlLabel
-              value='assessment'
+              value='Assessment Files'
               control={<Radio />}
               label='Assessment files'
             />
             <FormControlLabel
-              value='general'
+              value='General Files'
               control={<Radio />}
               label='General files'
             />
@@ -183,18 +297,18 @@ export default function ManageSessionFilesDialog({
             onChange={(e) => setUploadMode(e.target.value as any)}
           >
             <FormControlLabel
-              value='upload'
+              value='File Upload'
               control={<Radio />}
               label='Upload file'
             />
             <FormControlLabel
-              value='form'
+              value='Form Selection'
               control={<Radio />}
               label='Select Form'
             />
           </RadioGroup>
 
-          {uploadMode === 'upload' ? (
+          {uploadMode === 'File Upload' ? (
             <Box mt={2} display='flex' alignItems='center' gap={2}>
               <Button variant='contained' component='label'>
                 Choose File
@@ -264,7 +378,7 @@ export default function ManageSessionFilesDialog({
               </TableRow>
             </TableHead>
             <TableBody>
-              {[...mockFiles].map((file, idx) => {
+              {FormList.map((file, idx) => {
                 const isExpanded = expandedRow === idx
 
                 return (
@@ -279,10 +393,10 @@ export default function ManageSessionFilesDialog({
                           {isExpanded ? <RemoveIcon /> : <AddIcon />}
                         </IconButton>
                       </TableCell>
-                      <TableCell>General files</TableCell>
+                      <TableCell>{file.file_type}</TableCell>
                       <TableCell>{file.name}</TableCell>
                       <TableCell>{file.description}</TableCell>
-                      <TableCell>{file.dateUploaded}</TableCell>
+                      <TableCell>{format(new Date(file.created_at), 'MM-dd-yyyy')}</TableCell>
                       <TableCell>
                         <Checkbox />
                       </TableCell>

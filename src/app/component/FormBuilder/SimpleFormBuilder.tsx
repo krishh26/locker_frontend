@@ -69,6 +69,11 @@ const SIMPLE_COMPONENTS = [
   { type: 'checkbox', label: '☑️ Checkboxes', icon: '☑️' },
   { type: 'date', label: '📅 Date', icon: '📅' },
   { type: 'file', label: '📎 File Upload', icon: '📎' },
+  {
+    type: 'signature',
+    label: 'Signature',
+    icon: '✍️',
+  },
 ]
 
 interface SimpleFormBuilderProps {

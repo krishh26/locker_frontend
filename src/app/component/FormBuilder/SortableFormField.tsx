@@ -1,6 +1,6 @@
-import React from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import React from 'react'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import {
   Box,
   Paper,
@@ -17,17 +17,17 @@ import {
   Checkbox,
   FormGroup,
   Chip,
-} from '@mui/material';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import { FormField } from './DragDropFormBuilder';
+} from '@mui/material'
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
+import { FormField } from './DragDropFormBuilder'
 
 interface SortableFormFieldProps {
-  field: FormField;
-  isSelected: boolean;
-  onSelect: () => void;
-  onDelete: () => void;
+  field: FormField
+  isSelected: boolean
+  onSelect: () => void
+  onDelete: () => void
 }
 
 const SortableFormField: React.FC<SortableFormFieldProps> = ({
@@ -43,12 +43,12 @@ const SortableFormField: React.FC<SortableFormFieldProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: field.id });
+  } = useSortable({ id: field.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  };
+  }
 
   const renderFieldPreview = () => {
     switch (field.type) {
@@ -58,12 +58,12 @@ const SortableFormField: React.FC<SortableFormFieldProps> = ({
             label={field.label}
             placeholder={field.placeholder}
             fullWidth
-            size="small"
+            size='small'
             disabled
             required={field.required}
           />
-        );
-      
+        )
+
       case 'textarea':
         return (
           <TextField
@@ -72,15 +72,20 @@ const SortableFormField: React.FC<SortableFormFieldProps> = ({
             fullWidth
             multiline
             rows={3}
-            size="small"
+            size='small'
             disabled
             required={field.required}
           />
-        );
-      
+        )
+
       case 'select':
         return (
-          <FormControl fullWidth size="small" disabled required={field.required}>
+          <FormControl
+            fullWidth
+            size='small'
+            disabled
+            required={field.required}
+          >
             <InputLabel>{field.label}</InputLabel>
             <Select label={field.label}>
               {field.options?.map((option, index) => (
@@ -90,112 +95,146 @@ const SortableFormField: React.FC<SortableFormFieldProps> = ({
               ))}
             </Select>
           </FormControl>
-        );
-      
+        )
+
       case 'radio':
         return (
           <Box>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              {field.label} {field.required && <span style={{ color: 'red' }}>*</span>}
+            <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>
+              {field.label}{' '}
+              {field.required && <span style={{ color: 'red' }}>*</span>}
             </Typography>
             <RadioGroup>
               {field.options?.map((option, index) => (
                 <FormControlLabel
                   key={index}
                   value={option}
-                  control={<Radio size="small" disabled />}
+                  control={<Radio size='small' disabled />}
                   label={option}
                 />
               ))}
             </RadioGroup>
           </Box>
-        );
-      
+        )
+
       case 'checkbox':
         return (
           <Box>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              {field.label} {field.required && <span style={{ color: 'red' }}>*</span>}
+            <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>
+              {field.label}{' '}
+              {field.required && <span style={{ color: 'red' }}>*</span>}
             </Typography>
             <FormGroup>
               {field.options?.map((option, index) => (
                 <FormControlLabel
                   key={index}
-                  control={<Checkbox size="small" disabled />}
+                  control={<Checkbox size='small' disabled />}
                   label={option}
                 />
               ))}
             </FormGroup>
           </Box>
-        );
-      
+        )
+
       case 'number':
         return (
           <TextField
             label={field.label}
             placeholder={field.placeholder}
-            type="number"
+            type='number'
             fullWidth
-            size="small"
+            size='small'
             disabled
             required={field.required}
           />
-        );
-      
+        )
+
       case 'email':
         return (
           <TextField
             label={field.label}
             placeholder={field.placeholder}
-            type="email"
+            type='email'
             fullWidth
-            size="small"
+            size='small'
             disabled
             required={field.required}
           />
-        );
-      
+        )
+
       case 'date':
         return (
           <TextField
             label={field.label}
-            type="date"
+            type='date'
             fullWidth
-            size="small"
+            size='small'
             disabled
             required={field.required}
             InputLabelProps={{ shrink: true }}
           />
-        );
-      
+        )
+
       case 'file':
         return (
           <Box>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              {field.label} {field.required && <span style={{ color: 'red' }}>*</span>}
+            <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>
+              {field.label}{' '}
+              {field.required && <span style={{ color: 'red' }}>*</span>}
             </Typography>
             <TextField
-              type="file"
+              type='file'
               fullWidth
-              size="small"
+              size='small'
               disabled
               InputLabelProps={{ shrink: true }}
             />
           </Box>
-        );
-      
+        )
+
+      case 'signature':
+        return (
+          <Box>
+            <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>
+              {field.label}{' '}
+              {field.required && <span style={{ color: 'red' }}>*</span>}
+            </Typography>
+            <Box
+              sx={{
+                border: '1px solid #ccc',
+                borderRadius: 1,
+                height: 150,
+                backgroundColor: '#f9f9f9',
+              }}
+            >
+              <Typography
+                variant='caption'
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100%',
+                  color: 'text.disabled',
+                }}
+              >
+                Signature Pad (disabled preview)
+              </Typography>
+            </Box>
+          </Box>
+        )
+
       default:
         return (
           <TextField
             label={field.label}
             placeholder={field.placeholder}
             fullWidth
-            size="small"
+            size='small'
             disabled
           />
-        );
+        )
     }
-  };
+  }
 
   return (
     <Paper
@@ -228,52 +267,50 @@ const SortableFormField: React.FC<SortableFormFieldProps> = ({
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <IconButton
-            size="small"
+            size='small'
             {...attributes}
             {...listeners}
             sx={{ cursor: 'grab', '&:active': { cursor: 'grabbing' } }}
           >
-            <DragIndicatorIcon fontSize="small" />
+            <DragIndicatorIcon fontSize='small' />
           </IconButton>
           <Chip
             label={field.type}
-            size="small"
-            color="primary"
-            variant="outlined"
+            size='small'
+            color='primary'
+            variant='outlined'
           />
           {field.required && (
             <Chip
-              label="Required"
-              size="small"
-              color="error"
-              variant="outlined"
+              label='Required'
+              size='small'
+              color='error'
+              variant='outlined'
             />
           )}
         </Box>
-        
+
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton size="small" onClick={onSelect}>
-            <EditIcon fontSize="small" />
+          <IconButton size='small' onClick={onSelect}>
+            <EditIcon fontSize='small' />
           </IconButton>
           <IconButton
-            size="small"
+            size='small'
             onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
+              e.stopPropagation()
+              onDelete()
             }}
             sx={{ color: 'error.main' }}
           >
-            <DeleteIcon fontSize="small" />
+            <DeleteIcon fontSize='small' />
           </IconButton>
         </Box>
       </Box>
 
       {/* Field Preview */}
-      <Box sx={{ pointerEvents: 'none' }}>
-        {renderFieldPreview()}
-      </Box>
+      <Box sx={{ pointerEvents: 'none' }}>{renderFieldPreview()}</Box>
     </Paper>
-  );
-};
+  )
+}
 
-export default SortableFormField;
+export default SortableFormField

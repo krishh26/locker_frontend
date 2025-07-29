@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
 import {
+  closestCenter,
   DndContext,
   DragEndEvent,
   DragOverlay,
@@ -7,43 +7,34 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
-} from '@dnd-kit/core';
+} from '@dnd-kit/core'
 import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable';
+  arrayMove
+} from '@dnd-kit/sortable'
 import {
   Box,
-  Paper,
-  Typography,
-  Grid,
   Divider,
-  IconButton,
-  TextField,
-  Switch,
-  FormControlLabel,
-  Chip,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import { v4 as uuidv4 } from 'uuid';
-import ComponentPaletteItem from './ComponentPaletteItem';
-import FormBuilderArea from './FormBuilderArea';
-import FieldPropertiesPanel from './FieldPropertiesPanel';
+  Grid,
+  Paper,
+  Typography
+} from '@mui/material'
+import React, { useCallback, useState } from 'react'
+import { v4 as uuidv4 } from 'uuid'
+import ComponentPaletteItem from './ComponentPaletteItem'
+import FieldPropertiesPanel from './FieldPropertiesPanel'
+import FormBuilderArea from './FormBuilderArea'
 
 // Form field types
 export interface FormField {
-  id: string;
-  type: string;
-  label: string;
-  placeholder?: string;
-  required?: boolean;
-  options?: string[];
-  validation?: any;
-  properties?: any;
-  presetField?: string;
+  id: string
+  type: string
+  label: string
+  placeholder?: string
+  required?: boolean
+  options?: string[]
+  validation?: any
+  properties?: any
+  presetField?: string
 }
 
 // Component palette items
@@ -135,13 +126,13 @@ const FORM_COMPONENTS = [
       label: 'Upload File',
       required: false,
     },
-  },
-];
+  }
+]
 
 interface DragDropFormBuilderProps {
-  initialFields?: FormField[];
-  onChange?: (fields: FormField[]) => void;
-  onSave?: (fields: FormField[]) => void;
+  initialFields?: FormField[]
+  onChange?: (fields: FormField[]) => void
+  onSave?: (fields: FormField[]) => void
 }
 
 const DragDropFormBuilder: React.FC<DragDropFormBuilderProps> = ({
@@ -149,9 +140,9 @@ const DragDropFormBuilder: React.FC<DragDropFormBuilderProps> = ({
   onChange,
   onSave,
 }) => {
-  const [formFields, setFormFields] = useState<FormField[]>(initialFields);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [selectedField, setSelectedField] = useState<FormField | null>(null);
+  const [formFields, setFormFields] = useState<FormField[]>(initialFields)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [selectedField, setSelectedField] = useState<FormField | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -159,73 +150,87 @@ const DragDropFormBuilder: React.FC<DragDropFormBuilderProps> = ({
         distance: 8,
       },
     })
-  );
+  )
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  }, []);
+    setActiveId(event.active.id as string)
+  }, [])
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
 
-    if (!over) {
-      setActiveId(null);
-      return;
-    }
+      if (!over) {
+        setActiveId(null)
+        return
+      }
 
-    // Check if dragging from component palette
-    const componentType = FORM_COMPONENTS.find(comp => comp.type === active.id);
-    if (componentType && over.id === 'form-builder-area') {
-      // Add new field
-      const newField: FormField = {
-        id: uuidv4(),
-        type: componentType.type,
-        ...componentType.defaultProps,
-      };
-      
-      const updatedFields = [...formFields, newField];
-      setFormFields(updatedFields);
-      onChange?.(updatedFields);
-      setSelectedField(newField);
-    } else if (active.id !== over.id && formFields.find(f => f.id === active.id)) {
-      // Reorder existing fields
-      const oldIndex = formFields.findIndex(f => f.id === active.id);
-      const newIndex = formFields.findIndex(f => f.id === over.id);
-      
-      const updatedFields = arrayMove(formFields, oldIndex, newIndex);
-      setFormFields(updatedFields);
-      onChange?.(updatedFields);
-    }
+      // Check if dragging from component palette
+      const componentType = FORM_COMPONENTS.find(
+        (comp) => comp.type === active.id
+      )
+      if (componentType && over.id === 'form-builder-area') {
+        // Add new field
+        const newField: FormField = {
+          id: uuidv4(),
+          type: componentType.type,
+          ...componentType.defaultProps,
+        }
 
-    setActiveId(null);
-  }, [formFields, onChange]);
+        const updatedFields = [...formFields, newField]
+        setFormFields(updatedFields)
+        onChange?.(updatedFields)
+        setSelectedField(newField)
+      } else if (
+        active.id !== over.id &&
+        formFields.find((f) => f.id === active.id)
+      ) {
+        // Reorder existing fields
+        const oldIndex = formFields.findIndex((f) => f.id === active.id)
+        const newIndex = formFields.findIndex((f) => f.id === over.id)
 
-  const updateField = useCallback((fieldId: string, updates: Partial<FormField>) => {
-    const updatedFields = formFields.map(field =>
-      field.id === fieldId ? { ...field, ...updates } : field
-    );
-    setFormFields(updatedFields);
-    onChange?.(updatedFields);
-    
-    // Update selected field if it's the one being edited
-    if (selectedField?.id === fieldId) {
-      setSelectedField({ ...selectedField, ...updates });
-    }
-  }, [formFields, selectedField, onChange]);
+        const updatedFields = arrayMove(formFields, oldIndex, newIndex)
+        setFormFields(updatedFields)
+        onChange?.(updatedFields)
+      }
 
-  const deleteField = useCallback((fieldId: string) => {
-    const updatedFields = formFields.filter(field => field.id !== fieldId);
-    setFormFields(updatedFields);
-    onChange?.(updatedFields);
-    
-    if (selectedField?.id === fieldId) {
-      setSelectedField(null);
-    }
-  }, [formFields, selectedField, onChange]);
+      setActiveId(null)
+    },
+    [formFields, onChange]
+  )
+
+  const updateField = useCallback(
+    (fieldId: string, updates: Partial<FormField>) => {
+      const updatedFields = formFields.map((field) =>
+        field.id === fieldId ? { ...field, ...updates } : field
+      )
+      setFormFields(updatedFields)
+      onChange?.(updatedFields)
+
+      // Update selected field if it's the one being edited
+      if (selectedField?.id === fieldId) {
+        setSelectedField({ ...selectedField, ...updates })
+      }
+    },
+    [formFields, selectedField, onChange]
+  )
+
+  const deleteField = useCallback(
+    (fieldId: string) => {
+      const updatedFields = formFields.filter((field) => field.id !== fieldId)
+      setFormFields(updatedFields)
+      onChange?.(updatedFields)
+
+      if (selectedField?.id === fieldId) {
+        setSelectedField(null)
+      }
+    },
+    [formFields, selectedField, onChange]
+  )
 
   const handleSave = useCallback(() => {
-    onSave?.(formFields);
-  }, [formFields, onSave]);
+    onSave?.(formFields)
+  }, [formFields, onSave])
 
   return (
     <DndContext
@@ -246,11 +251,11 @@ const DragDropFormBuilder: React.FC<DragDropFormBuilderProps> = ({
             backgroundColor: '#f8f9fa',
           }}
         >
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+          <Typography variant='h6' gutterBottom sx={{ fontWeight: 600 }}>
             Form Components
           </Typography>
           <Divider sx={{ mb: 2 }} />
-          
+
           <Grid container spacing={1}>
             {FORM_COMPONENTS.map((component) => (
               <Grid item xs={12} key={component.type}>
@@ -273,10 +278,10 @@ const DragDropFormBuilder: React.FC<DragDropFormBuilderProps> = ({
               minHeight: 600,
             }}
           >
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+            <Typography variant='h6' gutterBottom sx={{ fontWeight: 600 }}>
               Form Builder
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
               Drag components from the left panel to build your form
             </Typography>
 
@@ -299,11 +304,11 @@ const DragDropFormBuilder: React.FC<DragDropFormBuilderProps> = ({
                 backgroundColor: '#f8f9fa',
               }}
             >
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+              <Typography variant='h6' gutterBottom sx={{ fontWeight: 600 }}>
                 Field Properties
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              
+
               <FieldPropertiesPanel
                 field={selectedField}
                 onUpdate={(updates) => updateField(selectedField.id, updates)}
@@ -324,12 +329,12 @@ const DragDropFormBuilder: React.FC<DragDropFormBuilderProps> = ({
               opacity: 0.8,
             }}
           >
-            {FORM_COMPONENTS.find(c => c.type === activeId)?.label || 'Field'}
+            {FORM_COMPONENTS.find((c) => c.type === activeId)?.label || 'Field'}
           </Box>
         ) : null}
       </DragOverlay>
     </DndContext>
-  );
-};
+  )
+}
 
-export default DragDropFormBuilder;
+export default DragDropFormBuilder
