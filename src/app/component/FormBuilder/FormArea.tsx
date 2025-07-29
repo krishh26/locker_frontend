@@ -102,7 +102,7 @@ const FormArea: React.FC<FormAreaProps> = ({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: 'calc(100vh - 500px)',
+            height: 'calc(100vh - 200px)',
             color: 'text.secondary',
           }}
         >

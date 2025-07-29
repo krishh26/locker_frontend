@@ -273,11 +273,7 @@ const TNAQuestionaire = (props) => {
                   disabled={
                     sampleData?.findIndex(
                       (item) => item.id === singleData?.id
-                    ) === 0 ||
-                    sampleData?.findIndex(
-                      (item) => item.id === singleData?.id
-                    ) ===
-                      sampleData?.length - 1
+                    ) === 0 
                   }
                   onClick={() => {
                     const currentIndex = sampleData?.findIndex(

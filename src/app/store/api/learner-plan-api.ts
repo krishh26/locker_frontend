@@ -111,6 +111,19 @@ export const learnerPlanAPI = createApi({
         body: payload.data,
       }),
     }),
+    addFormToLearner: builder.mutation({
+      query: (data) => ({
+        url: `learner-document/create`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    getFormListOfLearner: builder.query({
+      query: ({ id }) => {
+        const url = `learner-document/learner-plan/${id}`
+        return { url }
+      },
+    })
   }),
 })
 export const {
@@ -125,4 +138,6 @@ export const {
   useEditActionPlanerMutation,
   useDeleteActionPlanerMutation,
   useUploadActionFileMutation,
+  useAddFormToLearnerMutation,
+  useGetFormListOfLearnerQuery
 } = learnerPlanAPI

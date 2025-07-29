@@ -31,6 +31,7 @@ import { UserRole } from 'src/enum'
 import { useDispatch } from 'react-redux'
 import { createUserFormDataAPI, selectFormData } from 'app/store/formData'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import SignatureInput from './SignatureInput'
 
 export interface SimpleFormField {
   id: string
@@ -461,6 +462,27 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 control={control}
                                 label={field.label}
                                 error={errors[field.id]?.message as string}
+                              />
+                            </Box>
+                          )
+
+                        case 'signature':
+                          return (
+                            <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
+                              <Controller
+                                name='signature'
+                                control={control}
+                                defaultValue=''
+                                render={({ field }) => (
+                                  <SignatureInput
+                                    label='Signature'
+                                    required
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    error={!!fieldState.error}
+                                    helperText={fieldState.error?.message}
+                                  />
+                                )}
                               />
                             </Box>
                           )

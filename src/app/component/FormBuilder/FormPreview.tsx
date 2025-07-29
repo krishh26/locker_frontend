@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import {
   Box,
   Typography,
@@ -17,13 +17,14 @@ import {
   Card,
   CardContent,
   Button,
-} from '@mui/material';
+} from '@mui/material'
+import SignatureCanvas from 'react-signature-canvas'
 
 interface FormPreviewProps {
-  fields: any[];
-  formTitle?: string;
-  formDescription?: string;
-  onSubmit?: (values: { [key: string]: any }) => void;
+  fields: any[]
+  formTitle?: string
+  formDescription?: string
+  onSubmit?: (values: { [key: string]: any }) => void
 }
 
 const FormPreview: React.FC<FormPreviewProps> = ({
@@ -32,15 +33,16 @@ const FormPreview: React.FC<FormPreviewProps> = ({
   formDescription,
   onSubmit,
 }) => {
-  const [formValues, setFormValues] = useState<{ [key: string]: any }>({});
+  const [formValues, setFormValues] = useState<{ [key: string]: any }>({})
+  const signatureRef = React.useRef<any>(null)
 
   const handleFieldChange = (fieldId: string, value: any) => {
-    setFormValues(prev => ({ ...prev, [fieldId]: value }));
-  };
+    setFormValues((prev) => ({ ...prev, [fieldId]: value }))
+  }
 
   const renderField = (field: any) => {
-    const value = formValues[field.id] || '';
-    const fieldType = field.type;
+    const value = formValues[field.id] || ''
+    const fieldType = field.type
 
     switch (fieldType) {
       case 'text':
@@ -53,15 +55,21 @@ const FormPreview: React.FC<FormPreviewProps> = ({
             key={field.id}
             label={field.label}
             placeholder={field.placeholder}
-            type={fieldType === 'email' ? 'email' : fieldType === 'number' ? 'number' : 'text'}
+            type={
+              fieldType === 'email'
+                ? 'email'
+                : fieldType === 'number'
+                ? 'number'
+                : 'text'
+            }
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             fullWidth
             required={field.required}
-            margin="normal"
-            variant="outlined"
+            margin='normal'
+            variant='outlined'
           />
-        );
+        )
 
       case 'textarea':
         return (
@@ -73,16 +81,21 @@ const FormPreview: React.FC<FormPreviewProps> = ({
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             fullWidth
             required={field.required}
-            margin="normal"
-            variant="outlined"
+            margin='normal'
+            variant='outlined'
             multiline
             rows={4}
           />
-        );
+        )
 
       case 'select':
         return (
-          <FormControl key={field.id} fullWidth margin="normal" required={field.required}>
+          <FormControl
+            key={field.id}
+            fullWidth
+            margin='normal'
+            required={field.required}
+          >
             <InputLabel>{field.label}</InputLabel>
             <Select
               value={value}
@@ -96,12 +109,12 @@ const FormPreview: React.FC<FormPreviewProps> = ({
               ))}
             </Select>
           </FormControl>
-        );
+        )
 
       case 'radio':
         return (
           <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
-            <FormLabel component="legend" required={field.required}>
+            <FormLabel component='legend' required={field.required}>
               {field.label}
             </FormLabel>
             <RadioGroup
@@ -118,12 +131,12 @@ const FormPreview: React.FC<FormPreviewProps> = ({
               ))}
             </RadioGroup>
           </Box>
-        );
+        )
 
       case 'checkbox':
         return (
           <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
-            <FormLabel component="legend" required={field.required}>
+            <FormLabel component='legend' required={field.required}>
               {field.label}
             </FormLabel>
             <FormGroup>
@@ -132,13 +145,21 @@ const FormPreview: React.FC<FormPreviewProps> = ({
                   key={index}
                   control={
                     <Checkbox
-                      checked={Array.isArray(value) ? value.includes(option) : false}
+                      checked={
+                        Array.isArray(value) ? value.includes(option) : false
+                      }
                       onChange={(e) => {
-                        const currentValues = Array.isArray(value) ? value : [];
+                        const currentValues = Array.isArray(value) ? value : []
                         if (e.target.checked) {
-                          handleFieldChange(field.id, [...currentValues, option]);
+                          handleFieldChange(field.id, [
+                            ...currentValues,
+                            option,
+                          ])
                         } else {
-                          handleFieldChange(field.id, currentValues.filter(v => v !== option));
+                          handleFieldChange(
+                            field.id,
+                            currentValues.filter((v) => v !== option)
+                          )
                         }
                       }}
                     />
@@ -148,42 +169,52 @@ const FormPreview: React.FC<FormPreviewProps> = ({
               ))}
             </FormGroup>
           </Box>
-        );
+        )
 
       case 'date':
         return (
           <TextField
             key={field.id}
             label={field.label}
-            type="date"
+            type='date'
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             fullWidth
             required={field.required}
-            margin="normal"
-            variant="outlined"
+            margin='normal'
+            variant='outlined'
             InputLabelProps={{ shrink: true }}
           />
-        );
+        )
 
       case 'file':
         return (
           <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
-            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-              {field.label} {field.required && <span style={{ color: 'red' }}>*</span>}
+            <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>
+              {field.label}{' '}
+              {field.required && <span style={{ color: 'red' }}>*</span>}
             </Typography>
             <TextField
-              type="file"
+              type='file'
               onChange={(e) => {
-                const target = e.target as HTMLInputElement;
-                handleFieldChange(field.id, target.files);
+                const target = e.target as HTMLInputElement
+                handleFieldChange(field.id, target.files)
               }}
               fullWidth
-              variant="outlined"
+              variant='outlined'
               InputLabelProps={{ shrink: true }}
             />
           </Box>
-        );
+        )
+
+      case 'signature':
+        return (
+          <SignatureCanvas
+            penColor='black'
+            canvasProps={{ width: 400, height: 150, className: 'sigCanvas' }}
+            ref={signatureRef}
+          />
+        )
 
       default:
         return (
@@ -195,53 +226,68 @@ const FormPreview: React.FC<FormPreviewProps> = ({
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             fullWidth
             required={field.required}
-            margin="normal"
-            variant="outlined"
+            margin='normal'
+            variant='outlined'
           />
-        );
+        )
     }
-  };
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (onSubmit) {
-      onSubmit(formValues);
+      onSubmit(formValues)
     } else {
-      console.log('Form submitted with values:', formValues);
-      alert('Form submitted successfully! Check console for form data.');
+      console.log('Form submitted with values:', formValues)
+      alert('Form submitted successfully! Check console for form data.')
     }
-  };
+  }
 
   const handleClearForm = () => {
-    setFormValues({});
-  };
+    setFormValues({})
+  }
 
   return (
     <Card elevation={2} sx={{ maxWidth: 800, mx: 'auto' }}>
       <CardContent sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: '#1976d2' }}>
+        <Typography
+          variant='h4'
+          gutterBottom
+          sx={{ fontWeight: 600, color: '#1976d2' }}
+        >
           {formTitle}
         </Typography>
-        
+
         {formDescription && (
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
             {formDescription}
           </Typography>
         )}
 
         {fields.length === 0 ? (
-          <Alert severity="info" sx={{ mt: 2 }}>
+          <Alert severity='info' sx={{ mt: 2 }}>
             No fields added to the form yet. Switch to edit mode to add fields.
           </Alert>
         ) : (
-          <Box component="form" onSubmit={handleSubmit}>
+          <Box component='form' onSubmit={handleSubmit}>
             {fields.map(renderField)}
-            
-            <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-              <Button variant="outlined" type="button" onClick={handleClearForm}>
+
+            <Box
+              sx={{
+                mt: 4,
+                display: 'flex',
+                gap: 2,
+                justifyContent: 'flex-end',
+              }}
+            >
+              <Button
+                variant='outlined'
+                type='button'
+                onClick={handleClearForm}
+              >
                 Clear Form
               </Button>
-              <Button variant="contained" type="submit">
+              <Button variant='contained' type='submit'>
                 Submit Form
               </Button>
             </Box>
@@ -249,7 +295,7 @@ const FormPreview: React.FC<FormPreviewProps> = ({
         )}
       </CardContent>
     </Card>
-  );
-};
+  )
+}
 
-export default FormPreview;
+export default FormPreview
