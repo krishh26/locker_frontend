@@ -713,7 +713,20 @@ const SessionList = () => {
                   </AccordionSummary>
 
                   <AccordionDetails className='px-6'>
-                    <div className='flex items-end justify-end mb-8'>
+                    <div className='flex items-end justify-end mb-8 gap-7'>
+                      <Button
+                        variant='contained'
+                        className='rounded-md'
+                        color='primary'
+                        size='small'
+                        onClick={() => {
+                          setUnitList(session.units)
+                          setIsOpenAction(session.sessionNo)
+                          reset()
+                        }}
+                      >
+                        Add Form
+                      </Button>
                       <Button
                         variant='contained'
                         className='rounded-md'
