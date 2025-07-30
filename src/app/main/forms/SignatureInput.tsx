@@ -3,8 +3,8 @@ import SignatureCanvas from 'react-signature-canvas'
 import { Box, Button, Typography } from '@mui/material'
 
 interface SignatureInputProps {
-  value?: string
-  onChange?: (val: string) => void
+  value?: File | null
+  onChange?: (file: File | null) => void
   label?: string
   required?: boolean
   error?: boolean
@@ -16,24 +16,37 @@ const SignatureInput: React.FC<SignatureInputProps> = ({
   onChange,
   label,
   required,
-  helperText
+  helperText,
 }) => {
   const sigRef = useRef<SignatureCanvas | null>(null)
 
   useEffect(() => {
     if (value && sigRef.current) {
-      sigRef.current.fromDataURL(value)
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          sigRef.current!.fromDataURL(reader.result)
+        }
+      }
+      reader.readAsDataURL(value)
     }
   }, [value])
 
   const handleClear = () => {
     sigRef.current?.clear()
-    onChange?.('')
+    onChange?.(null)
   }
 
   const handleEnd = () => {
-    const dataURL = sigRef.current?.toDataURL() || ''
-    onChange?.(dataURL)
+    if (!sigRef.current) return
+    const dataUrl = sigRef.current.toDataURL()
+
+    fetch(dataUrl)
+      .then((res) => res.blob())
+      .then((blob) => {
+        const file = new File([blob], 'signature.png', { type: 'image/png' })
+        onChange?.(file)
+      })
   }
 
   return (
