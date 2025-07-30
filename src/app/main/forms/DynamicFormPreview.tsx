@@ -38,13 +38,13 @@ import {
   generateFormSubmissionPDF,
   generateFormSubmissionPDFFromHTML,
   sendFormSubmissionEmail,
-  FormSubmissionData
+  FormSubmissionData,
 } from 'src/app/utils/pdfGenerator'
 import {
   getFormAssignedUserIds,
   getAdminTrainerUserIds,
   formatUserForPDF,
-  getAuthToken
+  getAuthToken,
 } from 'src/app/utils/userHelpers'
 
 export interface SimpleFormField {
@@ -145,6 +145,10 @@ export const getDynamicYupSchema = (fields: SimpleFormField[]) => {
             )
           break
 
+        case 'signature':
+          schema = yup.mixed()
+          break
+
         default:
           schema = yup.string()
           break
@@ -184,8 +188,8 @@ const DynamicFormPreview: React.FC<Props> = ({
   // State for PDF generation and email sending
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<{
-    type: 'success' | 'error' | null;
-    message: string;
+    type: 'success' | 'error' | null
+    message: string
   }>({ type: null, message: '' })
 
   // Build Yup schema from fields
@@ -360,7 +364,11 @@ const DynamicFormPreview: React.FC<Props> = ({
 
   return (
     <>
-      <Card elevation={2} sx={{ maxWidth: 900, mx: 'auto' }} id="form-container">
+      <Card
+        elevation={2}
+        sx={{ maxWidth: 900, mx: 'auto' }}
+        id='form-container'
+      >
         <CardContent sx={{ p: 4 }}>
           <Typography
             variant='h4'
@@ -370,272 +378,271 @@ const DynamicFormPreview: React.FC<Props> = ({
             {formName || 'Untitled Form'}
           </Typography>
 
-        {description && (
-          <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
-            {description}
-          </Typography>
-        )}
+          {description && (
+            <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
+              {description}
+            </Typography>
+          )}
 
-        {fields.length === 0 ? (
-          <Alert severity='info'>No fields added to the form.</Alert>
-        ) : (
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <Grid container spacing={3}>
-              {fields.map((field) => (
-                <Grid key={field.id} item xs={widthToGrid(field.width)}>
-                  <Controller
-                    name={field.id}
-                    control={control}
-                    render={({ field: controllerField, fieldState }) => {
-                      const error = !!fieldState.error
-                      const helperText = fieldState.error?.message
+          {fields.length === 0 ? (
+            <Alert severity='info'>No fields added to the form.</Alert>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} noValidate>
+              <Grid container spacing={3}>
+                {fields.map((field) => (
+                  <Grid key={field.id} item xs={widthToGrid(field.width)}>
+                    <Controller
+                      name={field.id}
+                      control={control}
+                      render={({ field: controllerField, fieldState }) => {
+                        const error = !!fieldState.error
+                        const helperText = fieldState.error?.message
 
-                      switch (field.type) {
-                        case 'text':
-                        case 'email':
-                        case 'number':
-                          return (
-                            <TextField
-                              {...controllerField}
-                              label={field.label}
-                              placeholder={field.placeholder}
-                              fullWidth
-                              required={field.required}
-                              type={field.type === 'number' ? 'number' : 'text'}
-                              error={error}
-                              helperText={helperText}
-                            />
-                          )
-
-                        case 'textarea':
-                          return (
-                            <TextField
-                              {...controllerField}
-                              label={field.label}
-                              placeholder={field.placeholder}
-                              fullWidth
-                              required={field.required}
-                              multiline
-                              rows={4}
-                              error={error}
-                              helperText={helperText}
-                            />
-                          )
-
-                        case 'select':
-                          return (
-                            <FormControl
-                              fullWidth
-                              required={field.required}
-                              error={error}
-                            >
-                              <InputLabel>{field.label}</InputLabel>
-                              <Select
+                        switch (field.type) {
+                          case 'text':
+                          case 'email':
+                          case 'number':
+                            return (
+                              <TextField
                                 {...controllerField}
                                 label={field.label}
-                                value={controllerField.value || ''}
-                              >
-                                {field.options?.map((opt, i) => (
-                                  <MenuItem key={i} value={opt.value}>
-                                    {opt.label}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                              {helperText && (
-                                <Typography variant='caption' color='error'>
-                                  {helperText}
-                                </Typography>
-                              )}
-                            </FormControl>
-                          )
-
-                        case 'radio':
-                          return (
-                            <FormControl
-                              component='fieldset'
-                              required={field.required}
-                              error={error}
-                            >
-                              <FormLabel>{field.label}</FormLabel>
-                              <RadioGroup
-                                {...controllerField}
-                                onChange={(e) =>
-                                  controllerField.onChange(e.target.value)
+                                placeholder={field.placeholder}
+                                fullWidth
+                                required={field.required}
+                                type={
+                                  field.type === 'number' ? 'number' : 'text'
                                 }
-                              >
-                                {field.options?.map((opt, i) => (
-                                  <FormControlLabel
-                                    key={i}
-                                    value={opt.value}
-                                    control={<Radio />}
-                                    label={opt.label}
-                                  />
-                                ))}
-                              </RadioGroup>
-                              {helperText && (
-                                <Typography variant='caption' color='error'>
-                                  {helperText}
-                                </Typography>
-                              )}
-                            </FormControl>
-                          )
+                                error={error}
+                                helperText={helperText}
+                              />
+                            )
 
-                        case 'checkbox':
-                          return (
-                            <FormControl
-                              component='fieldset'
-                              required={field.required}
-                              error={error}
-                            >
-                              <FormLabel component='legend'>
-                                {field.label}
-                              </FormLabel>
-                              <FormGroup>
-                                {field.options?.map((opt, i) => (
-                                  <FormControlLabel
-                                    key={i}
-                                    control={
-                                      <Checkbox
-                                        checked={
-                                          controllerField.value?.includes(
-                                            opt.value
-                                          ) || false
-                                        }
-                                        onChange={(e) => {
-                                          const checked = e.target.checked
-                                          const valueArr = Array.isArray(
-                                            controllerField.value
-                                          )
-                                            ? controllerField.value
-                                            : []
-
-                                          if (checked) {
-                                            controllerField.onChange([
-                                              ...valueArr,
-                                              opt.value,
-                                            ])
-                                          } else {
-                                            controllerField.onChange(
-                                              valueArr.filter(
-                                                (v) => v !== opt.value
-                                              )
-                                            )
-                                          }
-                                        }}
-                                      />
-                                    }
-                                    label={opt.label}
-                                  />
-                                ))}
-                              </FormGroup>
-                              {helperText && (
-                                <Typography variant='caption' color='error'>
-                                  {helperText}
-                                </Typography>
-                              )}
-                            </FormControl>
-                          )
-
-                        case 'date':
-                          return (
-                            <TextField
-                              {...controllerField}
-                              type='date'
-                              label={field.label}
-                              fullWidth
-                              required={field.required}
-                              InputLabelProps={{ shrink: true }}
-                              error={error}
-                              helperText={helperText}
-                            />
-                          )
-
-                        case 'file':
-                          return (
-                            <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
-                              <FileUploadField
-                                name={field.id}
-                                control={control}
+                          case 'textarea':
+                            return (
+                              <TextField
+                                {...controllerField}
                                 label={field.label}
-                                error={errors[field.id]?.message as string}
+                                placeholder={field.placeholder}
+                                fullWidth
+                                required={field.required}
+                                multiline
+                                rows={4}
+                                error={error}
+                                helperText={helperText}
                               />
-                            </Box>
-                          )
+                            )
 
-                        case 'signature':
-                          return (
-                            <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
-                              <Controller
-                                name='signature'
-                                control={control}
-                                defaultValue=''
-                                render={({ field }) => (
-                                  <SignatureInput
-                                    label='Signature'
-                                    required
-                                    value={field.value}
-                                    onChange={field.onChange}
-                                    error={!!fieldState.error}
-                                    helperText={fieldState.error?.message}
-                                  />
+                          case 'select':
+                            return (
+                              <FormControl
+                                fullWidth
+                                required={field.required}
+                                error={error}
+                              >
+                                <InputLabel>{field.label}</InputLabel>
+                                <Select
+                                  {...controllerField}
+                                  label={field.label}
+                                  value={controllerField.value || ''}
+                                >
+                                  {field.options?.map((opt, i) => (
+                                    <MenuItem key={i} value={opt.value}>
+                                      {opt.label}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                                {helperText && (
+                                  <Typography variant='caption' color='error'>
+                                    {helperText}
+                                  </Typography>
                                 )}
+                              </FormControl>
+                            )
+
+                          case 'radio':
+                            return (
+                              <FormControl
+                                component='fieldset'
+                                required={field.required}
+                                error={error}
+                              >
+                                <FormLabel>{field.label}</FormLabel>
+                                <RadioGroup
+                                  {...controllerField}
+                                  onChange={(e) =>
+                                    controllerField.onChange(e.target.value)
+                                  }
+                                >
+                                  {field.options?.map((opt, i) => (
+                                    <FormControlLabel
+                                      key={i}
+                                      value={opt.value}
+                                      control={<Radio />}
+                                      label={opt.label}
+                                    />
+                                  ))}
+                                </RadioGroup>
+                                {helperText && (
+                                  <Typography variant='caption' color='error'>
+                                    {helperText}
+                                  </Typography>
+                                )}
+                              </FormControl>
+                            )
+
+                          case 'checkbox':
+                            return (
+                              <FormControl
+                                component='fieldset'
+                                required={field.required}
+                                error={error}
+                              >
+                                <FormLabel component='legend'>
+                                  {field.label}
+                                </FormLabel>
+                                <FormGroup>
+                                  {field.options?.map((opt, i) => (
+                                    <FormControlLabel
+                                      key={i}
+                                      control={
+                                        <Checkbox
+                                          checked={
+                                            controllerField.value?.includes(
+                                              opt.value
+                                            ) || false
+                                          }
+                                          onChange={(e) => {
+                                            const checked = e.target.checked
+                                            const valueArr = Array.isArray(
+                                              controllerField.value
+                                            )
+                                              ? controllerField.value
+                                              : []
+
+                                            if (checked) {
+                                              controllerField.onChange([
+                                                ...valueArr,
+                                                opt.value,
+                                              ])
+                                            } else {
+                                              controllerField.onChange(
+                                                valueArr.filter(
+                                                  (v) => v !== opt.value
+                                                )
+                                              )
+                                            }
+                                          }}
+                                        />
+                                      }
+                                      label={opt.label}
+                                    />
+                                  ))}
+                                </FormGroup>
+                                {helperText && (
+                                  <Typography variant='caption' color='error'>
+                                    {helperText}
+                                  </Typography>
+                                )}
+                              </FormControl>
+                            )
+
+                          case 'date':
+                            return (
+                              <TextField
+                                {...controllerField}
+                                type='date'
+                                label={field.label}
+                                fullWidth
+                                required={field.required}
+                                InputLabelProps={{ shrink: true }}
+                                error={error}
+                                helperText={helperText}
                               />
-                            </Box>
-                          )
+                            )
 
-                        default:
-                          return (
-                            <TextField
-                              {...controllerField}
-                              label={field.label}
-                              placeholder={field.placeholder}
-                              fullWidth
-                              required={field.required}
-                              error={error}
-                              helperText={helperText}
-                            />
-                          )
-                      }
-                    }}
-                  />
-                </Grid>
-              ))}
-            </Grid>
+                          case 'file':
+                            return (
+                              <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
+                                <FileUploadField
+                                  name={field.id}
+                                  control={control}
+                                  label={field.label}
+                                  error={errors[field.id]?.message as string}
+                                />
+                              </Box>
+                            )
 
-            <Box
-              sx={{
-                mt: 4,
-                display: 'flex',
-                gap: 2,
-                justifyContent: 'flex-end',
-              }}
-            >
-              <Button
-                type='button'
-                variant='outlined'
-                disabled={isSavedViewedPath}
-                onClick={() => onClear()}
-              >
-                Clear Form
-              </Button>
-              <Button
-                type='submit'
-                variant='contained'
-                disabled={isSubmitting || isSavedViewedPath}
-                startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
+                          case 'signature':
+                            return (
+                              <Box key={field.id} sx={{ mt: 2, mb: 1 }}>
+                                <SignatureInput
+                                  label={field.label}
+                                  required={field.required}
+                                  value={controllerField.value}
+                                  onChange={controllerField.onChange}
+                                  error={!!fieldState.error}
+                                  helperText={fieldState.error?.message}
+                                />
+                              </Box>
+                            )
+
+                          default:
+                            return (
+                              <TextField
+                                {...controllerField}
+                                label={field.label}
+                                placeholder={field.placeholder}
+                                fullWidth
+                                required={field.required}
+                                error={error}
+                                helperText={helperText}
+                              />
+                            )
+                        }
+                      }}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+
+              <Box
                 sx={{
-                  minWidth: 120,
-                  backgroundColor: '#1976d2',
-                  '&:hover': {
-                    backgroundColor: '#1565c0',
-                  },
+                  mt: 4,
+                  display: 'flex',
+                  gap: 2,
+                  justifyContent: 'flex-end',
                 }}
               >
-                {isSubmitting ? 'Submitting...' : 'Submit'}
-              </Button>
-            </Box>
-          </form>
-        )}
+                <Button
+                  type='button'
+                  variant='outlined'
+                  disabled={isSavedViewedPath}
+                  onClick={() => onClear()}
+                >
+                  Clear Form
+                </Button>
+                <Button
+                  type='submit'
+                  variant='contained'
+                  disabled={isSubmitting || isSavedViewedPath}
+                  startIcon={
+                    isSubmitting ? (
+                      <CircularProgress size={20} color='inherit' />
+                    ) : null
+                  }
+                  sx={{
+                    minWidth: 120,
+                    backgroundColor: '#1976d2',
+                    '&:hover': {
+                      backgroundColor: '#1565c0',
+                    },
+                  }}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit'}
+                </Button>
+              </Box>
+            </form>
+          )}
         </CardContent>
       </Card>
 
