@@ -1,7 +1,6 @@
 import { lazy } from "react";
 const FormsView = lazy(() => import("./forms"));
 import authRoles from 'src/app/auth/authRoles';
-import AddForms from "./addForms";
 import ImprovedFormBuilder from "./ImprovedFormBuilder";
 import FormBuilderDemo from "./FormBuilderDemo";
 import UserFriendlyFormBuilder from "./UserFriendlyFormBuilder";
@@ -56,7 +55,7 @@ const FormsConfig = {
       element: <AddViewForm />
     },
     {
-      path: '/forms/view-saved-form/:id',
+      path: '/forms/view-saved-form/:id/user/:userId',
       element: <AddViewForm />
     },
     {

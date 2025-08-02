@@ -13,7 +13,7 @@ export const formAPI = createApi({
     }),
     getSavedFormDetails: builder.query({
       query: (params) => {
-        const url = `form/get-saved-form/${params?.id}`
+        const url = `form/user/${params?.formId}?user_id=${params?.userId}`
         return { url }
       },
       keepUnusedDataFor: 0,

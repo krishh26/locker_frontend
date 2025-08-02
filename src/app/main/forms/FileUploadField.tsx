@@ -8,19 +8,48 @@ type FileUploadFieldProps = {
   control: any
   error?: string
   label: string
+  disabled?: boolean
+  value: File | string | null
 }
 
 const fileTypes = [
-  'JPG', 'PNG', 'GIF', 'PDF', 'DOCX', 'XLSX',
-  'PPTX', 'TXT', 'ZIP', 'MP4',
+  'JPG',
+  'PNG',
+  'GIF',
+  'PDF',
+  'DOCX',
+  'XLSX',
+  'PPTX',
+  'TXT',
+  'ZIP',
+  'MP4',
 ]
 
 const FileUploadField: FC<FileUploadFieldProps> = ({
   name,
   control,
   error,
-  label
+  label,
+  value,
+  disabled,
 }) => {
+
+const downloadHandler = () => {
+  if (!value) return;
+
+  if (typeof value === 'string') {
+    // It's a URL, open in new tab
+    window.open(value, '_blank');
+  } else if (value instanceof File) {
+    // It's a File object — create a blob URL and open
+    const fileUrl = URL.createObjectURL(value);
+    window.open(fileUrl, '_blank');
+
+    // Optional: revoke the URL later if needed
+    // setTimeout(() => URL.revokeObjectURL(fileUrl), 10000);
+  }
+};
+
   return (
     <Controller
       name={name}
@@ -28,42 +57,69 @@ const FileUploadField: FC<FileUploadFieldProps> = ({
       render={({ field }) => (
         <>
           <Typography className='font-semibold mb-2'>{label}</Typography>
-          <FileUploader
-            handleChange={(file: File) => field.onChange(file)}
-            name={name}
-            types={fileTypes}
-            multiple={false}
-            maxSize={10}
-          >
-            <div
-              className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[200px] flex flex-col items-center justify-center ${error ? 'border-red-500' : ''
+          {disabled ? (
+            <>
+              <div
+                className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[200px] flex flex-col items-center justify-center ${
+                  error ? 'border-red-500' : ''
                 }`}
-            >
-              <div className='flex justify-center mb-4'>
-                <img
-                  src='assets/images/svgImage/uploadimage.svg'
-                  alt='Upload'
-                  className='w-36 h-36 object-contain mx-auto'
-                />
-              </div>
-              {field.value ? (
-                <div className='text-center text-gray-700 font-medium'>
-                  <p>{field.value.name}</p>
+                onClick={downloadHandler}
+              >
+                <div className='flex justify-center mb-4'>
+                  <img
+                    src='assets/images/svgImage/uploadimage.svg'
+                    alt='Upload'
+                    className='w-36 h-36 object-contain mx-auto'
+                  />
                 </div>
-              ) : (
-                <>
-                  <p className='text-center mb-2 text-gray-600'>
-                    Drag and drop your files here or{' '}
-                    <span className='text-blue-500 underline'>Browse</span>
-                  </p>
-                  <p className='text-center text-sm text-gray-500'>
-                    Max 10MB files are allowed
-                  </p>
-                </>
-              )}
-            </div>
-          </FileUploader>
-          {error && <FormHelperText error className='mt-2'>{error}</FormHelperText>}
+                <p className='text-center mb-2 text-gray-600'>{field.value}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <FileUploader
+                handleChange={(file: File) => field.onChange(file)}
+                name={name}
+                types={fileTypes}
+                multiple={false}
+                maxSize={10}
+              >
+                <div
+                  className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[200px] flex flex-col items-center justify-center ${
+                    error ? 'border-red-500' : ''
+                  }`}
+                >
+                  <div className='flex justify-center mb-4'>
+                    <img
+                      src='assets/images/svgImage/uploadimage.svg'
+                      alt='Upload'
+                      className='w-36 h-36 object-contain mx-auto'
+                    />
+                  </div>
+                  {field.value ? (
+                    <div className='text-center text-gray-700 font-medium'>
+                      <p>{field.value.name}</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className='text-center mb-2 text-gray-600'>
+                        Drag and drop your files here or{' '}
+                        <span className='text-blue-500 underline'>Browse</span>
+                      </p>
+                      <p className='text-center text-sm text-gray-500'>
+                        Max 10MB files are allowed
+                      </p>
+                    </>
+                  )}
+                </div>
+              </FileUploader>
+            </>
+          )}
+          {error && (
+            <FormHelperText error className='mt-2'>
+              {error}
+            </FormHelperText>
+          )}
         </>
       )}
     />
