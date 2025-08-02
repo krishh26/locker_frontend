@@ -174,9 +174,10 @@ const DynamicFormPreview: React.FC<Props> = ({
   const navigate = useNavigate()
   const location = useLocation()
   const formId: string | boolean = param?.id ?? false
+  const userId: string | boolean = param?.userId ?? false
   const isSubmitPath = location.pathname === `/forms/${formId}/submit`
   const isSavedViewedPath =
-    location.pathname === `/forms/view-saved-form/${formId}`
+    location.pathname === `/forms/view-saved-form/${formId}/user/${userId}`
 
   const user =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
@@ -243,93 +244,132 @@ const DynamicFormPreview: React.FC<Props> = ({
     }
   }, [isSubmitPath, fields])
 
+  useEffect(() => {
+    if (
+      isSavedViewedPath &&
+      formDataDetails &&
+      Object.keys(formDataDetails).length > 0
+    ) {
+      reset(formDataDetails)
+    }
+  }, [reset, formDataDetails, isSavedViewedPath])
+
   const onSubmit = async (data: any) => {
     if (isSubmitPath && formId) {
       setIsSubmitting(true)
       setSubmitStatus({ type: null, message: '' })
 
       try {
-       // if (user.role !== UserRole.Admin) {
-          // First, submit the form data
-          await dispatch(
-            createUserFormDataAPI({
-              form_id: formId,
-              form_data: data,
-              user_id: currentUser.user_id,
-            })
-          )
+        const formData = new FormData()
 
-          // Generate PDF of the submitted form
-          const formSubmissionData: FormSubmissionData = {
-            formName,
-            description,
-            submittedBy: formatUserForPDF(currentUser),
-            submissionDate: new Date().toLocaleString(),
-            formData: data,
-            fields: fields.map(field => ({
-              id: field.id,
-              type: field.type,
-              label: field.label,
-              required: field.required,
-              options: field.options,
-            })),
+        // Split into two objects
+        const fileFields: Record<string, File> = {}
+        const textFields: Record<string, string> = {}
+
+        Object.entries(data).forEach(([key, value]) => {
+          if (value instanceof File) {
+            fileFields[key] = value
+          } else {
+            textFields[key] = String(value)
           }
+        })
 
-          try {
-            // Try to generate PDF from HTML first (better visual representation)
-            let pdfBlob: Blob
-            try {
-              pdfBlob = await generateFormSubmissionPDFFromHTML('form-container', formSubmissionData)
-            } catch (htmlError) {
-              console.warn('HTML to PDF failed, falling back to text-based PDF:', htmlError)
-              pdfBlob = await generateFormSubmissionPDF(formSubmissionData)
-            }
+        formData.append('form_data', JSON.stringify(textFields))
 
-            // Get auth token
-            const authToken = getAuthToken()
+        Object.entries(fileFields).forEach(([key, value]) => {
+          formData.append(key, value, value.name)
+        })
 
-            if (authToken) {
-              // Get admin/trainer user IDs for this form
-              let adminUserIds: string[]
-              try {
-                // Try to get form-specific assigned users first
-                adminUserIds = await getFormAssignedUserIds(formId.toString(), authToken)
-              } catch (error) {
-                console.warn('Could not get form assigned users, falling back to general admin users:', error)
-                // Fallback to general admin/trainer users
-                adminUserIds = await getAdminTrainerUserIds(authToken)
-              }
-              console.log("??????????????????????????????????")
-              await sendFormSubmissionEmail(pdfBlob, formId.toString(), adminUserIds, authToken)
+        formData.append('form_id', formId)
+        formData.append('user_id', currentUser.user_id)
 
-              setSubmitStatus({
-                type: 'success',
-                message: 'Form submitted successfully and notification sent to admin!'
-              })
-            } else {
-              setSubmitStatus({
-                type: 'success',
-                message: 'Form submitted successfully, but could not send email notification.'
-              })
-            }
-          } catch (pdfError) {
-            console.error('PDF generation or email sending failed:', pdfError)
-            setSubmitStatus({
-              type: 'success',
-              message: 'Form submitted successfully, but PDF generation failed.'
-            })
-          }
+        formData.forEach((value, key) => {
+          console.log('🚀 ~ onSubmit ~ key:', key, value)
+        })
 
-          // Navigate after a short delay to show the success message
-          setTimeout(() => {
-            navigate('/forms')
-          }, 2000)
-       // }
+        await dispatch(createUserFormDataAPI(formData))
+
+        // if (user.role !== UserRole.Admin) {
+        // First, submit the form data
+        // await dispatch(
+        //   createUserFormDataAPI({
+        //     form_id: formId,
+        //     form_data: data,
+        //     user_id: currentUser.user_id,
+        //   })
+        // )
+
+        // Generate PDF of the submitted form
+        // const formSubmissionData: FormSubmissionData = {
+        //   formName,
+        //   description,
+        //   submittedBy: formatUserForPDF(currentUser),
+        //   submissionDate: new Date().toLocaleString(),
+        //   formData: data,
+        //   fields: fields.map(field => ({
+        //     id: field.id,
+        //     type: field.type,
+        //     label: field.label,
+        //     required: field.required,
+        //     options: field.options,
+        //   })),
+        // }
+
+        // try {
+        //   // Try to generate PDF from HTML first (better visual representation)
+        //   let pdfBlob: Blob
+        //   try {
+        //     pdfBlob = await generateFormSubmissionPDFFromHTML('form-container', formSubmissionData)
+        //   } catch (htmlError) {
+        //     console.warn('HTML to PDF failed, falling back to text-based PDF:', htmlError)
+        //     pdfBlob = await generateFormSubmissionPDF(formSubmissionData)
+        //   }
+
+        //   // Get auth token
+        //   const authToken = getAuthToken()
+
+        //   if (authToken) {
+        //     // Get admin/trainer user IDs for this form
+        //     let adminUserIds: string[]
+        //     try {
+        //       // Try to get form-specific assigned users first
+        //       adminUserIds = await getFormAssignedUserIds(formId.toString(), authToken)
+        //     } catch (error) {
+        //       console.warn('Could not get form assigned users, falling back to general admin users:', error)
+        //       // Fallback to general admin/trainer users
+        //       adminUserIds = await getAdminTrainerUserIds(authToken)
+        //     }
+        //     console.log("??????????????????????????????????")
+        //     await sendFormSubmissionEmail(pdfBlob, formId.toString(), adminUserIds, authToken)
+
+        //     setSubmitStatus({
+        //       type: 'success',
+        //       message: 'Form submitted successfully and notification sent to admin!'
+        //     })
+        //   } else {
+        //     setSubmitStatus({
+        //       type: 'success',
+        //       message: 'Form submitted successfully, but could not send email notification.'
+        //     })
+        //   }
+        // } catch (pdfError) {
+        //   console.error('PDF generation or email sending failed:', pdfError)
+        //   setSubmitStatus({
+        //     type: 'success',
+        //     message: 'Form submitted successfully, but PDF generation failed.'
+        //   })
+        // }
+
+        // Navigate after a short delay to show the success message
+        // setTimeout(() => {
+        //   navigate('/forms')
+        // }, 2000)
+        // }
       } catch (err) {
         console.log(err)
         setSubmitStatus({
           type: 'error',
-          message: 'Failed to submit form. Please try again.'
+          message: 'Failed to submit form. Please try again.',
         })
         dispatch(
           showMessage({
@@ -342,16 +382,6 @@ const DynamicFormPreview: React.FC<Props> = ({
       }
     }
   }
-
-  useEffect(() => {
-    if (
-      isSavedViewedPath &&
-      formDataDetails &&
-      Object.keys(formDataDetails).length > 0
-    ) {
-      reset(formDataDetails)
-    }
-  }, [reset, formDataDetails, isSavedViewedPath])
 
   const onClear = () => {
     reset({
@@ -414,6 +444,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 }
                                 error={error}
                                 helperText={helperText}
+                                disabled={isSavedViewedPath}
                               />
                             )
 
@@ -429,6 +460,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 rows={4}
                                 error={error}
                                 helperText={helperText}
+                                disabled={isSavedViewedPath}
                               />
                             )
 
@@ -438,6 +470,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 fullWidth
                                 required={field.required}
                                 error={error}
+                                disabled={isSavedViewedPath}
                               >
                                 <InputLabel>{field.label}</InputLabel>
                                 <Select
@@ -465,6 +498,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 component='fieldset'
                                 required={field.required}
                                 error={error}
+                                disabled={isSavedViewedPath}
                               >
                                 <FormLabel>{field.label}</FormLabel>
                                 <RadioGroup
@@ -496,6 +530,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 component='fieldset'
                                 required={field.required}
                                 error={error}
+                                disabled={isSavedViewedPath}
                               >
                                 <FormLabel component='legend'>
                                   {field.label}
@@ -557,6 +592,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 InputLabelProps={{ shrink: true }}
                                 error={error}
                                 helperText={helperText}
+                                disabled={isSavedViewedPath}
                               />
                             )
 
@@ -568,6 +604,8 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   control={control}
                                   label={field.label}
                                   error={errors[field.id]?.message as string}
+                                  disabled={isSavedViewedPath}
+                                  value={controllerField.value}
                                 />
                               </Box>
                             )
@@ -582,6 +620,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   onChange={controllerField.onChange}
                                   error={!!fieldState.error}
                                   helperText={fieldState.error?.message}
+                                  disabled={isSavedViewedPath}
                                 />
                               </Box>
                             )
@@ -596,6 +635,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 required={field.required}
                                 error={error}
                                 helperText={helperText}
+                                disabled={isSavedViewedPath}
                               />
                             )
                         }
