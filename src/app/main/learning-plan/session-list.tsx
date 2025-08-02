@@ -66,6 +66,7 @@ import { UserRole } from 'src/enum'
 import { FileUploader } from 'react-drag-drop-files'
 import ManageSessionFilesDialog from './manage-session-files-dialog'
 import { getFormDataAPI } from 'app/store/formData'
+import FileCategorySummary from './FileCategorySummary'
 
 const schema = yup.object().shape({
   actionName: yup.string().required('Action name is required'),
@@ -212,7 +213,7 @@ const SessionList = () => {
     }
   }, [learner_id])
 
-  const { data, isLoading, isError, error, refetch } =
+  const { data, isLoading, isError, error, refetch: getLearnerPlanList } =
     useGetLearnerPlanListQuery(
       {
         learners: learner_id,
@@ -287,6 +288,7 @@ const SessionList = () => {
             }))
           ),
           actionList: item.sessionLearnerActionDetails,
+          learnerPlanDocuments: item?.learnerPlanDocuments || [],
         }
       })
       setSessionListData(payload)
@@ -362,7 +364,7 @@ const SessionList = () => {
           variant: 'success',
         })
       )
-      refetch()
+      getLearnerPlanList()
       setIsOpenAction('')
     } catch (error) {
       console.log(error)
@@ -385,7 +387,7 @@ const SessionList = () => {
         })
       )
       setOpenDeleteSession('')
-      refetch()
+      getLearnerPlanList()
     } catch (error) {
       console.log(error)
       dispatch(
@@ -442,7 +444,7 @@ const SessionList = () => {
         })
       )
       setOpenEditSession(null)
-      refetch()
+      getLearnerPlanList()
     } catch (error) {
       console.log(error)
       dispatch(
@@ -469,7 +471,7 @@ const SessionList = () => {
           variant: 'success',
         })
       )
-      refetch()
+      getLearnerPlanList()
       setOpenAddFile('')
     } catch (error) {
       console.log(error)
@@ -718,32 +720,37 @@ const SessionList = () => {
                   </AccordionSummary>
 
                   <AccordionDetails className='px-6'>
-                    <div className='flex items-end justify-end mb-8 gap-7'>
-                      <Button
-                        variant='contained'
-                        className='rounded-md'
-                        color='primary'
-                        size='small'
-                        onClick={() => {
-                          setIsOpenForm(session.sessionNo)
-                          reset()
-                        }}
-                      >
-                        Add Files
-                      </Button>
-                      <Button
-                        variant='contained'
-                        className='rounded-md'
-                        color='primary'
-                        size='small'
-                        onClick={() => {
-                          setUnitList(session.units)
-                          setIsOpenAction(session.sessionNo)
-                          reset()
-                        }}
-                      >
-                        Add Action
-                      </Button>
+                    <div className='flex items-start justify-between mb-8 gap-7'>
+                      <FileCategorySummary
+                        data={session.learnerPlanDocuments}
+                      />
+                      <div className='flex items-end justify-end gap-7'>
+                        <Button
+                          variant='contained'
+                          className='rounded-md'
+                          color='primary'
+                          size='small'
+                          onClick={() => {
+                            setIsOpenForm(session.sessionNo)
+                            reset()
+                          }}
+                        >
+                          Add Files
+                        </Button>
+                        <Button
+                          variant='contained'
+                          className='rounded-md'
+                          color='primary'
+                          size='small'
+                          onClick={() => {
+                            setUnitList(session.units)
+                            setIsOpenAction(session.sessionNo)
+                            reset()
+                          }}
+                        >
+                          Add Action
+                        </Button>
+                      </div>
                     </div>
 
                     <Table size='small'>
@@ -1325,6 +1332,7 @@ const SessionList = () => {
       </Dialog>
       <ManageSessionFilesDialog
         open={isOpenForm}
+        getLearnerPlanList={getLearnerPlanList}
         onClose={() => setIsOpenForm(false)}
       />
     </Box>

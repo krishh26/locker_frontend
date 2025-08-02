@@ -23,6 +23,7 @@ import {
   InputLabel,
   FormControl,
   IconButton,
+  CircularProgress,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
@@ -77,9 +78,11 @@ const forms = [
 export default function ManageSessionFilesDialog({
   open,
   onClose,
+  getLearnerPlanList,
 }: {
   open: boolean
-  onClose: () => void
+  onClose: () => void,
+  getLearnerPlanList: () => void
 }) {
   const { data } = useSelector(selectFormData)
 
@@ -97,7 +100,9 @@ export default function ManageSessionFilesDialog({
   const [FormList, setFormList] = useState([])
 
   const dispatch: any = useDispatch()
-  const [addFormToLearner] = useAddFormToLearnerMutation()
+  const [addFormToLearner , {
+    isLoading: isAddFormToLearnerLoading
+  }] = useAddFormToLearnerMutation()
 
   const {
     data: formList,
@@ -172,6 +177,7 @@ export default function ManageSessionFilesDialog({
       try {
         await addFormToLearner(formData).unwrap()
         refetch()
+        getLearnerPlanList()
         setSelectedFile(null)
         dispatch(
           showMessage({
@@ -227,6 +233,7 @@ export default function ManageSessionFilesDialog({
           })
         )
         refetch()
+        getLearnerPlanList()
         setSelectedForm('')
         console.log('🚀 ~ handleAddUpload ~ res:', res)
       } catch (error) {
@@ -315,6 +322,7 @@ export default function ManageSessionFilesDialog({
                 <input
                   type='file'
                   hidden
+                  accept='application/pdf'
                   onChange={(e) => {
                     if (e.target.files?.[0]) {
                       setSelectedFile(e.target.files[0])
@@ -326,8 +334,11 @@ export default function ManageSessionFilesDialog({
               <Button
                 variant='outlined'
                 onClick={handleAddUpload}
-                disabled={!selectedFile}
+                disabled={!selectedFile || isAddFormToLearnerLoading}
               >
+                {
+                  isAddFormToLearnerLoading && <CircularProgress size={20} />
+                }
                 Upload
               </Button>
             </Box>
@@ -357,8 +368,11 @@ export default function ManageSessionFilesDialog({
               <Button
                 variant='outlined'
                 onClick={handleAddForm}
-                disabled={!selectedForm}
+                disabled={!selectedForm || isAddFormToLearnerLoading}
               >
+                {
+                  isAddFormToLearnerLoading && <CircularProgress size={20} />
+                }
                 Add Form
               </Button>
             </Box>
