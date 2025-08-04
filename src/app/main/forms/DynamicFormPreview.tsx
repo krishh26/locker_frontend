@@ -1,51 +1,47 @@
-import React, { useEffect, useState } from 'react'
+import { yupResolver } from '@hookform/resolvers/yup'
 import {
-  Grid,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormLabel,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Checkbox,
-  FormGroup,
-  Typography,
-  Button,
+  Alert,
   Box,
+  Button,
   Card,
   CardContent,
-  Alert,
+  Checkbox,
   CircularProgress,
+  FormControl,
+  FormControlLabel,
+  FormGroup,
+  FormLabel,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Radio,
+  RadioGroup,
+  Select,
   Snackbar,
+  TextField,
+  Typography,
 } from '@mui/material'
-import { useForm, Controller } from 'react-hook-form'
-import * as yup from 'yup'
-import { yupResolver } from '@hookform/resolvers/yup'
-import FileUploadField from './FileUploadField'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useSelector } from 'react-redux'
-import { selectUser } from 'app/store/userSlice'
-import { selectGlobalUser } from 'app/store/globalUser'
-import { UserRole } from 'src/enum'
-import { useDispatch } from 'react-redux'
 import { createUserFormDataAPI, selectFormData } from 'app/store/formData'
 import { showMessage } from 'app/store/fuse/messageSlice'
-import SignatureInput from './SignatureInput'
+import { selectGlobalUser } from 'app/store/globalUser'
+import { selectUser } from 'app/store/userSlice'
+import html2pdf from 'html2pdf.js'
+import React, { useEffect, useRef, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { useDispatch, useSelector } from 'react-redux'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
-  generateFormSubmissionPDF,
-  generateFormSubmissionPDFFromHTML,
-  sendFormSubmissionEmail,
   FormSubmissionData,
+  sendFormSubmissionEmail
 } from 'src/app/utils/pdfGenerator'
 import {
-  getFormAssignedUserIds,
-  getAdminTrainerUserIds,
-  formatUserForPDF,
-  getAuthToken,
+  formatUserForPDF
 } from 'src/app/utils/userHelpers'
+import { UserRole } from 'src/enum'
+import * as yup from 'yup'
+import FileUploadField from './FileUploadField'
+import PDFFormRenderer from './PDFFormRenderer'
+import SignatureInput from './SignatureInput'
 
 export interface SimpleFormField {
   id: string
@@ -179,6 +175,8 @@ const DynamicFormPreview: React.FC<Props> = ({
   const isSavedViewedPath =
     location.pathname === `/forms/view-saved-form/${formId}/user/${userId}`
 
+  const formRef = useRef()
+
   const user =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectUser)?.data
@@ -212,6 +210,7 @@ const DynamicFormPreview: React.FC<Props> = ({
     control,
     reset,
     formState: { errors },
+    getValues,
   } = useForm({
     resolver: yupResolver(validationSchema),
     mode: 'onSubmit',
@@ -220,6 +219,9 @@ const DynamicFormPreview: React.FC<Props> = ({
       return acc
     }, {} as Record<string, any>),
   })
+
+  const formValues = getValues()
+
   useEffect(() => {
     if (isSubmitPath) {
       const presetMap = {
@@ -283,88 +285,57 @@ const DynamicFormPreview: React.FC<Props> = ({
         formData.append('form_id', formId)
         formData.append('user_id', currentUser.user_id)
 
-        formData.forEach((value, key) => {
-          console.log('🚀 ~ onSubmit ~ key:', key, value)
-        })
+        if (user.role !== UserRole.Admin) {
+          // First, submit the form data
+          await dispatch(
+            createUserFormDataAPI({
+              form_id: formId,
+              form_data: data,
+              user_id: currentUser.user_id,
+            })
+          )
 
-        await dispatch(createUserFormDataAPI(formData))
+          // Generate PDF of the submitted form
+          const formSubmissionData: FormSubmissionData = {
+            formName,
+            description,
+            submittedBy: formatUserForPDF(currentUser),
+            submissionDate: new Date().toLocaleString(),
+            formData: data,
+            fields: fields.map((field) => ({
+              id: field.id,
+              type: field.type,
+              label: field.label,
+              required: field.required,
+              options: field.options,
+            })),
+          }
 
-        // if (user.role !== UserRole.Admin) {
-        // First, submit the form data
-        // await dispatch(
-        //   createUserFormDataAPI({
-        //     form_id: formId,
-        //     form_data: data,
-        //     user_id: currentUser.user_id,
-        //   })
-        // )
+          try {
+            // Try to generate PDF from HTML first (better visual representation)
+            const pdfBlob = await exportPDF(formRef.current)
 
-        // Generate PDF of the submitted form
-        // const formSubmissionData: FormSubmissionData = {
-        //   formName,
-        //   description,
-        //   submittedBy: formatUserForPDF(currentUser),
-        //   submissionDate: new Date().toLocaleString(),
-        //   formData: data,
-        //   fields: fields.map(field => ({
-        //     id: field.id,
-        //     type: field.type,
-        //     label: field.label,
-        //     required: field.required,
-        //     options: field.options,
-        //   })),
-        // }
+            await sendFormSubmissionEmail(pdfBlob, formId.toString())
 
-        // try {
-        //   // Try to generate PDF from HTML first (better visual representation)
-        //   let pdfBlob: Blob
-        //   try {
-        //     pdfBlob = await generateFormSubmissionPDFFromHTML('form-container', formSubmissionData)
-        //   } catch (htmlError) {
-        //     console.warn('HTML to PDF failed, falling back to text-based PDF:', htmlError)
-        //     pdfBlob = await generateFormSubmissionPDF(formSubmissionData)
-        //   }
+            setSubmitStatus({
+              type: 'success',
+              message:
+                'Form submitted successfully and notification sent to admin!',
+            })
+          } catch (pdfError) {
+            console.error('PDF generation or email sending failed:', pdfError)
+            setSubmitStatus({
+              type: 'success',
+              message:
+                'Form submitted successfully, but PDF generation failed.',
+            })
+          }
 
-        //   // Get auth token
-        //   const authToken = getAuthToken()
-
-        //   if (authToken) {
-        //     // Get admin/trainer user IDs for this form
-        //     let adminUserIds: string[]
-        //     try {
-        //       // Try to get form-specific assigned users first
-        //       adminUserIds = await getFormAssignedUserIds(formId.toString(), authToken)
-        //     } catch (error) {
-        //       console.warn('Could not get form assigned users, falling back to general admin users:', error)
-        //       // Fallback to general admin/trainer users
-        //       adminUserIds = await getAdminTrainerUserIds(authToken)
-        //     }
-        //     console.log("??????????????????????????????????")
-        //     await sendFormSubmissionEmail(pdfBlob, formId.toString(), adminUserIds, authToken)
-
-        //     setSubmitStatus({
-        //       type: 'success',
-        //       message: 'Form submitted successfully and notification sent to admin!'
-        //     })
-        //   } else {
-        //     setSubmitStatus({
-        //       type: 'success',
-        //       message: 'Form submitted successfully, but could not send email notification.'
-        //     })
-        //   }
-        // } catch (pdfError) {
-        //   console.error('PDF generation or email sending failed:', pdfError)
-        //   setSubmitStatus({
-        //     type: 'success',
-        //     message: 'Form submitted successfully, but PDF generation failed.'
-        //   })
-        // }
-
-        // Navigate after a short delay to show the success message
-        // setTimeout(() => {
-        //   navigate('/forms')
-        // }, 2000)
-        // }
+          // Navigate after a short delay to show the success message
+          setTimeout(() => {
+            navigate('/forms')
+          }, 2000)
+        }
       } catch (err) {
         console.log(err)
         setSubmitStatus({
@@ -389,6 +360,24 @@ const DynamicFormPreview: React.FC<Props> = ({
         acc[field.id] = field.type === 'checkbox' ? [] : ''
         return acc
       }, {} as Record<string, any>),
+    })
+  }
+
+  const exportPDF = async (elementRef: HTMLDivElement): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      html2pdf()
+        .set({
+          margin: 0.5,
+          filename: 'submitted-form.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+        })
+        .from(elementRef)
+        .toPdf()
+        .outputPdf('blob')
+        .then((pdfBlob: Blob) => resolve(pdfBlob))
+        .catch(reject)
     })
   }
 
@@ -701,6 +690,16 @@ const DynamicFormPreview: React.FC<Props> = ({
           {submitStatus.message}
         </Alert>
       </Snackbar>
+
+      <div style={{ display: 'none' }}>
+        <PDFFormRenderer
+          ref={formRef}
+          formName={formName}
+          description={description}
+          fields={fields}
+          data={formValues}
+        />
+      </div>
     </>
   )
 }
