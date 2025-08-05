@@ -205,13 +205,10 @@ export const generateFormSubmissionPDFFromHTML = async (
 export const sendFormSubmissionEmail = async (
   pdfBlob: Blob,
   formId: string,
-  userIds: string[],
-  authToken: string
 ): Promise<boolean> => {
   try {
     console.log('Preparing to send email with PDF...', {
       formId,
-      userIds,
       pdfSize: pdfBlob.size,
     });
 
@@ -219,9 +216,6 @@ export const sendFormSubmissionEmail = async (
     formData.append('pdf', pdfBlob, `form_submission_${formId}_${Date.now()}.pdf`);
     formData.append('form_id', formId);
 
-    // userIds.forEach((userId, index) => {
-    //   formData.append(`user_ids[${index}]`, userId);
-    // });
     formData.append('user_ids[0]', '7');
     console.log('Sending request to /api/v1/form/send-assignment-email...');
 
