@@ -88,7 +88,7 @@ const PresetItem: React.FC<{ presets: RolePresets }> = ({ presets }) => {
             </Box>
           </AccordionSummary>
           <AccordionDetails>
-            <Grid container spacing={1}>
+            <Grid container spacing={2} sx={{maxHeight: '400px', overflowY: 'auto'}}>
               {fields.map((preset) => (
                 <Grid item xs={12} key={preset.type}>
                   <DraggablePresetField preset={preset} />
