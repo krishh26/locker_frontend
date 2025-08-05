@@ -48,8 +48,6 @@ const PDFFormRenderer = React.forwardRef<HTMLDivElement, Props>(
             <Grid item xs={widthToGrid(field.width)} key={field.id}>
               {(() => {
                 const value = data[field.id]
-                console.log('🚀 ~ value:', value)
-                console.log('🚀 ~ value:', field?.options)
 
                 switch (field.type) {
                   case 'text':

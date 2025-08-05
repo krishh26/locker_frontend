@@ -32,16 +32,15 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   FormSubmissionData,
-  sendFormSubmissionEmail
+  sendFormSubmissionEmail,
 } from 'src/app/utils/pdfGenerator'
-import {
-  formatUserForPDF
-} from 'src/app/utils/userHelpers'
+import { formatUserForPDF } from 'src/app/utils/userHelpers'
 import { UserRole } from 'src/enum'
 import * as yup from 'yup'
 import FileUploadField from './FileUploadField'
 import PDFFormRenderer from './PDFFormRenderer'
 import SignatureInput from './SignatureInput'
+import { selectLearnerManagement } from 'app/store/learnerManagement'
 
 export interface SimpleFormField {
   id: string
@@ -183,6 +182,9 @@ const DynamicFormPreview: React.FC<Props> = ({
   const currentUser =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectGlobalUser)?.currentUser
+  console.log("🚀 ~ DynamicFormPreview ~ currentUser:", currentUser)
+
+  const leaner = useSelector(selectLearnerManagement)?.learner
 
   // State for PDF generation and email sending
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -228,6 +230,12 @@ const DynamicFormPreview: React.FC<Props> = ({
         learnerFullName: currentUser.displayName,
         LearnerEmail: currentUser.email,
         LearnerPhoneNumber: currentUser.mobile,
+      }
+      
+      if(leaner){
+        Object.keys(leaner).forEach((key) => {
+          presetMap[key] = leaner[key]
+        })
       }
 
       reset(

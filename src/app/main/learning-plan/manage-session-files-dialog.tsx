@@ -383,153 +383,22 @@ export default function ManageSessionFilesDialog({
           <Table size='small'>
             <TableHead>
               <TableRow>
-                <TableCell>File</TableCell>
-                <TableCell>Type</TableCell>
                 <TableCell>Name</TableCell>
+                <TableCell>Type</TableCell>
                 <TableCell>Description</TableCell>
-                <TableCell>Date Uploaded</TableCell>
-                <TableCell colSpan={5}>Signed in Agreement</TableCell>
+                <TableCell style={{ width: 200 }}>Date Uploaded</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {FormList.map((file, idx) => {
-                const isExpanded = expandedRow === idx
-
                 return (
                   <>
                     <TableRow key={idx}>
-                      <TableCell>
-                        <IconButton
-                          onClick={() =>
-                            setExpandedRow(isExpanded ? null : idx)
-                          }
-                        >
-                          {isExpanded ? <RemoveIcon /> : <AddIcon />}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell>{file.file_type}</TableCell>
                       <TableCell>{file.name}</TableCell>
+                      <TableCell>{file.file_type}</TableCell>
                       <TableCell>{file.description}</TableCell>
-                      <TableCell>{format(new Date(file.created_at), 'MM-dd-yyyy')}</TableCell>
-                      <TableCell>
-                        <Checkbox />
-                      </TableCell>
-                      <TableCell>
-                        <Checkbox />
-                      </TableCell>
-                      <TableCell>
-                        <Checkbox />
-                      </TableCell>
-                      <TableCell>
-                        <Checkbox />
-                      </TableCell>
-                      <TableCell>
-                        <Checkbox />
-                      </TableCell>
+                      <TableCell style={{ width: 200 }}>{format(new Date(file.created_at), 'MM-dd-yyyy')}</TableCell>
                     </TableRow>
-
-                    {isExpanded && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={10}
-                          sx={{ backgroundColor: '#f9f9f9' }}
-                        >
-                          <Box p={2}>
-                            <TextField
-                              label='Name'
-                              fullWidth
-                              margin='normal'
-                              defaultValue={file.name}
-                            />
-                            <TextField
-                              label='Description'
-                              fullWidth
-                              margin='normal'
-                              defaultValue={file.description}
-                            />
-
-                            <Box mt={2}>
-                              <Typography variant='subtitle1'>Type</Typography>
-                              <RadioGroup row defaultValue='general'>
-                                <FormControlLabel
-                                  value='ilp'
-                                  control={<Radio />}
-                                  label='ILP files'
-                                />
-                                <FormControlLabel
-                                  value='review'
-                                  control={<Radio />}
-                                  label='Review files'
-                                />
-                                <FormControlLabel
-                                  value='assessment'
-                                  control={<Radio />}
-                                  label='Assessment files'
-                                />
-                                <FormControlLabel
-                                  value='general'
-                                  control={<Radio />}
-                                  label='General files'
-                                />
-                              </RadioGroup>
-                            </Box>
-
-                            <Box mt={2}>
-                              <Table size='small'>
-                                <TableHead>
-                                  <TableRow>
-                                    <TableCell>Signed in Agreement</TableCell>
-                                    <TableCell>Name</TableCell>
-                                    <TableCell>Signed</TableCell>
-                                    <TableCell>Date</TableCell>
-                                    <TableCell>Signature req</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {[
-                                    'Primary Assessor',
-                                    'Secondary Assessor',
-                                    'Learner',
-                                    'Employer',
-                                    'IQA',
-                                  ].map((role, rIdx) => (
-                                    <TableRow key={rIdx}>
-                                      <TableCell>{role}</TableCell>
-                                      <TableCell>{role}</TableCell>
-                                      <TableCell>
-                                        <Checkbox />
-                                      </TableCell>
-                                      <TableCell>—</TableCell>
-                                      <TableCell>
-                                        <Checkbox />
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </Box>
-
-                            <Box
-                              display='flex'
-                              justifyContent='flex-end'
-                              mt={2}
-                              gap={2}
-                            >
-                              <Button
-                                variant='contained'
-                                color='error'
-                                onClick={() => setExpandedRow(null)}
-                              >
-                                Cancel/Close
-                              </Button>
-                              <Button variant='contained' color='success'>
-                                Save
-                              </Button>
-                            </Box>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </>
                 )
               })}
