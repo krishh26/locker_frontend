@@ -21,6 +21,9 @@ import {
   MenuItem,
   FormHelperText,
   CircularProgress,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
@@ -40,10 +43,69 @@ import DynamicFormPreview from './DynamicFormPreview'
 import { useGetFormDetailsQuery } from 'app/store/api/form-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
 
+// Typed roles
+const roles = [
+  'Master Admin',
+  'Basic Admin',
+  'Assessor',
+  'IQA',
+  'EQA',
+  'Curriculum Manager',
+  'Employer Overview',
+  'Employer Manager',
+  'Partner',
+  'Custom Manager',
+  'Learner',
+  'Other',
+] as const
+
+type Role = (typeof roles)[number]
+
+type MetadataFormValues = {
+  form_name: string
+  type: string
+  description?: string
+  accessRights?: Partial<Record<Role, boolean>>
+  enableCompleteFunction?: boolean
+  completionRoles?: Partial<Record<Role, boolean>>
+  requestSignature?: boolean
+}
+
+// Yup schema
+const generateRoleObject = () =>
+  roles.reduce((acc, role) => {
+    acc[role] = yup.boolean()
+    return acc
+  }, {} as Record<Role, yup.BooleanSchema>)
+
 const schema = yup.object().shape({
   form_name: yup.string().required('Form name is required'),
   type: yup.string().required('Form type is required'),
   description: yup.string().notRequired(),
+  accessRights: yup
+    .object()
+    .shape(generateRoleObject())
+    .test(
+      'at-least-one-access-role',
+      'Select at least one access right',
+      function (value) {
+        return Object.values(value || {}).some((v) => v === true)
+      }
+    ),
+  enableCompleteFunction: yup.boolean(),
+  completionRoles: yup
+    .object()
+    .shape(generateRoleObject())
+    .test(
+      'at-least-one-selected',
+      'Select at least one completion role',
+      function (value) {
+        const { enableCompleteFunction } = this.parent
+        if (!enableCompleteFunction) return true // ✅ Skip validation if function is disabled
+        return Object.values(value || {}).some((v) => v === true)
+      }
+    ),
+  requestSignature: yup.boolean(),
 })
 
 const formTypeOptions = [
@@ -56,23 +118,14 @@ const formTypeOptions = [
   'Others',
 ]
 
-type MetadataFormValues = {
-  form_name: string
-  type: string
-  description?: string
-}
-
 const UserFriendlyFormBuilder: React.FC = () => {
   const navigate = useNavigate()
   const param = useParams()
-
-  const formId: string | boolean = param?.id ?? false
-
   const dispatch: any = useDispatch()
+  const formId: string | boolean = param?.id ?? false
   const { singleData, mode, dataUpdatingLoadding } = useSelector(selectFormData)
 
   const [formFields, setFormFields] = useState<SimpleFormField[]>([])
-  console.log('🚀 ~ formFields:', formFields)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
   const [saveStatus, setSaveStatus] = useState<
     'idle' | 'saving' | 'saved' | 'error'
@@ -83,12 +136,20 @@ const UserFriendlyFormBuilder: React.FC = () => {
     handleSubmit,
     getValues,
     reset,
+    watch,
     formState: { errors },
   } = useForm<MetadataFormValues>({
     defaultValues: {
       form_name: '',
       type: '',
       description: '',
+      accessRights: roles.reduce((acc, role) => {
+        acc[role] = true // ✅ All Access Rights checked
+        return acc
+      }, {} as Record<Role, boolean>),
+      enableCompleteFunction: true, // ✅ Checked by default
+      completionRoles: {},
+      requestSignature: false,
     },
     resolver: yupResolver(schema),
     mode: 'onSubmit',
@@ -100,14 +161,10 @@ const UserFriendlyFormBuilder: React.FC = () => {
     isError: isFormDetailsError,
     error: formDetailsError,
   } = useGetFormDetailsQuery(
-    {
-      id: formId,
-    },
-    {
-      skip: !formId,
-      refetchOnMountOrArgChange: false,
-    }
+    { id: formId },
+    { skip: !formId, refetchOnMountOrArgChange: false }
   )
+
   useEffect(() => {
     if (isFormDetailsError && formDetailsError) {
       console.error('Error fetching form details:', formDetailsError)
@@ -121,95 +178,37 @@ const UserFriendlyFormBuilder: React.FC = () => {
     }
 
     if (formDetails && !isFormDetailsLoading) {
-      const { form_name, type, form_data, description } = formDetails.data
+      const {
+        form_name,
+        type,
+        description,
+        form_data,
+        accessRights,
+        completionRoles,
+        enableCompleteFunction,
+        requestSignature,
+      } = formDetails.data
 
       reset({
         form_name,
         type,
         description,
+        accessRights:
+          accessRights ||
+          roles.reduce((acc, role) => {
+            acc[role] = true
+            return acc
+          }, {} as Record<Role, boolean>),
+        completionRoles: completionRoles || {},
+        enableCompleteFunction: enableCompleteFunction ?? true,
+        requestSignature: requestSignature ?? false,
       })
 
       setFormFields(form_data)
     }
   }, [formDetails, isFormDetailsLoading, isFormDetailsError, formDetailsError])
 
-  const convertFormIOToSimpleFields = (
-    formIOComponents: any[]
-  ): SimpleFormField[] => {
-    return formIOComponents.map((component, index) => ({
-      id: component.key || `field_${index}`,
-      type: mapFormIOTypeToSimpleType(component.type),
-      label: component.label || component.placeholder || 'Untitled Field',
-      placeholder: component.placeholder,
-      required: component.validate?.required || false,
-      options:
-        component.values?.map((v: any) => v.label || v.value) ||
-        component.data?.values?.map((v: any) => v.label),
-      width: 'full',
-    }))
-  }
-
-  const mapFormIOTypeToSimpleType = (formIOType: string): string => {
-    const typeMap: { [key: string]: string } = {
-      textfield: 'text',
-      textarea: 'textarea',
-      select: 'select',
-      radio: 'radio',
-      checkbox: 'checkbox',
-      number: 'number',
-      email: 'email',
-      datetime: 'date',
-      file: 'file',
-      phoneNumber: 'phone',
-    }
-    return typeMap[formIOType] || 'text'
-  }
-
-  const convertToFormIOFormat = (fields: SimpleFormField[]) => {
-    return fields.map((field) => {
-      const baseComponent = {
-        key: field.id,
-        type: mapSimpleTypeToFormIO(field.type),
-        label: field.label,
-        placeholder: field.placeholder,
-        input: true,
-        validate: {
-          required: field.required,
-        },
-      }
-
-      if (
-        ['select', 'radio', 'checkbox'].includes(field.type) &&
-        field.options
-      ) {
-        return {
-          ...baseComponent,
-          // values: field.options.map((option, index) => ({
-          //   label: option,
-          //   value: option.toLowerCase().replace(/\s+/g, '_'),
-          // })),
-        }
-      }
-
-      return baseComponent
-    })
-  }
-
-  const mapSimpleTypeToFormIO = (simpleType: string): string => {
-    const typeMap: { [key: string]: string } = {
-      text: 'textfield',
-      textarea: 'textarea',
-      select: 'select',
-      radio: 'radio',
-      checkbox: 'checkbox',
-      number: 'number',
-      email: 'email',
-      date: 'datetime',
-      file: 'file',
-      phone: 'phoneNumber',
-    }
-    return typeMap[simpleType] || 'textfield'
-  }
+  const enableCompleteFunction = watch('enableCompleteFunction')
 
   const handleSave = async () => {
     const values = getValues()
@@ -224,36 +223,38 @@ const UserFriendlyFormBuilder: React.FC = () => {
       return
     }
 
-    setSaveStatus('saving')
+    // setSaveStatus('saving')
 
-    const formData = {
-      id: formId || null,
-      form_name: values.form_name,
-      description: values.description,
-      type: values.type,
-      form_data: formFields,
-    }
+    // const formData = {
+    //   id: formId || null,
+    //   form_name: values.form_name,
+    //   description: values.description,
+    //   type: values.type,
+    //   form_data: formFields,
+    //   accessRights: values.accessRights,
+    //   completionRoles: values.completionRoles,
+    //   enableCompleteFunction: values.enableCompleteFunction,
+    //   requestSignature: values.requestSignature,
+    // }
 
-    try {
-      let response
-      if (formId) {
-        response = await dispatch(updateFormDataAPI(formData))
-      } else {
-        response = await dispatch(createFormDataAPI(formData))
-      }
+    // try {
+    //   let response
+    //   if (formId) {
+    //     response = await dispatch(updateFormDataAPI(formData))
+    //   } else {
+    //     response = await dispatch(createFormDataAPI(formData))
+    //   }
 
-      if (response) {
-        setSaveStatus('saved')
-        setTimeout(() => {
-          navigate('/forms')
-        }, 1500)
-      } else {
-        setSaveStatus('error')
-      }
-    } catch (error) {
-      console.error('Error saving form:', error)
-      setSaveStatus('error')
-    }
+    //   if (response) {
+    //     setSaveStatus('saved')
+    //     setTimeout(() => navigate('/forms'), 1500)
+    //   } else {
+    //     setSaveStatus('error')
+    //   }
+    // } catch (error) {
+    //   console.error('Error saving form:', error)
+    //   setSaveStatus('error')
+    // }
   }
 
   const handleCancel = () => {
@@ -274,8 +275,8 @@ const UserFriendlyFormBuilder: React.FC = () => {
 
   if (isFormDetailsLoading) {
     return (
-      <div
-        style={{
+      <Box
+        sx={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -288,7 +289,7 @@ const UserFriendlyFormBuilder: React.FC = () => {
       >
         <CircularProgress />
         please wait while we load the form details...
-      </div>
+      </Box>
     )
   }
 
@@ -378,6 +379,7 @@ const UserFriendlyFormBuilder: React.FC = () => {
         >
           📋 Form Information
         </Typography>
+
         <Grid container spacing={3} className='mt-4'>
           <Grid item xs={12} md={6}>
             <Controller
@@ -452,6 +454,101 @@ const UserFriendlyFormBuilder: React.FC = () => {
             </Box>
           </Box>
         )}
+
+        <Grid container spacing={3} sx={{ mt: 3 }}>
+          <Grid item xs={12}>
+            <Typography variant='subtitle1' fontWeight={600} gutterBottom>
+              Access Rights:
+            </Typography>
+            <FormGroup row>
+              {roles.map((role) => (
+                <FormControlLabel
+                  key={role}
+                  control={
+                    <Controller
+                      name={`accessRights.${role}` as const}
+                      control={control}
+                      render={({ field }) => (
+                        <Checkbox {...field} checked={field.value || false} />
+                      )}
+                    />
+                  }
+                  label={role}
+                />
+              ))}
+              {errors.accessRights?.message && (
+                <FormHelperText error sx={{ mt: 1 }}>
+                  {errors.accessRights.message}
+                </FormHelperText>
+              )}
+            </FormGroup>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant='subtitle1' fontWeight={600} gutterBottom>
+              Completion:
+            </Typography>
+            <FormControlLabel
+              control={
+                <Controller
+                  name='enableCompleteFunction'
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox {...field} checked={field.value || false} />
+                  )}
+                />
+              }
+              label='Enable Complete Function'
+            />
+
+            {enableCompleteFunction && (
+              <Box
+                sx={{ border: '1px solid #ccc', p: 2, borderRadius: 2, mt: 2 }}
+              >
+                <FormGroup row>
+                  {roles.map((role) => (
+                    <FormControlLabel
+                      key={role}
+                      control={
+                        <Controller
+                          name={`completionRoles.${role}` as const}
+                          control={control}
+                          render={({ field }) => (
+                            <Checkbox
+                              {...field}
+                              checked={field.value || false}
+                            />
+                          )}
+                        />
+                      }
+                      label={role}
+                    />
+                  ))}
+                </FormGroup>
+                {errors.completionRoles?.message && (
+                  <FormHelperText error sx={{ mt: 1 }}>
+                    {errors.completionRoles.message}
+                  </FormHelperText>
+                )}
+              </Box>
+            )}
+          </Grid>
+
+          <Grid item xs={12}>
+            <FormControlLabel
+              control={
+                <Controller
+                  name='requestSignature'
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox {...field} checked={field.value || false} />
+                  )}
+                />
+              }
+              label='Set Request Signature'
+            />
+          </Grid>
+        </Grid>
       </Paper>
 
       <Box sx={{ flex: 1 }}>
@@ -472,10 +569,6 @@ const UserFriendlyFormBuilder: React.FC = () => {
               sx={{ fontWeight: 600, color: '#1976d2', mb: 3 }}
             >
               👀 Interactive Form Preview
-            </Typography>
-            <Typography variant='body2' color='text.secondary' sx={{ mb: 4 }}>
-              This is exactly how your form will appear to users. You can
-              interact with all fields to test the user experience.
             </Typography>
             <DynamicFormPreview
               fields={formFields}

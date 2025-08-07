@@ -182,12 +182,13 @@ const DynamicFormPreview: React.FC<Props> = ({
   const currentUser =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectGlobalUser)?.currentUser
-  console.log("🚀 ~ DynamicFormPreview ~ currentUser:", currentUser)
 
   const leaner = useSelector(selectLearnerManagement)?.learner
 
   // State for PDF generation and email sending
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDraftLoading, setIsDraftLoading] = useState(false)
+
   const [submitStatus, setSubmitStatus] = useState<{
     type: 'success' | 'error' | null
     message: string
@@ -231,8 +232,8 @@ const DynamicFormPreview: React.FC<Props> = ({
         LearnerEmail: currentUser.email,
         LearnerPhoneNumber: currentUser.mobile,
       }
-      
-      if(leaner){
+
+      if (leaner) {
         Object.keys(leaner).forEach((key) => {
           presetMap[key] = leaner[key]
         })
@@ -387,6 +388,63 @@ const DynamicFormPreview: React.FC<Props> = ({
         .then((pdfBlob: Blob) => resolve(pdfBlob))
         .catch(reject)
     })
+  }
+
+  const onSaveAsDraft = async () => {
+    if (isSubmitPath && formId) {
+      setIsDraftLoading(true)
+      setSubmitStatus({ type: null, message: '' })
+
+      try {
+        const formData = new FormData()
+
+        // Split into two objects
+        const fileFields: Record<string, File> = {}
+        const textFields: Record<string, string> = {}
+
+        Object.entries(data).forEach(([key, value]) => {
+          if (value instanceof File) {
+            fileFields[key] = value
+          } else {
+            textFields[key] = String(value)
+          }
+        })
+
+        formData.append('form_data', JSON.stringify(textFields))
+
+        Object.entries(fileFields).forEach(([key, value]) => {
+          formData.append(key, value, value.name)
+        })
+
+        formData.append('form_id', formId)
+        formData.append('user_id', currentUser.user_id)
+
+        if (user.role !== UserRole.Admin) {
+          // First, submit the form data
+          // await dispatch(
+          //   createUserFormDataAPI({
+          //     form_id: formId,
+          //     form_data: data,
+          //     user_id: currentUser.user_id,
+          //   })
+          // )
+        }
+      } catch (err) {
+        console.log(err)
+        setSubmitStatus({
+          type: 'error',
+          message: 'Failed to submit form. Please try again.',
+        })
+        dispatch(
+          showMessage({
+            message: 'Something went wrong!',
+            variant: 'error',
+          })
+        )
+      } finally {
+        setIsSubmitting(false)
+      }
+    }
   }
 
   return (
@@ -658,6 +716,16 @@ const DynamicFormPreview: React.FC<Props> = ({
                 >
                   Clear Form
                 </Button>
+
+                <Button
+                  type='button'
+                  variant='outlined'
+                  disabled={isSavedViewedPath || isDraftLoading}
+                  onClick={() => onSaveAsDraft()}
+                >
+                  {isDraftLoading ? 'Saving...' : 'Save as draft'}
+                </Button>
+
                 <Button
                   type='submit'
                   variant='contained'
