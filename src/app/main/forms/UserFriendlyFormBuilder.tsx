@@ -56,8 +56,9 @@ const roles = [
   'Partner',
   'Custom Manager',
   'Learner',
-  'Other',
 ] as const
+
+type EmailRole = Role | 'Other'
 
 type Role = (typeof roles)[number]
 
@@ -69,6 +70,10 @@ type MetadataFormValues = {
   enableCompleteFunction?: boolean
   completionRoles?: Partial<Record<Role, boolean>>
   requestSignature?: boolean
+  emails: {
+    [key in EmailRole]?: boolean
+  }
+  otherEmail?: string
 }
 
 // Yup schema
@@ -106,6 +111,30 @@ const schema = yup.object().shape({
       }
     ),
   requestSignature: yup.boolean(),
+  emails: yup
+    .object()
+    .shape(generateRoleObject())
+    .test({
+      name: 'at-least-one-email',
+      message: 'Select at least one email recipient',
+      test: (value) => !!value && Object.values(value).some((v) => v),
+    }),
+  otherEmail: yup.string().when('emails.Other', {
+    is: true,
+    then: (schema) =>
+      schema
+        .required('Please enter other emails')
+        .test(
+          'valid-emails',
+          'Enter valid email(s) separated by commas',
+          (val) =>
+            val
+              ?.split(',')
+              .map((e) => e.trim())
+              .every((email) => /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email))
+        ),
+    otherwise: (schema) => schema.notRequired(),
+  }),
 })
 
 const formTypeOptions = [
@@ -137,6 +166,7 @@ const UserFriendlyFormBuilder: React.FC = () => {
     getValues,
     reset,
     watch,
+    trigger,
     formState: { errors },
   } = useForm<MetadataFormValues>({
     defaultValues: {
@@ -149,10 +179,15 @@ const UserFriendlyFormBuilder: React.FC = () => {
       }, {} as Record<Role, boolean>),
       enableCompleteFunction: true, // ✅ Checked by default
       completionRoles: {},
+      emails: roles.reduce((acc, role) => {
+        acc[role] = false
+        return acc
+      }, {} as Record<Role, boolean>),
+      otherEmail: '',
       requestSignature: false,
     },
     resolver: yupResolver(schema),
-    mode: 'onSubmit',
+    mode: 'all',
   })
 
   const {
@@ -212,6 +247,7 @@ const UserFriendlyFormBuilder: React.FC = () => {
 
   const handleSave = async () => {
     const values = getValues()
+    console.log('🚀 ~ handleSave ~ values:', values)
 
     if (!values.form_name.trim()) {
       alert('Please enter a form name')
@@ -225,36 +261,47 @@ const UserFriendlyFormBuilder: React.FC = () => {
 
     // setSaveStatus('saving')
 
-    // const formData = {
-    //   id: formId || null,
-    //   form_name: values.form_name,
-    //   description: values.description,
-    //   type: values.type,
-    //   form_data: formFields,
-    //   accessRights: values.accessRights,
-    //   completionRoles: values.completionRoles,
-    //   enableCompleteFunction: values.enableCompleteFunction,
-    //   requestSignature: values.requestSignature,
-    // }
+    const formData = {
+      id: formId || null,
+      form_name: values.form_name,
+      description: values.description,
+      type: values.type,
+      form_data: formFields,
+      access_rights: Object.entries(values.accessRights)
+        .filter(([_, value]) => value)
+        .map(([key]) => `'${key}'`) // wrap each key in single quotes
+        .join(','),
+      completion_roles: Object.entries(values.completionRoles)
+        .filter(([_, value]) => value)
+        .map(([key]) => `'${key}'`) // wrap each key in single quotes
+        .join(','),
+      enable_complete_function: values.enableCompleteFunction,
+      set_request_signature: values.requestSignature,
+      email_roles: Object.entries(values.emails)
+        .filter(([_, value]) => value)
+        .map(([key]) => `'${key}'`) // wrap each key in single quotes
+        .join(','),
+      other_emails: values.otherEmail || null,
+    }
 
-    // try {
-    //   let response
-    //   if (formId) {
-    //     response = await dispatch(updateFormDataAPI(formData))
-    //   } else {
-    //     response = await dispatch(createFormDataAPI(formData))
-    //   }
+    try {
+      let response
+      if (formId) {
+        response = await dispatch(updateFormDataAPI(formData))
+      } else {
+        response = await dispatch(createFormDataAPI(formData))
+      }
 
-    //   if (response) {
-    //     setSaveStatus('saved')
-    //     setTimeout(() => navigate('/forms'), 1500)
-    //   } else {
-    //     setSaveStatus('error')
-    //   }
-    // } catch (error) {
-    //   console.error('Error saving form:', error)
-    //   setSaveStatus('error')
-    // }
+      if (response) {
+        setSaveStatus('saved')
+        setTimeout(() => navigate('/forms'), 1500)
+      } else {
+        setSaveStatus('error')
+      }
+    } catch (error) {
+      console.error('Error saving form:', error)
+      setSaveStatus('error')
+    }
   }
 
   const handleCancel = () => {
@@ -469,7 +516,14 @@ const UserFriendlyFormBuilder: React.FC = () => {
                       name={`accessRights.${role}` as const}
                       control={control}
                       render={({ field }) => (
-                        <Checkbox {...field} checked={field.value || false} />
+                        <Checkbox
+                          {...field}
+                          checked={field.value || false}
+                          onChange={(e) => {
+                            field.onChange(e)
+                            trigger('accessRights')
+                          }}
+                        />
                       )}
                     />
                   }
@@ -541,12 +595,77 @@ const UserFriendlyFormBuilder: React.FC = () => {
                   name='requestSignature'
                   control={control}
                   render={({ field }) => (
-                    <Checkbox {...field} checked={field.value || false} />
+                    <Checkbox
+                      {...field}
+                      checked={field.value || false}
+                      onChange={(e) => {
+                        field.onChange(e)
+                        trigger(`requestSignature`)
+                      }}
+                    />
                   )}
                 />
               }
               label='Set Request Signature'
             />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant='subtitle1' fontWeight={600} gutterBottom>
+              Emails:
+            </Typography>
+            <FormGroup row>
+              {roles.map((role) => (
+                <FormControlLabel
+                  key={role}
+                  control={
+                    <Controller
+                      name={`emails.${role}` as const}
+                      control={control}
+                      render={({ field }) => (
+                        <Checkbox
+                          {...field}
+                          checked={field.value || false}
+                          onChange={(e) => {
+                            field.onChange(e)
+                            trigger(`emails`)
+                          }}
+                        />
+                      )}
+                    />
+                  }
+                  label={role}
+                />
+              ))}
+            </FormGroup>
+
+            {/* Show 'Other' email input if checked */}
+            {watch('emails.Other') && (
+              <Controller
+                name='otherEmail'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label='Other Emails'
+                    placeholder='Email are separated by comma(,)'
+                    fullWidth
+                    size='small'
+                    margin='dense'
+                    error={!!errors.otherEmail}
+                    helperText={errors.otherEmail?.message}
+                    sx={{ mt: 1 }}
+                  />
+                )}
+              />
+            )}
+
+            {/* Show error for emails group */}
+            {errors.emails?.message && (
+              <FormHelperText error sx={{ mt: 1 }}>
+                {errors.emails.message}
+              </FormHelperText>
+            )}
           </Grid>
         </Grid>
       </Paper>
