@@ -218,25 +218,66 @@ const UserFriendlyFormBuilder: React.FC = () => {
         type,
         description,
         form_data,
-        accessRights,
-        completionRoles,
-        enableCompleteFunction,
-        requestSignature,
+        access_rights,
+        enable_complete_function,
+        completion_roles,
+        other_emails,
+        set_request_signature,
+        email_roles,
       } = formDetails.data
+
+    const accessRolesArray = access_rights
+      ?.split(',')
+      .map(role => role.trim().replace(/^'(.*)'$/, '$1'));
+
+    const completionRolesArray = completion_roles
+      ?.split(',')
+      .map(role => role.trim().replace(/^'(.*)'$/, '$1'));
+
+    const emailRolesArray = email_roles
+      ?.split(',')
+      .map(role => role.trim().replace(/^'(.*)'$/, '$1'));
+
+      const allRoles = [
+        'Master Admin',
+        'Basic Admin',
+        'Assessor',
+        'IQA',
+        'EQA',
+        'Curriculum Manager',
+        'Employer Overview',
+        'Employer Manager',
+        'Partner',
+        'Custom Manager',
+        'Learner',
+        'Others',
+      ]
 
       reset({
         form_name,
         type,
         description,
-        accessRights:
-          accessRights ||
-          roles.reduce((acc, role) => {
-            acc[role] = true
-            return acc
-          }, {} as Record<Role, boolean>),
-        completionRoles: completionRoles || {},
-        enableCompleteFunction: enableCompleteFunction ?? true,
-        requestSignature: requestSignature ?? false,
+        accessRights: Object.fromEntries(
+          allRoles.map((role) => [
+            role,
+            accessRolesArray?.includes(role) || false,
+          ])
+        ),
+        completionRoles: Object.fromEntries(
+          allRoles.map((role) => [
+            role,
+            completionRolesArray?.includes(role) || false,
+          ])
+        ),
+        enableCompleteFunction: enable_complete_function,
+        requestSignature: set_request_signature,
+        emails: Object.fromEntries(
+          allRoles.map((role) => [
+            role,
+            emailRolesArray?.includes(role) || false,
+          ])
+        ),
+        otherEmail: other_emails || '',
       })
 
       setFormFields(form_data)

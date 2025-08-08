@@ -239,21 +239,29 @@ const DynamicFormPreview: React.FC<Props> = ({
         })
       }
 
-      reset(
-        Object.fromEntries(
-          fields.map((field) => [
-            field.id,
-            currentUser.roles.includes(UserRole.Learner) && field.presetField
-              ? presetMap[field.presetField] ??
-                (field.type === 'checkbox' ? [] : '')
-              : field.type === 'checkbox'
-              ? []
-              : '',
-          ])
-        )
-      )
+      const defaultValues: Record<string, any> = {}
+
+      // Apply preset values (for learner submitting)
+      fields.forEach((field) => {
+        defaultValues[field.id] =
+          currentUser.roles.includes(UserRole.Learner) && field.presetField
+            ? presetMap[field.presetField] ??
+              (field.type === 'checkbox' ? [] : '')
+            : field.type === 'checkbox'
+            ? []
+            : ''
+      })
+
+      // Apply values from formDataDetails if available
+      if (formDataDetails && Object.keys(formDataDetails).length > 0) {
+        Object.entries(formDataDetails).forEach(([key, value]) => {
+          defaultValues[key] = value
+        })
+      }
+
+      reset(defaultValues)
     }
-  }, [isSubmitPath, fields])
+  }, [isSubmitPath, fields, formDataDetails, reset, currentUser, leaner])
 
   useEffect(() => {
     if (
