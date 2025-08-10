@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react'
 import {
+  closestCenter,
   DndContext,
   DragEndEvent,
   DragOverlay,
@@ -7,39 +7,22 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
 } from '@dnd-kit/core'
 import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
+  arrayMove
 } from '@dnd-kit/sortable'
-import {
-  Box,
-  Paper,
-  Typography,
-  Grid,
-  Divider,
-  IconButton,
-  TextField,
-  Switch,
-  FormControlLabel,
-  Chip,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Radio,
-  RadioGroup,
-  Checkbox,
-  FormGroup,
-} from '@mui/material'
-import DeleteIcon from '@mui/icons-material/Delete'
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
-import AddIcon from '@mui/icons-material/Add'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import {
+  Box,
+  Divider,
+  Grid,
+  IconButton,
+  Paper,
+  Typography
+} from '@mui/material'
+import React, { useCallback, useEffect, useState } from 'react'
+import { UserRole } from 'src/enum'
 import { v4 as uuidv4 } from 'uuid'
 import ComponentItem from './ComponentItem'
 import FormArea from './FormArea'
@@ -54,7 +37,8 @@ export interface SimpleFormField {
   placeholder?: string
   required?: boolean
   options?: { label: string; value: string }[]
-  width?: 'full' | 'half' | 'third'
+  width?: 'full' | 'half' | 'third',
+  signatureRole?: string
 }
 
 // Simple component palette
@@ -145,6 +129,9 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
                   { label: 'Option 3', value: 'option_3' },
                 ],
               }),
+              ...(componentType!.type === 'signature' && {
+                signatureRole: UserRole.Learner,
+              })
             }
 
         const updatedFields = [...formFields, newField]

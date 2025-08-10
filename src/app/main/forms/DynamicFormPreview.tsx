@@ -51,6 +51,7 @@ export interface SimpleFormField {
   options?: { label: string; value: string }[]
   width?: 'full' | 'half' | 'third'
   presetField?: string
+  signatureRole?: string
 }
 
 interface Props {
@@ -159,6 +160,20 @@ export const getDynamicYupSchema = (fields: SimpleFormField[]) => {
   )
 }
 
+function parseIfJsonObject(str) {
+  try {
+    const parsed = JSON.parse(str)
+
+    // Check if parsed value is actually an object and not null/array
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed // Return object
+    }
+    return false // Not an object
+  } catch {
+    return false // Invalid JSON
+  }
+}
+
 const DynamicFormPreview: React.FC<Props> = ({
   fields,
   formName,
@@ -239,21 +254,43 @@ const DynamicFormPreview: React.FC<Props> = ({
         })
       }
 
-      reset(
-        Object.fromEntries(
-          fields.map((field) => [
-            field.id,
-            currentUser.roles.includes(UserRole.Learner) && field.presetField
-              ? presetMap[field.presetField] ??
-                (field.type === 'checkbox' ? [] : '')
-              : field.type === 'checkbox'
-              ? []
-              : '',
-          ])
-        )
-      )
+      const defaultValues: Record<string, any> = {}
+
+      // Apply preset values (for learner submitting)
+      fields.forEach((field) => {
+        defaultValues[field.id] =
+          currentUser.roles.includes(UserRole.Learner) && field.presetField
+            ? presetMap[field.presetField] ??
+              (field.type === 'checkbox' ? [] : '')
+            : field.type === 'checkbox'
+            ? []
+            : ''
+      })
+
+      // Apply values from formDataDetails if available
+      if (formDataDetails && Object.keys(formDataDetails).length > 0) {
+        Object.entries(formDataDetails).forEach(([key, value]) => {
+          const fieldDef = fields.find((f) => f.id === key)
+
+          if (fieldDef?.type === 'checkbox') {
+            // Ensure it's stored as an array
+            defaultValues[key] =
+              typeof value === 'string'
+                ? value.split(',').map((v) => v.trim())
+                : value
+          } else if (fieldDef?.type === 'signature') {
+            defaultValues[key] = parseIfJsonObject(value)
+              ? parseIfJsonObject(value)
+              : value
+          } else {
+            defaultValues[key] = value
+          }
+        })
+      }
+
+      reset(defaultValues)
     }
-  }, [isSubmitPath, fields])
+  }, [isSubmitPath, fields, formDataDetails])
 
   useEffect(() => {
     if (
@@ -261,9 +298,28 @@ const DynamicFormPreview: React.FC<Props> = ({
       formDataDetails &&
       Object.keys(formDataDetails).length > 0
     ) {
-      reset(formDataDetails)
+      const defaultValues: Record<string, any> = {}
+      Object.entries(formDataDetails).forEach(([key, value]) => {
+        const fieldDef = fields.find((f) => f.id === key)
+
+        if (fieldDef?.type === 'checkbox') {
+          // Ensure it's stored as an array
+          defaultValues[key] =
+            typeof value === 'string'
+              ? value.split(',').map((v) => v.trim())
+              : value
+        } else if (fieldDef?.type === 'signature') {
+          defaultValues[key] = parseIfJsonObject(value)
+            ? parseIfJsonObject(value)
+            : value
+        } else {
+          defaultValues[key] = value
+        }
+      })
+
+      reset(defaultValues)
     }
-  }, [reset, formDataDetails, isSavedViewedPath])
+  }, [reset, formDataDetails, isSavedViewedPath, fields])
 
   const onSubmit = async (data: any) => {
     if (isSubmitPath && formId) {
@@ -296,29 +352,7 @@ const DynamicFormPreview: React.FC<Props> = ({
 
         if (user.role !== UserRole.Admin) {
           // First, submit the form data
-          await dispatch(
-            createUserFormDataAPI({
-              form_id: formId,
-              form_data: data,
-              user_id: currentUser.user_id,
-            })
-          )
-
-          // Generate PDF of the submitted form
-          const formSubmissionData: FormSubmissionData = {
-            formName,
-            description,
-            submittedBy: formatUserForPDF(currentUser),
-            submissionDate: new Date().toLocaleString(),
-            formData: data,
-            fields: fields.map((field) => ({
-              id: field.id,
-              type: field.type,
-              label: field.label,
-              required: field.required,
-              options: field.options,
-            })),
-          }
+          await dispatch(createUserFormDataAPI(formData))
 
           try {
             // Try to generate PDF from HTML first (better visual representation)
@@ -394,7 +428,7 @@ const DynamicFormPreview: React.FC<Props> = ({
     if (isSubmitPath && formId) {
       setIsDraftLoading(true)
       setSubmitStatus({ type: null, message: '' })
-
+      const data = getValues()
       try {
         const formData = new FormData()
 
@@ -421,13 +455,10 @@ const DynamicFormPreview: React.FC<Props> = ({
 
         if (user.role !== UserRole.Admin) {
           // First, submit the form data
-          // await dispatch(
-          //   createUserFormDataAPI({
-          //     form_id: formId,
-          //     form_data: data,
-          //     user_id: currentUser.user_id,
-          //   })
-          // )
+          await dispatch(createUserFormDataAPI(formData))
+          setTimeout(() => {
+            navigate('/forms')
+          }, 2000)
         }
       } catch (err) {
         console.log(err)
@@ -675,7 +706,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   onChange={controllerField.onChange}
                                   error={!!fieldState.error}
                                   helperText={fieldState.error?.message}
-                                  disabled={isSavedViewedPath}
+                                  disabled={isSavedViewedPath || !currentUser.roles.includes(field.signatureRole)}
                                 />
                               </Box>
                             )

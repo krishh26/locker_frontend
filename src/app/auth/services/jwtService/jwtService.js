@@ -90,7 +90,9 @@ class JwtService extends FuseUtils.EventEmitter {
                         } else {
                             sessionStorage.setItem('email', decoded?.email);
                             resolve({ token: data?.accessToken, decoded });
+                            return
                         }
+                        resolve(response.data.data)
                     } else {
                         reject(response?.data.error);
                     }
