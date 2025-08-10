@@ -1,15 +1,16 @@
 import { Box, CircularProgress } from '@mui/material'
-import DynamicFormPreview from './DynamicFormPreview'
 import {
   useGetFormDetailsQuery,
   useGetSavedFormDetailsQuery,
 } from 'app/store/api/form-api'
-import { useEffect, useState } from 'react'
-import { redirect, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
-import { showMessage } from 'app/store/fuse/messageSlice'
-import type { SimpleFormField } from 'src/app/component/FormBuilder'
 import { selectFormData, slice } from 'app/store/formData'
+import { showMessage } from 'app/store/fuse/messageSlice'
+import { selectGlobalUser } from 'app/store/globalUser'
+import { useEffect, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import type { SimpleFormField } from 'src/app/component/FormBuilder'
+import DynamicFormPreview from './DynamicFormPreview'
 
 const AddViewForm = () => {
   const param = useParams()
@@ -26,6 +27,10 @@ const AddViewForm = () => {
   const [savedFormData, setSavedFormData] = useState<any>({})
 
   const dispatch: any = useDispatch()
+
+  const currentUser =
+    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
+    useSelector(selectGlobalUser)?.currentUser
   const {
     data,
     formDataDetails,
@@ -59,10 +64,9 @@ const AddViewForm = () => {
   } = useGetSavedFormDetailsQuery(
     {
       formId,
-      userId,
+      userId: currentUser?.user_id || userId,
     },
     {
-      skip: !isSavedViewedPath,
       refetchOnMountOrArgChange: false,
     }
   )
@@ -94,14 +98,14 @@ const AddViewForm = () => {
 
   useEffect(() => {
     if (isSavedFormDetailsError && savedFormDetailsError) {
-      console.error('Error fetching saved form details:', savedFormDetailsError)
-      dispatch(
-        showMessage({
-          message: 'Error fetching saved form details',
-          variant: 'error',
-        })
-      )
-      navigate('/forms')
+      // console.error('Error fetching saved form details:', savedFormDetailsError)
+      // dispatch(
+      //   showMessage({
+      //     message: 'Error fetching saved form details',
+      //     variant: 'error',
+      //   })
+      // )
+      // navigate('/forms')
     }
 
     if (savedFormDetails && !isSavedFormDetailsLoading) {

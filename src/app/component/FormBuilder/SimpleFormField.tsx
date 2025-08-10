@@ -30,6 +30,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import AddIcon from '@mui/icons-material/Add'
 import { SimpleFormField as FormFieldType } from './SimpleFormBuilder'
+import { UserRole } from 'src/enum'
 
 interface SimpleFormFieldProps {
   field: FormFieldType
@@ -331,7 +332,7 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
           label='Required field'
         />
 
-        {!['file' ].includes(field.type) && (
+        {!['file'].includes(field.type) && (
           <FormControl size='small' fullWidth>
             <InputLabel>Field Width</InputLabel>
             <Select
@@ -374,6 +375,23 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
               Add Option
             </Button>
           </Box>
+        )}
+
+        {field.type === 'signature' && (
+          <FormControl size='small' fullWidth>
+            <InputLabel>Signature Role</InputLabel>
+            <Select
+              value={localField.signatureRole || UserRole.Learner}
+              onChange={(e) =>
+                setLocalField({ ...localField, signatureRole: e.target.value })
+              }
+              label='Signature Role'
+            >
+              <MenuItem value={UserRole.Learner}>{UserRole.Learner}</MenuItem>
+              <MenuItem value={UserRole.Employer}>{UserRole.Employer}</MenuItem>
+              <MenuItem value={UserRole.Trainer}>{UserRole.Trainer}</MenuItem>
+            </Select>
+          </FormControl>
         )}
 
         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
