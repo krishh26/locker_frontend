@@ -21,6 +21,17 @@ export interface RolePresets {
 export const PRESET_FIELDS: RolePresets = {
   learner: [
     {
+      type: 'awarding_body',
+      label: 'Awarding Body',
+      field: {
+        id: 'awarding_body',
+        type: 'textfield',
+        label: 'Awarding Body',
+        required: false,
+        presetField: 'awarding_body',
+      },
+    },
+    {
       type: 'cohort',
       label: 'Cohort',
       field: {
@@ -31,9 +42,74 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'cohort',
       },
     },
-
     {
-      type: 'dob',
+      type: 'county',
+      label: 'County',
+      field: {
+        id: 'county',
+        type: 'textfield',
+        label: 'County',
+        required: false,
+        presetField: 'county',
+      },
+    },
+    {
+      type: 'course_actual_end_date',
+      label: 'Course Actual End Date',
+      field: {
+        id: 'course_actual_end_date',
+        type: 'date',
+        label: 'Course Actual End Date',
+        required: false,
+        presetField: 'course_actual_end_date',
+      },
+    },
+    {
+      type: 'course_expected_end_date',
+      label: 'Course Expected End Date',
+      field: {
+        id: 'course_expected_end_date',
+        type: 'date',
+        label: 'Course Expected End Date',
+        required: false,
+        presetField: 'course_expected_end_date',
+      },
+    },
+    {
+      type: 'course_name',
+      label: 'Course Name',
+      field: {
+        id: 'course_name',
+        type: 'textfield',
+        label: 'Course Name',
+        required: false,
+        presetField: 'course_name',
+      },
+    },
+    {
+      type: 'course_start_date',
+      label: 'Course Start Date',
+      field: {
+        id: 'course_start_date',
+        type: 'date',
+        label: 'Course Start Date',
+        required: false,
+        presetField: 'course_start_date',
+      },
+    },
+    {
+      type: 'current_time_progress',
+      label: 'Current Time Progress',
+      field: {
+        id: 'current_time_progress',
+        type: 'textfield',
+        label: 'Current Time Progress',
+        required: false,
+        presetField: 'current_time_progress',
+      },
+    },
+    {
+      type: 'date_of_birth',
       label: 'Date of Birth',
       field: {
         id: 'dob',
@@ -43,7 +119,6 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'dob',
       },
     },
-
     {
       type: 'employer',
       label: 'Employer',
@@ -55,7 +130,6 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'employer',
       },
     },
-
     {
       type: 'ethnicity',
       label: 'Ethnicity',
@@ -67,7 +141,61 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'ethnicity',
       },
     },
-
+    {
+      type: 'fs_english_green_progress',
+      label: 'FS English Green Progress',
+      field: {
+        id: 'fs_english_green_progress',
+        type: 'textfield',
+        label: 'FS English Green Progress',
+        required: false,
+        presetField: 'fs_english_green_progress',
+      },
+    },
+    {
+      type: 'fs_english_orange_progress',
+      label: 'FS English Orange Progress',
+      field: {
+        id: 'fs_english_orange_progress',
+        type: 'textfield',
+        label: 'FS English Orange Progress',
+        required: false,
+        presetField: 'fs_english_orange_progress',
+      },
+    },
+    {
+      type: 'fs_maths_green_progress',
+      label: 'FS Maths Green Progress',
+      field: {
+        id: 'fs_maths_green_progress',
+        type: 'textfield',
+        label: 'FS Maths Green Progress',
+        required: false,
+        presetField: 'fs_maths_green_progress',
+      },
+    },
+    {
+      type: 'fs_maths_orange_progress',
+      label: 'FS Maths Orange Progress',
+      field: {
+        id: 'fs_maths_orange_progress',
+        type: 'textfield',
+        label: 'FS Maths Orange Progress',
+        required: false,
+        presetField: 'fs_maths_orange_progress',
+      },
+    },
+    {
+      type: 'funding_body',
+      label: 'Funding Body',
+      field: {
+        id: 'funding_body',
+        type: 'textfield',
+        label: 'Funding Body',
+        required: false,
+        presetField: 'funding_body',
+      },
+    },
     {
       type: 'funding_contractor',
       label: 'Funding Contractor',
@@ -79,7 +207,6 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'funding_contractor',
       },
     },
-
     {
       type: 'gender',
       label: 'Gender',
@@ -92,7 +219,17 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'gender',
       },
     },
-
+    {
+      type: 'guided_learning_hours_achieved',
+      label: 'Guided Learning Hours Achieved to Date',
+      field: {
+        id: 'guided_learning_hours_achieved',
+        type: 'number',
+        label: 'Guided Learning Hours Achieved to Date',
+        required: false,
+        presetField: 'guided_learning_hours_achieved',
+      },
+    },
     {
       type: 'home_postcode',
       label: 'Home Postcode',
@@ -104,17 +241,26 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'home_postcode',
       },
     },
-
     {
-      type: 'learner-name',
-      label: 'Learner Name',
+      type: 'iqas_name',
+      label: "IQA's Name",
       field: {
-        id: 'learner-name',
+        id: 'iqas_name',
         type: 'textfield',
-        label: 'Full Name',
-        placeholder: 'Enter your full name',
-        required: true,
-        presetField: 'learnerFullName',
+        label: "IQA's Name",
+        required: false,
+        presetField: 'iqas_name',
+      },
+    },
+    {
+      type: 'lara_code',
+      label: 'Lara Code',
+      field: {
+        id: 'lara_code',
+        type: 'textfield',
+        label: 'Lara Code',
+        required: false,
+        presetField: 'lara_code',
       },
     },
     {
@@ -130,6 +276,18 @@ export const PRESET_FIELDS: RolePresets = {
       },
     },
     {
+      type: 'learner-name',
+      label: 'Learner Name',
+      field: {
+        id: 'learner-name',
+        type: 'textfield',
+        label: 'Full Name',
+        placeholder: 'Enter your full name',
+        required: true,
+        presetField: 'learnerFullName',
+      },
+    },
+    {
       type: 'learner_disability',
       label: 'Learner Disability',
       field: {
@@ -138,6 +296,28 @@ export const PRESET_FIELDS: RolePresets = {
         label: 'Learner Disability',
         required: false,
         presetField: 'learner_disability',
+      },
+    },
+    {
+      type: 'learner_forename',
+      label: 'Learner Forename',
+      field: {
+        id: 'learner_forename',
+        type: 'textfield',
+        label: 'Learner Forename',
+        required: false,
+        presetField: 'learner_forename',
+      },
+    },
+    {
+      type: 'learner_surname',
+      label: 'Learner Surname',
+      field: {
+        id: 'learner_surname',
+        type: 'textfield',
+        label: 'Learner Surname',
+        required: false,
+        presetField: 'learner_surname',
       },
     },
     {
@@ -152,7 +332,39 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'LearnerPhoneNumber',
       },
     },
-
+    {
+      type: 'learning_difficulties',
+      label: 'Learning Difficulties',
+      field: {
+        id: 'learning_difficulties',
+        type: 'textfield',
+        label: 'Learning Difficulties',
+        required: false,
+        presetField: 'learning_difficulties',
+      },
+    },
+    {
+      type: 'list_trainer',
+      label: 'List Trainers',
+      field: {
+        id: 'list_trainer',
+        type: 'textfield',
+        label: 'List Trainers',
+        required: false,
+        presetField: 'list_trainer',
+      },
+    },
+    {
+      type: 'list_courses',
+      label: 'List Courses',
+      field: {
+        id: 'list_courses',
+        type: 'textfield',
+        label: 'List Courses',
+        required: false,
+        presetField: 'list_courses',
+      },
+    },
     {
       type: 'location',
       label: 'Location',
@@ -164,7 +376,39 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'location',
       },
     },
-
+    {
+      type: 'main_aim_green_progress',
+      label: 'Main Aim Green Progress',
+      field: {
+        id: 'main_aim_green_progress',
+        type: 'textfield',
+        label: 'Main Aim Green Progress',
+        required: false,
+        presetField: 'main_aim_green_progress',
+      },
+    },
+    {
+      type: 'main_aim_guided_learning_hours_achieved',
+      label: 'Main Aim Guided Learning Hours Achieved to Date',
+      field: {
+        id: 'main_aim_guided_learning_hours_achieved',
+        type: 'number',
+        label: 'Main Aim Guided Learning Hours Achieved to Date',
+        required: false,
+        presetField: 'main_aim_guided_learning_hours_achieved',
+      },
+    },
+    {
+      type: 'main_aim_orange_progress',
+      label: 'Main Aim Orange Progress',
+      field: {
+        id: 'main_aim_orange_progress',
+        type: 'textfield',
+        label: 'Main Aim Orange Progress',
+        required: false,
+        presetField: 'main_aim_orange_progress',
+      },
+    },
     {
       type: 'manager_name',
       label: 'Manager Name',
@@ -176,7 +420,6 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'manager_name',
       },
     },
-
     {
       type: 'mis_learner_id',
       label: 'MIS Learner ID',
@@ -188,7 +431,6 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'mis_learner_id',
       },
     },
-
     {
       type: 'national_ins_no',
       label: 'National Insurance Number',
@@ -200,7 +442,50 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'national_ins_no',
       },
     },
-
+    {
+      type: 'next_planned_review_date',
+      label: 'Next Planned Review Date',
+      field: {
+        id: 'next_planned_review_date',
+        type: 'date',
+        label: 'Next Planned Review Date',
+        required: false,
+        presetField: 'next_planned_review_date',
+      },
+    },
+    {
+      type: 'next_session_date_type',
+      label: 'Next Session Date & Type',
+      field: {
+        id: 'next_session_date_type',
+        type: 'textfield',
+        label: 'Next Session Date & Type',
+        required: false,
+        presetField: 'next_session_date_type',
+      },
+    },
+    {
+      type: 'off_the_job_training',
+      label: 'Off the Job Training',
+      field: {
+        id: 'off_the_job_training',
+        type: 'textfield',
+        label: 'Off the Job Training',
+        required: false,
+        presetField: 'off_the_job_training',
+      },
+    },
+    {
+      type: 'on_track_status',
+      label: 'On Track / Off Track Status',
+      field: {
+        id: 'on_track_status',
+        type: 'textfield',
+        label: 'On Track / Off Track Status',
+        required: false,
+        presetField: 'on_track_status',
+      },
+    },
     {
       type: 'partner',
       label: 'Partner',
@@ -212,7 +497,83 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'partner',
       },
     },
-
+    {
+      type: 'planned_review_date',
+      label: 'Planned Review Date',
+      field: {
+        id: 'planned_review_date',
+        type: 'date',
+        label: 'Planned Review Date',
+        required: false,
+        presetField: 'planned_review_date',
+      },
+    },
+    {
+      type: 'primary_assessor_name',
+      label: 'Primary Assessor Name',
+      field: {
+        id: 'primary_assessor_name',
+        type: 'textfield',
+        label: 'Primary Assessor Name',
+        required: false,
+        presetField: 'primary_assessor_name',
+      },
+    },
+    {
+      type: 'registration_date',
+      label: 'Registration Date',
+      field: {
+        id: 'registration_date',
+        type: 'date',
+        label: 'Registration Date',
+        required: false,
+        presetField: 'registration_date',
+      },
+    },
+    {
+      type: 'registration_number',
+      label: 'Registration Number',
+      field: {
+        id: 'registration_number',
+        type: 'textfield',
+        label: 'Registration Number',
+        required: false,
+        presetField: 'registration_number',
+      },
+    },
+    {
+      type: 'review_date',
+      label: 'Review Date',
+      field: {
+        id: 'review_date',
+        type: 'date',
+        label: 'Review Date',
+        required: false,
+        presetField: 'review_date',
+      },
+    },
+    {
+      type: 'session_actions',
+      label: 'Session Actions',
+      field: {
+        id: 'session_actions',
+        type: 'textfield',
+        label: 'Session Actions',
+        required: false,
+        presetField: 'session_actions',
+      },
+    },
+    {
+      type: 'status_of_course',
+      label: 'Status of Course',
+      field: {
+        id: 'status_of_course',
+        type: 'textfield',
+        label: 'Status of Course',
+        required: false,
+        presetField: 'status_of_course',
+      },
+    },
     {
       type: 'town',
       label: 'Town',
@@ -224,7 +585,28 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'town',
       },
     },
-
+    {
+      type: 'uln',
+      label: 'ULN',
+      field: {
+        id: 'uln',
+        type: 'textfield',
+        label: 'ULN',
+        required: false,
+        presetField: 'uln',
+      },
+    },
+    {
+      type: 'units_chosen',
+      label: 'Units Chosen',
+      field: {
+        id: 'units_chosen',
+        type: 'textfield',
+        label: 'Units Chosen',
+        required: false,
+        presetField: 'units_chosen',
+      },
+    },
     {
       type: 'user_name',
       label: 'UserName',
@@ -236,17 +618,28 @@ export const PRESET_FIELDS: RolePresets = {
         presetField: 'user_name',
       },
     },
+    {
+      type: 'weeks_since_last_review',
+      label: 'Number of Weeks Since Last Review',
+      field: {
+        id: 'weeks_since_last_review',
+        type: 'number',
+        label: 'Number of Weeks Since Last Review',
+        required: false,
+        presetField: 'weeks_since_last_review',
+      },
+    },
   ],
   trainer: [
     {
-      type: 'trainer-name',
-      label: 'Trainer Name',
+      type: 'date_last_logged_in',
+      label: 'Date Last Logged In',
       field: {
-        id: 'trainer-name',
-        type: 'textfield',
-        label: 'Trainer Name',
-        placeholder: 'Enter your name',
-        presetField: 'TrainerFullName',
+        id: 'date_last_logged_in',
+        type: 'date',
+        label: 'Date Last Logged In',
+        required: false,
+        presetField: 'date_last_logged_in',
       },
     },
     {
@@ -272,29 +665,40 @@ export const PRESET_FIELDS: RolePresets = {
       },
     },
     {
-      type:'user_name',
-      label:'User Name',
+      type: 'number_of_active_learners',
+      label: 'Number of Active Learners',
+      field: {
+        id: 'number_of_active_learners',
+        type: 'number',
+        label: 'Number of Active Learners',
+        required: false,
+        presetField: 'number_of_active_learners',
+      },
+    },
+    {
+      type: 'trainer-name',
+      label: 'Trainer Name',
+      field: {
+        id: 'trainer-name',
+        type: 'textfield',
+        label: 'Trainer Name',
+        placeholder: 'Enter your name',
+        presetField: 'TrainerFullName',
+      },
+    },
+    {
+      type: 'user_name',
+      label: 'User Name',
       field: {
         id: 'user_name',
         type: 'textfield',
         label: 'User Name',
         required: false,
         presetField: 'user_name',
-      }
-    }
-  ],
-  employee: [
-    {
-      type: 'employee-name',
-      label: 'Employee Name',
-      field: {
-        id: 'employee-name',
-        type: 'textfield',
-        label: 'Employee Name',
-        placeholder: 'Enter your name',
-        presetField: 'EmployeeName',
       },
     },
+  ],
+  employee: [
     {
       type: 'address_1',
       label: 'Address 1',
@@ -318,69 +722,69 @@ export const PRESET_FIELDS: RolePresets = {
       },
     },
     {
-      type: 'branch_code',
-      label: 'Branch Code',
+      type: 'employer_county',
+      label: 'County',
       field: {
-        id: 'branch_code',
+        id: 'employer_county',
         type: 'textfield',
-        label: 'Branch Code',
+        label: 'County',
         required: false,
-        presetField: 'branch_code',
+        presetField: 'employer_county',
       },
     },
     {
-      type: 'business_department',
-      label: 'Business Department',
+      type: 'employer_telephone',
+      label: 'Telephone',
       field: {
-        id: 'business_department',
+        id: 'employer_telephone',
         type: 'textfield',
-        label: 'Business Department',
+        label: 'Telephone',
         required: false,
-        presetField: 'business_department',
+        presetField: 'employer_telephone',
       },
     },
     {
-      type: 'business_location',
-      label: 'Business Location',
+      type: 'employer_postcode',
+      label: 'Postcode',
       field: {
-        id: 'business_location',
+        id: 'employer_postcode',
         type: 'textfield',
-        label: 'Business Location',
+        label: 'Postcode',
         required: false,
-        presetField: 'business_location',
+        presetField: 'employer_postcode',
       },
     },
     {
-      type: 'country',
-      label: 'Country',
+      type: 'employer_town_city',
+      label: 'Town / City',
       field: {
-        id: 'country',
+        id: 'employer_town_city',
         type: 'textfield',
-        label: 'Country',
+        label: 'Town / City',
         required: false,
-        presetField: 'country',
+        presetField: 'employer_town_city',
       },
     },
     {
-      type: 'edrs_number',
-      label: 'EDRS Number',
+      type: 'employee-name',
+      label: 'Employee Name',
       field: {
-        id: 'edrs_number',
+        id: 'employee-name',
         type: 'textfield',
-        label: 'EDRS Number',
-        required: false,
-        presetField: 'edrs_number',
+        label: 'Employee Name',
+        placeholder: 'Enter your name',
+        presetField: 'EmployeeName',
       },
     },
     {
-      type: 'key_contact',
-      label: 'Key Contact',
+      type: 'health_safety_renewal_date',
+      label: 'Health and Safety Renewal Date',
       field: {
-        id: 'key_contact',
-        type: 'textfield',
-        label: 'Key Contact',
+        id: 'health_safety_renewal_date',
+        type: 'date',
+        label: 'Health and Safety Renewal Date',
         required: false,
-        presetField: 'key_contact',
+        presetField: 'health_safety_renewal_date',
       },
     },
     {
@@ -395,37 +799,16 @@ export const PRESET_FIELDS: RolePresets = {
       },
     },
     {
-      type: 'msi_employer_id',
-      label: 'MSI Employer ID',
+      type: 'number_of_learners',
+      label: 'Number of Learners',
       field: {
-        id: 'msi_employer_id',
-        type: 'textfield',
-        label: 'MSI Employer ID',
+        id: 'number_of_learners',
+        type: 'number',
+        label: 'Number of Learners',
         required: false,
-        presetField: 'msi_employer_id',
-      },
-    },
-    {
-      type: 'city',
-      label: 'City',
-      field: {
-        id: 'city',
-        type: 'textfield',
-        label: 'City',
-        required: false,
-        presetField: 'city',
-      },
-    },
-    {
-      type: 'website',
-      label: 'Website',
-      field: {
-        id: 'website',
-        type: 'textfield',
-        label: 'Website',
-        required: false,
-        presetField: 'website',
+        presetField: 'number_of_learners',
       },
     },
   ],
 }
+
