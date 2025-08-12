@@ -36,7 +36,7 @@ const SignInPage = () => {
       .signInWithEmailAndPassword(credentials, dispatch)
       .then((user) => {
         setLoading(false);
-        navigate("/reset");
+        navigate("/home");
         sessionStorage.setItem("reset", JSON.stringify(user));
       })
       .catch((err) => {

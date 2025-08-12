@@ -1,5 +1,7 @@
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   closestCenter,
+  rectIntersection,
   DndContext,
   DragEndEvent,
   DragOverlay,
@@ -7,21 +9,12 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  MeasuringStrategy
 } from '@dnd-kit/core'
-import {
-  arrayMove
-} from '@dnd-kit/sortable'
+import { arrayMove } from '@dnd-kit/sortable'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import {
-  Box,
-  Divider,
-  Grid,
-  IconButton,
-  Paper,
-  Typography
-} from '@mui/material'
-import React, { useCallback, useEffect, useState } from 'react'
+import { Box, Divider, Grid, IconButton, Paper, Typography } from '@mui/material'
 import { UserRole } from 'src/enum'
 import { v4 as uuidv4 } from 'uuid'
 import ComponentItem from './ComponentItem'
@@ -29,7 +22,6 @@ import FormArea from './FormArea'
 import PresetItem from './PresetItem'
 import { PRESET_FIELDS } from './presetData'
 
-// Simple form field interface
 export interface SimpleFormField {
   id: string
   type: string
@@ -37,11 +29,10 @@ export interface SimpleFormField {
   placeholder?: string
   required?: boolean
   options?: { label: string; value: string }[]
-  width?: 'full' | 'half' | 'third',
+  width?: 'full' | 'half' | 'third'
   signatureRole?: string
 }
 
-// Simple component palette
 const SIMPLE_COMPONENTS = [
   { type: 'text', label: '📝 Text Input', icon: '📝' },
   { type: 'email', label: '📧 Email', icon: '📧' },
@@ -53,11 +44,7 @@ const SIMPLE_COMPONENTS = [
   { type: 'checkbox', label: '☑️ Checkboxes', icon: '☑️' },
   { type: 'date', label: '📅 Date', icon: '📅' },
   { type: 'file', label: '📎 File Upload', icon: '📎' },
-  {
-    type: 'signature',
-    label: 'Signature',
-    icon: '✍️',
-  },
+  { type: 'signature', label: 'Signature', icon: '✍️' },
 ]
 
 interface SimpleFormBuilderProps {
@@ -74,9 +61,7 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
   const [formFields, setFormFields] = useState<SimpleFormField[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [editingField, setEditingField] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'components' | 'presets'>(
-    'components'
-  )
+  const [activeTab, setActiveTab] = useState<'components' | 'presets'>('components')
 
   useEffect(() => {
     setFormFields(initialFields)
@@ -100,21 +85,13 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
         return
       }
 
-      // Check if dragging from SIMPLE_COMPONENTS
-      const componentType = SIMPLE_COMPONENTS.find(
-        (comp) => comp.type === active.id
-      )
-
-      // Check if dragging from a preset (via `data`)
+      const componentType = SIMPLE_COMPONENTS.find(comp => comp.type === active.id)
       const isPresetDrag = active.data?.current?.type === 'preset'
       const presetField = active.data?.current?.field
 
       if ((componentType || isPresetDrag) && over.id === 'form-area') {
         const newField: SimpleFormField = isPresetDrag
-          ? {
-              ...presetField,
-              id: uuidv4(), // ensure unique id
-            }
+          ? { ...presetField, id: uuidv4() }
           : {
               id: uuidv4(),
               type: componentType!.type,
@@ -131,7 +108,7 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
               }),
               ...(componentType!.type === 'signature' && {
                 signatureRole: UserRole.Learner,
-              })
+              }),
             }
 
         const updatedFields = [...formFields, newField]
@@ -142,7 +119,6 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
         active.id !== over.id &&
         formFields.find((f) => f.id === active.id)
       ) {
-        // Reordering existing fields
         const oldIndex = formFields.findIndex((f) => f.id === active.id)
         const newIndex = formFields.findIndex((f) => f.id === over.id)
 
@@ -185,9 +161,8 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
     return placeholders[type] || 'Enter value'
   }
 
-  const needsOptions = (type: string): boolean => {
-    return ['select', 'radio', 'checkbox'].includes(type)
-  }
+  const needsOptions = (type: string): boolean =>
+    ['select', 'radio', 'checkbox'].includes(type)
 
   const updateField = useCallback(
     (fieldId: string, updates: Partial<SimpleFormField>) => {
@@ -232,21 +207,18 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
     [formFields, onChange]
   )
 
-  const handleSave = useCallback(() => {
-    onSave?.(formFields)
-  }, [formFields, onSave])
-
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={rectIntersection}
+      measuring={{
+        droppable: { strategy: MeasuringStrategy.Always }, 
+      }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <Box
-        sx={{ height: '100vh', display: 'flex', backgroundColor: '#f5f5f5' }}
-      >
-        {/* Component Palette */}
+      <Box sx={{ height: '100vh', display: 'flex', backgroundColor: '#f5f5f5' }}>
+        {/* Palette */}
         <Paper
           elevation={2}
           sx={{
@@ -259,12 +231,8 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
             position: 'relative',
           }}
         >
-          {/* Header with toggle */}
-          <Box
-            display='flex'
-            alignItems='center'
-            justifyContent='space-between'
-          >
+          {/* Toggle */}
+          <Box display='flex' alignItems='center' justifyContent='space-between'>
             <IconButton
               size='small'
               onClick={() => setActiveTab('components')}
@@ -274,12 +242,7 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
             </IconButton>
             <Typography
               variant='h6'
-              sx={{
-                fontWeight: 600,
-                color: '#1976d2',
-                flexGrow: 1,
-                textAlign: 'center',
-              }}
+              sx={{ fontWeight: 600, color: '#1976d2', flexGrow: 1, textAlign: 'center' }}
             >
               {activeTab === 'components' ? '📦 Form Components' : '✨ Presets'}
             </Typography>
@@ -305,44 +268,22 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
           <Divider sx={{ mb: 2 }} />
 
           <Grid container spacing={1}>
-            {activeTab === 'components' ? (
-              <>
-                {SIMPLE_COMPONENTS.map((item) => (
+            {activeTab === 'components'
+              ? SIMPLE_COMPONENTS.map((item) => (
                   <Grid item xs={12} key={item.type}>
                     <ComponentItem component={item} />
                   </Grid>
-                ))}
-              </>
-            ) : (
-              <PresetItem presets={PRESET_FIELDS} />
-            )}
+                ))
+              : <PresetItem presets={PRESET_FIELDS} />}
           </Grid>
         </Paper>
 
-        {/* Form Builder Area */}
+        {/* Form Area */}
         <Box sx={{ flex: 1, p: 2 }}>
-          <Paper
-            elevation={1}
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              backgroundColor: 'white',
-              minHeight: '80vh',
-            }}
-          >
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 3,
-              }}
-            >
+          <Paper elevation={1} sx={{ p: 3, borderRadius: 3, backgroundColor: 'white', minHeight: '80vh' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Box>
-                <Typography
-                  variant='h5'
-                  sx={{ fontWeight: 600, color: '#1976d2' }}
-                >
+                <Typography variant='h5' sx={{ fontWeight: 600, color: '#1976d2' }}>
                   🎨 Form Builder
                 </Typography>
                 <Typography variant='body2' color='text.secondary'>
@@ -365,18 +306,15 @@ const SimpleFormBuilder: React.FC<SimpleFormBuilderProps> = ({
 
       <DragOverlay>
         {activeId ? (
-          <Box
-            sx={{
-              p: 2,
-              backgroundColor: 'primary.main',
-              color: 'white',
-              borderRadius: 2,
-              opacity: 0.9,
-              boxShadow: 3,
-            }}
-          >
-            {SIMPLE_COMPONENTS.find((c) => c.type === activeId)?.label ||
-              'Field'}
+          <Box sx={{
+            p: 2,
+            backgroundColor: 'primary.main',
+            color: 'white',
+            borderRadius: 2,
+            opacity: 0.9,
+            boxShadow: 3,
+          }}>
+            {SIMPLE_COMPONENTS.find((c) => c.type === activeId)?.label || 'Field'}
           </Box>
         ) : null}
       </DragOverlay>
