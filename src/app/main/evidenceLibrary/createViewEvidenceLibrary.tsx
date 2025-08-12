@@ -323,6 +323,15 @@ const CreateViewEvidenceLibrary = () => {
     trigger('units')
   }
 
+  const selectAllLearnerMapHandler = (unitIndex, checked) => {
+    const updated = [...unitsWatch]
+    updated[unitIndex].subUnit.forEach((sub) => {
+      sub.learnerMap = checked
+    })
+    setValue('units', updated)
+    trigger('units')
+  }
+
   const trainerMapHandler = (row) => {
     const updated = [...unitsWatch]
     updated.forEach((unit) => {
@@ -844,7 +853,18 @@ const CreateViewEvidenceLibrary = () => {
                   <Table size='small'>
                     <TableHead>
                       <TableRow>
-                        <TableCell align='center'>Learner's Map</TableCell>
+                        <TableCell align='center'>
+                          <Checkbox
+                            checked={units.subUnit.every((s) => s.learnerMap)}
+                            onChange={(e) =>
+                              selectAllLearnerMapHandler(
+                                unitIndex,
+                                e.target.checked
+                              )
+                            }
+                            disabled={isEditMode}
+                          />
+                        </TableCell>
                         <TableCell>Subunit name</TableCell>
                         <TableCell>Trainer Comment</TableCell>
                         <TableCell align='center'>Gap</TableCell>
