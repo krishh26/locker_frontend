@@ -28,6 +28,7 @@ import NotificationConfig from "../main/notification/notificationConfig";
 import TimeLogConfig from "../main/timeLog/timeLogConfig";
 import BroadcastConfig from "../main/broadcast/broadcastConfig";
 import EvidenceLibraryConfig from "../main/evidenceLibrary/evidenceLibraryConfig";
+import FundingBandConfig from "../main/funding-band/funding-band-config";
 
 const routeConfigs = [
     LandingConfig,
@@ -56,7 +57,7 @@ const routeConfigs = [
     TimeLogConfig,
     BroadcastConfig,
     EvidenceLibraryConfig,
-
+    FundingBandConfig
 ];
 
 const routes = [
