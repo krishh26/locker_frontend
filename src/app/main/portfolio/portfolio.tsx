@@ -141,7 +141,7 @@ const Portfolio = () => {
           {/* Header */}
           <div className='grid grid-cols-12 px-10 py-12 border-b font-semibold text-sm text-gray-700 bg-[#F8F8F8]'>
             <div className='col-span-2'>Name</div>
-            <div className='col-span-5'>Information</div>
+            <div className='col-span-4 lg:col-span-3'>Information</div>
             <div className='col-span-5'>Next Visit Date</div>
           </div>
 
@@ -167,7 +167,7 @@ const Portfolio = () => {
             </div>
 
             {/* Information */}
-            <div className='col-span-5 text-sm space-y-1'>
+            <div className='col-span-4 lg:col-span-3 text-sm space-y-1'>
               <div className='text-sm space-y-2'>
                 <div className='flex gap-2'>
                   <span className='min-w-[140px] font-medium text-[14px]'>

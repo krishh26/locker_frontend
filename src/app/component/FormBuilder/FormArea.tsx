@@ -26,7 +26,7 @@ const FormArea: React.FC<FormAreaProps> = ({
     id: 'form-area',
   })
 
-  // Group fields by rows for automatic layout
+  // Group fields into rows for responsive layout
   const groupFieldsIntoRows = (fields: FormFieldType[]) => {
     const rows: FormFieldType[][] = []
     let currentRow: FormFieldType[] = []
@@ -34,8 +34,6 @@ const FormArea: React.FC<FormAreaProps> = ({
 
     fields.forEach((field) => {
       const fieldWidth = getFieldWidth(field.width || 'full')
-
-      // If adding this field would exceed 12 columns, start a new row
       if (currentRowWidth + fieldWidth > 12 && currentRow.length > 0) {
         rows.push(currentRow)
         currentRow = [field]
@@ -46,10 +44,7 @@ const FormArea: React.FC<FormAreaProps> = ({
       }
     })
 
-    if (currentRow.length > 0) {
-      rows.push(currentRow)
-    }
-
+    if (currentRow.length > 0) rows.push(currentRow)
     return rows
   }
 
@@ -60,7 +55,6 @@ const FormArea: React.FC<FormAreaProps> = ({
       case 'half':
         return 6
       case 'full':
-        return 12
       default:
         return 12
     }
@@ -73,7 +67,6 @@ const FormArea: React.FC<FormAreaProps> = ({
       case 'half':
         return 6
       case 'full':
-        return 12
       default:
         return 12
     }
@@ -92,9 +85,35 @@ const FormArea: React.FC<FormAreaProps> = ({
         borderColor: isOver ? '#1976d2' : '#e0e0e0',
         borderRadius: 3,
         backgroundColor: isOver ? '#e3f2fd' : '#fafafa',
-        transition: 'all 0.3s ease',
+        transition: 'all 0.2s ease',
+        position: 'relative',
       }}
     >
+      {/* Drop placeholder overlay */}
+      {isOver && fields.length > 0 && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 'auto',
+            bottom: 20,
+            left: 0,
+            right: 0,
+            height: 60,
+            backgroundColor: 'rgba(40, 167, 69, 0.1)', // light green overlay
+            border: '2px dashed #28a745', // green border
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            fontSize: 14,
+            color: '#28a745', // green text
+          }}
+        >
+          Release to drop here
+        </Box>
+      )}
+
       {fields.length === 0 ? (
         <Box
           sx={{
@@ -123,7 +142,7 @@ const FormArea: React.FC<FormAreaProps> = ({
           items={fields.map((f) => f.id)}
           strategy={verticalListSortingStrategy}
         >
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 , marginBottom  : '80px'}}>
             {rows.map((row, rowIndex) => (
               <Grid container spacing={2} key={rowIndex}>
                 {row.map((field) => (
@@ -149,7 +168,9 @@ const FormArea: React.FC<FormAreaProps> = ({
           </Box>
         </SortableContext>
       )}
-      <Box
+
+      {/* Action buttons */}
+      {/* <Box
         sx={{
           mt: 4,
           display: 'flex',
@@ -176,7 +197,7 @@ const FormArea: React.FC<FormAreaProps> = ({
         >
           Submit
         </Box>
-      </Box>
+      </Box> */}
     </Box>
   )
 }

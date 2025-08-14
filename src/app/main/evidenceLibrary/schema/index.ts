@@ -34,10 +34,10 @@ export const getValidationSchema = (isTrainer: boolean) => {
                 comment: Yup.string().optional(),
               })
             )
-            .min(1, 'Each unit must have at least one subunit')
+            .min(1, 'Each unit must have at least one sub unit.')
             .test(
               'at-least-one-learnerMap',
-              "Each unit must have at least one subunit where Learner's Map is selected",
+              "Each unit must have at least one sub unit where Learner's Map is selected",
               function (subUnits) {
                 if (!Array.isArray(subUnits)) return false
                 return subUnits.some((s) => s?.learnerMap === true)

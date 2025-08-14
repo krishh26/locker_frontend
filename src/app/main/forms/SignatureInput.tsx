@@ -24,12 +24,8 @@ import { fi } from 'date-fns/locale'
 interface SignatureInputProps {
   value: File | string | null | { name: string; timestamp: string }
   onChange?: (
-  file:
-    | File
-    | null
-    | { name: string; timestamp: string }
-    | string
-) => void;
+    file: File | null | { name: string; timestamp: string } | string
+  ) => void
   label?: string
   required?: boolean
   error?: boolean
@@ -128,10 +124,16 @@ const SignatureInput: React.FC<SignatureInputProps> = ({
       )
 
       if (res.user) {
-
         const signedInfo = {
           name: `${res.user.first_name} ${res.user.last_name}`,
-          timestamp: new Date().toLocaleString(),
+          timestamp: new Date().toLocaleString('en-GB', {
+            hour12: false,
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
         }
         setSignedInfo(signedInfo)
         onChange?.(JSON.stringify(signedInfo))
@@ -159,7 +161,7 @@ const SignatureInput: React.FC<SignatureInputProps> = ({
         control={<Checkbox checked={roleChecked} onChange={handleRoleChange} />}
         label='Signature Role'
         disabled={disabled}
-        />
+      />
       {typeof value === 'string' && !isDrawing && value.startsWith('http') ? (
         <Box sx={{ mb: 1 }}>
           <Typography variant='subtitle1'>Previous Signature:</Typography>
