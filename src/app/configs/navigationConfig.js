@@ -112,6 +112,16 @@ const navigationConfig = [{
     url: '/courseBuilder',
     visible: [UserRole.Admin],
 },
+
+{
+    id: 'dashboards.fundingBand',
+    title: 'Funding Band',
+    type: 'item',
+    icon: 'material-outline:attach_money',
+    url: '/funding-band',
+    visible: [UserRole.Admin],
+},
+
 {
     id: 'dashboards.forms',
     title: 'Forms',
@@ -154,7 +164,7 @@ const navigationConfig = [{
 },
 {
     id: 'dashboards.enrollments',
-    title: 'Enrolments',
+    title: 'Enrollments',
     type: 'item',
     icon: 'heroicons-outline:user-add',
     // url: '/criteria-demo',

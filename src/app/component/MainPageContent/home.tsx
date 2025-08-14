@@ -122,7 +122,7 @@ const Home = () => {
           </h2>
           <ul className="list-disc list-outside">
             <li className="p-5">Bespoke Management Reporting</li>
-            <li className="p-5">Online Enrolments- Free template provided</li>
+            <li className="p-5">Online Enrollments- Free template provided</li>
             <li className="p-5">
               Form creations- ILP, Reviews, Learning Plans
             </li>
@@ -167,7 +167,7 @@ const Home = () => {
           </h2>
 
           <p className="mt-12 text-justify break-words">
-            Streamline your online registration and enrollment process with ease. Our platform offers a user-friendly system that simplifies student data management, making it easy to organize and track enrolments. With free templates and automated processes, you can reduce administrative burdens and ensure a smooth experience for both students and staff.
+            Streamline your online registration and enrollment process with ease. Our platform offers a user-friendly system that simplifies student data management, making it easy to organize and track enrollments. With free templates and automated processes, you can reduce administrative burdens and ensure a smooth experience for both students and staff.
           </p>
         </div>
 
