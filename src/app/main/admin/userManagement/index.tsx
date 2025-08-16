@@ -1,18 +1,6 @@
-import React, { useEffect, useState } from "react";
-import Breadcrumb from "src/app/component/Breadcrumbs";
-import { SecondaryButton } from "src/app/component/Buttons";
-import DataNotFound from "src/app/component/Pages/dataNotFound";
-import { AdminRedirect, roles } from "src/app/contanst";
-import Style from "../style.module.css";
-import { useSelector } from "react-redux";
-import {
-  createUserAPI,
-  fetchUserAPI,
-  selectUserManagement,
-  updateUserAPI,
-} from "app/store/userManagement";
-import UserManagementTable from "src/app/component/Table/UserManagementTable";
-import { userManagementTableColumn } from "src/app/contanst";
+import FuseLoading from "@fuse/core/FuseLoading";
+import Close from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
 import {
   Autocomplete,
   Card,
@@ -23,19 +11,21 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import UserDetails from "./usetDetails";
-import { useDispatch } from "react-redux";
-import FuseLoading from "@fuse/core/FuseLoading";
-import Close from "@mui/icons-material/Close";
-import SearchIcon from "@mui/icons-material/Search";
-import {
-  emailReg,
-  mobileReg,
-  nameReg,
-  passwordReg,
-  usernameReg,
-} from "src/app/contanst/regValidation";
 import { selectGlobalUser } from "app/store/globalUser";
+import { getRoleAPI } from "app/store/learnerManagement";
+import {
+  fetchUserAPI,
+  selectUserManagement
+} from "app/store/userManagement";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import Breadcrumb from "src/app/component/Breadcrumbs";
+import { SecondaryButton } from "src/app/component/Buttons";
+import DataNotFound from "src/app/component/Pages/dataNotFound";
+import UserManagementTable from "src/app/component/Table/UserManagementTable";
+import { AdminRedirect, roles, userManagementTableColumn } from "src/app/contanst";
+import Style from "../style.module.css";
+import UserDetails from "./usetDetails";
 
 const Index = () => {
   const { data, dataFetchLoading, dataUpdatingLoadding, meta_data } =
@@ -50,6 +40,7 @@ const Index = () => {
 
   useEffect(() => {
     dispatch(fetchUserAPI());
+    dispatch(getRoleAPI('Line Manager'));
   }, [dispatch]);
 
   const [userData, setUserData] = useState({
@@ -60,19 +51,9 @@ const Index = () => {
     password: "",
     confrimpassword: "",
     mobile: "",
-    role: [],
+    roles: [],
     time_zone: "",
-  });
-
-  const [userDataError, setUserDataError] = useState({
-    first_name: false,
-    last_name: false,
-    user_name: false,
-    email: false,
-    password: false,
-    confrimpassword: false,
-    mobile: false,
-    role: false,
+    line_manager: "",
   });
 
   const handleOpen = () => {
@@ -85,12 +66,6 @@ const Index = () => {
     setOpen(false);
   };
 
-  const handleUpdate = (e) => {
-    const { name, value } = e.target;
-    setUserData((prev) => ({ ...prev, [name]: value }));
-    setUserDataError((prev) => ({ ...prev, [name]: false }));
-  };
-
   const resetValue = () => {
     setUserData({
       first_name: "",
@@ -100,49 +75,10 @@ const Index = () => {
       password: "",
       confrimpassword: "",
       mobile: "",
-      role: [],
+      roles: [],
       time_zone: "",
+      line_manager: "",
     });
-    setUserDataError({
-      first_name: false,
-      last_name: false,
-      user_name: false,
-      email: false,
-      password: false,
-      confrimpassword: false,
-      mobile: false,
-      role: false,
-    });
-  };
-
-  const createUserHandler = async () => {
-    if (validation()) {
-      const data = {
-        ...userData,
-        roles: userData.role.map((item) =>
-          item === "Lead IQA" ? "LIQA" : item
-        ),
-      };
-      delete data.role;
-      const response = await dispatch(createUserAPI(data));
-      if (response) {
-        resetValue();
-      }
-      handleClose();
-    }
-  };
-
-  const updateUserHandler = async () => {
-    const data = {
-      ...userData,
-      roles: userData.role.map((item) => (item === "Lead IQA" ? "LIQA" : item)),
-    };
-    delete data.role;
-    const response = await dispatch(updateUserAPI(updateData, data));
-    if (response) {
-      handleClose();
-      setUpdateData("");
-    }
   };
 
   const searchByKeywordUser = (e) => {
@@ -162,37 +98,6 @@ const Index = () => {
   const searchAPIHandler = () => {
     refetchUser()
   };
-
-  const validation = () => {
-    setUserDataError({
-      first_name: !nameReg.test(userData?.first_name),
-      last_name: !nameReg.test(userData?.last_name),
-      user_name: !usernameReg.test(userData?.user_name),
-      email: !emailReg.test(userData?.email),
-      password: !passwordReg.test(userData?.password),
-      confrimpassword:
-        userData?.password !== userData?.confrimpassword ||
-        !passwordReg.test(userData?.password),
-      mobile: !mobileReg.test(userData.mobile),
-      role: userData?.role?.length !== 0,
-    });
-
-    if (
-      nameReg.test(userData?.first_name) &&
-      nameReg.test(userData?.last_name) &&
-      usernameReg.test(userData?.user_name) &&
-      emailReg.test(userData?.email) &&
-      passwordReg.test(userData?.password) &&
-      userData?.password === userData?.confrimpassword &&
-      // mobileReg?.test(userData.mobile) &&
-      userData?.role?.length !== 0
-    ) {
-      return true;
-    }
-    return false;
-  };
-
-
 
   const handleChangePage = (event: unknown, newPage: number) => {
     refetchUser(searchKeyword, newPage)
@@ -327,13 +232,8 @@ const Index = () => {
           >
             <UserDetails
               handleClose={handleClose}
-              updateData={Boolean(updateData)}
+              updateData={updateData}
               userData={userData}
-              handleUpdate={handleUpdate}
-              createUserHandler={createUserHandler}
-              updateUserHandler={updateUserHandler}
-              dataUpdatingLoadding={dataUpdatingLoadding}
-              userDataError={userDataError}
             />
           </Dialog>
         </div>

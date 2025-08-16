@@ -1,8 +1,8 @@
 import { lazy } from "react";
-const CaseloadView = lazy(() => import("./caseload"));
+const TrainerRiskRating = lazy(() => import("./trainer-risk-rating"));
 import authRoles from 'src/app/auth/authRoles';
 
-const CaseloadConfig = {
+const TrainerRiskRatingConfig = {
   settings: {
     layout: {
       config: {
@@ -24,13 +24,13 @@ const CaseloadConfig = {
       },
     },
   },
-  auth: [authRoles.Admin], 
+  auth: [authRoles.Admin,],
   routes: [
     {
-      path: "/caseload",
-      element: <CaseloadView />
+      path: "/trainer-risk-rating",
+      element: <TrainerRiskRating />
     },
   ],
 };
 
-export default CaseloadConfig;
+export default TrainerRiskRatingConfig;
