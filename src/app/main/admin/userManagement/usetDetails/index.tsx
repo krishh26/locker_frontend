@@ -1,3 +1,4 @@
+'use client'
 import {
   Autocomplete,
   Box,
@@ -12,486 +13,567 @@ import {
   TextField,
   Tooltip,
   Typography,
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import { roles } from "src/app/contanst";
+} from '@mui/material'
+import { roles } from 'src/app/contanst'
 import {
   LoadingButton,
   SecondaryButton,
   SecondaryButtonOutlined,
-} from "src/app/component/Buttons";
-import { timezones } from "src/app/contanst/timezoneData";
+} from 'src/app/component/Buttons'
+import { timezones } from 'src/app/contanst/timezoneData'
 import {
   emailValidationMsg,
   mobileValidationMsg,
   nameValidationMsg,
   passwordValidation,
   usernameValidationMsg,
-} from "src/app/contanst/regValidation";
-import HelpOutlinedIcon from "@mui/icons-material/HelpOutlined";
-import { useState } from "react";
-import Style from "./style.module.css";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
-import MobileNumberInput from "src/app/component/Input/MobileNumberInput";
+} from 'src/app/contanst/regValidation'
+import HelpOutlinedIcon from '@mui/icons-material/HelpOutlined'
+import { useEffect, useState } from 'react'
+import Style from './style.module.css'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
+import MobileNumberInput from 'src/app/component/Input/MobileNumberInput'
 
-const UserDetails = (props) => {
+import { useForm, Controller } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
+import { useSelector } from 'react-redux'
+import { selectLearnerManagement } from 'app/store/learnerManagement'
+import { useDispatch } from 'react-redux'
+import {
+  createUserAPI,
+  selectUserManagement,
+  updateUserAPI,
+} from 'app/store/userManagement'
+
+const schema = (updateData, lineManagers = []) =>
+  yup.object().shape({
+    first_name: yup.string().required('Please enter your first name.'),
+    last_name: yup.string().required('Please enter your last name.'),
+    user_name: yup.string().required('Please enter your user name.'),
+    email: yup
+      .string()
+      .email('Please enter a valid email address.')
+      .required('Please enter your email.'),
+    password: yup.string().when([], {
+      is: () => !updateData, // if updateData is false => required
+      then: (schema) => schema.required('Please enter your password.'),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    confirmPassword: yup.string().when('password', {
+      is: (val) => !!val, // only validate if password has value
+      then: (schema) =>
+        schema
+          .oneOf([yup.ref('password')], 'Passwords must match.')
+          .required('Please confirm your password.'),
+      otherwise: (schema) =>
+        updateData
+          ? schema.notRequired()
+          : schema.required('Please confirm your password.'),
+    }),
+    mobile: yup.string().required('Please enter your mobile number.'),
+    time_zone: yup.string().required('Please select your timezone.'),
+    roles: yup.array().min(1, 'Please select at least one role.'),
+    line_manager: yup.string().when([], {
+      is: () => lineManagers.length > 0, // required only if API returned managers
+      then: (schema) => schema.required('Please select your line manager.'),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+  })
+
+const UserDetails = ({ handleClose, updateData, userData }) => {
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  const dispatch: any = useDispatch()
+  const { lineMangers = [] } = useSelector(selectLearnerManagement)
+  const { dataUpdatingLoadding } = useSelector(selectUserManagement)
+
+  const validationSchema = schema(updateData, lineMangers)
   const {
-    handleClose,
-    handleUpdate,
-    createUserHandler,
-    userData,
-    updateData,
-    updateUserHandler,
-    dataUpdatingLoadding,
-    userDataError,
-  } = props;
+    control,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm({
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      first_name: '',
+      last_name: '',
+      user_name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      mobile: '',
+      time_zone: '',
+      roles: [],
+      line_manager: '',
+    },
+  })
 
-  const handleChange = (event) => {
-    const {
-      target: { value },
-    } = event;
-    handleUpdate({
-      target: {
-        name: "role",
-        value: typeof value === "string" ? value.split(",") : value,
-      },
-    });
-  };
+  useEffect(() => {
+    if (updateData && userData) {
+      reset({
+        first_name: userData?.first_name,
+        last_name: userData?.last_name,
+        user_name: userData?.user_name,
+        email: userData?.email,
+        password: '',
+        confirmPassword: '',
+        mobile: userData?.mobile,
+        time_zone: userData?.time_zone,
+        roles: userData?.roles,
+        line_manager: userData?.line_manager,
+      })
+    }
+  }, [updateData, userData])
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const onSubmit = async (data) => {
+    // if (updateData) updateUserHandler(data)
+    // else createUserHandler(data)
 
-  const handleClickShowPassword = () => {
-    setShowPassword((prev) => !prev);
-  };
+    if (!updateData) {
+      console.log('add user', data)
+      const response = await dispatch(createUserAPI(data))
+      if (response) {
+        handleClose()
+      }
+      return
+    }
 
-  const handleClickShowConfirmPassword = () => {
-    setShowConfirmPassword((prev) => !prev);
-  };
+    console.log('update user', data)
+    const response = await dispatch(updateUserAPI(updateData, data))
+    if (response) {
+      handleClose()
+    }
+  }
 
   const handleMouseDownPassword = (event) => {
-    event.preventDefault();
-  };
+    event.preventDefault()
+  }
 
   return (
-    <div className="h-full flex flex-col">
+    <form onSubmit={handleSubmit(onSubmit)} className='h-full flex flex-col'>
       <Box>
-        <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-1/2">
+        {/* First & Last Name */}
+        <Box className='m-12 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-1/2'>
             <Typography
-              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
               className={Style.name}
             >
               First Name<sup>*</sup>
             </Typography>
-            <TextField
-              name="first_name"
-              // label="First Name"
-              value={userData?.first_name}
-              size="small"
-              placeholder="Enter first name"
-              required
-              fullWidth
-              onChange={handleUpdate}
-              error={userDataError?.first_name}
-              InputProps={{
-                endAdornment: (
-                  <Tooltip title={nameValidationMsg} placement="bottom" arrow>
-                    <HelpOutlinedIcon
-                      sx={{
-                        fontSize: "16px",
-                        color: "gray",
-                        marginLeft: "2px",
-                        cursor: "help",
-                      }}
-                    />
-                  </Tooltip>
-                ),
-              }}
+            <Controller
+              name='first_name'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  size='small'
+                  placeholder='Enter first name'
+                  fullWidth
+                  error={!!errors.first_name}
+                  helperText={errors.first_name?.message}
+                  InputProps={{
+                    endAdornment: (
+                      <Tooltip
+                        title={nameValidationMsg}
+                        placement='bottom'
+                        arrow
+                      >
+                        <HelpOutlinedIcon
+                          sx={{
+                            fontSize: '16px',
+                            color: 'gray',
+                            marginLeft: '2px',
+                            cursor: 'help',
+                          }}
+                        />
+                      </Tooltip>
+                    ),
+                  }}
+                />
+              )}
             />
           </div>
-          <div className="w-1/2">
+          <div className='w-1/2'>
             <Typography
-              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
               className={Style.name}
             >
               Last Name<sup>*</sup>
             </Typography>
-            <TextField
-              name="last_name"
-              value={userData?.last_name}
-              size="small"
-              placeholder="Enter last name"
-              required
-              fullWidth
-              onChange={handleUpdate}
-              error={userDataError?.last_name}
-              InputProps={{
-                endAdornment: (
-                  <Tooltip title={nameValidationMsg} placement="bottom" arrow>
-                    <HelpOutlinedIcon
-                      sx={{
-                        fontSize: "16px",
-                        color: "gray",
-                        marginLeft: "2px",
-                        cursor: "help",
-                      }}
-                    />
-                  </Tooltip>
-                ),
-              }}
+            <Controller
+              name='last_name'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  size='small'
+                  placeholder='Enter last name'
+                  fullWidth
+                  error={!!errors.last_name}
+                  helperText={errors.last_name?.message}
+                  InputProps={{
+                    endAdornment: (
+                      <Tooltip
+                        title={nameValidationMsg}
+                        placement='bottom'
+                        arrow
+                      >
+                        <HelpOutlinedIcon
+                          sx={{
+                            fontSize: '16px',
+                            color: 'gray',
+                            marginLeft: '2px',
+                            cursor: 'help',
+                          }}
+                        />
+                      </Tooltip>
+                    ),
+                  }}
+                />
+              )}
             />
           </div>
         </Box>
-        <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-1/2">
+
+        {/* Username & Email */}
+        <Box className='m-12 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-1/2'>
             <Typography
-              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
               className={Style.name}
             >
               User Name<sup>*</sup>
             </Typography>
-            <TextField
-              name="user_name"
-              // label="Username"
-              value={userData?.user_name}
-              size="small"
-              placeholder="Enter username"
-              required
-              fullWidth
-              onChange={handleUpdate}
-              error={userDataError?.user_name}
-              InputProps={{
-                endAdornment: (
-                  <Tooltip
-                    title={usernameValidationMsg}
-                    placement="bottom"
-                    arrow
-                  >
-                    <HelpOutlinedIcon
-                      sx={{
-                        fontSize: "16px",
-                        color: "gray",
-                        marginLeft: "2px",
-                        cursor: "help",
-                      }}
-                    />
-                  </Tooltip>
-                ),
-              }}
+            <Controller
+              name='user_name'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  size='small'
+                  placeholder='Enter username'
+                  fullWidth
+                  error={!!errors.user_name}
+                  helperText={errors.user_name?.message}
+                  InputProps={{
+                    endAdornment: (
+                      <Tooltip
+                        title={usernameValidationMsg}
+                        placement='bottom'
+                        arrow
+                      >
+                        <HelpOutlinedIcon
+                          sx={{
+                            fontSize: '16px',
+                            color: 'gray',
+                            marginLeft: '2px',
+                            cursor: 'help',
+                          }}
+                        />
+                      </Tooltip>
+                    ),
+                  }}
+                />
+              )}
             />
           </div>
-
-          <div className="w-1/2">
+          <div className='w-1/2'>
             <Typography
-              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
               className={Style.name}
             >
               Email<sup>*</sup>
             </Typography>
-            <TextField
-              name="email"
-              value={userData?.email}
-              size="small"
-              placeholder="Enter email"
-              required
-              fullWidth
-              onChange={handleUpdate}
-              error={userDataError?.email}
-              autoComplete="new-email"
-              InputProps={{
-                endAdornment: (
-                  <Tooltip title={emailValidationMsg} placement="bottom" arrow>
-                    <HelpOutlinedIcon
-                      sx={{
-                        fontSize: "16px",
-                        color: "gray",
-                        marginLeft: "2px",
-                        cursor: "help",
-                      }}
-                    />
-                  </Tooltip>
-                ),
-              }}
+            <Controller
+              name='email'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  size='small'
+                  placeholder='Enter email'
+                  fullWidth
+                  error={!!errors.email}
+                  helperText={errors.email?.message}
+                  InputProps={{
+                    endAdornment: (
+                      <Tooltip
+                        title={emailValidationMsg}
+                        placement='bottom'
+                        arrow
+                      >
+                        <HelpOutlinedIcon
+                          sx={{
+                            fontSize: '16px',
+                            color: 'gray',
+                            marginLeft: '2px',
+                            cursor: 'help',
+                          }}
+                        />
+                      </Tooltip>
+                    ),
+                  }}
+                />
+              )}
             />
           </div>
         </Box>
-        {!updateData && <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-1/2">
-            <Typography
-              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-              className={Style.name}
-            >
-              Password<sup>*</sup>
-            </Typography>
 
-            <TextField
-              name="password"
-              placeholder="Enter Password"
-              value={updateData ? "Locker@2024" : userData?.password}
-              size="small"
-              type={showPassword ? 'text' : 'password'}
-              required={!updateData}
-              fullWidth
-              onChange={handleUpdate}
-              error={userDataError?.password}
-              helperText={userDataError?.password ? "Password : 6+ chars, with 1 each: A, a, 0-9." : ""}
-              autoComplete="new-password"
-              InputProps={{
-                endAdornment: (
-                  // <Tooltip title={passwordValidation} placement="bottom" arrow>
-                  //   <HelpOutlinedIcon
-                  //     sx={{
-                  //       fontSize: "16px",
-                  //       color: "gray",
-                  //       marginLeft: "2px",
-                  //       cursor: "help",
-                  //     }}
-                  //   />
-                  // </Tooltip>
-                  <InputAdornment position="end" className="ml-0">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowPassword}
-                      onMouseDown={handleMouseDownPassword}
-                      edge="end"
-                    >
-                      {showPassword ?
-                        <VisibilityOff
-                          sx={{
-                            fontSize: "2rem",
-                            color: "gray",
-                            marginLeft: "2px",
-                          }}
-                        /> :
-                        <Visibility
-                          sx={{
-                            fontSize: "2rem",
-                            color: "gray",
-                            marginLeft: "2px",
-                          }}
-                        />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </div>
+        {/* Password & Confirm Password */}
+        {!updateData && (
+          <Box className='m-12 flex flex-col justify-between gap-12 sm:flex-row'>
+            <div className='w-1/2'>
+              <Typography
+                sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+                className={Style.name}
+              >
+                Password<sup>*</sup>
+              </Typography>
+              <Controller
+                name='password'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    size='small'
+                    type={showPassword ? 'text' : 'password'}
+                    fullWidth
+                    error={!!errors.password}
+                    helperText={errors.password?.message}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position='end'>
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            onMouseDown={handleMouseDownPassword}
+                            edge='end'
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                )}
+              />
+            </div>
+            <div className='w-1/2'>
+              <Typography
+                sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+                className={Style.name}
+              >
+                Confirm Password<sup>*</sup>
+              </Typography>
+              <Controller
+                name='confirmPassword'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    size='small'
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    fullWidth
+                    error={!!errors.confirmPassword}
+                    helperText={errors.confirmPassword?.message}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position='end'>
+                          <IconButton
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            onMouseDown={handleMouseDownPassword}
+                            edge='end'
+                          >
+                            {showConfirmPassword ? (
+                              <VisibilityOff />
+                            ) : (
+                              <Visibility />
+                            )}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                )}
+              />
+            </div>
+          </Box>
+        )}
 
-          <div className="w-1/2">
+        {/* Mobile & Timezone */}
+        <Box className='m-12 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-1/2'>
             <Typography
-              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-              className={Style.name}
-            >
-              Confirm Password<sup>*</sup>
-            </Typography>
-            <TextField
-              name="confrimpassword"
-              placeholder="Enter confirm password"
-              value={updateData ? "Locker@2024" : userData?.confrimpassword}
-              size="small"
-              type={showConfirmPassword ? 'text' : 'password'}
-              required={!updateData}
-              fullWidth
-              onChange={handleUpdate}
-              error={userDataError?.confrimpassword}
-              helperText={userDataError?.password ? "Password must be same" : ""}
-              InputProps={{
-                endAdornment: (
-                  // <Tooltip
-                  //   title="Password must be same"
-                  //   placement="bottom"
-                  //   arrow
-                  // >
-                  //   <HelpOutlinedIcon
-                  //     sx={{
-                  //       fontSize: "16px",
-                  //       color: "gray",
-                  //       marginLeft: "2px",
-                  //       cursor: "help",
-                  //     }}
-                  //   />
-                  // </Tooltip>
-                  <InputAdornment position="end" className="ml-0">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleClickShowConfirmPassword}
-                      onMouseDown={handleMouseDownPassword}
-                      sx={{ color: 'black' }}
-                      edge="end"
-                    >
-                      {showConfirmPassword ?
-                        <VisibilityOff
-                          sx={{
-                            fontSize: "2rem",
-                            color: "gray",
-                            marginLeft: "2px",
-                          }}
-                        /> :
-                        <Visibility
-                          sx={{
-                            fontSize: "2rem",
-                            color: "gray",
-                            marginLeft: "2px",
-                          }}
-                        />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </div>
-        </Box>}
-
-        <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-1/2">
-            <Typography
-              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
               className={Style.name}
             >
               Mobile<sup>*</sup>
             </Typography>
-            {/* <div className="flex">
-              <Autocomplete
-                size="small"
-                value={userData?.country_code}
-                options={countryCodes.map((option) => option)}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder="Select country code"
-                    name="country_code"
-                    sx={{ width: "60px" }}
-                  />
-                )}
-                onChange={(e, value) =>
-                  handleUpdate({ target: { name: "country_code", value: value } })
-                }
-                sx={{
-                  ".MuiAutocomplete-clearIndicator": {
-                    color: "#5B718F",
-                  },
-                }}
-                PaperComponent={({ children }) => (
-                  <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-                )}
-              />
-              <TextField
-                name="mobile"
-                value={userData?.mobile}
-                size="small"
-                placeholder="Enter mobile number"
-                required
-                fullWidth
-                onChange={handleUpdate}
-                error={userDataError?.mobile}
-                InputProps={{
-                  endAdornment: (
-                    <Tooltip title={mobileValidationMsg} placement="bottom" arrow>
-                      <HelpOutlinedIcon
-                        sx={{
-                          fontSize: "16px",
-                          color: "gray",
-                          marginLeft: "2px",
-                          cursor: "help",
-                        }}
-                      />
-                    </Tooltip>
-                  ),
-                }}
-              />
-            </div> */}
-            <MobileNumberInput
-              value={userData?.mobile}
-              handleChange={handleUpdate}
-              name={"mobile"}
+            <Controller
+              name='mobile'
+              control={control}
+              render={({ field }) => (
+                <MobileNumberInput
+                  {...field}
+                  value={field.value}
+                  handleChange={(e) => field.onChange(e.target.value)}
+                  name='mobile'
+                />
+              )}
             />
+            {errors.mobile && (
+              <Typography color='error' variant='caption'>
+                {errors.mobile.message}
+              </Typography>
+            )}
           </div>
-          <div className="w-1/2">
+          <div className='w-1/2'>
             <Typography
-              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
               className={Style.name}
             >
               Time Zone<sup>*</sup>
             </Typography>
-            <Autocomplete
-              fullWidth
-              size="small"
-              value={userData?.time_zone}
-              options={timezones.map((option) => option)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Select timezone"
-                  name="time_zone"
+            <Controller
+              name='time_zone'
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  fullWidth
+                  size='small'
+                  value={field.value}
+                  onChange={(_, val) => field.onChange(val)}
+                  options={timezones.map((option) => option)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder='Select timezone'
+                      error={!!errors.time_zone}
+                      helperText={errors.time_zone?.message}
+                    />
+                  )}
                 />
-              )}
-              onChange={(e, value) =>
-                handleUpdate({ target: { name: "time_zone", value: value } })
-              }
-              sx={{
-                ".MuiAutocomplete-clearIndicator": {
-                  color: "#5B718F",
-                },
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
               )}
             />
           </div>
         </Box>
 
-        <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
-            <Typography
-              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-              className={Style.name}
-            >
-              Role<sup>*</sup>
-            </Typography>
-            <Select
-              multiple
-              value={userData?.role}
-              fullWidth
-              size="small"
-              onChange={handleChange}
-              input={<OutlinedInput placeholder="Select Role" />}
-              renderValue={(selected) => selected.join(", ")}
-            >
-              {roles.filter(item => item.label !== "Employer")?.map((item) => (
-                <MenuItem
-                  key={item.value}
-                  value={item.label}
-                  sx={{ height: "32px" }}
-                >
-                  <Checkbox checked={userData.role.indexOf(item.label) > -1} />
-                  <ListItemText primary={item.label} />
+        {/* Role */}
+        <Box className='m-12'>
+          <Typography
+            sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+            className={Style.name}
+          >
+            Role<sup>*</sup>
+          </Typography>
+          <Controller
+            name='roles'
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                multiple
+                fullWidth
+                size='small'
+                onChange={(e) => field.onChange(e.target.value)}
+                input={<OutlinedInput placeholder='Select Role' />}
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {roles
+                  .filter((item) => item.label !== 'Employer')
+                  ?.map((item) => (
+                    <MenuItem key={item.value} value={item.label}>
+                      <Checkbox
+                        checked={field.value.indexOf(item.label) > -1}
+                      />
+                      <ListItemText primary={item.label} />
+                    </MenuItem>
+                  ))}
+                <MenuItem value='Line Manager'>
+                  <Checkbox
+                    checked={field.value.indexOf('Line Manager') > -1}
+                  />
+                  <ListItemText primary='Line Manager' />
                 </MenuItem>
-              ))}
-            </Select>
-          </div>
+              </Select>
+            )}
+          />
+          {errors.roles && (
+            <Typography color='error' variant='caption'>
+              {errors.roles.message}
+            </Typography>
+          )}
+        </Box>
+
+        {/* Line Manager */}
+        <Box className='m-12'>
+          <Typography
+            sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+            className={Style.name}
+          >
+            Select Your Line Manager<sup>*</sup>
+          </Typography>
+          <Controller
+            name='line_manager'
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                fullWidth
+                size='small'
+                onChange={(e) => field.onChange(e.target.value)}
+                input={<OutlinedInput placeholder='Select Line Manager' />}
+                renderValue={(selected) => selected}
+              >
+                {/* Add line manager options here */}
+                {lineMangers.length == 0 ? (
+                  <MenuItem value='No Line Manager' disabled>
+                    <ListItemText primary='No Line Manager' />
+                  </MenuItem>
+                ) : (
+                  lineMangers.map((item) => (
+                    <MenuItem key={item.id} value={item.id}>
+                      <ListItemText primary={item.name} />
+                    </MenuItem>
+                  ))
+                )}
+              </Select>
+            )}
+          />
+          {errors.line_manager && (
+            <Typography color='error' variant='caption'>
+              {errors.line_manager.message}
+            </Typography>
+          )}
         </Box>
       </Box>
-      <Box style={{ margin: "auto 1rem 1rem auto" }}>
+
+      <Box style={{ margin: 'auto 1rem 1rem auto' }}>
         {dataUpdatingLoadding ? (
           <LoadingButton />
         ) : (
           <>
             <SecondaryButtonOutlined
-              name="Cancel"
+              name='Cancel'
               onClick={handleClose}
-              style={{ width: "10rem", marginRight: "2rem" }}
+              type='button'
+              style={{ width: '10rem', marginRight: '2rem' }}
             />
             <SecondaryButton
-              name={updateData ? "Update" : "Create"}
-              style={{ width: "10rem" }}
-              onClick={updateData ? updateUserHandler : createUserHandler}
+              name={updateData ? 'Update' : 'Create'}
+              style={{ width: '10rem' }}
+              type='submit'
             />
           </>
         )}
       </Box>
-    </div>
-  );
-};
+    </form>
+  )
+}
 
-export default UserDetails;
+export default UserDetails

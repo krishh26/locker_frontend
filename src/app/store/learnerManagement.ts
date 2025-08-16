@@ -11,6 +11,7 @@ const initialState = {
     IQA: [],
     EQA: [],
     employer: [],
+    lineMangers: [],
     LIQA: [],
     dataFetchLoading: false,
     dataUpdatingLoadding: false,
@@ -77,6 +78,9 @@ const learnerManagementSlice = createSlice({
         },
         setLIQA(state, action) {
             state.LIQA = action.payload
+        },
+        setLineMangers(state, action) {
+            state.lineMangers = action.payload
         },
         setSingleData(state, action) {
             state.singleData = action.payload
@@ -165,6 +169,8 @@ export const getRoleAPI = (role) => async (dispatch) => {
             dispatch(slice.setEmployer(response.data.data))
         else if (role === "LIQA")
             dispatch(slice.setLIQA(response.data.data))
+        else if (role === "Line Manager")
+            dispatch(slice.setLineMangers(response.data.data))
         return true;
 
     } catch (err) {
