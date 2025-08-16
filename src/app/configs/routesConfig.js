@@ -30,6 +30,7 @@ import BroadcastConfig from '../main/broadcast/broadcastConfig'
 import EvidenceLibraryConfig from '../main/evidenceLibrary/evidenceLibraryConfig'
 import FundingBandConfig from '../main/funding-band/funding-band-config'
 import CaseloadConfig from '../main/caseload/caseloadConfig'
+import TrainerRiskRatingConfig from '../main/trainer-risk-rating/trainer-risk-rating-config'
 
 const routeConfigs = [
   LandingConfig,
@@ -60,6 +61,7 @@ const routeConfigs = [
   EvidenceLibraryConfig,
   FundingBandConfig,
   CaseloadConfig,
+  TrainerRiskRatingConfig
 ]
 
 const routes = [
