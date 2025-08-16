@@ -191,7 +191,7 @@ const navigationConfig = [{
     title: 'Caseload',
     type: 'item',
     icon: 'heroicons-outline:briefcase',
-    // url: '/criteria-demo',
+    url: '/caseload',
     visible: [UserRole.Admin],
 },
 {

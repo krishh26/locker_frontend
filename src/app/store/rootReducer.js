@@ -28,6 +28,7 @@ import {evidenceAPI} from './api/evidence-api'
 import {learnerPlanAPI} from './api/learner-plan-api'
 import {formAPI} from './api/form-api'
 import {fundingBandAPI} from './api/funding-band-api'
+import {caseloadAPI} from './api/caseload-api'
 
 const createReducer = (asyncReducers) => (state, action) => {
     const combinedReducer = combineReducers({
@@ -61,6 +62,7 @@ const createReducer = (asyncReducers) => (state, action) => {
         [learnerPlanAPI.reducerPath]: learnerPlanAPI.reducer,
         [formAPI.reducerPath]: formAPI.reducer,
         [fundingBandAPI.reducerPath]: fundingBandAPI.reducer,
+        [caseloadAPI.reducerPath]: caseloadAPI.reducer,
 
         ...asyncReducers,
     });
@@ -78,7 +80,8 @@ export const concatMiddleware = [
     evidenceAPI.middleware,
     learnerPlanAPI.middleware,
     formAPI.middleware,
-    fundingBandAPI.middleware
+    fundingBandAPI.middleware,
+    caseloadAPI.middleware
 ]
 
 
