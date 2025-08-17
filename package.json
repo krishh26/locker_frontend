@@ -73,6 +73,7 @@
         "moment": "2.29.4",
         "notistack": "1.0.6-next.3",
         "npm": "^10.8.2",
+        "papaparse": "^5.5.3",
         "perfect-scrollbar": "1.5.5",
         "pptxgenjs": "^4.0.0",
         "prismjs": "1.29.0",
