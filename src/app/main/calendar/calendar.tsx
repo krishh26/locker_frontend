@@ -19,7 +19,18 @@ import {
   TableRow,
   TextField,
   Typography,
+  Box,
+  Button,
+  ButtonGroup,
+  Chip,
+  Card,
+  CardContent,
+  Tooltip,
 } from '@mui/material'
+import { Calendar as BigCalendar, momentLocalizer, Views } from 'react-big-calendar'
+import moment from 'moment'
+import 'react-big-calendar/lib/css/react-big-calendar.css'
+import './calendar.css'
 import React, { useEffect, useState } from 'react'
 import {
   DangerButton,
@@ -50,6 +61,9 @@ import {
 } from 'app/store/learnerManagement'
 import SortByVisitDateDropdown from './SortByVisitDateDropdown'
 
+// Setup moment localizer for react-big-calendar
+const localizer = momentLocalizer(moment)
+
 const Calendar = () => {
   const dispatch: any = useDispatch()
 
@@ -64,6 +78,9 @@ const Calendar = () => {
   const [selectedRow, setSelectedRow] = useState<any>(null)
   const [dialogType, setDialogType] = useState(false)
   const [deleteId, setDeleteId] = useState('')
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const [calendarView, setCalendarView] = useState(Views.MONTH)
+  const [currentDate, setCurrentDate] = useState(new Date())
   const [filter, setfilter] = useState({
     Attended: '',
     trainer_id: '',
@@ -123,10 +140,120 @@ const Calendar = () => {
     dispatch(getRoleAPI('Trainer'))
   }, [])
 
+  useEffect(() => {
+    console.log('Session data updated:', session?.data)
+    console.log('Current calendar view:', calendarView)
+
+    if (!session?.data || session.data.length === 0) {
+      console.log('No session data available for calendar')
+    } else {
+      console.log('Sessions available:', session.data.length)
+      session.data.forEach((s, index) => {
+        console.log(`Session ${index + 1}:`, {
+          title: s.title,
+          startDate: s.startDate,
+          trainer: s.trainer_id?.user_name,
+          location: s.location
+        })
+      })
+    }
+  }, [session?.data, calendarView])
+
+  
+
   const formatDate = (date) => {
     if (!date) return ''
     const formattedDate = date.substr(0, 10)
     return formattedDate
+  }
+
+  // Transform session data into calendar events
+  const transformSessionsToEvents = (sessions) => {
+    if (!sessions || sessions.length === 0) {
+      console.log('No sessions to transform')
+      return []
+    }
+
+    const events = sessions.map((session) => {
+      const startDate = new Date(session.startDate)
+
+      // Ensure we have a valid date
+      if (isNaN(startDate.getTime())) {
+        console.warn('Invalid start date for session:', session)
+        return null
+      }
+
+      const endDate = new Date(session.endDate || session.startDate)
+
+      // If no end date, add duration to start date
+      if (!session.endDate && session.Duration) {
+        const durationHours = parseFloat(session.Duration) || 1
+        endDate.setHours(startDate.getHours() + durationHours)
+      } else if (!session.endDate) {
+        // Default to 1 hour if no duration specified
+        endDate.setHours(startDate.getHours() + 1)
+      }
+
+      const event = {
+        id: session.session_id,
+        title: session.title || 'Untitled Session',
+        start: startDate,
+        end: endDate,
+        resource: session,
+        allDay: false,
+      }
+
+      console.log('Created event:', event)
+      return event
+    }).filter(event => event !== null)
+
+    console.log('Total transformed events for calendar:', events.length, events)
+    return events
+  }
+
+  // Get color based on attendance status
+  const getEventColor = (attended) => {
+    switch (attended) {
+      case 'Attended':
+        return '#4caf50'
+      case 'Cancelled':
+      case 'Cancelled by Assessor':
+      case 'Cancelled by Learner':
+      case 'Cancelled by Employer':
+        return '#f44336'
+      case 'Learner Late':
+      case 'Assessor Late':
+        return '#ff9800'
+      case 'Learner not Attended':
+        return '#e91e63'
+      default:
+        return '#2196f3'
+    }
+  }
+
+  // Simple event component for calendar
+  const EventComponent = ({ event }) => {
+    console.log('Rendering event:', event)
+
+    return (
+      <div
+        style={{
+          backgroundColor: getEventColor(event.resource?.Attended),
+          color: 'white',
+          padding: '2px 4px',
+          borderRadius: '3px',
+          fontSize: '11px',
+          fontWeight: '500',
+          height: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}
+        title={`${event.title} - ${moment(event.start).format('h:mm A')}`}
+      >
+        {event.title}
+      </div>
+    )
   }
   return (
     <>
@@ -198,17 +325,147 @@ const Calendar = () => {
               }}
             />
           </div>
-          {/* <div className='items-end'>
-            <Link to='/newsession'>
-              <SecondaryButton name='New Session' />
-            </Link>
-          </div> */}
+          <div className='items-end flex gap-2'>
+            <ButtonGroup variant="outlined" size="small">
+              <Button
+                variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
+                onClick={() => setViewMode('calendar')}
+              >
+                Calendar
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'contained' : 'outlined'}
+                onClick={() => setViewMode('list')}
+              >
+                List
+              </Button>
+            </ButtonGroup>
+            {/* <div className='items-end'>
+              <Link to='/newsession'>
+                <SecondaryButton name='New Session' />
+              </Link>
+            </div> */}
+          </div>
+        </div>
+      )}
+
+      {/* View Toggle for Learners */}
+      {user?.role === 'Learner' && (
+        <div className='m-10 mb-0 flex justify-end'>
+          <ButtonGroup variant="outlined" size="small">
+            <Button
+              variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
+              onClick={() => setViewMode('calendar')}
+            >
+              Calendar
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'contained' : 'outlined'}
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </Button>
+          </ButtonGroup>
         </div>
       )}
 
       <Grid className='m-10'>
-        <div>
-          <TableContainer
+        {viewMode === 'calendar' ? (
+          // Calendar View
+          <Box>
+            {/* Calendar Legend */}
+            <Box sx={{ mb: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                Status Legend:
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <Chip
+                  size="small"
+                  label="Attended"
+                  sx={{ backgroundColor: '#4caf50', color: 'white' }}
+                />
+                <Chip
+                  size="small"
+                  label="Cancelled"
+                  sx={{ backgroundColor: '#f44336', color: 'white' }}
+                />
+                <Chip
+                  size="small"
+                  label="Late"
+                  sx={{ backgroundColor: '#ff9800', color: 'white' }}
+                />
+                <Chip
+                  size="small"
+                  label="Not Attended"
+                  sx={{ backgroundColor: '#e91e63', color: 'white' }}
+                />
+                <Chip
+                  size="small"
+                  label="Not Set"
+                  sx={{ backgroundColor: '#2196f3', color: 'white' }}
+                />
+              </Box>
+            </Box>
+
+            <Box sx={{ height: 600, backgroundColor: 'white', borderRadius: 2, p: 2 }}>
+              <BigCalendar
+                localizer={localizer}
+                events={(() => {
+                  const realEvents = session?.data && session.data.length > 0
+                    ? transformSessionsToEvents(session.data)
+                    : []
+
+                  const allEvents = [...realEvents]
+                  console.log('Events being passed to calendar:', allEvents)
+                  console.log('Current view:', calendarView)
+                  console.log('Real events:', realEvents)
+                  return allEvents
+                })()}
+                defaultView={Views.MONTH}
+                defaultDate={new Date()}
+                  startAccessor="start"
+                  endAccessor="end"
+                  view={calendarView}
+                  onView={setCalendarView}
+                  date={currentDate}
+                  onNavigate={setCurrentDate}
+                  style={{ height: '100%' }}
+                  components={{
+                    event: EventComponent,
+                  }}
+                  onSelectEvent={(event) => {
+                    console.log('Event selected:', event)
+                    setSelectedRow(event.resource)
+                    setDialogType(true)
+                  }}
+                  // Remove eventPropGetter to avoid conflicts with custom EventComponent
+                  views={['month', 'week', 'day', 'agenda']}
+                  popup={true}
+                  showMultiDayTimes={true}
+                  step={30}
+                  timeslots={2}
+                  length={30}
+                  messages={{
+                    agenda: 'Sessions Schedule',
+                    date: 'Date',
+                    time: 'Time',
+                    event: 'Session Details',
+                    noEventsInRange: 'No sessions scheduled for this period.',
+                    showMore: (total) => `+${total} more sessions`,
+                    month: 'Month',
+                    week: 'Week',
+                    day: 'Day',
+                    today: 'Today',
+                    previous: 'Previous',
+                    next: 'Next'
+                  }}
+                />
+            </Box>
+          </Box>
+        ) : (
+          // List View (existing table)
+          <div>
+            <TableContainer
             sx={{
               minHeight: 575,
               display: 'flex',
@@ -463,7 +720,8 @@ const Calendar = () => {
               items={session?.meta_data?.items}
             />
           </TableContainer>
-        </div>
+          </div>
+        )}
         <AlertDialog
           open={Boolean(deleteId)}
           close={() => deleteIcon('')}
