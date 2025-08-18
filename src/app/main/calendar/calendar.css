@@ -1,0 +1,126 @@
+/* Make calendar responsive */
+.rbc-calendar {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+/* Toolbar */
+.rbc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rbc-toolbar button {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin: 2px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rbc-toolbar button:hover {
+  background: #e5e7eb;
+}
+
+.rbc-toolbar button.rbc-active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+/* Header (weekdays row) */
+.rbc-header {
+  padding: 8px;
+  text-align: center;
+  background: #f9fafb;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Month view grid cells */
+.rbc-month-view {
+  border: none;
+}
+
+.rbc-month-row + .rbc-month-row {
+  border-top: 1px solid #f3f4f6;
+}
+
+.rbc-date-cell {
+  padding: 6px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.rbc-date-cell.rbc-now {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+/* Today highlight */
+.rbc-today {
+  background: #eff6ff !important;
+}
+
+/* Events (pill style) */
+.rbc-event {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.rbc-event-label {
+  display: none; /* hide time in month view */
+}
+
+.rbc-event-content {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+}
+
+/* Example colors */
+.rbc-event.meeting .rbc-event-content {
+  background: #3b82f6;
+}
+.rbc-event.personal .rbc-event-content {
+  background: #10b981;
+}
+.rbc-event.doctor .rbc-event-content {
+  background: #ef4444;
+}
+.rbc-event.other .rbc-event-content {
+  background: #f59e0b;
+}
+
+/* Agenda view */
+.rbc-agenda-date-cell,
+.rbc-agenda-time-cell {
+  font-weight: 500;
+  font-size: 13px;
+  color: #374151;
+}
+
+.rbc-agenda-event-cell {
+  font-size: 13px;
+  padding: 4px 0;
+}

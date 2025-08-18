@@ -41,7 +41,9 @@ import { showMessage } from 'app/store/fuse/messageSlice'
 
 const FundingBandList = () => {
   const dispatch: any = useDispatch()
-  const { data, isLoading } = useGetFundingBandsQuery(null)
+  const { data, isLoading } = useGetFundingBandsQuery({},{
+    refetchOnMountOrArgChange: true
+  })
   const { data: coursesData, dataFetchLoading } = useSelector(
     selectCourseManagement
   )
