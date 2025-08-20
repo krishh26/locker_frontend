@@ -41,7 +41,24 @@ import {
   useSaveCourseCommentMutation,
 } from 'app/store/api/trainer-risk-rating-api'
 
-const riskOptions = ['Low', 'Medium', 'High']
+const riskOptions = [
+  {
+    value: 'Please select',
+    label: 'Please select',
+  },
+  {
+    value: 'Low',
+    label: 'Low',
+  },
+  {
+    value: 'Medium',
+    label: 'Medium',
+  },
+  {
+    value: 'High',
+    label: 'High',
+  },
+]
 
 const assessmentMethods: AssessmentMethod[] = [
   { value: 'pe', label: 'PE', fullName: 'Professional Discussion' },
@@ -71,8 +88,9 @@ const TrainerRiskRating = () => {
     {}
   )
   const [assessmentRiskRating, setAssessmentRiskRating] = useState<{
-    [key: string]: string
+    [key: number]: string
   }>({})
+
 
   const dispatch: any = useDispatch()
   const { trainer = [] } = useSelector(selectLearnerManagement)
@@ -92,9 +110,41 @@ const TrainerRiskRating = () => {
   const [saveCourseComment] = useSaveCourseCommentMutation()
 
   // Mock until API courses returned
-  const courses = trainerDetails?.courses || []
+  const courses = trainerDetails?.data[0]?.courses || []
+  const assessment_methods = trainerDetails?.data[0]?.assessment_methods || []
+
+  useEffect(() => {
+    if (trainerDetails?.data[0]?.assessment_methods) {
+      setAssessmentRiskRating(trainerDetails?.data[0].assessment_methods)
+    }
+  }, [trainerDetails])
+
+  useEffect(() => {
+    if (trainerDetails?.data[0]?.assessment_methods) {
+      const updated: { [key: number]: string } = {}
+      trainerDetails?.data[0]?.assessment_methods.forEach(
+        (c: any) =>
+          (updated[c.assessment_method] =
+            c.risk_level === '' ? 'Please select' : c.risk_level)
+      )
+      setAssessmentRiskRating(updated)
+    }
+
+    if (trainerDetails?.data[0]?.courses) {
+      const updated: { [key: number]: string } = {}
+      trainerDetails?.data[0]?.courses.forEach(
+        (c: any) =>
+          (updated[c.course_id] =
+            c.overall_risk_level === ''
+              ? 'Please select'
+              : c.overall_risk_level)
+      )
+      setCourseRatings(updated)
+    }
+  }, [trainerDetails])
 
   const handleRatingChange = (courseId: number, value: string) => {
+    console.log('🚀 ~ handleRatingChange ~ value:', value)
     setCourseRatings((prev) => ({ ...prev, [courseId]: value }))
   }
 
@@ -104,7 +154,7 @@ const TrainerRiskRating = () => {
 
   const handleBulkSet = (value: string) => {
     const updated: { [key: number]: string } = {}
-    courses.forEach((c: any) => (updated[c.id] = value))
+    courses.forEach((c: any) => (updated[c.course_id] = value))
     setCourseRatings(updated)
   }
 
@@ -124,18 +174,57 @@ const TrainerRiskRating = () => {
   }
 
   const handleSaveRiskSettings = async () => {
-    await saveRiskSettings({ trainerId: selectedUser.user_id, data: riskSettings })
+    await saveRiskSettings({
+      trainerId: selectedUser.user_id,
+      data: riskSettings,
+    })
   }
 
   const handleSaveCourseRatings = async () => {
-    await saveCourseRisk({ trainerId: selectedUser.user_id, data: courseRatings })
+    const courses = Object.entries(courseRatings).map(([id, risk]) => ({
+      course_id: Number(id),
+      overall_risk_level: risk === 'Please select' ? '' : risk,
+    }))
+
+    const assessment = Object.entries(assessmentRiskRating).map(
+      ([id, risk]) => ({
+        assessment_method: id,
+        risk_level: risk === 'Please select' ? '' : risk,
+      })
+    )
+
+    const payload = {
+      trainer_id: selectedUser.user_id,
+      courses,
+    }
+
+    try {
+      const res = await saveCourseRisk({ data: payload }).unwrap()
+      console.log('🚀 ~ handleSaveCourseRatings ~ res:', res)
+    } catch (error) {
+      console.error('Error saving course risk ratings:', error)
+    }
   }
 
   const handleSaveAssessmentRatings = async () => {
-    await saveAssessmentRisk({
-      trainerId: selectedUser.user_id,
-      data: assessmentRiskRating,
-    })
+    const assessment_methods = Object.entries(assessmentRiskRating).map(
+      ([id, risk]) => ({
+        assessment_method: id,
+        risk_level: risk === 'Please select' ? '' : risk,
+      })
+    )
+
+    const payload = {
+      trainer_id: selectedUser.user_id,
+      assessment_methods,
+    }
+
+    try {
+      const res = await saveCourseRisk({ data: payload }).unwrap()
+      console.log('🚀 ~ handleSaveCourseRatings ~ res:', res)
+    } catch (error) {
+      console.error('Error saving course risk ratings:', error)
+    }
   }
 
   return (
@@ -149,7 +238,12 @@ const TrainerRiskRating = () => {
             <ListItem key={user.user_id} disablePadding>
               <ListItemButton
                 selected={selectedUser?.user_id === user.user_id}
-                onClick={() => setSelectedUser(user)}
+                onClick={() => {
+                  setSelectedUser(user)
+                  setExpandedRow(null)
+                  setCourseRatings({})
+                  setAssessmentRiskRating({})
+                }}
               >
                 <ListItemAvatar>
                   <Avatar src={user.avatar?.url || ''} alt={user.first_name}>
@@ -261,21 +355,24 @@ const TrainerRiskRating = () => {
               <TableBody>
                 {courses.map((course: any, index: number) => (
                   <>
-                    <TableRow key={course.id}>
-                      <TableCell>{course.name}</TableCell>
+                    <TableRow key={course.course_id}>
+                      <TableCell>{course.course_name}</TableCell>
                       <TableCell sx={{ width: '30%' }}>
                         <TextField
                           select
-                          value={courseRatings[course.id] || 'Medium'}
+                          value={
+                            courseRatings[course.course_id] ??
+                            course.overall_risk_level
+                          }
                           onChange={(e) =>
-                            handleRatingChange(course.id, e.target.value)
+                            handleRatingChange(course.course_id, e.target.value)
                           }
                           size='small'
                           fullWidth
                         >
                           {riskOptions.map((opt) => (
-                            <MenuItem key={opt} value={opt}>
-                              {opt}
+                            <MenuItem key={opt.value} value={opt.value}>
+                              {opt.label}
                             </MenuItem>
                           ))}
                         </TextField>
@@ -393,7 +490,7 @@ const TrainerRiskRating = () => {
                     <TableCell sx={{ width: '30%' }}>
                       <TextField
                         select
-                        value={assessmentRiskRating[assessment.value] || 'Medium'}
+                        value={assessmentRiskRating[assessment.value] || ''}
                         onChange={(e) =>
                           handleAssessmentRatingChange(
                             assessment.value,
@@ -404,8 +501,8 @@ const TrainerRiskRating = () => {
                         fullWidth
                       >
                         {riskOptions.map((opt) => (
-                          <MenuItem key={opt} value={opt}>
-                            {opt}
+                          <MenuItem key={opt.label} value={opt.value}>
+                            {opt.label}
                           </MenuItem>
                         ))}
                       </TextField>
