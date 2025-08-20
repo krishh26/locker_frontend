@@ -243,15 +243,15 @@ const UserDetails = (props) => {
               Confirm Password<sup>*</sup>
             </Typography>
             <TextField
-              name="confrimpassword"
+              name="confirmPassword"
               placeholder="Enter confirm password"
-              value={updateData ? "Locker@2024" : userData?.confrimpassword}
+              value={updateData ? "Locker@2024" : userData?.confirmPassword}
               size="small"
               type={showConfirmPassword ? 'text' : 'password'}
               required={!updateData}
               fullWidth
               onChange={handleUpdate}
-              error={userDataError?.confrimpassword}
+              error={userDataError?.confirmPassword}
               helperText={userDataError?.password ? "Password must be same" : ""}
               InputProps={{
                 endAdornment: (

@@ -215,7 +215,7 @@ export const getLearnerCourseDetails = (data) => async (dispatch) => {
 export const updateLearnerAPI = (id, data) => async (dispatch) => {
     try {
         dispatch(slice.setUpdatingLoader(true));
-        const { password, confrimpassword, ...payload } = data
+        const { password, confirmPassword, ...payload } = data
         const response = await axios.patch(`${URL_BASE_LINK}/learner/update/${id}`, payload)
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         dispatch(slice.updateLearnerById(response.data.data));

@@ -91,7 +91,7 @@ const Index = () => {
     user_name: '',
     email: '',
     password: '',
-    confrimpassword: '',
+    confirmPassword: '',
     mobile: '',
     employer_id: '',
     funding_body: '',
@@ -105,7 +105,7 @@ const Index = () => {
     user_name: false,
     email: false,
     password: false,
-    confrimpassword: false,
+    confirmPassword: false,
     mobile: false,
     employer_id: false,
     funding_body: false,
@@ -135,7 +135,7 @@ const Index = () => {
       user_name: '',
       email: '',
       password: '',
-      confrimpassword: '',
+      confirmPassword: '',
       mobile: '',
       employer_id: '',
       funding_body: '',
@@ -148,7 +148,7 @@ const Index = () => {
       user_name: false,
       email: false,
       password: false,
-      confrimpassword: false,
+      confirmPassword: false,
       mobile: false,
       employer_id: false,
       funding_body: false,
@@ -224,8 +224,8 @@ const Index = () => {
       user_name: !usernameReg.test(userData?.user_name),
       email: !emailReg.test(userData?.email),
       password: !passwordReg.test(userData?.password),
-      confrimpassword:
-        userData?.password !== userData?.confrimpassword ||
+      confirmPassword:
+        userData?.password !== userData?.confirmPassword ||
         !passwordReg.test(userData?.password),
       mobile: !mobileReg.test(userData.mobile),
       employer_id: userData?.employer_id === '',
@@ -238,7 +238,7 @@ const Index = () => {
       usernameReg.test(userData?.user_name) &&
       emailReg.test(userData?.email) &&
       passwordReg.test(userData?.password) &&
-      userData?.password === userData?.confrimpassword &&
+      userData?.password === userData?.confirmPassword &&
       // mobileReg.test(userData.mobile) &&
       userData?.employer_id !== '' &&
       userData?.funding_body !== '' &&

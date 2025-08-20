@@ -261,7 +261,7 @@ export const updateUserAPI = (id, data) => async (dispatch) => {
     try {
 
         dispatch(slice.setUpdatingLoader(true));
-        const { password, confrimpassword, ...payload } = data
+        const { password, confirmPassword, ...payload } = data
         const response = await axios.patch(`${URL_BASE_LINK}/user/update/${id}`, payload)
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         dispatch(slice.updateUserById(response.data.data));

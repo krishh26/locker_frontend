@@ -240,7 +240,7 @@ export const updateCourseAPI = (id, data) => async (dispatch) => {
         });
 
         dispatch(slice.setUpdatingLoader());
-        const { password, confrimpassword, ...payload } = data;
+        const { password, confirmPassword, ...payload } = data;
         const response = await axios.patch(
             `${URL_BASE_LINK}/course/update/${id}`,
             payload
