@@ -241,8 +241,8 @@
 //     </Box>
 //   );
 // }
-"use client";
-import { useEffect, useState } from "react";
+'use client'
+import { useEffect, useState } from 'react'
 import {
   Box,
   Typography,
@@ -256,19 +256,20 @@ import {
   MenuItem,
   Button,
   Pagination,
-} from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import jsPDF from "jspdf";
-import { applyPlugin } from "jspdf-autotable";
-import { useGetCaseloadListQuery } from "app/store/api/caseload-api";
+  Grid,
+} from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import jsPDF from 'jspdf'
+import { applyPlugin } from 'jspdf-autotable'
+import { useGetCaseloadListQuery } from 'app/store/api/caseload-api'
 
-applyPlugin(jsPDF);
+applyPlugin(jsPDF)
 
 export default function CaseloadPage() {
-  const [filterName, setFilterName] = useState("");
-  const [filterRole, setFilterRole] = useState("");
-  const [page, setPage] = useState(1);
-  const rowsPerPage = 5;
+  const [filterName, setFilterName] = useState('')
+  const [filterRole, setFilterRole] = useState('')
+  const [page, setPage] = useState(1)
+  const rowsPerPage = 5
 
   // ✅ Call API with params
   const { data, isLoading, isError } = useGetCaseloadListQuery({
@@ -276,46 +277,48 @@ export default function CaseloadPage() {
     role: filterRole,
     page,
     limit: rowsPerPage,
-  });
+    meta: true,
+  })
+  console.log('🚀 ~ CaseloadPage ~ data:', data)
 
   // ✅ Fallback if no data
-  const lineManagers = data?.results || [];
-  const totalCount = data?.total || 0;
-  const totalPages = Math.ceil(totalCount / rowsPerPage);
+  const lineManagers = data?.data || []
+  const totalCount = data?.meta_data?.total_line_managers || 0
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
 
   // Export PDF
   const handleExportPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Caseload Report", 14, 15);
+    const doc = new jsPDF()
+    doc.setFontSize(16)
+    doc.text('Caseload Report', 14, 15)
 
     lineManagers.forEach((manager, idx) => {
-      doc.setFontSize(12);
+      doc.setFontSize(12)
       doc.text(
         `${idx + 1}. Line Manager: ${manager.name} (${manager.email})`,
         14,
         25 + idx * 10
-      );
+      )
 
       if (manager.users?.length > 0) {
-        (doc as any).autoTable({
-          head: [["Name", "Email", "Role"]],
+        ;(doc as any).autoTable({
+          head: [['Name', 'Email', 'Role']],
           body: manager.users.map((u) => [u.name, u.email, u.role]),
-          theme: "grid",
-        });
+          theme: 'grid',
+        })
       } else {
-        doc.text("No users assigned.", 20, 30 + idx * 10);
+        doc.text('No users assigned.', 20, 30 + idx * 10)
       }
-    });
+    })
 
-    doc.save("caseload-report.pdf");
-  };
+    doc.save('caseload-report.pdf')
+  }
 
   return (
     <Box p={3}>
       {/* Page Title */}
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Typography variant="h5">Caseload Management</Typography>
+      <Box display='flex' justifyContent='space-between' alignItems='center'>
+        <Typography variant='h5'>Caseload Management</Typography>
         {/* <Button variant="contained" color="primary" onClick={handleExportPDF}>
           Export PDF
         </Button> */}
@@ -323,46 +326,46 @@ export default function CaseloadPage() {
 
       {/* Filters */}
       <Box
-        display="flex"
+        display='flex'
         gap={2}
         mb={3}
         mt={2}
-        sx={{ flexWrap: "wrap", alignItems: "center" }}
+        sx={{ flexWrap: 'wrap', alignItems: 'center' }}
       >
         <TextField
-          label="Search Line Manager"
-          variant="outlined"
-          size="small"
+          label='Search Line Manager'
+          variant='outlined'
+          size='small'
           value={filterName}
           onChange={(e) => {
-            setPage(1); // reset to page 1 on filter
-            setFilterName(e.target.value);
+            setPage(1) // reset to page 1 on filter
+            setFilterName(e.target.value)
           }}
         />
 
         <TextField
-          label="Filter by Role"
-          variant="outlined"
-          size="small"
+          label='Filter by Role'
+          variant='outlined'
+          size='small'
           select
           value={filterRole}
           onChange={(e) => {
-            setPage(1);
-            setFilterRole(e.target.value);
+            setPage(1)
+            setFilterRole(e.target.value)
           }}
           sx={{ minWidth: 200 }}
         >
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="Trainer">Trainer</MenuItem>
-          <MenuItem value="OtherRole">Other Role</MenuItem>
+          <MenuItem value=''>All</MenuItem>
+          <MenuItem value='Trainer'>Trainer</MenuItem>
+          <MenuItem value='OtherRole'>Other Role</MenuItem>
         </TextField>
 
         <Button
-          variant="outlined"
+          variant='outlined'
           onClick={() => {
-            setFilterName("");
-            setFilterRole("");
-            setPage(1);
+            setFilterName('')
+            setFilterRole('')
+            setPage(1)
           }}
         >
           Reset Filters
@@ -374,30 +377,126 @@ export default function CaseloadPage() {
 
       {/* Accordion List */}
       {lineManagers.map((manager: any) => (
-        <Accordion key={manager.id}>
+        <Accordion key={manager.user_id}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography fontWeight="bold">
-              {manager.name} ({manager.email})
+            <Typography fontWeight='bold'>
+              {manager.line_manager.full_name} ({manager.line_manager.email})
             </Typography>
           </AccordionSummary>
           <AccordionDetails>
-            {manager.users?.length > 0 ? (
+            {manager.managed_users?.length > 0 ? (
               <List>
-                {manager.users
+                {manager.managed_users
                   .filter((u: any) =>
-                    filterRole ? u.role === filterRole : true
+                    filterRole ? u.roles.includes(filterRole) : true
                   )
                   .map((user: any) => (
-                    <ListItem key={user.id} divider>
+                    <ListItem key={user.user_id} divider>
                       <ListItemText
-                        primary={`${user.name} (${user.role})`}
+                        primary={`${user.first_name} ${
+                          user.last_name
+                        } (${user.roles.join(', ')})`}
                         secondary={user.email}
                       />
                     </ListItem>
                   ))}
               </List>
             ) : (
-              <Typography color="text.secondary">No users assigned.</Typography>
+              <Typography color='text.secondary'>No users assigned.</Typography>
+            )}
+            {manager?.statistics && (
+              <Box mb={3}>
+                <Typography variant='h6' gutterBottom>
+                  Statistics
+                </Typography>
+
+                <Grid container spacing={2}>
+                  {/* Simple key-value stats */}
+                  {[
+                    {
+                      label: 'Active Users',
+                      value: manager.statistics.active_users,
+                    },
+                    {
+                      label: 'Total Managed Learners',
+                      value: manager.statistics.total_managed_learners,
+                    },
+                    {
+                      label: 'Total Managed Users',
+                      value: manager.statistics.total_managed_users,
+                    },
+                  ].map((stat, idx) => {
+                    const colors = [
+                      '#E57373',
+                      '#64B5F6',
+                      '#81C784',
+                      '#FFB74D',
+                      '#BA68C8',
+                    ]
+                    const randomColor = colors[idx % colors.length] // rotate through colors
+                    return (
+                      <Grid item xs={12} sm={4} key={stat.label}>
+                        <Box
+                          bgcolor={randomColor}
+                          color='white'
+                          borderRadius={2}
+                          p={3}
+                          textAlign='center'
+                          sx={{
+                            height: 120,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            boxShadow: 2,
+                          }}
+                        >
+                          <Typography variant='h6' fontWeight='bold'>
+                            {stat.value}
+                          </Typography>
+                          <Typography variant='body2'>{stat.label}</Typography>
+                        </Box>
+                      </Grid>
+                    )
+                  })}
+
+                  {/* Users by role */}
+                  {Object.entries(manager?.statistics?.users_by_role || {}).map(
+                    ([role, count], idx) => {
+                      const colors = [
+                        '#4DB6AC',
+                        '#FFD54F',
+                        '#9575CD',
+                        '#F06292',
+                        '#7986CB',
+                      ]
+                      const randomColor = colors[idx % colors.length]
+                      return (
+                        <Grid item xs={12} sm={3} md={2} key={role}>
+                          <Box
+                            bgcolor={randomColor}
+                            color='white'
+                            borderRadius={2}
+                            p={2}
+                            textAlign='center'
+                            sx={{
+                              height: 100,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'center',
+                              boxShadow: 2,
+                            }}
+                          >
+                            <Typography variant='h6' fontWeight='bold'>
+                             {Number(count)}
+                            </Typography>
+                            <Typography variant='body2'>{role}</Typography>
+                          </Box>
+                        </Grid>
+                      )
+                    }
+                  )}
+                </Grid>
+              </Box>
             )}
           </AccordionDetails>
         </Accordion>
@@ -405,22 +504,22 @@ export default function CaseloadPage() {
 
       {/* No Data */}
       {!isLoading && lineManagers.length === 0 && (
-        <Typography color="text.secondary" mt={2}>
+        <Typography color='text.secondary' mt={2}>
           No Line Managers found.
         </Typography>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <Box display="flex" justifyContent="center" mt={3}>
+        <Box display='flex' justifyContent='center' mt={3}>
           <Pagination
             count={totalPages}
             page={page}
             onChange={(_, value) => setPage(value)}
-            color="primary"
+            color='primary'
           />
         </Box>
       )}
     </Box>
-  );
+  )
 }

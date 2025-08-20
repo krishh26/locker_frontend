@@ -17,7 +17,7 @@ export const caseloadAPI = createApi({
           )
           .join('&')
 
-        const url = `/caseload/list${queryString ? `?${queryString}` : ''}`
+        const url = `/user/line-managers${queryString ? `?${queryString}` : ''}`
         return { url, method: 'GET' }
       },
       providesTags: ['CaseloadList'],
