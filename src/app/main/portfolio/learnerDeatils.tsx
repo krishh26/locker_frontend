@@ -100,7 +100,7 @@ const LearnerDetails = () => {
   //     useUpdateFundingBandMutation()
   const isLoading = false
   const isUpdating = false
-  const [fundingBands, setFundingBands] = useState<any[]>(sampleFundingBands)
+  const [fundingBands, setFundingBands] = useState<any[]>([])
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editedAmount, setEditedAmount] = useState<string>('')
 
@@ -122,9 +122,14 @@ const LearnerDetails = () => {
   }, [learner_id])
 
   // ✅ Sync API data to local state
-  //   useEffect(() => {
-  //     if (data?.data) setFundingBands(data.data)
-  //   }, [data])
+  useEffect(() => {
+    if (
+      learner?.available_funding_bands &&
+      learner?.available_funding_bands?.length > 0
+    ) {
+      setFundingBands(learner?.available_funding_bands)
+    }
+  }, [learner])
 
   const [learnerData, setLearnerData] = useState({
     uln: learner?.uln || '',
@@ -1866,8 +1871,7 @@ const LearnerDetails = () => {
                             )
                           </Typography>
                           <Typography variant='body2' color='text.secondary'>
-                            Code: {band.course.course_code} | Credits:{' '}
-                            {band.course.total_credits}
+                            Code: {band.course.course_code} 
                           </Typography>
                         </Box>
 
@@ -1903,12 +1907,12 @@ const LearnerDetails = () => {
                               <Typography className='font-600 text-lg'>
                                 £{band.amount}
                               </Typography>
-                              <IconButton
+                              {/* <IconButton
                                 color='primary'
                                 onClick={() => handleEditClick(band)}
                               >
                                 <EditIcon />
-                              </IconButton>
+                              </IconButton> */}
                             </>
                           )}
                         </Box>

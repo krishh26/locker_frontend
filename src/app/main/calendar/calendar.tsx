@@ -468,6 +468,7 @@ const Calendar = () => {
                 onSelectEvent={(event) => {
                   console.log('Event selected:', event)
                   setSelectedRow(event.resource)
+                  dispatch(slice.setSingledata(event.resource))
                   setDialogType(true)
                 }}
                 // Remove eventPropGetter to avoid conflicts with custom EventComponent
@@ -492,19 +493,6 @@ const Calendar = () => {
                   next: 'Next',
                 }}
               />
-              {/* <BigCalendar
-                localizer={localizer}
-                events={staticEvents}
-                defaultView={Views.MONTH}
-                defaultDate={new Date(2025, 7, 1)}
-                startAccessor='start'
-                endAccessor='end'
-                style={{ height: '100%' }}
-                components={{
-                  event: EventComponent, // custom pill-style renderer
-                }}
-                views={['month', 'week', 'day', 'agenda']}
-              /> */}
             </Box>
           </Box>
         ) : (
@@ -833,27 +821,6 @@ const Calendar = () => {
           <DialogContent className='p-0'>
             <NewSession edit={true} handleCloseDialog={handleCloseDialog} />
           </DialogContent>
-          {/* <DialogActions>
-          {session?.dataUpdatingLoadding ? (
-            <LoadingButton />
-          ) : (
-            <>
-              <SecondaryButtonOutlined
-                onClick={handleCloseDialog}
-                name="Cancel"
-              />
-              <SecondaryButton
-                name={Object.keys(session?.singleData)?.length !== 0 ? "Edit" : "Save"}
-              // onClick={
-              //   Object.keys(session?.singleData)?.length !== 0
-              //     ? handleUpdate
-              //     : handleSubmit
-              // }
-              // disable={!isSupport}
-              />
-            </>
-          )}
-        </DialogActions> */}
         </Dialog>
       </Grid>
     </>
