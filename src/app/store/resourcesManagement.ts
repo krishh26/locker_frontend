@@ -117,7 +117,7 @@ export const updateResourceAPI = (id, data) => async (dispatch) => {
     try {
 
         dispatch(slice.setUpdatingLoader());
-        const { password, confrimpassword, ...payload } = data
+        const { password, confirmPassword, ...payload } = data
         const response = await axios.patch(`${URL_BASE_LINK}/resource/update/${id}`, payload)
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         dispatch(slice.updateResourceById(response.data.data));

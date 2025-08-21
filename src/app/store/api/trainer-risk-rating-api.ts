@@ -7,21 +7,13 @@ export const trainerRiskAPI = createApi({
   baseQuery: createBaseQueryWithReAuth(),
   tagTypes: ['TrainerRisk'],
   endpoints: (builder) => ({
-    // Fetch all trainers
-    getTrainerList: builder.query({
-      query: () => ({
-        url: `/trainers`,
-        method: 'GET',
-      }),
-      providesTags: ['TrainerRisk'],
-    }),
-
     // Fetch trainer details + courses
     getTrainerDetails: builder.query({
       query: (id) => ({
-        url: `/trainers/${id}`,
+        url: `/risk-rating?trainer_id=${id}`,
         method: 'GET',
       }),
+      providesTags: ['TrainerRisk'],
     }),
 
     // Save risk settings (high, medium, low %)
@@ -36,8 +28,8 @@ export const trainerRiskAPI = createApi({
 
     // Save course risk ratings
     saveCourseRiskRatings: builder.mutation({
-      query: ({ trainerId, data }) => ({
-        url: `/trainers/${trainerId}/courses/risk`,
+      query: ({ data }) => ({
+        url: `/risk-rating`,
         method: 'POST',
         body: data,
       }),
@@ -67,7 +59,6 @@ export const trainerRiskAPI = createApi({
 })
 
 export const {
-  useGetTrainerListQuery,
   useGetTrainerDetailsQuery,
   useSaveTrainerRiskSettingsMutation,
   useSaveCourseRiskRatingsMutation,

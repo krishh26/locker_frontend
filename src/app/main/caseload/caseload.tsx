@@ -257,6 +257,7 @@ import {
   Button,
   Pagination,
   Grid,
+  Collapse,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import jsPDF from 'jspdf'
@@ -267,6 +268,8 @@ applyPlugin(jsPDF)
 
 export default function CaseloadPage() {
   const [filterName, setFilterName] = useState('')
+  const [open, setOpen] = useState(false)
+
   const [filterRole, setFilterRole] = useState('')
   const [page, setPage] = useState(1)
   const rowsPerPage = 5
@@ -279,7 +282,6 @@ export default function CaseloadPage() {
     limit: rowsPerPage,
     meta: true,
   })
-  console.log('🚀 ~ CaseloadPage ~ data:', data)
 
   // ✅ Fallback if no data
   const lineManagers = data?.data || []
@@ -343,7 +345,7 @@ export default function CaseloadPage() {
           }}
         />
 
-        <TextField
+        {/* <TextField
           label='Filter by Role'
           variant='outlined'
           size='small'
@@ -358,9 +360,9 @@ export default function CaseloadPage() {
           <MenuItem value=''>All</MenuItem>
           <MenuItem value='Trainer'>Trainer</MenuItem>
           <MenuItem value='OtherRole'>Other Role</MenuItem>
-        </TextField>
+        </TextField> */}
 
-        <Button
+        {/* <Button
           variant='outlined'
           onClick={() => {
             setFilterName('')
@@ -369,7 +371,7 @@ export default function CaseloadPage() {
           }}
         >
           Reset Filters
-        </Button>
+        </Button> */}
       </Box>
 
       {/* Loader / Error */}
@@ -384,120 +386,73 @@ export default function CaseloadPage() {
             </Typography>
           </AccordionSummary>
           <AccordionDetails>
-            {manager.managed_users?.length > 0 ? (
-              <List>
-                {manager.managed_users
-                  .filter((u: any) =>
-                    filterRole ? u.roles.includes(filterRole) : true
-                  )
-                  .map((user: any) => (
-                    <ListItem key={user.user_id} divider>
-                      <ListItemText
-                        primary={`${user.first_name} ${
-                          user.last_name
-                        } (${user.roles.join(', ')})`}
-                        secondary={user.email}
-                      />
-                    </ListItem>
-                  ))}
-              </List>
-            ) : (
-              <Typography color='text.secondary'>No users assigned.</Typography>
-            )}
-            {manager?.statistics && (
-              <Box mb={3}>
-                <Typography variant='h6' gutterBottom>
-                  Statistics
-                </Typography>
+            <Grid container spacing={2}>
+              {[
+                {
+                  label: 'Active Users',
+                  value: manager.statistics.active_users,
+                  users: manager.managed_users, // link users here
+                },
+                {
+                  label: 'Total Managed Learners',
+                  value: manager.statistics.total_managed_learners,
+                  users: [], // optional
+                },
+                {
+                  label: 'Total Managed Users',
+                  value: manager.statistics.total_managed_users,
+                  users: manager.managed_users,
+                },
+              ].map((stat, idx) => {
+                const colors = ['#E57373', '#64B5F6', '#81C784']
+                const color = colors[idx % colors.length]
 
-                <Grid container spacing={2}>
-                  {/* Simple key-value stats */}
-                  {[
-                    {
-                      label: 'Active Users',
-                      value: manager.statistics.active_users,
-                    },
-                    {
-                      label: 'Total Managed Learners',
-                      value: manager.statistics.total_managed_learners,
-                    },
-                    {
-                      label: 'Total Managed Users',
-                      value: manager.statistics.total_managed_users,
-                    },
-                  ].map((stat, idx) => {
-                    const colors = [
-                      '#E57373',
-                      '#64B5F6',
-                      '#81C784',
-                      '#FFB74D',
-                      '#BA68C8',
-                    ]
-                    const randomColor = colors[idx % colors.length] // rotate through colors
-                    return (
-                      <Grid item xs={12} sm={4} key={stat.label}>
-                        <Box
-                          bgcolor={randomColor}
-                          color='white'
-                          borderRadius={2}
-                          p={3}
-                          textAlign='center'
-                          sx={{
-                            height: 120,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            boxShadow: 2,
-                          }}
-                        >
+                return (
+                  <Grid item xs={12} sm={3} key={stat.label}>
+                    <Accordion disableGutters elevation={0}>
+                      <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        sx={{
+                          bgcolor: color,
+                          color: 'white',
+                          borderRadius: 2,
+                          p: 2,
+                          textAlign: 'center',
+                          boxShadow: 2,
+                        }}
+                      >
+                        <Box flex={1}>
                           <Typography variant='h6' fontWeight='bold'>
                             {stat.value}
                           </Typography>
                           <Typography variant='body2'>{stat.label}</Typography>
                         </Box>
-                      </Grid>
-                    )
-                  })}
-
-                  {/* Users by role */}
-                  {Object.entries(manager?.statistics?.users_by_role || {}).map(
-                    ([role, count], idx) => {
-                      const colors = [
-                        '#4DB6AC',
-                        '#FFD54F',
-                        '#9575CD',
-                        '#F06292',
-                        '#7986CB',
-                      ]
-                      const randomColor = colors[idx % colors.length]
-                      return (
-                        <Grid item xs={12} sm={3} md={2} key={role}>
-                          <Box
-                            bgcolor={randomColor}
-                            color='white'
-                            borderRadius={2}
-                            p={2}
-                            textAlign='center'
-                            sx={{
-                              height: 100,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'center',
-                              boxShadow: 2,
-                            }}
-                          >
-                            <Typography variant='h6' fontWeight='bold'>
-                             {Number(count)}
-                            </Typography>
-                            <Typography variant='body2'>{role}</Typography>
-                          </Box>
-                        </Grid>
-                      )
-                    }
-                  )}
-                </Grid>
-              </Box>
-            )}
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        {stat.users && stat.users.length > 0 ? (
+                          <List dense>
+                            {stat.users.map((user: any) => (
+                              <ListItem key={user.user_id} divider>
+                                <ListItemText
+                                  primary={`${user.first_name} ${
+                                    user.last_name
+                                  }`}
+                                  secondary={user.email}
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        ) : (
+                          <Typography color='text.secondary'>
+                            No users assigned.
+                          </Typography>
+                        )}
+                      </AccordionDetails>
+                    </Accordion>
+                  </Grid>
+                )
+              })}
+            </Grid>
           </AccordionDetails>
         </Accordion>
       ))}
