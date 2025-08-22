@@ -1,533 +1,751 @@
-import FuseLoading from '@fuse/core/FuseLoading';
-import { Autocomplete, Box, Dialog, Grid, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
-import { courseAllocationAPI, selectCourseManagement } from 'app/store/courseManagement';
-import { selectGlobalUser } from 'app/store/globalUser';
-import { getLearnerDetails, getLearnerDetailsReturn, selectLearnerManagement } from 'app/store/learnerManagement';
+import FuseLoading from '@fuse/core/FuseLoading'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { Add, Edit } from '@mui/icons-material'
+import {
+  Autocomplete,
+  Box,
+  Chip,
+  Dialog,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material'
+import {
+  courseAllocationAPI,
+  selectCourseManagement,
+  updateUserCourse,
+} from 'app/store/courseManagement'
+import { showMessage } from 'app/store/fuse/messageSlice'
+import { slice as globalSlice, selectGlobalUser } from 'app/store/globalUser'
+import {
+  getLearnerDetails,
+  selectLearnerManagement,
+} from 'app/store/learnerManagement'
 import { useState } from 'react'
-import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
-import { LoadingButton, SecondaryButton, SecondaryButtonOutlined } from 'src/app/component/Buttons';
-import DataNotFound from 'src/app/component/Pages/dataNotFound';
-import { slice as globalSlice } from "app/store/globalUser";
-import { selectUser } from 'app/store/userSlice';
+import { Controller, useForm } from 'react-hook-form'
+import { useDispatch, useSelector } from 'react-redux'
+import {
+  LoadingButton,
+  SecondaryButton,
+  SecondaryButtonOutlined,
+} from 'src/app/component/Buttons'
+import DataNotFound from 'src/app/component/Pages/dataNotFound'
+import * as yup from 'yup'
+
+// Course status enum
+enum CourseStatus {
+  AwaitingInduction = 'Awaiting Induction',
+  Certificated = 'Certificated',
+  Completed = 'Completed',
+  EarlyLeaver = 'Early Leaver',
+  Exempt = 'Exempt',
+  InTraining = 'In Training',
+  IQAApproved = 'IQA Approved',
+  TrainingSuspended = 'Training Suspended',
+  Transferred = 'Transferred',
+}
+
+// Course status options for dropdown
+const courseStatusOptions = Object.values(CourseStatus)
+
+// Validation schema
+const courseSchema = yup.object().shape({
+  course_id: yup.string().required('Please select a course'),
+  trainer_id: yup.string().required('Please select a trainer'),
+  IQA_id: yup.string().required('Please select an IQA'),
+  LIQA_id: yup.string().required('Please select a LIQA'),
+  EQA_id: yup.string().required('Please select an EQA'),
+  employer_id: yup.string().required('Please select an employer'),
+  start_date: yup.string().required('Please select a start date'),
+  end_date: yup
+    .string()
+    .required('Please select an end date')
+    .test('end-date', 'End date must be after start date', function (value) {
+      const { start_date } = this.parent
+      if (!start_date || !value) return true
+      return new Date(value) > new Date(start_date)
+    }),
+  course_status: yup.string().optional(),
+})
 
 const CourseTab = () => {
+  const dispatch: any = useDispatch()
 
-    const dispatch: any = useDispatch();
+  const { data } = useSelector(selectCourseManagement)
+  const { LIQA, IQA, trainer, employer, EQA, learner } = useSelector(
+    selectLearnerManagement
+  )
+  const learnerUser =
+    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
+    useSelector(selectGlobalUser)?.selectedUser
 
-    const { data } = useSelector(selectCourseManagement);
-    const { LIQA, IQA, trainer, employer, EQA, learner } = useSelector(selectLearnerManagement);
-    const learnerUser = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectGlobalUser)?.selectedUser;
+  const [courseDialog, setCourseDialog] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState(null)
+  const [loading, setLoading] = useState(false)
 
-    const [courseDialog, setCourseDialog] = useState(false);
-    const [courseAllocationData, setCourseAllocationData] = useState({
-        course_id: "",
-        trainer_id: "",
-        IQA_id: "",
-        learner_id: learner?.learner_id,
-        EQA_id: "",
-        LIQA_id: "",
-        employer_id: "",
-        start_date: "",
-        end_date: ""
-    });
-    const [loading, setLoading] = useState(false);
+  // React Hook Form setup
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors, isValid },
+  } = useForm({
+    resolver: yupResolver(courseSchema),
+    mode: 'onChange',
+    defaultValues: {
+      course_id: '',
+      trainer_id: '',
+      IQA_id: '',
+      learner_id: learner?.learner_id,
+      EQA_id: '',
+      LIQA_id: '',
+      employer_id: '',
+      start_date: '',
+      end_date: '',
+      course_status: '',
+    },
+  })
 
-    const handleUpdateData = (name, value) => {
-        setCourseAllocationData((prevState) => ({
-            ...prevState,
-            [name]: value,
-        }));
-    };
-
-    const closeCourseDialog = () => {
-        setCourseDialog(false);
-    };
-    console.log(learnerUser, "user")
-
-    const handleLearnerRefetch = async () => {
-        const data = await dispatch(getLearnerDetails(learnerUser?.learner_id))
-        if (data) {
-            dispatch(globalSlice.setSelectedUser(data))
-        }
+  const handleLearnerRefetch = async () => {
+    const data = await dispatch(getLearnerDetails(learnerUser?.learner_id))
+    if (data) {
+      dispatch(globalSlice.setSelectedUser(data))
     }
+  }
 
-    const courseAllocation = async () => {
-        setLoading(true);
+  const onSubmit = async (formData) => {
+    setLoading(true)
+    try {
+      if (isEditMode) {
+        // Update course logic
         const response = await dispatch(
-            courseAllocationAPI(courseAllocationData)
-        );
+          updateUserCourse(selectedCourse?.user_course_id, formData)
+        )
         if (response) {
-            setCourseAllocationData({
-                course_id: "",
-                trainer_id: "",
-                IQA_id: "",
-                learner_id: learner?.learner_id,
-                EQA_id: "",
-                LIQA_id: "",
-                employer_id: "",
-                start_date: "",
-                end_date: ""
-            });
+          dispatch(
+            showMessage({
+              message: 'Course updated successfully!',
+              variant: 'success',
+            })
+          )
+        } else {
+          dispatch(
+            showMessage({
+              message: 'Failed to update course. Please try again.',
+              variant: 'error',
+            })
+          )
         }
-        setLoading(false);
-        setCourseDialog(false);
-        handleLearnerRefetch()
-    };
+      } else {
+        // Add course logic
+        const response = await dispatch(courseAllocationAPI(formData))
+        if (response) {
+          dispatch(
+            showMessage({
+              message: 'Course added successfully!',
+              variant: 'success',
+            })
+          )
+        } else {
+          dispatch(
+            showMessage({
+              message: 'Failed to add course. Please try again.',
+              variant: 'error',
+            })
+          )
+        }
+      }
+      closeCourseDialog()
+      handleLearnerRefetch()
+    } catch (error) {
+      dispatch(
+        showMessage({
+          message: `Failed to ${
+            isEditMode ? 'update' : 'add'
+          } course. Please try again.`,
+          variant: 'error',
+        })
+      )
+    }
+    setLoading(false)
+  }
 
-    const { selectedUser, dataFetchLoading } = useSelector(selectGlobalUser);
+  const handleEditCourse = (course) => {
+    setSelectedCourse(course)
+    setIsEditMode(true)
 
-    const handleCreateCourse = () => {
-        setCourseDialog(true);
-        // navigate("/courseBuilder/course");
-    };
+    // Pre-populate form with existing data
+    setValue('course_id', course?.course?.course_id || '')
+    setValue('trainer_id', course?.trainer_id?.user_id || '')
+    setValue('IQA_id', course?.IQA_id?.user_id || '')
+    setValue('EQA_id', course?.EQA_id?.user_id || '')
+    setValue('LIQA_id', course?.LIQA_id?.user_id || '')
+    setValue('employer_id', course?.employer_id?.user_id || '')
+    setValue('start_date', course?.start_date?.substr(0, 10) || '')
+    setValue('end_date', course?.end_date?.substr(0, 10) || '')
+    setValue('course_status', course?.course_status || '')
 
-    const formatDate = (date) => {
-        if (!date) return "";
-        const formattedDate = date.substr(0, 10);
-        return formattedDate;
-    };
+    setCourseDialog(true)
+  }
 
+  const { selectedUser, dataFetchLoading } = useSelector(selectGlobalUser)
+
+  const handleCreateCourse = () => {
+    setIsEditMode(false)
+    setSelectedCourse(null)
+    reset() // Reset form to default values
+    setCourseDialog(true)
+  }
+
+  const closeCourseDialog = () => {
+    setCourseDialog(false)
+    setIsEditMode(false)
+    setSelectedCourse(null)
+    reset()
+  }
+
+  const formatDate = (date) => {
+    if (!date) return '-'
+    const formattedDate = date.substr(0, 10)
+    return formattedDate
+  }
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case CourseStatus.AwaitingInduction:
+        return 'warning'
+      case CourseStatus.Certificated:
+        return 'success'
+      case CourseStatus.Completed:
+        return 'primary'
+      case CourseStatus.EarlyLeaver:
+        return 'error'
+      case CourseStatus.Exempt:
+        return 'info'
+      case CourseStatus.InTraining:
+        return 'success'
+      case CourseStatus.IQAApproved:
+        return 'success'
+      case CourseStatus.TrainingSuspended:
+        return 'warning'
+      case CourseStatus.Transferred:
+        return 'info'
+      // Fallback for legacy status values
+      case 'active':
+      case 'in progress':
+        return 'success'
+      case 'pending':
+        return 'warning'
+      case 'cancelled':
+      case 'failed':
+        return 'error'
+      default:
+        return 'default'
+    }
+  }
+
+  const getStatusChip = (status) => {
     return (
-        <>
-            <div>
-                <div>
-                    <h1 className='font-semibold'>Learner Course Management</h1>
-                </div>
+      <Chip
+        label={status || 'N/A'}
+        color={getStatusColor(status)}
+        size='small'
+        variant='outlined'
+        sx={{
+          fontWeight: 500,
+          minWidth: '80px',
+        }}
+      />
+    )
+  }
 
-                <Grid className='w-full flex flex-row gap-20 mt-32 mb-24 justify-end'>
-                    <SecondaryButton
-                        className="py-6"
-                        name="Add Course"
-                        onClick={handleCreateCourse}
-                    />
-                </Grid>
+  return (
+    <>
+      <div className='bg-white rounded-lg shadow-sm p-6'>
+        <div className='flex justify-between items-center mb-6'>
+          <div>
+            <h1 className='text-2xl font-bold text-gray-800 mb-2'>
+              Learner Course Management
+            </h1>
+            <p className='text-gray-600'>
+              Manage and track learner course progress
+            </p>
+          </div>
+          <SecondaryButton
+            className='py-3 px-6'
+            name='Add New Course'
+            onClick={handleCreateCourse}
+            startIcon={<Add />}
+          />
+        </div>
 
-                <TableContainer sx={{ minHeight: 550, display: "flex", flexDirection: "column", justifyContent: "space-between", overflowX: "auto !important" }}>
-                    {dataFetchLoading ? (
-                        <FuseLoading />
-                    ) : selectedUser?.course?.length ? (
-                        <Table
-                            sx={{ minWidth: 650, height: "100%" }}
-                            size="small"
-                            aria-label="simple table"
-                        >
-                            <TableHead className="bg-[#F8F8F8]">
-                                <TableRow>
-                                    <TableCell align="left">
-                                        Course Name
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Status
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Episode
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Grouping
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Qualification Code
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Course Start/End
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Extension Date
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Actual End Date
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Trainer(s)
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        IQA(s)
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Grades
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Awarding Body
-                                    </TableCell>
-                                    <TableCell align="left">
-                                        Registratin Details
-                                    </TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {selectedUser?.course?.map((row) => (
-                                    <TableRow
-                                        key={row?.course?.user_course_id}
-                                        sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-                                    >
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                            {row?.course?.course_name}
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                            {row?.course?.qualification_status}
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                            {formatDate(row?.course.operational_start_date)}
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                            {row?.trainer_id?.first_name} {row?.trainer_id?.last_name}
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                            {row?.IQA_id?.first_name} {row?.IQA_id?.last_name}
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                        </TableCell>
-                                        <TableCell
-                                            align="left"
-                                            sx={{ borderBottom: "2px solid #F8F8F8", minWidth: "15rem" }}
-                                        >
-                                            {/* {formatDate(row.created_at)} */}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    ) : (
+        <div className='bg-white rounded-lg border border-gray-200 overflow-hidden'>
+          {dataFetchLoading ? (
+            <div className='flex justify-center items-center h-64'>
+              <FuseLoading />
+            </div>
+          ) : selectedUser?.course?.length ? (
+            <TableContainer sx={{ maxHeight: 600 }}>
+              <Table stickyHeader size='medium'>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#f8fafc' }}>
+                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                      Course Name
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                      Status
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                      Start Date
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                      End Date
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                      Trainer
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                      IQA
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                      Actions
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {selectedUser?.course?.map((row, index) => (
+                    <TableRow
+                      key={row?.course?.user_course_id || index}
+                      sx={{
+                        '&:hover': { backgroundColor: '#f9fafb' },
+                        '&:last-child td': { border: 0 },
+                      }}
+                    >
+                      <TableCell
+                        sx={{
+                          fontWeight: 500,
+                          color: '#1f2937',
+                          maxWidth: '200px',
+                        }}
+                      >
                         <div
-                            className="flex flex-col justify-center items-center gap-10 "
-                            style={{ height: "94%" }}
+                          className='font-medium'
+                          style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            lineHeight: '1.2em',
+                            maxHeight: '2.4em',
+                          }}
+                          title={row?.course?.course_name}
                         >
-                            <DataNotFound width="25%" />
-                            <Typography variant="h5">No data found</Typography>
-                            <Typography variant="body2" className="text-center">
-                                It is a long established fact that a reader will be <br />
-                                distracted by the readable content.
-                            </Typography>
+                          {row?.course?.course_name}
                         </div>
+                      </TableCell>
+                      <TableCell>{getStatusChip(row?.course_status)}</TableCell>
+                      <TableCell sx={{ color: '#6b7280' }}>
+                        {formatDate(row?.start_date)}
+                      </TableCell>
+                      <TableCell sx={{ color: '#6b7280' }}>
+                        {formatDate(row?.end_date)}
+                      </TableCell>
+                      <TableCell sx={{ color: '#6b7280' }}>
+                        {row?.trainer_id?.first_name &&
+                        row?.trainer_id?.last_name
+                          ? `${row?.trainer_id?.first_name} ${row?.trainer_id?.last_name}`
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell sx={{ color: '#6b7280' }}>
+                        {row?.IQA_id?.first_name && row?.IQA_id?.last_name
+                          ? `${row?.IQA_id?.first_name} ${row?.IQA_id?.last_name}`
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <div className='flex gap-2'>
+                          <Tooltip title='Edit Course'>
+                            <IconButton
+                              size='small'
+                              sx={{ color: '#10b981' }}
+                              onClick={() => handleEditCourse(row)}
+                            >
+                              <Edit fontSize='small' />
+                            </IconButton>
+                          </Tooltip>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <div className='flex flex-col justify-center items-center py-16'>
+              <DataNotFound width='20%' />
+              <Typography variant='h6' className='mt-4 text-gray-700'>
+                No courses found
+              </Typography>
+              <Typography
+                variant='body2'
+                className='text-center text-gray-500 mt-2'
+              >
+                Start by adding a new course to track learner progress
+              </Typography>
+              <SecondaryButton
+                className='mt-4'
+                name='Add Your First Course'
+                onClick={handleCreateCourse}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Combined Add/Edit Course Dialog */}
+      <Dialog
+        open={courseDialog}
+        onClose={closeCourseDialog}
+        maxWidth='md'
+        fullWidth
+        sx={{
+          '.MuiDialog-paper': {
+            borderRadius: '12px',
+          },
+        }}
+      >
+        <Box className='p-12'>
+          <Typography variant='h5' className='mb-2 font-semibold text-gray-800'>
+            {isEditMode ? 'Edit Course' : 'Add New Course'}
+          </Typography>
+          <Typography variant='body2' className='mb-6 text-gray-600'>
+            Fields marked with <span className='text-red-500'>*</span> are
+            required
+          </Typography>
+
+          <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
+            <div>
+              <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                Select Course <span className='text-red-500'>*</span>
+              </Typography>
+              <Controller
+                name='course_id'
+                control={control}
+                render={({ field }) => (
+                  <Autocomplete
+                    {...field}
+                    disableClearable
+                    fullWidth
+                    size='small'
+                    options={data || []}
+                    getOptionLabel={(option: any) => option.course_name}
+                    value={
+                      data?.find((c) => c.course_id === field.value) || null
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder='Choose a course'
+                        variant='outlined'
+                        error={!!errors.course_id}
+                        helperText={errors.course_id?.message}
+                      />
                     )}
-                    {/* <CustomPagination
-                    pages={meta_data?.pages}
-                    page={meta_data?.page}
-                    handleChangePage={handleChangePage}
-                    items={meta_data?.items}
-                /> */}
-                </TableContainer>
+                    onChange={(e, value: any) =>
+                      field.onChange(value?.course_id || '')
+                    }
+                    disabled={isEditMode}
+                  />
+                )}
+              />
             </div>
 
-            <Dialog
-                open={courseDialog}
-                onClose={closeCourseDialog}
-                sx={{
-                    ".MuiDialog-paper": {
-                        borderRadius: "4px",
-                        padding: "1rem",
-                        width: "440px",
-                    },
-                }}
-            >
-                <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-                    <div className="w-full">
-                        <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}>
-                            Select Course
-                        </Typography>
-                        <Autocomplete
-                            disableClearable
-                            fullWidth
-                            size="small"
-                            options={data}
-                            getOptionLabel={(option: any) => option.course_name}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    placeholder="Select Course"
-                                    name="role"
-                                    value={courseAllocationData?.course_id}
-                                />
-                            )}
-                            onChange={(e, value: any) =>
-                                handleUpdateData("course_id", value.course_id)
-                            }
-                            sx={{
-                                ".MuiAutocomplete-clearIndicator": {
-                                    color: "#5B718F",
-                                },
-                            }}
-                            PaperComponent={({ children }) => (
-                                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-                            )}
-                        />
-                    </div>
-                </Box>
-                <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-                    <div className="w-full">
-                        <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}>
-                            Trainer
-                        </Typography>
-                        <Autocomplete
-                            disableClearable
-                            fullWidth
-                            size="small"
-                            options={trainer}
-                            getOptionLabel={(option: any) => option.user_name}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    placeholder="Select Trainer"
-                                    name="role"
-                                    value={courseAllocationData?.trainer_id}
-                                />
-                            )}
-                            onChange={(e, value: any) =>
-                                handleUpdateData("trainer_id", value.user_id)
-                            }
-                            sx={{
-                                ".MuiAutocomplete-clearIndicator": {
-                                    color: "#5B718F",
-                                },
-                            }}
-                            PaperComponent={({ children }) => (
-                                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-                            )}
-                        />
-                    </div>
-                </Box>
-                <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-                    <div className="w-full">
-                        <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}>
-                            IQA
-                        </Typography>
-                        <Autocomplete
-                            disableClearable
-                            fullWidth
-                            size="small"
-                            options={IQA}
-                            getOptionLabel={(option: any) => option.user_name}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    placeholder="Select IQA"
-                                    name="role"
-                                    value={courseAllocationData?.IQA_id}
-                                />
-                            )}
-                            onChange={(e, value: any) =>
-                                handleUpdateData("IQA_id", value.user_id)
-                            }
-                            sx={{
-                                ".MuiAutocomplete-clearIndicator": {
-                                    color: "#5B718F",
-                                },
-                            }}
-                            PaperComponent={({ children }) => (
-                                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-                            )}
-                        />
-                    </div>
-                </Box>
-                <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-                    <div className="w-full">
-                        <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}>
-                            LIQA
-                        </Typography>
-                        <Autocomplete
-                            disableClearable
-                            fullWidth
-                            size="small"
-                            options={LIQA}
-                            getOptionLabel={(option: any) => option.user_name}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    placeholder="Select LIQA"
-                                    name="role"
-                                    value={courseAllocationData?.LIQA_id}
-                                />
-                            )}
-                            onChange={(e, value: any) =>
-                                handleUpdateData("LIQA_id", value.user_id)
-                            }
-                            sx={{
-                                ".MuiAutocomplete-clearIndicator": {
-                                    color: "#5B718F",
-                                },
-                            }}
-                            PaperComponent={({ children }) => (
-                                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-                            )}
-                        />
-                    </div>
-                </Box>
-                <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-                    <div className="w-full">
-                        <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}>
-                            EQA
-                        </Typography>
-                        <Autocomplete
-                            disableClearable
-                            fullWidth
-                            size="small"
-                            options={EQA}
-                            getOptionLabel={(option: any) => option.user_name}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    placeholder="Select EQA"
-                                    name="role"
-                                    value={courseAllocationData?.EQA_id}
-                                />
-                            )}
-                            onChange={(e, value: any) =>
-                                handleUpdateData("EQA_id", value.user_id)
-                            }
-                            sx={{
-                                ".MuiAutocomplete-clearIndicator": {
-                                    color: "#5B718F",
-                                },
-                            }}
-                            PaperComponent={({ children }) => (
-                                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-                            )}
-                        />
-                    </div>
-                </Box>
-                <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-                    <div className="w-full">
-                        <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}>
-                            Employer
-                        </Typography>
-                        <Autocomplete
-                            disableClearable
-                            fullWidth
-                            size="small"
-                            options={employer}
-                            getOptionLabel={(option: any) => option.employer?.employer_name}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    placeholder="Select Employer"
-                                    name="role"
-                                    value={courseAllocationData?.employer_id}
-                                />
-                            )}
-                            onChange={(e, value: any) =>
-                                handleUpdateData("employer_id", value.user_id)
-                            }
-                            sx={{
-                                ".MuiAutocomplete-clearIndicator": {
-                                    color: "#5B718F",
-                                },
-                            }}
-                            PaperComponent={({ children }) => (
-                                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-                            )}
-                        />
-                    </div>
-                </Box>
-                <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-                    <div className="w-full">
-                        <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}>
-                            Start Date
-                        </Typography>
+            {isEditMode && (
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  Course Status <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='course_status'
+                  control={control}
+                  render={({ field }) => (
+                    <Autocomplete
+                      {...field}
+                      disableClearable
+                      fullWidth
+                      size='small'
+                      options={courseStatusOptions}
+                      value={field.value || null}
+                      renderInput={(params) => (
                         <TextField
-                            name="start_date"
-                            value={courseAllocationData?.start_date}
-                            size="small"
-                            type='date'
-                            required
-                            fullWidth
-                            onChange={(e) => setCourseAllocationData({
-                                ...courseAllocationData,
-                                start_date: e.target.value
-                            })}
+                          {...params}
+                          placeholder='Select course status'
+                          variant='outlined'
+                          error={!!errors.course_status}
+                          helperText={errors.course_status?.message}
                         />
+                      )}
+                      onChange={(e, value: any) => field.onChange(value || '')}
+                    />
+                  )}
+                />
+              </div>
+            )}
 
-                    </div>
-                </Box>
-                <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-                    <div className="w-full">
-                        <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}>
-                            End Date
-                        </Typography>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  Trainer <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='trainer_id'
+                  control={control}
+                  render={({ field }) => (
+                    <Autocomplete
+                      {...field}
+                      disableClearable
+                      fullWidth
+                      size='small'
+                      options={trainer || []}
+                      getOptionLabel={(option: any) => option.user_name}
+                      value={
+                        trainer?.find((t) => t.user_id === field.value) || null
+                      }
+                      renderInput={(params) => (
                         <TextField
-                            name="end_date"
-                            value={courseAllocationData?.end_date}
-                            size="small"
-                            type='date'
-                            required
-                            fullWidth
-                            onChange={(e) => setCourseAllocationData({
-                                ...courseAllocationData,
-                                end_date: e.target.value
-                            })}
+                          {...params}
+                          placeholder='Select trainer'
+                          variant='outlined'
+                          error={!!errors.trainer_id}
+                          helperText={errors.trainer_id?.message}
                         />
+                      )}
+                      onChange={(e, value: any) =>
+                        field.onChange(value?.user_id || '')
+                      }
+                    />
+                  )}
+                />
+              </div>
 
-                    </div>
-                </Box>
-                <div className="flex justify-end mt-4">
-                    {loading ? (
-                        <LoadingButton style={{ width: "10rem" }} />
-                    ) : (
-                        <>
-                            <SecondaryButtonOutlined
-                                name="Cancel"
-                                style={{ width: "10rem", marginRight: "2rem" }}
-                                onClick={closeCourseDialog}
-                            />
-                            <SecondaryButton
-                                name="Add Course"
-                                style={{ width: "10rem" }}
-                                onClick={courseAllocation}
-                            />
-                        </>
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  IQA <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='IQA_id'
+                  control={control}
+                  render={({ field }) => (
+                    <Autocomplete
+                      {...field}
+                      disableClearable
+                      fullWidth
+                      size='small'
+                      options={IQA || []}
+                      getOptionLabel={(option: any) => option.user_name}
+                      value={
+                        IQA?.find((i) => i.user_id === field.value) || null
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder='Select IQA'
+                          variant='outlined'
+                          error={!!errors.IQA_id}
+                          helperText={errors.IQA_id?.message}
+                        />
+                      )}
+                      onChange={(e, value: any) =>
+                        field.onChange(value?.user_id || '')
+                      }
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  LIQA <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='LIQA_id'
+                  control={control}
+                  render={({ field }) => (
+                    <Autocomplete
+                      {...field}
+                      disableClearable
+                      fullWidth
+                      size='small'
+                      options={LIQA || []}
+                      getOptionLabel={(option: any) => option.user_name}
+                      value={
+                        LIQA?.find((l) => l.user_id === field.value) || null
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder='Select LIQA'
+                          variant='outlined'
+                          error={!!errors.LIQA_id}
+                          helperText={errors.LIQA_id?.message}
+                        />
+                      )}
+                      onChange={(e, value: any) =>
+                        field.onChange(value?.user_id || '')
+                      }
+                    />
+                  )}
+                />
+              </div>
+
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  EQA <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='EQA_id'
+                  control={control}
+                  render={({ field }) => (
+                    <Autocomplete
+                      {...field}
+                      disableClearable
+                      fullWidth
+                      size='small'
+                      options={EQA || []}
+                      getOptionLabel={(option: any) => option.user_name}
+                      value={
+                        EQA?.find((e) => e.user_id === field.value) || null
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder='Select EQA'
+                          variant='outlined'
+                          error={!!errors.EQA_id}
+                          helperText={errors.EQA_id?.message}
+                        />
+                      )}
+                      onChange={(e, value: any) =>
+                        field.onChange(value?.user_id || '')
+                      }
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                Employer <span className='text-red-500'>*</span>
+              </Typography>
+              <Controller
+                name='employer_id'
+                control={control}
+                render={({ field }) => (
+                  <Autocomplete
+                    {...field}
+                    disableClearable
+                    fullWidth
+                    size='small'
+                    options={employer || []}
+                    getOptionLabel={(option: any) =>
+                      option.employer?.employer_name
+                    }
+                    value={
+                      employer?.find((e) => e.user_id === field.value) || null
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder='Select employer'
+                        variant='outlined'
+                        error={!!errors.employer_id}
+                        helperText={errors.employer_id?.message}
+                      />
                     )}
-                </div>
-            </Dialog>
-        </>
-    )
+                    onChange={(e, value: any) =>
+                      field.onChange(value?.user_id || '')
+                    }
+                  />
+                )}
+              />
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  Start Date <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='start_date'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      size='small'
+                      type='date'
+                      fullWidth
+                      variant='outlined'
+                      error={!!errors.start_date}
+                      helperText={errors.start_date?.message}
+                    />
+                  )}
+                />
+              </div>
+
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  End Date <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='end_date'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      size='small'
+                      type='date'
+                      fullWidth
+                      variant='outlined'
+                      error={!!errors.end_date}
+                      helperText={errors.end_date?.message}
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className='flex justify-end gap-3 mt-6'>
+              <SecondaryButtonOutlined
+                name='Cancel'
+                onClick={closeCourseDialog}
+                type='button'
+              />
+              {loading ? (
+                <LoadingButton style={{ width: '120px' }} />
+              ) : (
+                <SecondaryButton
+                  name={isEditMode ? 'Update Course' : 'Add Course'}
+                  type='submit'
+                />
+              )}
+            </div>
+          </form>
+        </Box>
+      </Dialog>
+    </>
+  )
 }
 
 export default CourseTab
