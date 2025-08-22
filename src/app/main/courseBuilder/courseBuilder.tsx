@@ -13,6 +13,9 @@ import {
   Menu,
   Tooltip,
   Box,
+  useTheme,
+  Chip,
+  Paper,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { SecondaryButton } from "src/app/component/Buttons";
@@ -35,8 +38,119 @@ import Style from "./style.module.css";
 import { selectGlobalUser } from "app/store/globalUser";
 import AddIcon from "@mui/icons-material/Add";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import { useThemeColors, themeHelpers } from "../../utils/themeUtils";
+import { styled } from "@mui/material/styles";
+
+// Styled components for theme integration
+const ThemedCard = styled(Card)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+  transition: 'all 0.3s ease',
+  height: '100%',
+  overflowY: 'auto',
+  
+  '&:hover': {
+    boxShadow: themeHelpers.getShadow(theme, 2),
+  },
+}));
+
+const ThemedPaper = styled(Paper)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+}));
+
+const ThemedTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius * 1.5,
+    transition: 'all 0.2s ease',
+    
+    '&:hover': {
+      backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.02),
+    },
+    
+    '&.Mui-focused': {
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: `0 0 0 3px ${themeHelpers.withOpacity(theme.palette.primary.main, 0.1)}`,
+    },
+  },
+  
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
+    fontWeight: 500,
+  },
+  
+  '& .MuiOutlinedInput-input': {
+    color: theme.palette.text.primary,
+  },
+}));
+
+const ThemedFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius * 1.5,
+    transition: 'all 0.2s ease',
+    
+    '&:hover': {
+      backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.02),
+    },
+    
+    '&.Mui-focused': {
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: `0 0 0 3px ${themeHelpers.withOpacity(theme.palette.primary.main, 0.1)}`,
+    },
+  },
+  
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
+    fontWeight: 500,
+  },
+  
+  '& .MuiSelect-select': {
+    color: theme.palette.text.primary,
+  },
+}));
+
+const ThemedIconButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.primary.main,
+  transition: 'all 0.2s ease',
+  
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.1),
+    transform: 'scale(1.1)',
+  },
+}));
+
+const ThemedChip = styled(Chip)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.light,
+  color: theme.palette.primary.contrastText,
+  borderRadius: theme.shape.borderRadius * 2,
+  fontWeight: 600,
+  fontSize: '12px',
+  height: '24px',
+  transition: 'all 0.2s ease',
+  
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: themeHelpers.getShadow(theme, 1),
+  },
+  
+  '& .MuiChip-label': {
+    px: 1.5,
+    py: 0.5,
+  },
+}));
 
 const CourseBuilder = () => {
+  const theme = useTheme();
+  const colors = useThemeColors();
+  
   const { dataUpdatingLoadding, meta_data, data, dataFetchLoading } =
     useSelector(selectCourseManagement);
   const dispatch: any = useDispatch();
@@ -119,93 +233,154 @@ const CourseBuilder = () => {
     fetchCourse(searchKeyword, 1, value);
   };
 
-
   const handleChangePage = (_event: unknown, newPage: number) => {
     fetchCourse(searchKeyword, newPage, coreTypeFilter)
   };
 
   return (
     <>
-      <Card className="mx-10 rounded-6" style={{ height: "100%", overflowY: "scroll" }}>
-        {/* Always show the search and filter bar */}
-        <div className={`m-12 flex items-center justify-between mt-10 ${Style.Search_container}`}>
-          <div className="flex items-center gap-4 w-2/3">
-            <TextField
-              label="Search by keyword"
-              fullWidth
-              size="small"
-              onKeyDown={searchByKeywordUser}
-              onChange={searchHandler}
-              value={searchKeyword}
-              className={`w-1/2 ${Style.Search}`}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {searchKeyword ? (
-                      <Close
-                        onClick={() => {
-                          setSearchKeyword("");
-                          fetchCourse("")
-                        }}
-                        sx={{
-                          color: "#5B718F",
-                          fontSize: 18,
-                          cursor: "pointer",
-                        }}
-                      />
-                    ) : (
-                      <IconButton
-                        id="dashboard-search-events-btn"
-                        disableRipple
-                        sx={{ color: "#5B718F" }}
-                        onClick={() => searchAPIHandler()}
-                        size="small"
-                      >
-                        <SearchIcon fontSize="small" />
-                      </IconButton>
-                    )}
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <FormControl size="small" className="w-1/3">
-              <InputLabel id="core-type-filter-label">Course Core Type</InputLabel>
-              <Select
-                labelId="core-type-filter-label"
-                id="core-type-filter"
-                value={coreTypeFilter}
-                label="Course Core Type"
-                onChange={handleCoreTypeChange}
-              >
-                <MenuItem value="">All Types</MenuItem>
-                {mainCourseTypes.map((type) => (
-                  <MenuItem key={type} value={type}>{type}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </div>
-
-          <div className={`flex items-center space-x-4 ${Style.button}`}>
-            <SecondaryButton
-              className="py-6 mr-4"
-              name="Upload File"
-              startIcon={
-                <img
-                  src="assets/images/svgimage/uploadfileicon.svg"
-                  alt="Create File"
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
+      <ThemedCard sx={{ mx: 5, my: 2 }}>
+        {/* Header Section */}
+        <Box sx={{ p: 3, borderBottom: `1px solid ${colors.divider}` }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 700,
+              color: colors.text.primary,
+              mb: 1,
+            }}
+          >
+            Course Builder
+          </Typography>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: colors.text.secondary,
+              mb: 2,
+            }}
+          >
+            Create, manage, and organize your courses with ease
+          </Typography>
+          
+          {/* Active Filters Display */}
+          {(searchKeyword || coreTypeFilter) && (
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}>
+              {searchKeyword && (
+                <ThemedChip
+                  label={`Search: "${searchKeyword}"`}
+                  onDelete={() => {
+                    setSearchKeyword("");
+                    fetchCourse("", 1, coreTypeFilter);
+                  }}
+                  size="small"
                 />
-              }
-              onClick={handleOpen}
-            />
+              )}
+              {coreTypeFilter && (
+                <ThemedChip
+                  label={`Type: ${coreTypeFilter}`}
+                  onDelete={() => {
+                    setCoreTypeFilter("");
+                    fetchCourse(searchKeyword, 1, "");
+                  }}
+                  size="small"
+                />
+              )}
+            </Box>
+          )}
+        </Box>
 
-            {/* Create Course Button with Dropdown */}
-            <Box className={`flex items-center space-x-4 ${Style.button}`}>
+        {/* Search and Filter Section */}
+        <Box sx={{ p: 3, backgroundColor: colors.background.default }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 3, 
+            flexWrap: 'wrap',
+            '@media (max-width: 600px)': {
+              flexDirection: 'column',
+              alignItems: 'stretch',
+            }
+          }}>
+            <Box sx={{ flex: 1, minWidth: 300 }}>
+              <ThemedTextField
+                label="Search by keyword"
+                fullWidth
+                size="small"
+                onKeyDown={searchByKeywordUser}
+                onChange={searchHandler}
+                value={searchKeyword}
+                placeholder="Search courses by title, description, or keywords..."
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {searchKeyword ? (
+                        <ThemedIconButton
+                          onClick={() => {
+                            setSearchKeyword("");
+                            fetchCourse("")
+                          }}
+                          size="small"
+                        >
+                          <Close fontSize="small" />
+                        </ThemedIconButton>
+                      ) : (
+                        <ThemedIconButton
+                          onClick={() => searchAPIHandler()}
+                          size="small"
+                        >
+                          <SearchIcon fontSize="small" />
+                        </ThemedIconButton>
+                      )}
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+
+            <Box sx={{ minWidth: 200 }}>
+              <ThemedFormControl fullWidth size="small">
+                <InputLabel id="core-type-filter-label">Course Type</InputLabel>
+                <Select
+                  labelId="core-type-filter-label"
+                  id="core-type-filter"
+                  value={coreTypeFilter}
+                  label="Course Type"
+                  onChange={handleCoreTypeChange}
+                >
+                  <MenuItem value="">All Types</MenuItem>
+                  {mainCourseTypes.map((type) => (
+                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                  ))}
+                </Select>
+              </ThemedFormControl>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <SecondaryButton
+                name="Upload File"
+                startIcon={
+                  <img
+                    src="assets/images/svgimage/uploadfileicon.svg"
+                    alt="Upload File"
+                    className="w-5 h-5"
+                  />
+                }
+                onClick={handleOpen}
+                sx={{
+                  backgroundColor: colors.secondary.main,
+                  color: colors.secondary.contrastText,
+                  '&:hover': {
+                    backgroundColor: colors.secondary.dark,
+                    transform: 'translateY(-1px)',
+                    boxShadow: themeHelpers.getShadow(theme, 2),
+                  },
+                }}
+              />
+
+              {/* Create Course Button with Dropdown */}
               <SecondaryButton
                 id="create-course-button"
                 name="Create Course"
-                className="min-h-[35px]"
                 aria-controls={openMenu ? 'create-course-menu' : undefined}
                 aria-haspopup="true"
                 aria-expanded={openMenu ? 'true' : undefined}
@@ -214,10 +389,19 @@ const CourseBuilder = () => {
                   <img
                     src="assets/images/svgimage/createcourseicon.svg"
                     alt="Create Course"
-                    className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
+                    className="w-5 h-5"
                   />
                 }
                 endIcon={<KeyboardArrowDownIcon />}
+                sx={{
+                  backgroundColor: colors.primary.main,
+                  color: colors.primary.contrastText,
+                  '&:hover': {
+                    backgroundColor: colors.primary.dark,
+                    transform: 'translateY(-1px)',
+                    boxShadow: themeHelpers.getShadow(theme, 2),
+                  },
+                }}
               />
               <Menu
                 id="create-course-menu"
@@ -235,64 +419,121 @@ const CourseBuilder = () => {
                   vertical: 'top',
                   horizontal: 'right',
                 }}
+                sx={{
+                  '& .MuiPaper-root': {
+                    backgroundColor: colors.background.paper,
+                    color: colors.text.primary,
+                    border: `1px solid ${colors.divider}`,
+                    borderRadius: theme.shape.borderRadius * 2,
+                    boxShadow: themeHelpers.getShadow(theme, 3),
+                    mt: 1,
+                  },
+                }}
               >
                 {mainCourseTypes.map((type) => (
                   <Tooltip key={type} title={courseTypeDescriptions[type]} placement="left">
-                    <MenuItem onClick={() => handleCreateCourse(type)}>
-                      <AddIcon fontSize="small" sx={{ mr: 1 }} />
+                    <MenuItem 
+                      onClick={() => handleCreateCourse(type)}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: themeHelpers.withOpacity(colors.primary.main, 0.1),
+                        },
+                      }}
+                    >
+                      <AddIcon fontSize="small" sx={{ mr: 1, color: colors.primary.main }} />
                       {type}
                     </MenuItem>
                   </Tooltip>
                 ))}
               </Menu>
             </Box>
-          </div>
-        </div>
+          </Box>
+        </Box>
 
-        {dataFetchLoading ? (
-          <FuseLoading />
-        ) : data?.length ? (
-          <CourseManagementTable
-            columns={courseManagementTableColumn}
-            rows={data}
-            meta_data={meta_data}
-            dataUpdatingLoadding={dataUpdatingLoadding}
-            handleChangePage={handleChangePage}
-          />
-        ) : (
-          <div className="m-12 p-6 border border-gray-200 rounded-md bg-gray-50">
-            <div className="flex flex-col justify-center items-center gap-6 py-10">
-              <DataNotFound width="20%" />
-              <Typography variant="h5">No courses found</Typography>
-
-              {searchKeyword || coreTypeFilter ? (
-                <Typography variant="body2" className="text-center">
-                  No courses match your search criteria. Try adjusting your filters or create a new course.
+        {/* Content Section */}
+        <Box sx={{ p: 3 }}>
+          {dataFetchLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <FuseLoading />
+            </Box>
+          ) : data?.length ? (
+            <CourseManagementTable
+              columns={courseManagementTableColumn}
+              rows={data}
+              meta_data={meta_data}
+              dataUpdatingLoadding={dataUpdatingLoadding}
+              handleChangePage={handleChangePage}
+            />
+          ) : (
+            <ThemedPaper sx={{ p: 4 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                gap: 3, 
+                py: 6 
+              }}>
+                <DataNotFound width="20%" />
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    color: colors.text.primary,
+                    fontWeight: 600,
+                  }}
+                >
+                  No courses found
                 </Typography>
-              ) : (
-                <Typography variant="body2" className="text-center">
-                  There are no courses available. Get started by creating your first course.
-                </Typography>
-              )}
 
-              <div className="flex flex-row items-center gap-4 mt-4">
-                <SecondaryButton
-                  name="Upload File"
-                  startIcon={
-                    <img
-                      src="assets/images/svgimage/uploadfileicon.svg"
-                      alt="Create File"
-                      className="w-6 h-6 mr-2"
-                    />
-                  }
-                  onClick={handleOpen}
-                />
+                {searchKeyword || coreTypeFilter ? (
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      textAlign: 'center',
+                      color: colors.text.secondary,
+                      maxWidth: 400,
+                    }}
+                  >
+                    No courses match your search criteria. Try adjusting your filters or create a new course.
+                  </Typography>
+                ) : (
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      textAlign: 'center',
+                      color: colors.text.secondary,
+                      maxWidth: 400,
+                    }}
+                  >
+                    There are no courses available. Get started by creating your first course.
+                  </Typography>
+                )}
 
-                {/* Create Course Button with Dropdown */}
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 2 }}>
+                  <SecondaryButton
+                    name="Upload File"
+                    startIcon={
+                      <img
+                        src="assets/images/svgimage/uploadfileicon.svg"
+                        alt="Upload File"
+                        className="w-5 h-5"
+                      />
+                    }
+                    onClick={handleOpen}
+                    sx={{
+                      backgroundColor: colors.secondary.main,
+                      color: colors.secondary.contrastText,
+                      '&:hover': {
+                        backgroundColor: colors.secondary.dark,
+                        transform: 'translateY(-1px)',
+                        boxShadow: themeHelpers.getShadow(theme, 2),
+                      },
+                    }}
+                  />
+
                   <SecondaryButton
                     id="create-course-button-empty"
                     name="Create Course"
-                    className="min-h-[35px]"
                     aria-controls={openMenu ? 'create-course-menu-empty' : undefined}
                     aria-haspopup="true"
                     aria-expanded={openMenu ? 'true' : undefined}
@@ -301,24 +542,35 @@ const CourseBuilder = () => {
                       <img
                         src="assets/images/svgimage/createcourseicon.svg"
                         alt="Create Course"
-                        className="w-6 h-6 mr-2"
+                        className="w-5 h-5"
                       />
                     }
                     endIcon={<KeyboardArrowDownIcon />}
+                    sx={{
+                      backgroundColor: colors.primary.main,
+                      color: colors.primary.contrastText,
+                      '&:hover': {
+                        backgroundColor: colors.primary.dark,
+                        transform: 'translateY(-1px)',
+                        boxShadow: themeHelpers.getShadow(theme, 2),
+                      },
+                    }}
                   />
-              </div>
-            </div>
-          </div>
-        )}
-      </Card>
+                </Box>
+              </Box>
+            </ThemedPaper>
+          )}
+        </Box>
+      </ThemedCard>
 
       <Dialog
         open={open}
         onClose={handleClose}
         sx={{
           ".MuiDialog-paper": {
-            borderRadius: "4px",
-            padding: "1rem",
+            borderRadius: theme.shape.borderRadius * 2,
+            backgroundColor: colors.background.paper,
+            boxShadow: themeHelpers.getShadow(theme, 4),
           },
         }}
       >

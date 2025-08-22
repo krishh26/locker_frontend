@@ -31,6 +31,7 @@ import EvidenceLibraryConfig from '../main/evidenceLibrary/evidenceLibraryConfig
 import FundingBandConfig from '../main/funding-band/funding-band-config'
 import CaseloadConfig from '../main/caseload/caseloadConfig'
 import TrainerRiskRatingConfig from '../main/trainer-risk-rating/trainer-risk-rating-config'
+import ThemeDemoConfig from '../pages/themedemoConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -61,7 +62,8 @@ const routeConfigs = [
   EvidenceLibraryConfig,
   FundingBandConfig,
   CaseloadConfig,
-  TrainerRiskRatingConfig
+  TrainerRiskRatingConfig,
+  ThemeDemoConfig
 ]
 
 const routes = [
