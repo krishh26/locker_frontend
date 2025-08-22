@@ -1,4 +1,5 @@
 import { Dialog, Tooltip, Typography } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import Style from "./style.module.css";
 import { useThemeMediaQuery } from "@fuse/hooks";
 import FuseSvgIcon from "@fuse/core/FuseSvgIcon";
@@ -14,6 +15,117 @@ import { slice as globalSlice } from "app/store/globalUser"
 import { useSelector } from "react-redux";
 import { selectstoreDataSlice } from "app/store/reloadData";
 import { selectUser } from "app/store/userSlice";
+import { useThemeColors, themeHelpers } from "../../utils/themeUtils";
+import { styled } from "@mui/material/styles";
+
+// Theme-aware styled components
+interface ThemedCardProps {
+  $background?: string;
+  $hoverColor?: string;
+}
+
+const ThemedCard = styled('div')<ThemedCardProps>(({ theme, $background, $hoverColor }) => ({
+  width: '20rem',
+  height: '10rem',
+  padding: '1rem',
+  margin: '1rem',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'space-evenly',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  backgroundColor: $background || theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  color: theme.palette.text.primary,
+  
+  '&:hover': {
+    boxShadow: themeHelpers.getShadow(theme, 3),
+    transform: 'scale(1.05)',
+    backgroundColor: $hoverColor || theme.palette.background.default,
+    // Use smart text color selection for proper contrast
+    color: themeHelpers.getHoverTextColor(theme, 'primary'),
+  },
+  
+  '&:active': {
+    backgroundColor: theme.palette.primary.dark || theme.palette.primary.light,
+    transform: 'scale(0.98)',
+    color: themeHelpers.getHoverTextColor(theme, 'primary'),
+  },
+  
+  '@media (max-width: 426px)': {
+    margin: '1rem 0.5rem',
+  },
+  
+  '@media (max-width: 376px)': {
+    width: '80vw',
+    margin: '1rem 0.5rem',
+  },
+}));
+
+interface ThemedPortfolioCardProps {
+  $background?: string;
+}
+
+const ThemedPortfolioCard = styled('div')<ThemedPortfolioCardProps>(({ theme, $background }) => ({
+  borderRadius: '8px',
+  position: 'relative',
+  padding: '12px',
+  width: '18%',
+  overflow: 'hidden',
+  background: $background,
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: themeHelpers.getShadow(theme, 4),
+  },
+  
+  '@media (max-width: 768px)': {
+    width: '45%',
+  },
+  
+  '@media (max-width: 480px)': {
+    width: '100%',
+  },
+}));
+
+interface ThemedIconProps {
+  $background?: string;
+  $textColor?: string;
+}
+
+const ThemedIcon = styled('div')<ThemedIconProps>(({ theme, $background, $textColor }) => ({
+  borderRadius: '50%',
+  padding: '12px',
+  backgroundColor: $background || theme.palette.primary.main,
+  color: $textColor || theme.palette.primary.contrastText,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'all 0.2s ease',
+}));
+
+const ThemedIndex = styled('div')(({ theme }) => ({
+  width: '28px',
+  height: '28px',
+  borderRadius: '50%',
+  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  color: 'white',
+  fontWeight: 'bold',
+}));
+
+const ThemedTitle = styled('div')(({ theme }) => ({
+  fontWeight: 600,
+  color: 'white',
+  margin: '8px 0px',
+  fontSize: '13px',
+}));
 
 export const Card = (props) => {
   const {
@@ -21,43 +133,55 @@ export const Card = (props) => {
     name,
     title,
     color,
-    background = "var(--pc1)",
-    textColor = "black",
-    radiusColor = "white",
+    background,
+    textColor,
+    radiusColor,
   } = props;
+  
   const isMobile = useThemeMediaQuery((theme) => theme.breakpoints.down("sm"));
+  const colors = useThemeColors();
+  const theme = useTheme();
+  
+  // Use theme colors with fallbacks
+  const cardBackground = background || colors.background.paper;
+  const cardTextColor = textColor || colors.text.primary;
+  const iconBackground = radiusColor || colors.primary.main;
+  const iconTextColor = textColor || colors.primary.contrastText;
+  
+  // Use the theme helper for smart hover color selection
+  const hoverColor = themeHelpers.getHoverColor(theme, 'primary');
 
   return (
-    <div className={Style.home_card} style={{ backgroundColor: background }}>
+    <ThemedCard 
+      $background={cardBackground}
+      $hoverColor={hoverColor}
+    >
       {isIcon ? (
-        <div
-          className="rounded-full p-12"
-          style={{
-            backgroundColor: radiusColor,
-            color: textColor,
-          }}
+        <ThemedIcon
+          $background={iconBackground}
+          $textColor={iconTextColor}
         >
           {name}
-        </div>
+        </ThemedIcon>
       ) : (
         <Typography
-          color={`text.${color}`}
+          color={color ? `text.${color}` : 'text.primary'}
           variant="h6"
-          className="rounded-full px-12 py-8 "
+          className="rounded-full px-12 py-8"
           style={{
-            backgroundColor: radiusColor,
-            color: textColor,
+            backgroundColor: iconBackground,
+            color: iconTextColor,
           }}
         >
           {name}
         </Typography>
       )}
       <Tooltip title={title} arrow>
-        <Typography>
+        <Typography color="text.primary">
           {title?.length > 20 && !isMobile ? `${title.slice(0, 17)}...` : title}
         </Typography>
       </Tooltip>
-    </div>
+    </ThemedCard>
   );
 };
 
@@ -66,10 +190,11 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
   const dispatch: any = useDispatch();
   const navigate = useNavigate();
   const { role } = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const colors = useThemeColors();
 
-  const { id = 0, name = "No title", color = "#FCA14E" } = data;
+  const { id = 0, name = "No title", color = colors.primary.main } = data;
+  
   const handleClick = (row = "") => {
-
     if (learner) {
       handleClickData(learner?.learner_id, learner?.user_id);
       dispatch(globalSlice.setSelectedUser(learner))
@@ -87,33 +212,32 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
       navigate('/resources-card');
     } else if (id === 6) {
       navigate('/skillsScan');
-    }else if (id === 7) {
+    } else if (id === 7) {
       navigate(`/session-list/${learner?.learner_id}`);
     }
-
   };
+  
   const handleClose = () => {
-    setOpen(false);;
+    setOpen(false);
   };
 
   return (
     role !== "Learner" ?
       !["Upload Work"].includes(name) ?
         <>
-          <div
-            className={Style.cardContain}
-            style={{ background: color ,cursor:'pointer'}}
+          <ThemedPortfolioCard
+            $background={color}
             onClick={() => {
               handleClick();
             }}
           >
             <div>
-              <div className={Style.index}>{name?.charAt(0)}</div>
+              <ThemedIndex>{name?.charAt(0)}</ThemedIndex>
               <div className={Style.emptyRing}></div>
               <div className={Style.filledRing}></div>
             </div>
-            <div className={Style.title}>{name}</div>
-          </div>
+            <ThemedTitle>{name}</ThemedTitle>
+          </ThemedPortfolioCard>
           <Dialog
             open={open}
             onClose={handleClose}
@@ -121,6 +245,8 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
               ".MuiDialog-paper": {
                 borderRadius: "4px",
                 padding: "1rem",
+                backgroundColor: colors.background.paper,
+                color: colors.text.primary,
               },
             }}
           >
@@ -131,20 +257,19 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
       :
       !["Skill Scan"].includes(name) ?
         <>
-          <div
-            className={Style.cardContain}
-            style={{ background: color ,cursor:'pointer' }}
+          <ThemedPortfolioCard
+            $background={color}
             onClick={() => {
               handleClick();
             }}
           >
             <div>
-              <div className={Style.index}>{index + 1}</div>
+              <ThemedIndex>{index + 1}</ThemedIndex>
               <div className={Style.emptyRing}></div>
               <div className={Style.filledRing}></div>
             </div>
-            <div className={Style.title}>{name}</div>
-          </div>
+            <ThemedTitle>{name}</ThemedTitle>
+          </ThemedPortfolioCard>
           <Dialog
             open={open}
             onClose={handleClose}
@@ -152,6 +277,8 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
               ".MuiDialog-paper": {
                 borderRadius: "4px",
                 padding: "1rem",
+                backgroundColor: colors.background.paper,
+                color: colors.text.primary,
               },
             }}
           >
