@@ -266,7 +266,7 @@ export const defaultThemes = {
       error: red,
     },
     status: {
-      danger: 'orange',
+      danger: '#ff9800',
     },
   },
   defaultDark: {
@@ -281,7 +281,7 @@ export const defaultThemes = {
       error: red,
     },
     status: {
-      danger: 'orange',
+      danger: '#ff9800',
     },
   },
 };

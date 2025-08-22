@@ -22,13 +22,13 @@ const themesConfig = {
         white: 'rgb(255, 255, 255)',
       },
       primary: {
-        light: '#64748b',
+        light: '#f1f5f9', // Much lighter for better contrast
         main: '#1e293b',
         dark: '#0f172a',
         contrastText: darkPaletteText.primary,
       },
       secondary: {
-        light: '#818cf8',
+        light: '#f1f5f9', // Much lighter for better contrast
         main: '#4f46e5',
         dark: '#3730a3',
         contrastText: darkPaletteText.primary,
@@ -44,7 +44,7 @@ const themesConfig = {
       },
     },
     status: {
-      danger: 'orange',
+      danger: '#ff9800',
     },
     typography: {
       fontSize: 14,
@@ -84,7 +84,7 @@ const themesConfig = {
         dark: '#b71c1c',
       },
       status: {
-        danger: 'orange',
+        danger: '#ff9800',
       },
     },
     typography: {
@@ -109,15 +109,15 @@ const themesConfig = {
         white: '#FFFF00',
       },
       primary: {
-        light: '#FFFF00',
+        light: '#CCCC00', // Darker yellow for better contrast
         main: '#FFFF00',
-        dark: '#CCCC00',
+        dark: '#999900',  // Even darker for hover states
         contrastText: '#000000',
       },
       secondary: {
-        light: '#FFFF00',
+        light: '#CCCC00', // Darker yellow for better contrast
         main: '#FFFF00',
-        dark: '#CCCC00',
+        dark: '#999900',  // Even darker for hover states
         contrastText: '#000000',
       },
       background: {
