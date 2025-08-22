@@ -74,7 +74,7 @@ const schema = (updateData, lineManagers = []) =>
     mobile: yup.string().required('Please enter your mobile number.'),
     time_zone: yup.string().required('Please select your timezone.'),
     roles: yup.array().min(1, 'Please select at least one role.'),
-    line_manager: yup.string().when([], {
+    line_manager_id: yup.string().when([], {
       is: () => lineManagers.length > 0, // required only if API returned managers
       then: (schema) => schema.required('Please select your line manager.'),
       otherwise: (schema) => schema.notRequired(),
@@ -87,6 +87,7 @@ const UserDetails = ({ handleClose, updateData, userData }) => {
 
   const dispatch: any = useDispatch()
   const { lineMangers = [] } = useSelector(selectLearnerManagement)
+  console.log('🚀 ~ UserDetails ~ lineMangers:', lineMangers)
   const { dataUpdatingLoadding } = useSelector(selectUserManagement)
 
   const validationSchema = schema(updateData, lineMangers)
@@ -107,7 +108,7 @@ const UserDetails = ({ handleClose, updateData, userData }) => {
       mobile: '',
       time_zone: '',
       roles: [],
-      line_manager: '',
+      line_manager_id: '',
     },
   })
 
@@ -123,7 +124,7 @@ const UserDetails = ({ handleClose, updateData, userData }) => {
         mobile: userData?.mobile,
         time_zone: userData?.time_zone,
         roles: userData?.roles,
-        line_manager: userData?.line_manager,
+        line_manager_id: userData?.line_manager?.user_id,
       })
     }
   }, [updateData, userData])
@@ -519,7 +520,7 @@ const UserDetails = ({ handleClose, updateData, userData }) => {
             Select Your Line Manager<sup>*</sup>
           </Typography>
           <Controller
-            name='line_manager'
+            name='line_manager_id'
             control={control}
             render={({ field }) => (
               <Select
@@ -528,7 +529,14 @@ const UserDetails = ({ handleClose, updateData, userData }) => {
                 size='small'
                 onChange={(e) => field.onChange(e.target.value)}
                 input={<OutlinedInput placeholder='Select Line Manager' />}
-                renderValue={(selected) => selected}
+                renderValue={(selected) => {
+                  const lineManager = lineMangers.find(
+                    (item) => item.user_id === selected
+                  )
+                  return lineManager
+                    ? `${lineManager.first_name} ${lineManager.last_name}`
+                    : 'No Line Manager'
+                }}
               >
                 {/* Add line manager options here */}
                 {lineMangers.length == 0 ? (
@@ -537,17 +545,19 @@ const UserDetails = ({ handleClose, updateData, userData }) => {
                   </MenuItem>
                 ) : (
                   lineMangers.map((item) => (
-                    <MenuItem key={item.id} value={item.id}>
-                      <ListItemText primary={item.name} />
+                    <MenuItem key={item.user_id} value={item.user_id}>
+                      <ListItemText
+                        primary={`${item.first_name} ${item.last_name}`}
+                      />
                     </MenuItem>
                   ))
                 )}
               </Select>
             )}
           />
-          {errors.line_manager && (
+          {errors.line_manager_id && (
             <Typography color='error' variant='caption'>
-              {errors.line_manager.message}
+              {errors.line_manager_id.message}
             </Typography>
           )}
         </Box>

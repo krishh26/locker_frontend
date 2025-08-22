@@ -10,7 +10,7 @@ export const trainerRiskAPI = createApi({
     // Fetch trainer details + courses
     getTrainerDetails: builder.query({
       query: (id) => ({
-        url: `/risk-rating?trainer_id=${id}`,
+        url: `/course/trainer/${id}`,
         method: 'GET',
       }),
       providesTags: ['TrainerRisk'],
@@ -36,22 +36,12 @@ export const trainerRiskAPI = createApi({
       invalidatesTags: ['TrainerRisk'],
     }),
 
-    // Save assessment method risk ratings
-    saveAssessmentRiskRatings: builder.mutation({
-      query: ({ trainerId, data }) => ({
-        url: `/trainers/${trainerId}/assessments/risk`,
-        method: 'POST',
-        body: data,
-      }),
-      invalidatesTags: ['TrainerRisk'],
-    }),
-
     // Save comments for specific course
     saveCourseComment: builder.mutation({
-      query: ({ trainerId, courseId, comment }) => ({
-        url: `/trainers/${trainerId}/courses/${courseId}/comment`,
+      query: ({ trainerId, body }) => ({
+        url: `/risk-rating/${trainerId}/course-comments`,
         method: 'POST',
-        body: { comment },
+        body,
       }),
       invalidatesTags: ['TrainerRisk'],
     }),
@@ -62,6 +52,5 @@ export const {
   useGetTrainerDetailsQuery,
   useSaveTrainerRiskSettingsMutation,
   useSaveCourseRiskRatingsMutation,
-  useSaveAssessmentRiskRatingsMutation,
   useSaveCourseCommentMutation,
 } = trainerRiskAPI
