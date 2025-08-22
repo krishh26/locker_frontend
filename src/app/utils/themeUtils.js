@@ -310,10 +310,10 @@ export const themeHelpers = {
       // For dark themes, use lighter variants
       return palette.light;
     } else {
-      // For light themes, use a very light background that maintains text contrast
-      // This ensures dark text remains visible on light backgrounds
+      // For light themes, use a subtle background that ensures text visibility
+      // Use a very light version of the primary color or a neutral light gray
       return theme.palette.mode === 'light' 
-        ? theme.palette.grey?.[50] || '#f8fafc'  // Very light gray
+        ? theme.palette.grey?.[50] || '#fafafa'  // Very light gray for subtle hover
         : palette.dark;
     }
   },
@@ -321,7 +321,6 @@ export const themeHelpers = {
   // Get hover text color that ensures proper contrast
   getHoverTextColor: (theme, colorType = 'primary') => {
     const palette = theme.palette[colorType];
-    console.log("🚀 ~ palette:", palette)
     const accessibility = theme.accessibility;
     
     if (accessibility?.type === 'highContrast') {
@@ -331,7 +330,8 @@ export const themeHelpers = {
       // For dark themes, use contrast text or fallback to primary text
       return palette.contrastText || theme.palette.text.primary;
     } else {
-      // For light themes, use dark text for good contrast
+      // For light themes, always use dark text for maximum contrast
+      // This ensures text is always visible on light hover backgrounds
       return theme.palette.text.primary;
     }
   },

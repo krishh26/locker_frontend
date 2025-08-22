@@ -24,7 +24,7 @@ const themesConfig = {
       primary: {
         light: '#f1f5f9', // Much lighter for better contrast
         main: '#1e293b',
-        dark: '#0f172a',
+        dark: '#334155', // Lighter dark for better contrast
         contrastText: darkPaletteText.primary,
       },
       secondary: {

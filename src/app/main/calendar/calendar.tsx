@@ -1,16 +1,19 @@
-import FuseLoading from '@fuse/core/FuseLoading'
+import FuseLoading from '@fuse/core/FuseLoading';
+import { ArrowBackIos, ArrowForwardIos } from "@mui/icons-material";
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import {
   Autocomplete,
+  Box,
+  Button,
+  ButtonGroup,
+  Card,
+  Chip,
   Dialog,
-  DialogActions,
   DialogContent,
-  Grid,
   IconButton,
   Menu,
   MenuItem,
-  Pagination,
   Paper,
-  Stack,
   Table,
   TableBody,
   TableCell,
@@ -19,58 +22,138 @@ import {
   TableRow,
   TextField,
   Typography,
-  Box,
-  Button,
-  ButtonGroup,
-  Chip,
-  Card,
-  CardContent,
-  Tooltip,
-} from '@mui/material'
-import { ArrowBackIos, ArrowForwardIos } from "@mui/icons-material";
+  useTheme
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { selectGlobalUser } from 'app/store/globalUser';
 import {
-  Calendar as BigCalendar,
-  momentLocalizer,
-  Views,
-} from 'react-big-calendar'
-import moment from 'moment'
-import 'react-big-calendar/lib/css/react-big-calendar.css'
-import './calendar.css'
-import React, { useEffect, useState } from 'react'
-import {
-  DangerButton,
-  LoadingButton,
-  SecondaryButton,
-  SecondaryButtonOutlined,
-} from 'src/app/component/Buttons'
-import AlertDialog from 'src/app/component/Dialogs/AlertDialog'
-import DataNotFound from 'src/app/component/Pages/dataNotFound'
-import NewSession from '../portfolio/newsession'
+  getRoleAPI,
+  selectLearnerManagement,
+} from 'app/store/learnerManagement';
 import {
   deleteSessionHandler,
   getSessionAPI,
   selectSession,
   slice,
   updateSessionAPI,
-} from 'app/store/session'
-import { useDispatch } from 'react-redux'
-import { useSelector } from 'react-redux'
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
-import { Link } from 'react-router-dom'
-import { selectUser } from 'app/store/userSlice'
-import { selectGlobalUser } from 'app/store/globalUser'
-import CustomPagination from 'src/app/component/Pagination/CustomPagination'
+} from 'app/store/session';
+import { selectUser } from 'app/store/userSlice';
+import moment from 'moment';
+import { useEffect, useState } from 'react';
 import {
-  getRoleAPI,
-  selectLearnerManagement,
-} from 'app/store/learnerManagement'
-import SortByVisitDateDropdown from './SortByVisitDateDropdown'
+  Calendar as BigCalendar,
+  momentLocalizer,
+  Views,
+} from 'react-big-calendar';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  DangerButton,
+  LoadingButton,
+  SecondaryButtonOutlined
+} from 'src/app/component/Buttons';
+import AlertDialog from 'src/app/component/Dialogs/AlertDialog';
+import DataNotFound from 'src/app/component/Pages/dataNotFound';
+import CustomPagination from 'src/app/component/Pagination/CustomPagination';
+import { themeHelpers, useThemeColors } from '../../utils/themeUtils';
+import NewSession from '../portfolio/newsession';
+import './calendar.css';
+import SortByVisitDateDropdown from './SortByVisitDateDropdown';
 
 // Setup moment localizer for react-big-calendar
 const localizer = momentLocalizer(moment)
 
-const Calendar = () => {
+// Styled components for theme integration
+const ThemedCard = styled(Card)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+  transition: 'all 0.3s ease',
+  
+  '&:hover': {
+    boxShadow: themeHelpers.getShadow(theme, 3),
+    transform: 'translateY(-2px)',
+  },
+}));
+
+const ThemedPaper = styled(Paper)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+}));
+
+const ThemedButton = styled(Button)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius * 1.5,
+  textTransform: 'none',
+  fontWeight: 600,
+  padding: '8px 16px',
+  transition: 'all 0.2s ease',
+  
+  '&:hover': {
+    transform: 'translateY(-1px)',
+    boxShadow: themeHelpers.getShadow(theme, 2),
+  },
+}));
+
+const ThemedIconButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.primary.main,
+  transition: 'all 0.2s ease',
+  
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.1),
+    transform: 'scale(1.1)',
+  },
+}));
+
+const ThemedChip = styled(Chip)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius * 2,
+  fontWeight: 600,
+  fontSize: '12px',
+  height: '24px',
+  transition: 'all 0.2s ease',
+  
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: themeHelpers.getShadow(theme, 1),
+  },
+  
+  '& .MuiChip-label': {
+    px: 1.5,
+    py: 0.5,
+  },
+}));
+
+const ThemedTableContainer = styled(TableContainer)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius * 2,
+  border: `1px solid ${theme.palette.divider}`,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+  overflow: 'hidden',
+}));
+
+const ThemedTableCell = styled(TableCell)(({ theme }) => ({
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  color: theme.palette.text.primary,
+  fontWeight: 500,
+}));
+
+const ThemedTableHead = styled(TableHead)(({ theme }) => ({
+  backgroundColor: theme.palette.background.default,
+  '& .MuiTableCell-root': {
+    color: theme.palette.text.secondary,
+    fontWeight: 700,
+    fontSize: '14px',
+  },
+}));
+
+const ThemedCalendar = () => {
   const dispatch: any = useDispatch()
+  const theme = useTheme()
+  const colors = useThemeColors()
 
   const session = useSelector(selectSession)
   const user =
@@ -99,7 +182,6 @@ const Calendar = () => {
   const handleClick = (event, row) => {
     dispatch(slice.setSingledata(row))
     setSelectedRow(row)
-    console.log(row)
     setAnchorEl(event.currentTarget)
   }
 
@@ -133,6 +215,7 @@ const Calendar = () => {
   const handleChangePage = (event: unknown, newPage: number) => {
     fetchSessionData(newPage)
   }
+  
   const handleFilterChange = (event: string, value: string) => {
     setfilter({ ...filter, [event]: value })
   }
@@ -145,25 +228,6 @@ const Calendar = () => {
     dispatch(getRoleAPI('Trainer'))
   }, [])
 
-  // useEffect(() => {
-  //   console.log('Session data updated:', session?.data)
-  //   console.log('Current calendar view:', calendarView)
-
-  //   if (!session?.data || session.data.length === 0) {
-  //     console.log('No session data available for calendar')
-  //   } else {
-  //     console.log('Sessions available:', session.data.length)
-  //     session.data.forEach((s, index) => {
-  //       console.log(`Session ${index + 1}:`, {
-  //         title: s.title,
-  //         startDate: s.startDate,
-  //         trainer: s.trainer_id?.user_name,
-  //         location: s.location,
-  //       })
-  //     })
-  //   }
-  // }, [session?.data, calendarView])
-
   const formatDate = (date) => {
     if (!date) return ''
     const formattedDate = date.substr(0, 10)
@@ -173,7 +237,6 @@ const Calendar = () => {
   // Transform session data into calendar events
   const transformSessionsToEvents = (sessions) => {
     if (!sessions || sessions.length === 0) {
-      console.log('No sessions to transform')
       return []
     }
 
@@ -181,20 +244,16 @@ const Calendar = () => {
       .map((session) => {
         const startDate = new Date(session.startDate)
 
-        // Ensure we have a valid date
         if (isNaN(startDate.getTime())) {
-          console.warn('Invalid start date for session:', session)
           return null
         }
 
         const endDate = new Date(session.endDate || session.startDate)
 
-        // If no end date, add duration to start date
         if (!session.endDate && session.Duration) {
           const durationHours = parseFloat(session.Duration) || 1
           endDate.setHours(startDate.getHours() + durationHours)
         } else if (!session.endDate) {
-          // Default to 1 hour if no duration specified
           endDate.setHours(startDate.getHours() + 1)
         }
 
@@ -207,51 +266,74 @@ const Calendar = () => {
           allDay: false,
         }
 
-        console.log('Created event:', event)
         return event
       })
       .filter((event) => event !== null)
 
-    console.log('Total transformed events for calendar:', events.length, events)
     return events
   }
 
-  // Get color based on attendance status
+  // Get color based on attendance status with theme integration
   const getEventColor = (attended) => {
     switch (attended) {
       case 'Attended':
-        return '#4caf50'
+        return colors.primary.main
       case 'Cancelled':
       case 'Cancelled by Assessor':
       case 'Cancelled by Learner':
       case 'Cancelled by Employer':
-        return '#f44336'
+        return colors.error.main
       case 'Learner Late':
       case 'Assessor Late':
-        return '#ff9800'
+        return colors.status.danger
       case 'Learner not Attended':
-        return '#e91e63'
+        return colors.secondary.main
       default:
-        return '#2196f3'
+        return colors.primary.light
     }
   }
 
-  // Simple event component for calendar
+  // Get status chip color with theme integration
+  const getStatusChipColor = (status) => {
+    switch (status) {
+      case 'Attended':
+        return { bg: colors.primary.main, text: colors.primary.contrastText }
+      case 'Cancelled':
+      case 'Cancelled by Assessor':
+      case 'Cancelled by Learner':
+      case 'Cancelled by Employer':
+        return { bg: colors.error.main, text: colors.error.contrastText }
+      case 'Learner Late':
+      case 'Assessor Late':
+        return { bg: colors.status.danger, text: '#ffffff' }
+      case 'Learner not Attended':
+        return { bg: colors.secondary.main, text: colors.secondary.contrastText }
+      default:
+        return { bg: colors.primary.light, text: colors.text.primary }
+    }
+  }
+
+  // Simple event component for calendar with theme integration
   const EventComponent = ({ event }: { event: any }) => {
+    const statusColor = getEventColor(event.resource?.Attended)
+    
     return (
-      <Chip
+      <ThemedChip
         label={event.title}
         size='small'
         sx={{
-          backgroundColor: getEventColor(event.resource?.Attended),
-          color: '#fff',
-          borderRadius: '6px',
-          fontSize: '0.75rem',
-          fontWeight: 500,
-          height: '22px',
+          backgroundColor: statusColor,
+          color: theme.palette.getContrastText(statusColor),
+          fontSize: '11px',
+          fontWeight: 600,
+          height: '20px',
+          maxWidth: '100%',
           '& .MuiChip-label': {
-            px: 1.5,
-            py: 0.5,
+            px: 1,
+            py: 0.25,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           },
         }}
       />
@@ -260,252 +342,294 @@ const Calendar = () => {
 
   const CustomToolbar = ({ label, onNavigate }) => {
     return (
-      <div className='rbc-toolbar flex justify-between items-center p-2'>
-        <div className='flex gap-2'>
-          <IconButton onClick={() => onNavigate('PREV')} color='primary'>
-            <ArrowBackIos />
-          </IconButton>
-          <IconButton onClick={() => onNavigate('NEXT')} color='primary'>
-            <ArrowForwardIos />
-          </IconButton>
-        </div>
-        <span className='font-semibold text-lg'>{label}</span>
-        <IconButton onClick={() => onNavigate('TODAY')} color='secondary'>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: 2,
+          backgroundColor: colors.background.paper,
+          borderBottom: `1px solid ${colors.divider}`,
+          borderRadius: `${theme.shape.borderRadius * 2}px ${theme.shape.borderRadius * 2}px 0 0`,
+        }}
+      >
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <ThemedIconButton onClick={() => onNavigate('PREV')} size="small">
+            <ArrowBackIos fontSize="small" />
+          </ThemedIconButton>
+          <ThemedIconButton onClick={() => onNavigate('NEXT')} size="small">
+            <ArrowForwardIos fontSize="small" />
+          </ThemedIconButton>
+        </Box>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            fontWeight: 700,
+            color: colors.text.primary,
+            fontSize: '18px',
+          }}
+        >
+          {label}
+        </Typography>
+        <ThemedButton
+          variant="outlined"
+          onClick={() => onNavigate('TODAY')}
+          sx={{
+            backgroundColor: colors.primary.main,
+            color: colors.primary.contrastText,
+            '&:hover': {
+              backgroundColor: colors.primary.dark,
+            },
+          }}
+        >
           Today
-        </IconButton>
-      </div>
+        </ThemedButton>
+      </Box>
     )
   }
 
   return (
     <>
       {user?.role !== 'Learner' && (
-        <div className='m-10 mb-0 flex justify-between'>
-          <div className='w-1/3 flex gap-14'>
-            <Autocomplete
-              fullWidth
-              size='small'
-              options={trainer}
-              getOptionLabel={(option: any) => option.user_name}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder='Search by Trainer'
-                  name='role'
-                  value={filter?.trainer_id}
+        <Box sx={{ m: 5, mb: 0 }}>
+          <ThemedCard sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, flex: 1, flexWrap: 'wrap' }}>
+                <Autocomplete
+                  sx={{ minWidth: 200, flex: 1 }}
+                  size='small'
+                  options={trainer}
+                  getOptionLabel={(option: any) => option.user_name}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder='Search by Trainer'
+                      name='role'
+                      value={filter?.trainer_id}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: colors.background.paper,
+                          borderRadius: theme.shape.borderRadius * 1.5,
+                        },
+                      }}
+                    />
+                  )}
+                  onChange={(e, value: any) =>
+                    handleFilterChange('trainer_id', value?.user_id)
+                  }
+                  PaperComponent={({ children }) => (
+                    <ThemedPaper>{children}</ThemedPaper>
+                  )}
                 />
-              )}
-              onChange={(e, value: any) =>
-                handleFilterChange('trainer_id', value?.user_id)
-              }
-              sx={{
-                '.MuiAutocomplete-clearIndicator': {
-                  color: '#5B718F',
-                },
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: '4px' }}>{children}</Paper>
-              )}
-            />
-            <Autocomplete
-              fullWidth
-              size='small'
-              value={filter.Attended}
-              options={[
-                'Not Set',
-                'Attended',
-                'Cancelled',
-                'Cancelled by Assessor',
-                'Cancelled by Learner',
-                'Cancelled by Employer',
-                'Learner Late',
-                'Assessor Late',
-                'Learner not Attended',
-              ].map((option) => option)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder='Search by Attended'
-                  name='Attended'
+                <Autocomplete
+                  sx={{ minWidth: 200, flex: 1 }}
+                  size='small'
+                  value={filter.Attended}
+                  options={[
+                    'Not Set',
+                    'Attended',
+                    'Cancelled',
+                    'Cancelled by Assessor',
+                    'Cancelled by Learner',
+                    'Cancelled by Employer',
+                    'Learner Late',
+                    'Assessor Late',
+                    'Learner not Attended',
+                  ].map((option) => option)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder='Search by Attended'
+                      name='Attended'
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: colors.background.paper,
+                          borderRadius: theme.shape.borderRadius * 1.5,
+                        },
+                      }}
+                    />
+                  )}
+                  onChange={(e, value) => {
+                    handleFilterChange('Attended', value)
+                  }}
+                  PaperComponent={({ children }) => (
+                    <ThemedPaper>{children}</ThemedPaper>
+                  )}
                 />
-              )}
-              onChange={(e, value) => {
-                handleFilterChange('Attended', value)
-              }}
-              sx={{
-                '.MuiAutocomplete-clearIndicator': {
-                  color: '#5B718F',
-                },
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: '4px' }}>{children}</Paper>
-              )}
-            />
-            <SortByVisitDateDropdown
-              onChange={(order) => {
-                setfilter({ ...filter, sortBy: order })
-              }}
-            />
-          </div>
-          <div className='items-end flex gap-2'>
-            <ButtonGroup variant='outlined' size='small'>
-              <Button
-                variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
-                onClick={() => setViewMode('calendar')}
-              >
-                Calendar
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'contained' : 'outlined'}
-                onClick={() => setViewMode('list')}
-              >
-                List
-              </Button>
-            </ButtonGroup>
-            {/* <div className='items-end'>
-              <Link to='/newsession'>
-                <SecondaryButton name='New Session' />
-              </Link>
-            </div> */}
-          </div>
-        </div>
+                <SortByVisitDateDropdown
+                  onChange={(order) => {
+                    setfilter({ ...filter, sortBy: order })
+                  }}
+                />
+              </Box>
+              <ButtonGroup variant='outlined' size='small'>
+                <ThemedButton
+                  variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
+                  onClick={() => setViewMode('calendar')}
+                  sx={{
+                    backgroundColor: viewMode === 'calendar' ? colors.primary.main : 'transparent',
+                    color: viewMode === 'calendar' ? colors.primary.contrastText : colors.primary.main,
+                    '&:hover': {
+                      backgroundColor: viewMode === 'calendar' ? colors.primary.dark : themeHelpers.withOpacity(colors.primary.main, 0.1),
+                    },
+                  }}
+                >
+                  Calendar
+                </ThemedButton>
+                <ThemedButton
+                  variant={viewMode === 'list' ? 'contained' : 'outlined'}
+                  onClick={() => setViewMode('list')}
+                  sx={{
+                    backgroundColor: viewMode === 'list' ? colors.primary.main : 'transparent',
+                    color: viewMode === 'list' ? colors.primary.contrastText : colors.primary.main,
+                    '&:hover': {
+                      backgroundColor: viewMode === 'list' ? colors.primary.dark : themeHelpers.withOpacity(colors.primary.main, 0.1),
+                    },
+                  }}
+                >
+                  List
+                </ThemedButton>
+              </ButtonGroup>
+            </Box>
+          </ThemedCard>
+        </Box>
       )}
 
       {/* View Toggle for Learners */}
       {user?.role === 'Learner' && (
-        <div className='m-10 mb-0 flex justify-end'>
-          <ButtonGroup variant='outlined' size='small'>
-            <Button
-              variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
-              onClick={() => setViewMode('calendar')}
-            >
-              Calendar
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'contained' : 'outlined'}
-              onClick={() => setViewMode('list')}
-            >
-              List
-            </Button>
-          </ButtonGroup>
-        </div>
+        <Box sx={{ m: 5, mb: 0, display: 'flex', justifyContent: 'flex-end' }}>
+          <ThemedCard sx={{ p: 2 }}>
+            <ButtonGroup variant='outlined' size='small'>
+              <ThemedButton
+                variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
+                onClick={() => setViewMode('calendar')}
+                sx={{
+                  backgroundColor: viewMode === 'calendar' ? colors.primary.main : 'transparent',
+                  color: viewMode === 'calendar' ? colors.primary.contrastText : colors.primary.main,
+                  '&:hover': {
+                    backgroundColor: viewMode === 'calendar' ? colors.primary.dark : themeHelpers.withOpacity(colors.primary.main, 0.1),
+                  },
+                }}
+              >
+                Calendar
+              </ThemedButton>
+              <ThemedButton
+                variant={viewMode === 'list' ? 'contained' : 'outlined'}
+                onClick={() => setViewMode('list')}
+                sx={{
+                  backgroundColor: viewMode === 'list' ? colors.primary.main : 'transparent',
+                  color: viewMode === 'list' ? colors.primary.contrastText : colors.primary.main,
+                  '&:hover': {
+                    backgroundColor: viewMode === 'list' ? colors.primary.dark : themeHelpers.withOpacity(colors.primary.main, 0.1),
+                  },
+                }}
+              >
+                List
+              </ThemedButton>
+            </ButtonGroup>
+          </ThemedCard>
+        </Box>
       )}
 
-      <Grid className='m-10'>
+      <Box sx={{ m: 5 }}>
         {viewMode === 'calendar' ? (
           // Calendar View
           <Box>
             {/* Calendar Legend */}
-            <Box
-              sx={{ mb: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}
-            >
-              <Typography variant='subtitle2' sx={{ mb: 1, fontWeight: 600 }}>
-                Status Legend:
+            <ThemedCard sx={{ mb: 3, p: 3 }}>
+              <Typography 
+                variant='h6' 
+                sx={{ 
+                  mb: 2, 
+                  fontWeight: 700,
+                  color: colors.text.primary,
+                }}
+              >
+                Status Legend
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                <Chip
-                  size='small'
-                  label='Attended'
-                  sx={{ backgroundColor: '#4caf50', color: 'white' }}
-                />
-                <Chip
-                  size='small'
-                  label='Cancelled'
-                  sx={{ backgroundColor: '#f44336', color: 'white' }}
-                />
-                <Chip
-                  size='small'
-                  label='Late'
-                  sx={{ backgroundColor: '#ff9800', color: 'white' }}
-                />
-                <Chip
-                  size='small'
-                  label='Not Attended'
-                  sx={{ backgroundColor: '#e91e63', color: 'white' }}
-                />
-                <Chip
-                  size='small'
-                  label='Not Set'
-                  sx={{ backgroundColor: '#2196f3', color: 'white' }}
+                {[
+                  { label: 'Attended', status: 'Attended' },
+                  { label: 'Cancelled', status: 'Cancelled' },
+                  { label: 'Late', status: 'Learner Late' },
+                  { label: 'Not Attended', status: 'Learner not Attended' },
+                  { label: 'Not Set', status: 'Not Set' },
+                ].map((item) => {
+                  const chipColors = getStatusChipColor(item.status)
+                  return (
+                    <ThemedChip
+                      key={item.label}
+                      size='small'
+                      label={item.label}
+                      sx={{
+                        backgroundColor: chipColors.bg,
+                        color: chipColors.text,
+                        fontWeight: 600,
+                      }}
+                    />
+                  )
+                })}
+              </Box>
+            </ThemedCard>
+
+            <ThemedCard sx={{ p: 3 }}>
+              <Box
+                sx={{
+                  height: 600,
+                  backgroundColor: colors.background.paper,
+                  borderRadius: theme.shape.borderRadius * 2,
+                  overflow: 'hidden',
+                }}
+              >
+                <BigCalendar
+                  localizer={localizer}
+                  events={transformSessionsToEvents(session?.data || [])}
+                  defaultView={Views.MONTH}
+                  defaultDate={new Date(2025, 7, 1)}
+                  startAccessor='start'
+                  endAccessor='end'
+                  view={calendarView}
+                  onView={setCalendarView}
+                  date={currentDate}
+                  onNavigate={setCurrentDate}
+                  style={{ height: '100%' }}
+                  components={{
+                    event: EventComponent,
+                    toolbar: CustomToolbar,
+                  }}
+                  onSelectEvent={(event) => {
+                    setSelectedRow(event.resource)
+                    dispatch(slice.setSingledata(event.resource))
+                    setDialogType(true)
+                  }}
+                  views={['month', 'week', 'day', 'agenda']}
+                  popup={true}
+                  showMultiDayTimes={true}
+                  step={30}
+                  timeslots={2}
+                  length={30}
+                  messages={{
+                    agenda: 'Sessions Schedule',
+                    date: 'Date',
+                    time: 'Time',
+                    event: 'Session Details',
+                    noEventsInRange: 'No sessions scheduled for this period.',
+                    showMore: (total) => `+${total} more sessions`,
+                    month: 'Month',
+                    week: 'Week',
+                    day: 'Day',
+                    today: 'Today',
+                    previous: 'Previous',
+                    next: 'Next',
+                  }}
                 />
               </Box>
-            </Box>
-
-            <Box
-              sx={{
-                height: 600,
-                backgroundColor: 'white',
-                borderRadius: 2,
-                p: 2,
-              }}
-            >
-              <BigCalendar
-                localizer={localizer}
-                events={(() => {
-                  const realEvents =
-                    session?.data && session.data.length > 0
-                      ? transformSessionsToEvents(session.data)
-                      : []
-
-                  const allEvents = [...realEvents]
-                  console.log('Events being passed to calendar:', allEvents)
-                  console.log('Current view:', calendarView)
-                  console.log('Real events:', realEvents)
-                  return allEvents
-                })()}
-                defaultView={Views.MONTH}
-                defaultDate={new Date(2025, 7, 1)}
-                startAccessor='start'
-                endAccessor='end'
-                view={calendarView}
-                onView={setCalendarView}
-                date={currentDate}
-                onNavigate={setCurrentDate}
-                style={{ height: '100%' }}
-                components={{
-                  event: EventComponent,
-                }}
-                onSelectEvent={(event) => {
-                  console.log('Event selected:', event)
-                  setSelectedRow(event.resource)
-                  dispatch(slice.setSingledata(event.resource))
-                  setDialogType(true)
-                }}
-                // Remove eventPropGetter to avoid conflicts with custom EventComponent
-                views={['month', 'week', 'day', 'agenda']}
-                popup={true}
-                showMultiDayTimes={true}
-                step={30}
-                timeslots={2}
-                length={30}
-                messages={{
-                  agenda: 'Sessions Schedule',
-                  date: 'Date',
-                  time: 'Time',
-                  event: 'Session Details',
-                  noEventsInRange: 'No sessions scheduled for this period.',
-                  showMore: (total) => `+${total} more sessions`,
-                  month: 'Month',
-                  week: 'Week',
-                  day: 'Day',
-                  today: 'Today',
-                  previous: 'Previous',
-                  next: 'Next',
-                }}
-              />
-            </Box>
+            </ThemedCard>
           </Box>
         ) : (
-          // List View (existing table)
+          // List View
           <div>
-            <TableContainer
-              sx={{
-                minHeight: 575,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
+            <ThemedTableContainer>
               {session?.dataFetchLoading ? (
                 <FuseLoading />
               ) : session?.data?.length ? (
@@ -514,155 +638,40 @@ const Calendar = () => {
                   size='small'
                   aria-label='simple table'
                 >
-                  <TableHead className='bg-[#F8F8F8]'>
+                  <ThemedTableHead>
                     <TableRow>
-                      <TableCell
-                        align='left'
-                        sx={{
-                          width: '15rem',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Title
-                      </TableCell>
-                      <TableCell
-                        align='left'
-                        sx={{
-                          width: '15rem',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Learners
-                      </TableCell>
-                      <TableCell
-                        align='left'
-                        sx={{
-                          width: '15rem',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Trainer
-                      </TableCell>
-                      <TableCell
-                        align='left'
-                        sx={{
-                          width: '15rem',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Location
-                      </TableCell>
-                      <TableCell align='left' sx={{ width: '15rem' }}>
-                        Visit Date
-                      </TableCell>
-                      <TableCell align='left' sx={{ width: '10rem' }}>
-                        Duration
-                      </TableCell>
-                      <TableCell align='center' sx={{ width: '20rem' }}>
-                        Attended
-                      </TableCell>
-                      {/* <TableCell align="left" sx={{ width: "15rem" }}>
-                      Type
-                    </TableCell> */}
-                      <TableCell align='left' sx={{ width: '15rem' }}>
-                        Action
-                      </TableCell>
+                      <ThemedTableCell>Title</ThemedTableCell>
+                      <ThemedTableCell>Learners</ThemedTableCell>
+                      <ThemedTableCell>Trainer</ThemedTableCell>
+                      <ThemedTableCell>Location</ThemedTableCell>
+                      <ThemedTableCell>Visit Date</ThemedTableCell>
+                      <ThemedTableCell>Duration</ThemedTableCell>
+                      <ThemedTableCell align='center'>Attended</ThemedTableCell>
+                      <ThemedTableCell>Action</ThemedTableCell>
                     </TableRow>
-                  </TableHead>
+                  </ThemedTableHead>
                   <TableBody>
                     {session?.data?.map((row) => (
                       <TableRow
                         key={row.title}
                         sx={{
                           '&:last-child td, &:last-child th': { border: 0 },
+                          '&:hover': {
+                            backgroundColor: themeHelpers.withOpacity(colors.primary.main, 0.05),
+                          },
                         }}
                       >
-                        <TableCell
-                          component='th'
-                          scope='row'
-                          sx={{
-                            borderBottom: '2px solid #F8F8F8',
-                            width: '15rem',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {row?.title}
-                        </TableCell>
-                        <TableCell
-                          component='th'
-                          scope='row'
-                          sx={{
-                            borderBottom: '2px solid #F8F8F8',
-                            width: '15rem',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
+                        <ThemedTableCell>{row?.title}</ThemedTableCell>
+                        <ThemedTableCell>
                           {row?.learners
                             .map((learner) => learner.user_name)
                             .join(', ')}
-                        </TableCell>
-                        <TableCell
-                          component='th'
-                          scope='row'
-                          sx={{
-                            borderBottom: '2px solid #F8F8F8',
-                            width: '15rem',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {row?.trainer_id?.user_name}
-                        </TableCell>
-                        <TableCell
-                          align='left'
-                          sx={{
-                            borderBottom: '2px solid #F8F8F8',
-                            width: '15rem',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {row?.location}
-                        </TableCell>
-                        <TableCell
-                          align='left'
-                          sx={{
-                            borderBottom: '2px solid #F8F8F8',
-                            width: '15rem',
-                          }}
-                        >
-                          {formatDate(row?.startDate)}
-                        </TableCell>
-                        <TableCell
-                          align='left'
-                          sx={{
-                            borderBottom: '2px solid #F8F8F8',
-                            width: '10rem',
-                          }}
-                        >
-                          {row?.Duration}
-                        </TableCell>
-                        <TableCell
-                          align='left'
-                          sx={{
-                            borderBottom: '2px solid #F8F8F8',
-                            width: '20rem',
-                          }}
-                        >
+                        </ThemedTableCell>
+                        <ThemedTableCell>{row?.trainer_id?.user_name}</ThemedTableCell>
+                        <ThemedTableCell>{row?.location}</ThemedTableCell>
+                        <ThemedTableCell>{formatDate(row?.startDate)}</ThemedTableCell>
+                        <ThemedTableCell>{row?.Duration}</ThemedTableCell>
+                        <ThemedTableCell align='center'>
                           <Autocomplete
                             disableClearable
                             fullWidth
@@ -682,9 +691,14 @@ const Calendar = () => {
                             renderInput={(params) => (
                               <TextField
                                 {...params}
-                                placeholder='Select funding body'
-                                name='funding_body'
-                                // error={true || userDataError?.funding_body}
+                                placeholder='Select status'
+                                name='status'
+                                sx={{
+                                  '& .MuiOutlinedInput-root': {
+                                    backgroundColor: colors.background.paper,
+                                    borderRadius: theme.shape.borderRadius,
+                                  },
+                                }}
                               />
                             )}
                             onChange={async (e, value) => {
@@ -695,58 +709,44 @@ const Calendar = () => {
                               )
                               fetchSessionData()
                             }}
-                            sx={{
-                              '.MuiAutocomplete-clearIndicator': {
-                                color: '#5B718F',
-                              },
-                            }}
                             PaperComponent={({ children }) => (
-                              <Paper style={{ borderRadius: '4px' }}>
-                                {children}
-                              </Paper>
+                              <ThemedPaper>{children}</ThemedPaper>
                             )}
                           />
-                        </TableCell>
-                        {/* <TableCell
-                        align="left"
-                        sx={{
-                          borderBottom: "2px solid #F8F8F8",
-                          width: "15rem",
-                        }}
-                      >
-                        {row?.type}
-                      </TableCell> */}
-                        <TableCell
-                          align='left'
-                          sx={{
-                            borderBottom: '2px solid #F8F8F8',
-                            width: '15rem',
-                          }}
-                        >
-                          <IconButton
+                        </ThemedTableCell>
+                        <ThemedTableCell>
+                          <ThemedIconButton
                             size='small'
-                            sx={{ color: '#5B718F', marginRight: '4px' }}
                             onClick={(e) => handleClick(e, row)}
                           >
                             <MoreHorizIcon fontSize='small' />
-                          </IconButton>
-                        </TableCell>
+                          </ThemedIconButton>
+                        </ThemedTableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               ) : (
-                <div
-                  className='flex flex-col justify-center items-center gap-10 '
-                  style={{ height: '94%' }}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 3,
+                    height: '400px',
+                    color: colors.text.secondary,
+                  }}
                 >
                   <DataNotFound width='25%' />
-                  <Typography variant='h5'>No data found</Typography>
-                  <Typography variant='body2' className='text-center'>
+                  <Typography variant='h5' sx={{ color: colors.text.primary }}>
+                    No data found
+                  </Typography>
+                  <Typography variant='body2' sx={{ textAlign: 'center' }}>
                     It is a long established fact that a reader will be <br />
                     distracted by the readable content.
                   </Typography>
-                </div>
+                </Box>
               )}
               <CustomPagination
                 pages={session?.meta_data?.pages}
@@ -754,14 +754,15 @@ const Calendar = () => {
                 handleChangePage={handleChangePage}
                 items={session?.meta_data?.items}
               />
-            </TableContainer>
+            </ThemedTableContainer>
           </div>
         )}
+        
         <AlertDialog
           open={Boolean(deleteId)}
           close={() => deleteIcon('')}
           title='Delete Session?'
-          content='Deleting this ession will also remove all associated data and relationships. Proceed with deletion?'
+          content='Deleting this session will also remove all associated data and relationships. Proceed with deletion?'
           className='-224 '
           actionButton={
             session?.dataUpdatingLoadding ? (
@@ -792,7 +793,6 @@ const Calendar = () => {
               handleEdit()
               handleClose()
             }}
-            // disabled={data.role !== "Admin" && session?.singleData.status === "Closed"}
           >
             Edit
           </MenuItem>
@@ -813,8 +813,9 @@ const Calendar = () => {
           fullWidth
           sx={{
             '.MuiDialog-paper': {
-              borderRadius: '4px',
+              borderRadius: theme.shape.borderRadius * 2,
               width: '100%',
+              backgroundColor: colors.background.paper,
             },
           }}
         >
@@ -822,9 +823,9 @@ const Calendar = () => {
             <NewSession edit={true} handleCloseDialog={handleCloseDialog} />
           </DialogContent>
         </Dialog>
-      </Grid>
+      </Box>
     </>
   )
 }
 
-export default Calendar
+export default ThemedCalendar

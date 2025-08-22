@@ -1,11 +1,12 @@
-/* Make calendar responsive */
+/* Make calendar responsive with theme integration */
 .rbc-calendar {
   font-family: 'Inter', sans-serif;
   font-size: 14px;
-  background: #fff;
+  background: var(--calendar-bg, #fff);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--calendar-shadow, 0 2px 12px rgba(0, 0, 0, 0.08));
   overflow: hidden;
+  color: var(--calendar-text, #000);
 }
 
 /* Toolbar */
@@ -14,8 +15,8 @@
   flex-wrap: wrap;
   justify-content: space-between;
   padding: 10px 16px;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--toolbar-bg, #f9fafb);
+  border-bottom: 1px solid var(--toolbar-border, #e5e7eb);
 }
 
 .rbc-toolbar button {
@@ -43,10 +44,11 @@
 .rbc-header {
   padding: 8px;
   text-align: center;
-  background: #f9fafb;
+  background: var(--header-bg, #f9fafb);
   font-weight: 600;
   font-size: 13px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--header-border, #e5e7eb);
+  color: var(--header-text, #374151);
 }
 
 /* Month view grid cells */
