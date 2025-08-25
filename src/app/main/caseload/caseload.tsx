@@ -490,18 +490,19 @@ export default function CaseloadPage() {
                     </ThemedIconButton>
                   }
                   title={
-                    <ThemedTypography variant='h6' fontWeight='bold' noWrap>
+                    <ThemedTypography variant='h6' fontWeight='bold' noWrap sx={{ color: theme.palette.text.primary }}>
                       {manager.line_manager.full_name}
                     </ThemedTypography>
                   }
                   subheader={
                     <Box>
-                      <ThemedTypography variant='body2' color='text.secondary' noWrap>
+                      <ThemedTypography variant='body2' noWrap sx={{ color: theme.palette.text.secondary }}>
                         <EmailIcon
                           sx={{
                             fontSize: 14,
                             mr: 0.5,
                             verticalAlign: 'middle',
+                            color: 'inherit',
                           }}
                         />
                         {manager.line_manager.email}
@@ -523,11 +524,11 @@ export default function CaseloadPage() {
                           color: theme.palette.primary.contrastText,
                         }}
                       >
-                        <PeopleIcon sx={{ fontSize: 20, mb: 0.5 }} />
-                        <ThemedTypography variant='h6' fontWeight='bold'>
+                        <PeopleIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
+                        <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
                           {manager.statistics.active_users}
                         </ThemedTypography>
-                        <ThemedTypography variant='caption'>Active</ThemedTypography>
+                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Active</ThemedTypography>
                       </ThemedPaper>
                     </Grid>
                     <Grid item xs={4}>
@@ -540,11 +541,11 @@ export default function CaseloadPage() {
                           color: theme.palette.secondary.contrastText,
                         }}
                       >
-                        <SchoolIcon sx={{ fontSize: 20, mb: 0.5 }} />
-                        <ThemedTypography variant='h6' fontWeight='bold'>
+                        <SchoolIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
+                        <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
                           {manager.statistics.total_managed_learners}
                         </ThemedTypography>
-                        <ThemedTypography variant='caption'>Learners</ThemedTypography>
+                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Learners</ThemedTypography>
                       </ThemedPaper>
                     </Grid>
                     <Grid item xs={4}>
@@ -557,11 +558,11 @@ export default function CaseloadPage() {
                           color: theme.palette.success.contrastText,
                         }}
                       >
-                        <PersonIcon sx={{ fontSize: 20, mb: 0.5 }} />
-                        <ThemedTypography variant='h6' fontWeight='bold'>
+                        <PersonIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
+                        <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
                           {manager.statistics.total_managed_users}
                         </ThemedTypography>
-                        <ThemedTypography variant='caption'>Total</ThemedTypography>
+                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Total</ThemedTypography>
                       </ThemedPaper>
                     </Grid>
                   </Grid>
@@ -573,6 +574,13 @@ export default function CaseloadPage() {
                       color={getStatusColor(manager.statistics.active_users)}
                       size='small'
                       variant='outlined'
+                      sx={{
+                        borderColor: theme.palette.primary.main,
+                        color: theme.palette.primary.main,
+                        '& .MuiChip-label': {
+                          color: 'inherit',
+                        },
+                      }}
                     />
                   </Box>
 
@@ -617,6 +625,7 @@ export default function CaseloadPage() {
                                     <ThemedTypography
                                       variant='body2'
                                       fontWeight='medium'
+                                      sx={{ color: theme.palette.text.primary }}
                                     >
                                       {user.first_name} {user.last_name}
                                     </ThemedTypography>
@@ -624,7 +633,7 @@ export default function CaseloadPage() {
                                   secondary={
                                     <ThemedTypography
                                       variant='caption'
-                                      color='text.secondary'
+                                      sx={{ color: theme.palette.text.secondary }}
                                     >
                                       {user.email}
                                     </ThemedTypography>
