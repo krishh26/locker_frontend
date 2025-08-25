@@ -9,6 +9,8 @@ Your application includes several pre-configured themes:
 - **default**: Light theme with blue/purple colors
 - **defaultDark**: Dark theme with blue/purple colors  
 - **yellowBlackContrast**: High contrast yellow and black theme
+- **blackYellowTheme**: High contrast black text on yellow background theme
+- **blueYellowTheme**: High contrast blue text on yellow background theme
 - **invertedColors**: High contrast inverted color theme
 - **sepiaTheme**: Light sensitivity theme with warm brown tones
 - **nightMode**: Light sensitivity theme with deep blue tones

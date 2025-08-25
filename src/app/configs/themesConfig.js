@@ -143,6 +143,140 @@ const themesConfig = {
       name: 'Yellow & Black',
     },
   },
+  // Black text on Yellow background
+  blackYellowTheme: {
+    palette: {
+      mode: 'light',
+      divider: '#000000',
+      text: {
+        primary: '#000000',
+        secondary: '#333333',
+        disabled: '#666666',
+      },
+      common: {
+        black: '#000000',
+        white: '#FFFF00',
+      },
+      primary: {
+        light: '#FFFF66', // Lighter yellow for hover
+        main: '#000000',
+        dark: '#333333',  // Darker for active states
+        contrastText: '#FFFF00',
+      },
+      secondary: {
+        light: '#FFFF66', // Lighter yellow for hover
+        main: '#000000',
+        dark: '#333333',  // Darker for active states
+        contrastText: '#FFFF00',
+      },
+      background: {
+        paper: '#FFFF00',
+        default: '#FFFF00',
+      },
+      error: {
+        light: '#FF6666',
+        main: '#FF0000',
+        dark: '#CC0000',
+        contrastText: '#FFFF00',
+      },
+      success: {
+        light: '#66FF66',
+        main: '#00FF00',
+        dark: '#00CC00',
+        contrastText: '#000000',
+      },
+      warning: {
+        light: '#FFCC66',
+        main: '#FF9900',
+        dark: '#CC6600',
+        contrastText: '#000000',
+      },
+      info: {
+        light: '#66CCFF',
+        main: '#0066CC',
+        dark: '#004499',
+        contrastText: '#FFFF00',
+      },
+    },
+    status: {
+      danger: '#FF0000',
+    },
+    typography: {
+      fontSize: 16,
+      fontWeightBold: 700,
+    },
+    accessibility: {
+      type: 'highContrast',
+      name: 'Black on Yellow',
+    },
+  },
+  // Blue text on Yellow background
+  blueYellowTheme: {
+    palette: {
+      mode: 'light',
+      divider: '#0066CC',
+      text: {
+        primary: '#0066CC',
+        secondary: '#004499',
+        disabled: '#6699CC',
+      },
+      common: {
+        black: '#0066CC',
+        white: '#FFFF00',
+      },
+      primary: {
+        light: '#FFFF66', // Lighter yellow for hover
+        main: '#0066CC',
+        dark: '#004499',  // Darker blue for active states
+        contrastText: '#FFFF00',
+      },
+      secondary: {
+        light: '#FFFF66', // Lighter yellow for hover
+        main: '#0066CC',
+        dark: '#004499',  // Darker blue for active states
+        contrastText: '#FFFF00',
+      },
+      background: {
+        paper: '#FFFF00',
+        default: '#FFFF00',
+      },
+      error: {
+        light: '#FF6666',
+        main: '#FF0000',
+        dark: '#CC0000',
+        contrastText: '#FFFF00',
+      },
+      success: {
+        light: '#66FF66',
+        main: '#00FF00',
+        dark: '#00CC00',
+        contrastText: '#0066CC',
+      },
+      warning: {
+        light: '#FFCC66',
+        main: '#FF9900',
+        dark: '#CC6600',
+        contrastText: '#0066CC',
+      },
+      info: {
+        light: '#66CCFF',
+        main: '#0066CC',
+        dark: '#004499',
+        contrastText: '#FFFF00',
+      },
+    },
+    status: {
+      danger: '#FF0000',
+    },
+    typography: {
+      fontSize: 16,
+      fontWeightBold: 700,
+    },
+    accessibility: {
+      type: 'highContrast',
+      name: 'Blue on Yellow',
+    },
+  },
   // Inverted Colors
   invertedColors: {
     palette: {
