@@ -25,6 +25,8 @@ import {
   Tooltip,
   IconButton,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
+import { styled } from '@mui/material/styles'
 import EditIcon from '@mui/icons-material/Edit'
 import {
   useAddFundingBandMutation,
@@ -38,8 +40,163 @@ import {
 import { useDispatch } from 'react-redux'
 import { useSelector } from 'react-redux'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import { useThemeColors, themeHelpers } from '../../utils/themeUtils'
+
+// Styled Components
+const ThemedPaper = styled(Paper)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: themeHelpers.getShadow(theme, 2),
+  '&:hover': {
+    boxShadow: themeHelpers.getShadow(theme, 4),
+  },
+}))
+
+const ThemedTableContainer = styled(TableContainer)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius * 2,
+  overflow: 'hidden',
+  border: `1px solid ${theme.palette.divider}`,
+}))
+
+const ThemedTableHead = styled(TableHead)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  '& .MuiTableCell-head': {
+    color: theme.palette.primary.contrastText,
+    fontWeight: 600,
+  },
+}))
+
+const ThemedTableCell = styled(TableCell)(({ theme }) => ({
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  color: theme.palette.text.primary,
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.04),
+  },
+}))
+
+const ThemedTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    '& fieldset': {
+      borderColor: theme.palette.divider,
+    },
+    '&:hover fieldset': {
+      borderColor: theme.palette.primary.main,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: theme.palette.primary.main,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
+    '&.Mui-focused': {
+      color: theme.palette.primary.main,
+    },
+  },
+}))
+
+const ThemedFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    '& fieldset': {
+      borderColor: theme.palette.divider,
+    },
+    '&:hover fieldset': {
+      borderColor: theme.palette.primary.main,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: theme.palette.primary.main,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
+    '&.Mui-focused': {
+      color: theme.palette.primary.main,
+    },
+  },
+  '& .MuiSelect-icon': {
+    color: theme.palette.text.secondary,
+  },
+}))
+
+const ThemedIconButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.08),
+  },
+  '&:active': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.12),
+  },
+}))
+
+const ThemedDialog = styled(Dialog)(({ theme }) => ({
+  '& .MuiDialog-paper': {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    borderRadius: theme.shape.borderRadius * 2,
+    boxShadow: themeHelpers.getShadow(theme, 8),
+  },
+}))
+
+const ThemedDialogTitle = styled(DialogTitle)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  fontWeight: 600,
+}))
+
+const ThemedDialogContent = styled(DialogContent)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+}))
+
+const ThemedDialogActions = styled(DialogActions)(({ theme }) => ({
+  backgroundColor: theme.palette.background.default,
+  borderTop: `1px solid ${theme.palette.divider}`,
+  padding: theme.spacing(2),
+}))
+
+const ThemedButton = styled(Button)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius * 1.5,
+  textTransform: 'none',
+  fontWeight: 600,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+  '&:hover': {
+    boxShadow: themeHelpers.getShadow(theme, 3),
+  },
+}))
+
+const ThemedPrimaryButton = styled(ThemedButton)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  '&:hover': {
+    backgroundColor: theme.palette.primary.dark,
+  },
+}))
+
+const ThemedSecondaryButton = styled(ThemedButton)(({ theme }) => ({
+  backgroundColor: theme.palette.secondary.main,
+  color: theme.palette.secondary.contrastText,
+  '&:hover': {
+    backgroundColor: theme.palette.secondary.dark,
+  },
+}))
+
+const ThemedTypography = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.primary,
+}))
+
+const ThemedBox = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.background.default,
+}))
 
 const FundingBandList = () => {
+  const theme = useTheme()
+  const colors = useThemeColors()
   const dispatch: any = useDispatch()
   const { data, isLoading } = useGetFundingBandsQuery({},{
     refetchOnMountOrArgChange: true
@@ -131,14 +288,13 @@ const FundingBandList = () => {
   }
 
   return (
-    <Box p={3}>
-      <Box display='flex' justifyContent='space-between' alignItems='center'>
-        <Typography variant='h4' gutterBottom>
+    <ThemedBox p={3}>
+      <Box display='flex' justifyContent='space-between' alignItems='center' mb={3}>
+        <ThemedTypography variant='h4' gutterBottom>
           Funding Bands
-        </Typography>
-        <Button
+        </ThemedTypography>
+        <ThemedPrimaryButton
           variant='contained'
-          color='primary'
           onClick={() => {
             setIsEditMode(false)
             setFormValues({ id: '', course_id: '', band_name: '', amount: '' })
@@ -146,64 +302,72 @@ const FundingBandList = () => {
           }}
         >
           Add Funding Band
-        </Button>
+        </ThemedPrimaryButton>
       </Box>
 
       {isLoading ? (
         <Box display='flex' justifyContent='center' mt={3}>
-          <CircularProgress />
-        </Box>
+          <CircularProgress sx={{ color: colors.primary.main }} />
+        </Box>  
       ) : (
-        <TableContainer component={Paper} sx={{ mt: 2 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Course Name</TableCell>
-                <TableCell>Level</TableCell>
-                <TableCell>Amount (£)</TableCell>
-                <TableCell align='center'>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {fundingBands.map((band: any) => (
-                <TableRow key={band.id}>
-                  <TableCell>{band.course.course_name}</TableCell>
-                  <TableCell>{band.course.level}</TableCell>
-                  <TableCell>{band.amount}</TableCell>
-                  <TableCell align='center'>
-                    <Tooltip title='Edit Funding Band'>
-                      <IconButton
-                        color='primary'
-                        onClick={() => openEditDialog(band)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
+          <ThemedTableContainer>
+            <Table>
+              <ThemedTableHead>
+                <TableRow>
+                  <ThemedTableCell>Course Name</ThemedTableCell>
+                  <ThemedTableCell>Level</ThemedTableCell>
+                  <ThemedTableCell>Amount (£)</ThemedTableCell>
+                  <ThemedTableCell align='center'>Action</ThemedTableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </ThemedTableHead>
+              <TableBody>
+                {fundingBands.map((band: any) => (
+                  <TableRow key={band.id}>
+                    <ThemedTableCell>{band.course.course_name}</ThemedTableCell>
+                    <ThemedTableCell>{band.course.level}</ThemedTableCell>
+                    <ThemedTableCell>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                        }}
+                      >
+                        £{band.amount}
+                      </Typography>
+                    </ThemedTableCell>
+                    <ThemedTableCell align='center'>
+                      <Tooltip title='Edit Funding Band'>
+                        <ThemedIconButton
+                          onClick={() => openEditDialog(band)}
+                        >
+                          <EditIcon />
+                        </ThemedIconButton>
+                      </Tooltip>
+                    </ThemedTableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ThemedTableContainer>
       )}
 
       {/* Add Funding Band Dialog */}
-      <Dialog
+      <ThemedDialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         maxWidth='sm'
         fullWidth
       >
-        <DialogTitle>
+        <ThemedDialogTitle>
           {isEditMode ? 'Edit Funding Band' : 'Add Funding Band'}
-        </DialogTitle>
-        <DialogContent
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}
+        </ThemedDialogTitle>
+        <ThemedDialogContent
+          sx={{ display: 'flex', flexDirection: 'column', gap: 3,}}
         >
-          <FormControl
+          <ThemedFormControl
             fullWidth
             sx={{
-              mt: 2,
+              marginTop: 3,
             }}
           >
             <InputLabel>Select Course</InputLabel>
@@ -232,29 +396,33 @@ const FundingBandList = () => {
                 ))
               )}
             </Select>
-          </FormControl>
+          </ThemedFormControl>
 
-          <TextField
-            label='Amount'
+          <ThemedTextField
+            label='Amount (£)'
             type='number'
             value={formValues.amount}
             onChange={(e) =>
               setFormValues({ ...formValues, amount: e.target.value })
             }
+            InputProps={{
+              startAdornment: <Typography variant="body2" sx={{ mr: 1, color: colors.text.secondary }}>£</Typography>,
+            }}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button
-            variant='contained'
+        </ThemedDialogContent>
+        <ThemedDialogActions>
+          <ThemedSecondaryButton onClick={() => setOpenDialog(false)}>
+            Cancel
+          </ThemedSecondaryButton>
+          <ThemedPrimaryButton
             onClick={handleAddOrUpdate}
             disabled={isSaving || isUpdating}
           >
             {isSaving || isUpdating ? <CircularProgress size={20} /> : 'Save'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+          </ThemedPrimaryButton>
+        </ThemedDialogActions>
+      </ThemedDialog>
+    </ThemedBox>
   )
 }
 
