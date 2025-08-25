@@ -160,8 +160,7 @@ const FundingBandList = () => {
               <TableRow>
                 <TableCell>Course Name</TableCell>
                 <TableCell>Level</TableCell>
-                <TableCell>Credits</TableCell>
-                <TableCell>Amount</TableCell>
+                <TableCell>Amount (£)</TableCell>
                 <TableCell align='center'>Action</TableCell>
               </TableRow>
             </TableHead>
@@ -170,7 +169,6 @@ const FundingBandList = () => {
                 <TableRow key={band.id}>
                   <TableCell>{band.course.course_name}</TableCell>
                   <TableCell>{band.course.level}</TableCell>
-                  <TableCell>{band.course.total_credits}</TableCell>
                   <TableCell>{band.amount}</TableCell>
                   <TableCell align='center'>
                     <Tooltip title='Edit Funding Band'>
