@@ -125,6 +125,51 @@ export default function CaseloadPage() {
     doc.save('caseload-report.pdf')
   }
 
+  // Export CSV
+  const handleExportCSV = () => {
+    // Create CSV content
+    const csvHeaders = [
+      'Line Manager Name',
+      'Managed User Email',
+      'Active Users',
+      'Total Learners',
+      'Total Users',
+    ]
+
+    let csvContent = csvHeaders.join(',') + '\n'
+
+    lineManagers.forEach((manager) => {
+      // Get all managed user emails as a comma-separated string
+      let managedUserEmails = ''
+      if (manager.managed_users && manager.managed_users.length > 0) {
+        managedUserEmails = manager.managed_users
+          .map((user: any) => user.email)
+          .join(',')
+      }
+
+      const rowData = [
+        manager.line_manager.full_name,
+        managedUserEmails,
+        manager.statistics.active_users,
+        manager.statistics.total_managed_learners,
+        manager.statistics.total_managed_users,
+      ]
+      
+      csvContent += rowData.map(field => `"${field}"`).join(',') + '\n'
+    })
+
+    // Create and download the CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `caseload-report-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // Get initials for avatar
   const getInitials = (name: string) => {
     return name
@@ -183,6 +228,23 @@ export default function CaseloadPage() {
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
+            <Button
+              variant='outlined'
+              startIcon={<DownloadIcon />}
+              onClick={handleExportCSV}
+              sx={{
+                borderColor: '#000',
+                color: '#000',
+                '&:hover': {
+                  borderColor: '#333',
+                  backgroundColor: '#f5f5f5',
+                  transition: 'all 0.3s ease',
+                },
+              }}
+              disabled={isLoading || lineManagers.length === 0}
+            >
+              Export CSV
+            </Button>
             <Button
               variant='contained'
               startIcon={<DownloadIcon />}
