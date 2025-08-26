@@ -8,6 +8,8 @@ import { styled } from '@mui/material/styles';
  * - default (light theme)
  * - defaultDark (dark theme) 
  * - yellowBlackContrast (high contrast)
+ * - blackYellowTheme (high contrast - black text on yellow background)
+ * - blueYellowTheme (high contrast - blue text on yellow background)
  * - invertedColors (high contrast)
  * - sepiaTheme (light sensitivity)
  * - nightMode (light sensitivity)

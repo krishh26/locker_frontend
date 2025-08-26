@@ -25,6 +25,8 @@ import {
   Stack,
   Badge,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
+import { styled } from '@mui/material/styles'
 import {
   Search as SearchIcon,
   People as PeopleIcon,
@@ -40,10 +42,151 @@ import {
 import jsPDF from 'jspdf'
 import { applyPlugin } from 'jspdf-autotable'
 import { useGetCaseloadListQuery } from 'app/store/api/caseload-api'
+import { themeHelpers } from '../../utils/themeUtils'
 
 applyPlugin(jsPDF)
 
+// Styled Components
+const ThemedBox = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.background.default,
+  color: theme.palette.text.primary,
+}))
+
+const ThemedPaper = styled(Paper)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+}))
+
+const ThemedCard = styled(Card)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: themeHelpers.getShadow(theme, 2),
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    boxShadow: themeHelpers.getShadow(theme, 4),
+    transform: 'translateY(-2px)',
+  },
+}))
+
+const ThemedCardHeader = styled(CardHeader)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  '& .MuiCardHeader-title': {
+    color: theme.palette.text.primary,
+  },
+  '& .MuiCardHeader-subheader': {
+    color: theme.palette.text.secondary,
+  },
+}))
+
+const ThemedCardContent = styled(CardContent)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+}))
+
+const ThemedTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    '& fieldset': {
+      borderColor: theme.palette.divider,
+    },
+    '&:hover fieldset': {
+      borderColor: theme.palette.primary.main,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: theme.palette.primary.main,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
+    '&.Mui-focused': {
+      color: theme.palette.primary.main,
+    },
+  },
+}))
+
+const ThemedButton = styled(Button)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius * 1.5,
+  textTransform: 'none',
+  fontWeight: 600,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+  '&:hover': {
+    boxShadow: themeHelpers.getShadow(theme, 3),
+  },
+}))
+
+const ThemedPrimaryButton = styled(ThemedButton)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  '&:hover': {
+    backgroundColor: theme.palette.primary.dark,
+  },
+}))
+
+const ThemedOutlinedButton = styled(ThemedButton)(({ theme }) => ({
+  borderColor: theme.palette.primary.main,
+  color: theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const ThemedIconButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.08),
+  },
+  '&:active': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.12),
+  },
+}))
+
+const ThemedTypography = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.primary,
+}))
+
+const ThemedChip = styled(Chip)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  '&.MuiChip-colorSuccess': {
+    backgroundColor: theme.palette.success.main,
+    color: theme.palette.success.contrastText,
+  },
+  '&.MuiChip-colorWarning': {
+    backgroundColor: theme.palette.warning.main,
+    color: theme.palette.warning.contrastText,
+  },
+  '&.MuiChip-colorInfo': {
+    backgroundColor: theme.palette.info.main,
+    color: theme.palette.info.contrastText,
+  },
+  '&.MuiChip-colorDefault': {
+    backgroundColor: theme.palette.grey[300],
+    color: theme.palette.text.primary,
+  },
+}))
+
+const ThemedListItem = styled(ListItem)(({ theme }) => ({
+  backgroundColor: theme.palette.background.default,
+  borderRadius: theme.shape.borderRadius,
+  marginBottom: theme.spacing(0.5),
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.04),
+  },
+}))
+
+const ThemedDivider = styled(Divider)(({ theme }) => ({
+  borderColor: theme.palette.divider,
+}))
+
 export default function CaseloadPage() {
+  const theme = useTheme()
   const [filterName, setFilterName] = useState('')
   const [expandedManager, setExpandedManager] = useState<string | null>(null)
   const [page, setPage] = useState(1)
@@ -125,6 +268,51 @@ export default function CaseloadPage() {
     doc.save('caseload-report.pdf')
   }
 
+  // Export CSV
+  const handleExportCSV = () => {
+    // Create CSV content
+    const csvHeaders = [
+      'Line Manager Name',
+      'Managed User Email',
+      'Active Users',
+      'Total Learners',
+      'Total Users',
+    ]
+
+    let csvContent = csvHeaders.join(',') + '\n'
+
+    lineManagers.forEach((manager) => {
+      // Get all managed user emails as a comma-separated string
+      let managedUserEmails = ''
+      if (manager.managed_users && manager.managed_users.length > 0) {
+        managedUserEmails = manager.managed_users
+          .map((user: any) => user.email)
+          .join(',')
+      }
+
+      const rowData = [
+        manager.line_manager.full_name,
+        managedUserEmails,
+        manager.statistics.active_users,
+        manager.statistics.total_managed_learners,
+        manager.statistics.total_managed_users,
+      ]
+      
+      csvContent += rowData.map(field => `"${field}"`).join(',') + '\n'
+    })
+
+    // Create and download the CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `caseload-report-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // Get initials for avatar
   const getInitials = (name: string) => {
     return name
@@ -144,16 +332,15 @@ export default function CaseloadPage() {
   }
 
   return (
-    <Box
+    <ThemedBox
       sx={{
         p: 3,
-      
         height: 'calc(100vh - 100px)',
         overflowY: 'auto',
       }}
     >
       {/* Header Section */}
-      <Paper elevation={0} sx={{ p: 3, mb: 3, borderRadius: 2 ,  backgroundColor: '#f5f5f5'}}>
+      <ThemedPaper elevation={0} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
         <Box
           display='flex'
           justifyContent='space-between'
@@ -161,50 +348,66 @@ export default function CaseloadPage() {
           mb={2}
         >
           <Box>
-            <Typography
+            <ThemedTypography
               variant='h4'
               fontWeight='bold'
               color='primary'
               gutterBottom
             >
               Caseload Management
-            </Typography>
-            <Typography variant='body1' color='text.secondary'>
+            </ThemedTypography>
+            <ThemedTypography variant='body1' color='text.secondary'>
               Manage and view line managers and their assigned users
-            </Typography>
+            </ThemedTypography>
           </Box>
           <Stack direction='row' spacing={2}>
             <Tooltip title='Refresh Data'>
-              <IconButton
+              <ThemedIconButton
                 onClick={() => refetch()}
-                color='primary'
                 disabled={isLoading}
               >
                 <RefreshIcon />
-              </IconButton>
+              </ThemedIconButton>
             </Tooltip>
-            <Button
+            <ThemedOutlinedButton
+              variant='outlined'
+              startIcon={<DownloadIcon />}
+              onClick={handleExportCSV}
+              sx={{
+                borderColor: theme.palette.primary.main,
+                color: theme.palette.primary.main,
+                '&:hover': {
+                  borderColor: theme.palette.primary.dark,
+                  backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.08),
+                  transition: 'all 0.3s ease',
+                },
+              }}
+              disabled={isLoading || lineManagers.length === 0}
+            >
+              Export CSV
+            </ThemedOutlinedButton>
+            <ThemedPrimaryButton
               variant='contained'
               startIcon={<DownloadIcon />}
               onClick={handleExportPDF}
               sx={{
-                backgroundColor: '#000',
-                color: '#fff',
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
                 '&:hover': {
-                  backgroundColor: '#333',
+                  backgroundColor: theme.palette.primary.dark,
                   transition: 'all 0.3s ease',
                 },
               }}
               disabled={isLoading || lineManagers.length === 0}
             >
               Export PDF
-            </Button>
+            </ThemedPrimaryButton>
           </Stack>
         </Box>
 
         {/* Search Bar */}
         <Box display='flex' gap={2} alignItems='center'>
-          <TextField
+          <ThemedTextField
             fullWidth
             placeholder='Search line managers by name or email...'
             variant='outlined'
@@ -216,13 +419,13 @@ export default function CaseloadPage() {
             }}
             InputProps={{
               startAdornment: (
-                <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                <SearchIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />
               ),
             }}
             sx={{ maxWidth: 400 }}
           />
           {filterName && (
-            <Button
+            <ThemedOutlinedButton
               variant='outlined'
               onClick={() => {
                 setFilterName('')
@@ -230,18 +433,18 @@ export default function CaseloadPage() {
               }}
             >
               Clear
-            </Button>
+            </ThemedOutlinedButton>
           )}
         </Box>
-      </Paper>
+      </ThemedPaper>
 
       {/* Loading State */}
       {isLoading && (
         <Box display='flex' justifyContent='center' alignItems='center' py={8}>
-          <CircularProgress size={40} />
-          <Typography variant='h6' ml={2}>
+          <CircularProgress size={40} sx={{ color: theme.palette.primary.main }} />
+          <ThemedTypography variant='h6' ml={2}>
             Loading caseload data...
-          </Typography>
+          </ThemedTypography>
         </Box>
       )}
 
@@ -257,22 +460,13 @@ export default function CaseloadPage() {
         <Grid container spacing={3}>
           {lineManagers.map((manager: any) => (
             <Grid item xs={12} md={6} lg={4} key={manager.line_manager.user_id}>
-              <Card
-                elevation={2}
-                sx={{
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    elevation: 4,
-                    transform: 'translateY(-2px)',
-                  },
-                }}
-              >
+              <ThemedCard elevation={2}>
                 {/* Manager Header */}
-                <CardHeader
+                <ThemedCardHeader
                   avatar={
                     <Avatar
                       sx={{
-                        bgcolor: 'primary.main',
+                        bgcolor: theme.palette.primary.main,
                         width: 56,
                         height: 56,
                         fontSize: '1.2rem',
@@ -282,7 +476,7 @@ export default function CaseloadPage() {
                     </Avatar>
                   }
                   action={
-                    <IconButton
+                    <ThemedIconButton
                       onClick={() =>
                         handleManagerToggle(manager.line_manager.user_id)
                       }
@@ -293,115 +487,123 @@ export default function CaseloadPage() {
                       ) : (
                         <ExpandMoreIcon />
                       )}
-                    </IconButton>
+                    </ThemedIconButton>
                   }
                   title={
-                    <Typography variant='h6' fontWeight='bold' noWrap>
+                    <ThemedTypography variant='h6' fontWeight='bold' noWrap sx={{ color: theme.palette.text.primary }}>
                       {manager.line_manager.full_name}
-                    </Typography>
+                    </ThemedTypography>
                   }
                   subheader={
                     <Box>
-                      <Typography variant='body2' color='text.secondary' noWrap>
+                      <ThemedTypography variant='body2' noWrap sx={{ color: theme.palette.text.secondary }}>
                         <EmailIcon
                           sx={{
                             fontSize: 14,
                             mr: 0.5,
                             verticalAlign: 'middle',
+                            color: 'inherit',
                           }}
                         />
                         {manager.line_manager.email}
-                      </Typography>
+                      </ThemedTypography>
                     </Box>
                   }
                 />
 
                 {/* Statistics Cards */}
-                <CardContent sx={{ pt: 0 }}>
+                <ThemedCardContent sx={{ pt: 0 }}>
                   <Grid container spacing={2} mb={2}>
                     <Grid item xs={4}>
-                      <Paper
+                      <ThemedPaper
                         elevation={0}
                         sx={{
                           p: 1.5,
                           textAlign: 'center',
-                          bgcolor: 'primary.light',
-                          color: 'white',
+                          bgcolor: theme.palette.primary.main,
+                          color: theme.palette.primary.contrastText,
                         }}
                       >
-                        <PeopleIcon sx={{ fontSize: 20, mb: 0.5 }} />
-                        <Typography variant='h6' fontWeight='bold'>
+                        <PeopleIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
+                        <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
                           {manager.statistics.active_users}
-                        </Typography>
-                        <Typography variant='caption'>Active</Typography>
-                      </Paper>
+                        </ThemedTypography>
+                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Active</ThemedTypography>
+                      </ThemedPaper>
                     </Grid>
                     <Grid item xs={4}>
-                      <Paper
+                      <ThemedPaper
                         elevation={0}
                         sx={{
                           p: 1.5,
                           textAlign: 'center',
-                          bgcolor: 'secondary.light',
-                          color: 'white',
+                          bgcolor: theme.palette.secondary.main,
+                          color: theme.palette.secondary.contrastText,
                         }}
                       >
-                        <SchoolIcon sx={{ fontSize: 20, mb: 0.5 }} />
-                        <Typography variant='h6' fontWeight='bold'>
+                        <SchoolIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
+                        <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
                           {manager.statistics.total_managed_learners}
-                        </Typography>
-                        <Typography variant='caption'>Learners</Typography>
-                      </Paper>
+                        </ThemedTypography>
+                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Learners</ThemedTypography>
+                      </ThemedPaper>
                     </Grid>
                     <Grid item xs={4}>
-                      <Paper
+                      <ThemedPaper
                         elevation={0}
                         sx={{
                           p: 1.5,
                           textAlign: 'center',
-                          bgcolor: 'success.light',
-                          color: 'white',
+                          bgcolor: theme.palette.success.main,
+                          color: theme.palette.success.contrastText,
                         }}
                       >
-                        <PersonIcon sx={{ fontSize: 20, mb: 0.5 }} />
-                        <Typography variant='h6' fontWeight='bold'>
+                        <PersonIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
+                        <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
                           {manager.statistics.total_managed_users}
-                        </Typography>
-                        <Typography variant='caption'>Total</Typography>
-                      </Paper>
+                        </ThemedTypography>
+                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Total</ThemedTypography>
+                      </ThemedPaper>
                     </Grid>
                   </Grid>
 
                   {/* Status Indicator */}
                   <Box display='flex' justifyContent='center' mb={2}>
-                    <Chip
+                    <ThemedChip
                       label={`${manager.statistics.active_users} Active Users`}
                       color={getStatusColor(manager.statistics.active_users)}
                       size='small'
                       variant='outlined'
+                      sx={{
+                        borderColor: theme.palette.primary.main,
+                        color: theme.palette.primary.main,
+                        '& .MuiChip-label': {
+                          color: 'inherit',
+                        },
+                      }}
                     />
                   </Box>
 
                   {/* Expandable User List - Only show for the clicked card */}
                   {expandedManager === manager.line_manager.user_id && (
                     <Box mt={2}>
-                      <Divider sx={{ mb: 2 }} />
-                      <Typography variant='subtitle2' fontWeight='bold' mb={1}>
+                      <ThemedDivider sx={{ mb: 2 }} />
+                      <ThemedTypography variant='subtitle2' fontWeight='bold' mb={1}>
                         Managed Users ({manager.managed_users?.length || 0})
-                      </Typography>
+                      </ThemedTypography>
 
                       {manager.managed_users &&
                       manager.managed_users.length > 0 ? (
                         <List dense sx={{ maxHeight: 300, overflow: 'auto' }}>
                           {manager.managed_users.map(
                             (user: any, index: number) => (
-                              <ListItem
+                              <ThemedListItem
                                 key={user.user_id}
                                 sx={{
                                   px: 1,
                                   borderRadius: 1,
                                   mb: 0.5,
-                                  bgcolor: 'grey.50',
+                                  bgcolor: theme.palette.background.default,
                                 }}
                               >
                                 <ListItemAvatar>
@@ -410,7 +612,7 @@ export default function CaseloadPage() {
                                       width: 32,
                                       height: 32,
                                       fontSize: '0.8rem',
-                                      bgcolor: 'primary.main',
+                                      bgcolor: theme.palette.primary.main,
                                     }}
                                   >
                                     {getInitials(
@@ -420,31 +622,32 @@ export default function CaseloadPage() {
                                 </ListItemAvatar>
                                 <ListItemText
                                   primary={
-                                    <Typography
+                                    <ThemedTypography
                                       variant='body2'
                                       fontWeight='medium'
+                                      sx={{ color: theme.palette.text.primary }}
                                     >
                                       {user.first_name} {user.last_name}
-                                    </Typography>
+                                    </ThemedTypography>
                                   }
                                   secondary={
-                                    <Typography
+                                    <ThemedTypography
                                       variant='caption'
-                                      color='text.secondary'
+                                      sx={{ color: theme.palette.text.secondary }}
                                     >
                                       {user.email}
-                                    </Typography>
+                                    </ThemedTypography>
                                   }
                                 />
                                 {user.role && (
-                                  <Chip
+                                  <ThemedChip
                                     label={user.role}
                                     size='small'
                                     variant='outlined'
                                     sx={{ ml: 1 }}
                                   />
                                 )}
-                              </ListItem>
+                              </ThemedListItem>
                             )
                           )}
                         </List>
@@ -453,26 +656,26 @@ export default function CaseloadPage() {
                           textAlign='center'
                           py={3}
                           sx={{
-                            bgcolor: 'grey.50',
+                            bgcolor: theme.palette.background.default,
                             borderRadius: 1,
                           }}
                         >
                           <PeopleIcon
                             sx={{
                               fontSize: 40,
-                              color: 'text.secondary',
+                              color: theme.palette.text.secondary,
                               mb: 1,
                             }}
                           />
-                          <Typography variant='body2' color='text.secondary'>
+                          <ThemedTypography variant='body2' color='text.secondary'>
                             No users assigned yet
-                          </Typography>
+                          </ThemedTypography>
                         </Box>
                       )}
                     </Box>
                   )}
-                </CardContent>
-              </Card>
+                </ThemedCardContent>
+              </ThemedCard>
             </Grid>
           ))}
         </Grid>
@@ -480,31 +683,31 @@ export default function CaseloadPage() {
 
       {/* No Data State */}
       {!isLoading && !isError && lineManagers.length === 0 && (
-        <Paper
+        <ThemedPaper
           elevation={0}
           sx={{
             p: 8,
             textAlign: 'center',
-            bgcolor: 'grey.50',
+            bgcolor: theme.palette.background.default,
             borderRadius: 2,
           }}
         >
-          <PeopleIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
-          <Typography variant='h5' color='text.secondary' gutterBottom>
+          <PeopleIcon sx={{ fontSize: 80, color: theme.palette.text.secondary, mb: 2 }} />
+          <ThemedTypography variant='h5' color='text.secondary' gutterBottom>
             No Line Managers Found
-          </Typography>
-          <Typography variant='body1' color='text.secondary'>
+          </ThemedTypography>
+          <ThemedTypography variant='body1' color='text.secondary'>
             {filterName
               ? `No line managers match "${filterName}"`
               : 'There are no line managers in the system yet.'}
-          </Typography>
-        </Paper>
+          </ThemedTypography>
+        </ThemedPaper>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
         <Box display='flex' justifyContent='center' mt={4}>
-          <Paper elevation={1} sx={{ p: 2 }}>
+          <ThemedPaper elevation={1} sx={{ p: 2 }}>
             <Pagination
               count={totalPages}
               page={page}
@@ -514,9 +717,9 @@ export default function CaseloadPage() {
               showFirstButton
               showLastButton
             />
-          </Paper>
+          </ThemedPaper>
         </Box>
       )}
-    </Box>
+    </ThemedBox>
   )
 }

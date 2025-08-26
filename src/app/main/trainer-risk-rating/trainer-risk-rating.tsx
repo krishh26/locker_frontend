@@ -44,6 +44,9 @@ import {
   selectLearnerManagement,
 } from 'app/store/learnerManagement'
 import { useSelector } from 'react-redux'
+import { themeHelpers } from '../../utils/themeUtils'
+import { styled } from '@mui/material/styles'
+import { useTheme } from '@mui/material/styles'
 
 // ✅ API slice imports
 import {
@@ -52,6 +55,170 @@ import {
   useSaveCourseRiskRatingsMutation,
   useSaveCourseCommentMutation,
 } from 'app/store/api/trainer-risk-rating-api'
+
+// Styled Components
+const ThemedBox = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.background.default,
+  color: theme.palette.text.primary,
+}))
+
+const ThemedCard = styled(Card)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: themeHelpers.getShadow(theme, 2),
+  '&:hover': {
+    boxShadow: themeHelpers.getShadow(theme, 4),
+  },
+}))
+
+const ThemedCardContent = styled(CardContent)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+}))
+
+const ThemedPaper = styled(Paper)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+}))
+
+const ThemedTableHead = styled(TableHead)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  '& .MuiTableCell-head': {
+    color: theme.palette.primary.contrastText,
+    fontWeight: 600,
+  },
+}))
+
+const ThemedTableCell = styled(TableCell)(({ theme }) => ({
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  color: theme.palette.text.primary,
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.04),
+  },
+}))
+
+const ThemedTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    '& fieldset': {
+      borderColor: theme.palette.divider,
+    },
+    '&:hover fieldset': {
+      borderColor: theme.palette.primary.main,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: theme.palette.primary.main,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: theme.palette.text.secondary,
+    '&.Mui-focused': {
+      color: theme.palette.primary.main,
+    },
+  },
+}))
+
+const ThemedButton = styled(Button)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius * 1.5,
+  textTransform: 'none',
+  fontWeight: 600,
+  boxShadow: themeHelpers.getShadow(theme, 1),
+  '&:hover': {
+    boxShadow: themeHelpers.getShadow(theme, 3),
+  },
+}))
+
+const ThemedPrimaryButton = styled(ThemedButton)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  '&:hover': {
+    backgroundColor: theme.palette.primary.dark,
+  },
+}))
+
+const ThemedSecondaryButton = styled(ThemedButton)(({ theme }) => ({
+  backgroundColor: theme.palette.secondary.main,
+  color: theme.palette.secondary.contrastText,
+  '&:hover': {
+    backgroundColor: theme.palette.secondary.dark,
+  },
+}))
+
+const ThemedOutlinedButton = styled(ThemedButton)(({ theme }) => ({
+  borderColor: theme.palette.primary.main,
+  color: theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const ThemedIconButton = styled(IconButton)(({ theme }) => ({
+  color: theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.08),
+  },
+  '&:active': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.12),
+  },
+}))
+
+const ThemedListItemButton = styled(ListItemButton)(({ theme }) => ({
+  borderRadius: theme.shape.borderRadius * 1.5,
+  marginBottom: theme.spacing(0.5),
+  '&.Mui-selected': {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.dark,
+    },
+  },
+  '&:hover': {
+    backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.08),
+  },
+}))
+
+const ThemedTypography = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.primary,
+}))
+
+const ThemedChip = styled(Chip)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  '&.MuiChip-colorSuccess': {
+    backgroundColor: theme.palette.success.main,
+    color: theme.palette.success.contrastText,
+  },
+  '&.MuiChip-colorWarning': {
+    backgroundColor: theme.palette.warning.main,
+    color: theme.palette.warning.contrastText,
+  },
+  '&.MuiChip-colorError': {
+    backgroundColor: theme.palette.error.main,
+    color: theme.palette.error.contrastText,
+  },
+}))
+
+const ThemedSnackbar = styled(Snackbar)(({ theme }) => ({
+  '& .MuiAlert-root': {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.shape.borderRadius * 2,
+  },
+}))
+
+const ThemedBadge = styled(Badge)(({ theme }) => ({
+  '& .MuiBadge-badge': {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+  },
+}))
 
 const riskOptions = [
   {
@@ -91,6 +258,7 @@ const assessmentMethods: AssessmentMethod[] = [
 ]
 
 const TrainerRiskRating = () => {
+  const theme = useTheme()
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
   const [comments, setComments] = useState<{ [key: number]: string }>({})
@@ -102,14 +270,9 @@ const TrainerRiskRating = () => {
   const [courseRatings, setCourseRatings] = useState<{ [key: number]: string }>(
     {}
   )
-  console.log('🚀 ~ TrainerRiskRating ~ courseRatings:', courseRatings)
   const [assessmentRiskRating, setAssessmentRiskRating] = useState<{
     [key: number]: string
   }>({})
-  console.log(
-    '🚀 ~ TrainerRiskRating ~ assessmentRiskRating:',
-    assessmentRiskRating
-  )
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -171,7 +334,6 @@ const TrainerRiskRating = () => {
               : trainerDetails?.data?.risk_rating_info.assessment_methods[key]
                   .risk_level)
       )
-      console.log('🚀 ~ TrainerRiskRating ~ updated:', updated)
 
       setAssessmentRiskRating(updated)
     }
@@ -190,7 +352,6 @@ const TrainerRiskRating = () => {
   }, [trainerDetails])
 
   const handleRatingChange = (courseId: number, value: string) => {
-    console.log('🚀 ~ handleRatingChange ~ value:', value)
     setCourseRatings((prev) => ({ ...prev, [courseId]: value }))
   }
 
@@ -304,43 +465,37 @@ const TrainerRiskRating = () => {
   }
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <ThemedBox sx={{ p: 3, minHeight: '100vh' }}>
       <Grid container spacing={3}>
         {/* Trainer List */}
         <Grid item xs={12} md={3}>
-          <Card elevation={2}>
-            <CardContent>
+          <ThemedCard elevation={2}>
+            <ThemedCardContent>
               <Box display='flex' alignItems='center' gap={1} mb={2}>
-                <PersonIcon color='primary' />
-                <Typography variant='h6' fontWeight='bold'>
-                  Trainers
-                </Typography>
-                <Badge
-                  badgeContent={trainer.length}
-                  color='primary'
-                  className='ml-6'
-                />
+                                 <PersonIcon sx={{ color: theme.palette.primary.main }} />
+                 <ThemedTypography variant='h6' fontWeight='bold' mr={1}>
+                   Trainers
+                 </ThemedTypography>
+                 <ThemedBadge
+                   badgeContent={trainer.length}
+                   sx={{
+                     '& .MuiBadge-badge': {
+                       backgroundColor: theme.palette.primary.main,
+                       color: theme.palette.primary.contrastText,
+                     },
+                   }}
+                 />
               </Box>
               <List sx={{ maxHeight: 600, overflow: 'auto' }}>
                 {trainer.map((user) => (
                   <ListItem key={user.user_id} disablePadding sx={{ mb: 1 }}>
-                    <ListItemButton
+                    <ThemedListItemButton
                       selected={selectedUser?.user_id === user.user_id}
                       onClick={() => {
                         setSelectedUser(user)
                         setExpandedRow(null)
                         setCourseRatings({})
                         setAssessmentRiskRating({})
-                      }}
-                      sx={{
-                        borderRadius: 2,
-                        '&.Mui-selected': {
-                          backgroundColor: 'primary.main',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: 'primary.dark',
-                          },
-                        },
                       }}
                     >
                       <ListItemAvatar>
@@ -350,14 +505,14 @@ const TrainerRiskRating = () => {
                           sx={{
                             width: 40,
                             height: 40,
-                            bgcolor:
-                              selectedUser?.user_id === user.user_id
-                                ? 'white'
-                                : 'primary.main',
-                            color:
-                              selectedUser?.user_id === user.user_id
-                                ? 'primary.main'
-                                : 'white',
+                                                       bgcolor:
+                             selectedUser?.user_id === user.user_id
+                               ? theme.palette.primary.contrastText
+                               : theme.palette.primary.main,
+                           color:
+                             selectedUser?.user_id === user.user_id
+                               ? theme.palette.primary.main
+                               : theme.palette.primary.contrastText,
                           }}
                         >
                           {user.first_name[0]}
@@ -371,23 +526,24 @@ const TrainerRiskRating = () => {
                             selectedUser?.user_id === user.user_id
                               ? 'bold'
                               : 'normal',
+                          color: 'inherit',
                         }}
                         secondaryTypographyProps={{
-                          color:
-                            selectedUser?.user_id === user.user_id
-                              ? 'rgba(255,255,255,0.7)'
-                              : 'text.secondary',
+                                                     color:
+                             selectedUser?.user_id === user.user_id
+                               ? 'rgba(255,255,255,0.7)'
+                               : theme.palette.text.secondary,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
                       />
-                    </ListItemButton>
+                    </ThemedListItemButton>
                   </ListItem>
                 ))}
               </List>
-            </CardContent>
-          </Card>
+            </ThemedCardContent>
+          </ThemedCard>
         </Grid>
 
         {/* Main Content */}
@@ -395,8 +551,8 @@ const TrainerRiskRating = () => {
           {selectedUser ? (
             <Box>
               {/* Header */}
-              <Card elevation={2} sx={{ mb: 3 }}>
-                <CardContent>
+              <ThemedCard elevation={2} sx={{ mb: 3 }}>
+                <ThemedCardContent>
                   <Box display='flex' alignItems='center' gap={2} mb={2}>
                     <Avatar
                       src={selectedUser.avatar?.url || ''}
@@ -406,32 +562,32 @@ const TrainerRiskRating = () => {
                       {selectedUser.first_name[0]}
                     </Avatar>
                     <Box>
-                      <Typography variant='h5' fontWeight='bold'>
+                      <ThemedTypography variant='h5' fontWeight='bold'>
                         {selectedUser.first_name} {selectedUser.last_name}
-                      </Typography>
-                      <Typography variant='body2' color='text.secondary'>
+                      </ThemedTypography>
+                      <ThemedTypography variant='body2' color='text.secondary'>
                         {selectedUser.email}
-                      </Typography>
+                      </ThemedTypography>
                     </Box>
                   </Box>
 
                   {isLoading && (
                     <Box display='flex' justifyContent='center' p={2}>
-                      <CircularProgress />
+                      <CircularProgress sx={{ color: theme.palette.primary.main }} />
                     </Box>
                   )}
-                </CardContent>
-              </Card>
+                </ThemedCardContent>
+              </ThemedCard>
 
               {/* Risk Settings */}
-              <Card elevation={2} sx={{ mb: 3 }}>
-                <CardContent>
-                  <Typography variant='h6' fontWeight='bold' mb={2}>
+              <ThemedCard elevation={2} sx={{ mb: 3 }}>
+                <ThemedCardContent>
+                  <ThemedTypography variant='h6' fontWeight='bold' mb={2}>
                     Risk Settings Configuration
-                  </Typography>
+                  </ThemedTypography>
                   <Grid container spacing={2} alignItems='center'>
                     <Grid item xs={12} sm={3}>
-                      <TextField
+                      <ThemedTextField
                         label='High Risk %'
                         value={riskSettings.high}
                         onChange={(e) =>
@@ -446,7 +602,7 @@ const TrainerRiskRating = () => {
                       />
                     </Grid>
                     <Grid item xs={12} sm={3}>
-                      <TextField
+                      <ThemedTextField
                         label='Medium Risk %'
                         value={riskSettings.medium}
                         onChange={(e) =>
@@ -461,7 +617,7 @@ const TrainerRiskRating = () => {
                       />
                     </Grid>
                     <Grid item xs={12} sm={3}>
-                      <TextField
+                      <ThemedTextField
                         label='Low Risk %'
                         value={riskSettings.low}
                         onChange={(e) =>
@@ -476,9 +632,8 @@ const TrainerRiskRating = () => {
                       />
                     </Grid>
                     <Grid item xs={12} sm={3}>
-                      <Button
+                      <ThemedPrimaryButton
                         variant='contained'
-                        color='primary'
                         onClick={handleSaveRiskSettings}
                         disabled={savingSettings}
                         startIcon={
@@ -491,15 +646,15 @@ const TrainerRiskRating = () => {
                         fullWidth
                       >
                         {savingSettings ? 'Saving...' : 'Save Settings'}
-                      </Button>
+                      </ThemedPrimaryButton>
                     </Grid>
                   </Grid>
-                </CardContent>
-              </Card>
+                </ThemedCardContent>
+              </ThemedCard>
 
               {/* Courses Section */}
-              <Card elevation={2} sx={{ mb: 3 }}>
-                <CardContent>
+              <ThemedCard elevation={2} sx={{ mb: 3 }}>
+                <ThemedCardContent>
                   <Box
                     display='flex'
                     alignItems='center'
@@ -507,45 +662,56 @@ const TrainerRiskRating = () => {
                     mb={3}
                   >
                     <Box display='flex' alignItems='center' gap={1}>
-                      <SchoolIcon color='primary' />
-                      <Typography variant='h6' fontWeight='bold'>
+                                             <SchoolIcon sx={{ color: theme.palette.primary.main }} />
+                      <ThemedTypography variant='h6' fontWeight='bold'>
                         Courses ({courses.length})
-                      </Typography>
+                      </ThemedTypography>
                     </Box>
                     <Box display='flex' gap={1} flexWrap='wrap'>
-                      <Button
-                        variant='outlined'
-                        size='small'
-                        onClick={() => handleBulkSet('Low')}
-                        sx={{
-                          borderColor: 'success.main',
-                          color: 'success.main',
-                        }}
-                      >
-                        Set All Low
-                      </Button>
-                      <Button
-                        variant='outlined'
-                        size='small'
-                        onClick={() => handleBulkSet('Medium')}
-                        sx={{
-                          borderColor: 'warning.main',
-                          color: 'warning.main',
-                        }}
-                      >
-                        Set All Medium
-                      </Button>
-                      <Button
-                        variant='outlined'
-                        size='small'
-                        onClick={() => handleBulkSet('High')}
-                        sx={{ borderColor: 'error.main', color: 'error.main' }}
-                      >
-                        Set All High
-                      </Button>
-                      <Button
+                                             <ThemedOutlinedButton
+                         variant='outlined'
+                         size='small'
+                         onClick={() => handleBulkSet('Low')}
+                         sx={{
+                           borderColor: theme.palette.success.main,
+                           color: theme.palette.success.main,
+                           '&:hover': {
+                             backgroundColor: themeHelpers.withOpacity(theme.palette.success.main, 0.08),
+                           },
+                         }}
+                       >
+                         Set All Low
+                       </ThemedOutlinedButton>
+                       <ThemedOutlinedButton
+                         variant='outlined'
+                         size='small'
+                         onClick={() => handleBulkSet('Medium')}
+                         sx={{
+                           borderColor: theme.palette.warning.main,
+                           color: theme.palette.warning.main,
+                           '&:hover': {
+                             backgroundColor: themeHelpers.withOpacity(theme.palette.warning.main, 0.08),
+                           },
+                         }}
+                       >
+                         Set All Medium
+                       </ThemedOutlinedButton>
+                       <ThemedOutlinedButton
+                         variant='outlined'
+                         size='small'
+                         onClick={() => handleBulkSet('High')}
+                         sx={{
+                           borderColor: theme.palette.error.main,
+                           color: theme.palette.error.main,
+                           '&:hover': {
+                             backgroundColor: themeHelpers.withOpacity(theme.palette.error.main, 0.08),
+                           },
+                         }}
+                       >
+                         Set All High
+                       </ThemedOutlinedButton>
+                      <ThemedSecondaryButton
                         variant='contained'
-                        color='secondary'
                         onClick={handleSaveCourseRatings}
                         disabled={savingCourseRisk}
                         startIcon={
@@ -557,38 +723,38 @@ const TrainerRiskRating = () => {
                         }
                       >
                         {savingCourseRisk ? 'Saving...' : 'Save Courses'}
-                      </Button>
+                      </ThemedSecondaryButton>
                     </Box>
                   </Box>
 
-                  <Paper elevation={1}>
+                  <ThemedPaper elevation={1}>
                     <Table>
-                      <TableHead>
-                        <TableRow sx={{ backgroundColor: 'grey.50' }}>
-                          <TableCell sx={{ fontWeight: 'bold' }}>
+                      <ThemedTableHead>
+                        <TableRow>
+                          <ThemedTableCell sx={{ fontWeight: 'bold' }}>
                             Course Name
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>
+                          </ThemedTableCell>
+                          <ThemedTableCell sx={{ fontWeight: 'bold', width: '30%' }}>
                             Risk Level
-                          </TableCell>
-                          <TableCell
+                          </ThemedTableCell>
+                          <ThemedTableCell
                             sx={{ fontWeight: 'bold', width: '100px' }}
                           >
                             Actions
-                          </TableCell>
+                          </ThemedTableCell>
                         </TableRow>
-                      </TableHead>
+                      </ThemedTableHead>
                       <TableBody>
                         {courses.map((course: any, index: number) => (
                           <>
                             <TableRow key={course.course_id} hover>
-                              <TableCell>
-                                <Typography variant='body1' fontWeight='medium'>
+                              <ThemedTableCell>
+                                <ThemedTypography variant='body1' fontWeight='medium'>
                                   {course.course_name}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>
-                                <TextField
+                                </ThemedTypography>
+                              </ThemedTableCell>
+                              <ThemedTableCell>
+                                <ThemedTextField
                                   select
                                   value={
                                     courseRatings[course.course_id] ??
@@ -614,7 +780,7 @@ const TrainerRiskRating = () => {
                                     <MenuItem key={opt.value} value={opt.value}>
                                       {opt.label}
                                       {opt.value !== 'Please select' && (
-                                        <Chip
+                                        <ThemedChip
                                           label={opt.label}
                                           size='small'
                                           color={opt.color as any}
@@ -623,29 +789,30 @@ const TrainerRiskRating = () => {
                                       )}
                                     </MenuItem>
                                   ))}
-                                </TextField>
-                              </TableCell>
-                              <TableCell>
+                                </ThemedTextField>
+                              </ThemedTableCell>
+                              <ThemedTableCell>
                                 <Tooltip title='Add comment'>
-                                  <IconButton
+                                  <ThemedIconButton
                                     onClick={() =>
                                       setExpandedRow(
                                         expandedRow === index ? null : index
                                       )
                                     }
-                                    color={
-                                      expandedRow === index
-                                        ? 'primary'
-                                        : 'default'
-                                    }
+                                    sx={{
+                                                                             color:
+                                         expandedRow === index
+                                           ? theme.palette.primary.main
+                                           : theme.palette.text.secondary,
+                                    }}
                                   >
                                     <AddCircleIcon />
-                                  </IconButton>
+                                  </ThemedIconButton>
                                 </Tooltip>
-                              </TableCell>
+                              </ThemedTableCell>
                             </TableRow>
                             <TableRow>
-                              <TableCell colSpan={3} sx={{ p: 0 }}>
+                              <ThemedTableCell colSpan={3} sx={{ p: 0 }}>
                                 <Collapse
                                   in={expandedRow === index}
                                   timeout='auto'
@@ -653,18 +820,19 @@ const TrainerRiskRating = () => {
                                 >
                                   <Box
                                     p={3}
-                                    bgcolor='grey.50'
-                                    borderTop={1}
-                                    borderColor='grey.200'
+                                    sx={{
+                                                                           backgroundColor: theme.palette.background.default,
+                                     borderTop: `1px solid ${theme.palette.divider}`,
+                                    }}
                                   >
-                                    <Typography
+                                    <ThemedTypography
                                       variant='subtitle2'
                                       mb={2}
                                       fontWeight='bold'
                                     >
                                       Add Comment for {course.course_name}
-                                    </Typography>
-                                    <TextField
+                                    </ThemedTypography>
+                                    <ThemedTextField
                                       label='Comment'
                                       multiline
                                       fullWidth
@@ -679,7 +847,7 @@ const TrainerRiskRating = () => {
                                       placeholder='Enter your comment here...'
                                     />
                                     <Box mt={2} display='flex' gap={2}>
-                                      <Button
+                                      <ThemedPrimaryButton
                                         variant='contained'
                                         onClick={() =>
                                           handleSaveComment(
@@ -699,29 +867,29 @@ const TrainerRiskRating = () => {
                                         {savingComment
                                           ? 'Saving...'
                                           : 'Save Comment'}
-                                      </Button>
-                                      <Button
+                                      </ThemedPrimaryButton>
+                                      <ThemedOutlinedButton
                                         variant='outlined'
                                         onClick={() => setExpandedRow(null)}
                                       >
                                         Cancel
-                                      </Button>
+                                      </ThemedOutlinedButton>
                                     </Box>
                                   </Box>
                                 </Collapse>
-                              </TableCell>
+                              </ThemedTableCell>
                             </TableRow>
                           </>
                         ))}
                       </TableBody>
                     </Table>
-                  </Paper>
-                </CardContent>
-              </Card>
+                  </ThemedPaper>
+                </ThemedCardContent>
+              </ThemedCard>
 
               {/* Assessment Method Risk */}
-              <Card elevation={2}>
-                <CardContent>
+              <ThemedCard elevation={2}>
+                <ThemedCardContent>
                   <Box
                     display='flex'
                     alignItems='center'
@@ -729,45 +897,56 @@ const TrainerRiskRating = () => {
                     mb={3}
                   >
                     <Box display='flex' alignItems='center' gap={1}>
-                      <AssessmentIcon color='primary' />
-                      <Typography variant='h6' fontWeight='bold'>
+                                             <AssessmentIcon sx={{ color: theme.palette.primary.main }} />
+                      <ThemedTypography variant='h6' fontWeight='bold'>
                         Assessment Method Risk ({assessmentMethods.length})
-                      </Typography>
+                      </ThemedTypography>
                     </Box>
                     <Box display='flex' gap={1} flexWrap='wrap'>
-                      <Button
-                        variant='outlined'
-                        size='small'
-                        onClick={() => handleAssessmentRisk('Low')}
-                        sx={{
-                          borderColor: 'success.main',
-                          color: 'success.main',
-                        }}
-                      >
-                        Set All Low
-                      </Button>
-                      <Button
-                        variant='outlined'
-                        size='small'
-                        onClick={() => handleAssessmentRisk('Medium')}
-                        sx={{
-                          borderColor: 'warning.main',
-                          color: 'warning.main',
-                        }}
-                      >
-                        Set All Medium
-                      </Button>
-                      <Button
-                        variant='outlined'
-                        size='small'
-                        onClick={() => handleAssessmentRisk('High')}
-                        sx={{ borderColor: 'error.main', color: 'error.main' }}
-                      >
-                        Set All High
-                      </Button>
-                      <Button
+                                             <ThemedOutlinedButton
+                         variant='outlined'
+                         size='small'
+                         onClick={() => handleAssessmentRisk('Low')}
+                         sx={{
+                           borderColor: theme.palette.success.main,
+                           color: theme.palette.success.main,
+                           '&:hover': {
+                             backgroundColor: themeHelpers.withOpacity(theme.palette.success.main, 0.08),
+                           },
+                         }}
+                       >
+                         Set All Low
+                       </ThemedOutlinedButton>
+                       <ThemedOutlinedButton
+                         variant='outlined'
+                         size='small'
+                         onClick={() => handleAssessmentRisk('Medium')}
+                         sx={{
+                           borderColor: theme.palette.warning.main,
+                           color: theme.palette.warning.main,
+                           '&:hover': {
+                             backgroundColor: themeHelpers.withOpacity(theme.palette.warning.main, 0.08),
+                           },
+                         }}
+                       >
+                         Set All Medium
+                       </ThemedOutlinedButton>
+                       <ThemedOutlinedButton
+                         variant='outlined'
+                         size='small'
+                         onClick={() => handleAssessmentRisk('High')}
+                         sx={{
+                           borderColor: theme.palette.error.main,
+                           color: theme.palette.error.main,
+                           '&:hover': {
+                             backgroundColor: themeHelpers.withOpacity(theme.palette.error.main, 0.08),
+                           },
+                         }}
+                       >
+                         Set All High
+                       </ThemedOutlinedButton>
+                      <ThemedSecondaryButton
                         variant='contained'
-                        color='secondary'
                         onClick={handleSaveAssessmentRatings}
                         disabled={savingCourseRisk}
                         startIcon={
@@ -779,40 +958,40 @@ const TrainerRiskRating = () => {
                         }
                       >
                         {savingCourseRisk ? 'Saving...' : 'Save Assessment'}
-                      </Button>
+                      </ThemedSecondaryButton>
                     </Box>
                   </Box>
 
-                  <Paper elevation={1}>
+                  <ThemedPaper elevation={1}>
                     <Table>
-                      <TableHead>
-                        <TableRow sx={{ backgroundColor: 'grey.50' }}>
-                          <TableCell sx={{ fontWeight: 'bold' }}>
+                      <ThemedTableHead>
+                        <TableRow>
+                          <ThemedTableCell sx={{ fontWeight: 'bold' }}>
                             Assessment Method
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>
+                          </ThemedTableCell>
+                          <ThemedTableCell sx={{ fontWeight: 'bold', width: '30%' }}>
                             Risk Level
-                          </TableCell>
+                          </ThemedTableCell>
                         </TableRow>
-                      </TableHead>
+                      </ThemedTableHead>
                       <TableBody>
                         {assessmentMethods.map((assessment) => (
                           <TableRow key={assessment.value} hover>
-                            <TableCell>
+                            <ThemedTableCell>
                               <Box display='flex' alignItems='center' gap={2}>
-                                <Chip
+                                <ThemedChip
                                   label={assessment.label}
                                   size='small'
                                   color='primary'
                                   variant='outlined'
                                 />
-                                <Typography variant='body1'>
+                                <ThemedTypography variant='body1'>
                                   {assessment.fullName}
-                                </Typography>
+                                </ThemedTypography>
                               </Box>
-                            </TableCell>
-                            <TableCell>
-                              <TextField
+                            </ThemedTableCell>
+                            <ThemedTableCell>
+                              <ThemedTextField
                                 select
                                 value={
                                   assessmentRiskRating[assessment.value] || ''
@@ -837,7 +1016,7 @@ const TrainerRiskRating = () => {
                                   <MenuItem key={opt.label} value={opt.value}>
                                     {opt.label}
                                     {opt.value !== 'Please select' && (
-                                      <Chip
+                                      <ThemedChip
                                         label={opt.label}
                                         size='small'
                                         color={opt.color as any}
@@ -846,43 +1025,43 @@ const TrainerRiskRating = () => {
                                     )}
                                   </MenuItem>
                                 ))}
-                              </TextField>
-                            </TableCell>
+                              </ThemedTextField>
+                            </ThemedTableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
-                  </Paper>
-                </CardContent>
-              </Card>
+                  </ThemedPaper>
+                </ThemedCardContent>
+              </ThemedCard>
             </Box>
           ) : (
-            <Card elevation={2}>
-              <CardContent>
+            <ThemedCard elevation={2}>
+              <ThemedCardContent>
                 <Box
                   display='flex'
                   flexDirection='column'
                   alignItems='center'
                   py={8}
                 >
-                  <PersonIcon sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
-                  <Typography
+                                     <PersonIcon sx={{ fontSize: 64, color: theme.palette.text.secondary, mb: 2 }} />
+                  <ThemedTypography
                     variant='h6'
                     color='text.secondary'
                     textAlign='center'
                   >
                     Select a trainer from the list to view their courses and
                     assessment methods
-                  </Typography>
+                  </ThemedTypography>
                 </Box>
-              </CardContent>
-            </Card>
+              </ThemedCardContent>
+            </ThemedCard>
           )}
         </Grid>
       </Grid>
 
       {/* Snackbar for notifications */}
-      <Snackbar
+      <ThemedSnackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
@@ -895,8 +1074,8 @@ const TrainerRiskRating = () => {
         >
           {snackbar.message}
         </Alert>
-      </Snackbar>
-    </Box>
+      </ThemedSnackbar>
+    </ThemedBox>
   )
 }
 
