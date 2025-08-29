@@ -197,6 +197,7 @@ const DynamicFormPreview: React.FC<Props> = ({
   const currentUser =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectGlobalUser)?.currentUser
+  console.log("🚀 ~ DynamicFormPreview ~ currentUser:", currentUser)
 
   const leaner = useSelector(selectLearnerManagement)?.learner
 
@@ -706,7 +707,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   onChange={controllerField.onChange}
                                   error={!!fieldState.error}
                                   helperText={fieldState.error?.message}
-                                  disabled={isSavedViewedPath || !currentUser.roles.includes(field.signatureRole)}
+                                  disabled={isSavedViewedPath || !currentUser?.roles?.includes(field.signatureRole)}
                                 />
                               </Box>
                             )
