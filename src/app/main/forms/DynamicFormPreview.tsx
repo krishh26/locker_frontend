@@ -42,6 +42,18 @@ import PDFFormRenderer from './PDFFormRenderer'
 import SignatureInput from './SignatureInput'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
 
+// Utility function to format dates for HTML date input
+const formatDateForInput = (dateValue: string | Date | null | undefined): string => {
+  if (!dateValue) return ''
+  try {
+    const date = new Date(dateValue)
+    if (isNaN(date.getTime())) return ''
+    return date.toISOString().split('T')[0]
+  } catch {
+    return ''
+  }
+}
+
 export interface SimpleFormField {
   id: string
   type: string
@@ -258,13 +270,27 @@ const DynamicFormPreview: React.FC<Props> = ({
 
       // Apply preset values (for learner submitting)
       fields.forEach((field) => {
-        defaultValues[field.id] =
-          currentUser.roles.includes(UserRole.Learner) && field.presetField
-            ? presetMap[field.presetField] ??
-              (field.type === 'checkbox' ? [] : '')
-            : field.type === 'checkbox'
-            ? []
-            : ''
+        let defaultValue: any = ''
+        
+        if (currentUser.roles.includes(UserRole.Learner) && field.presetField) {
+          const presetValue = presetMap[field.presetField]
+          if (presetValue !== undefined) {
+            if (field.type === 'checkbox') {
+              defaultValue = presetValue
+            } else if (field.type === 'date') {
+              // Handle date fields - convert ISO string to Date object if needed
+              defaultValue = presetValue
+            } else {
+              defaultValue = presetValue
+            }
+          } else {
+            defaultValue = field.type === 'checkbox' ? [] : ''
+          }
+        } else {
+          defaultValue = field.type === 'checkbox' ? [] : ''
+        }
+        
+        defaultValues[field.id] = defaultValue
       })
 
       // Apply values from formDataDetails if available
@@ -282,6 +308,9 @@ const DynamicFormPreview: React.FC<Props> = ({
             defaultValues[key] = parseIfJsonObject(value)
               ? parseIfJsonObject(value)
               : value
+          } else if (fieldDef?.type === 'date') {
+            // Handle date fields - ensure proper date handling
+            defaultValues[key] = value
           } else {
             defaultValues[key] = value
           }
@@ -312,6 +341,9 @@ const DynamicFormPreview: React.FC<Props> = ({
           defaultValues[key] = parseIfJsonObject(value)
             ? parseIfJsonObject(value)
             : value
+        } else if (fieldDef?.type === 'date') {
+          // Handle date fields - ensure proper date handling
+          defaultValues[key] = value
         } else {
           defaultValues[key] = value
         }
@@ -679,6 +711,16 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 error={error}
                                 helperText={helperText}
                                 disabled={isSavedViewedPath}
+                                value={formatDateForInput(controllerField.value)}
+                                onChange={(e) => {
+                                  // Convert YYYY-MM-DD back to ISO string when user changes the date
+                                  if (e.target.value) {
+                                    const date = new Date(e.target.value + 'T00:00:00.000Z')
+                                    controllerField.onChange(date.toISOString())
+                                  } else {
+                                    controllerField.onChange('')
+                                  }
+                                }}
                               />
                             )
 
@@ -706,7 +748,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   onChange={controllerField.onChange}
                                   error={!!fieldState.error}
                                   helperText={fieldState.error?.message}
-                                  disabled={isSavedViewedPath || !currentUser.roles.includes(field.signatureRole)}
+                                  disabled={isSavedViewedPath || !currentUser?.roles?.includes(field.signatureRole)}
                                 />
                               </Box>
                             )

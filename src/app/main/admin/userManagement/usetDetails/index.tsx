@@ -87,7 +87,7 @@ const UserDetails = ({ handleClose, updateData, userData }) => {
 
   const dispatch: any = useDispatch()
   const { lineMangers = [] } = useSelector(selectLearnerManagement)
-  console.log('🚀 ~ UserDetails ~ lineMangers:', lineMangers)
+  
   const { dataUpdatingLoadding } = useSelector(selectUserManagement)
 
   const validationSchema = schema(updateData, lineMangers)
