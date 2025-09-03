@@ -126,11 +126,11 @@ export const learnerPlanAPI = createApi({
     }),
     uploadLearnerData: builder.mutation({
       query: (data) => ({
-        url: `learner-document/upload`,
+        url: `learner/bulk-upload`,
         method: 'POST',
         body: data,
       }),
-    })
+    }),
   }),
 })
 export const {
