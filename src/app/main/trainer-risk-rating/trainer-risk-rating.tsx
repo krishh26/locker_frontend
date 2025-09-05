@@ -267,6 +267,12 @@ const TrainerRiskRating = () => {
     medium: '',
     low: '',
   })
+  const [riskSettingsErrors, setRiskSettingsErrors] = useState({
+    high: '',
+    medium: '',
+    low: '',
+    general: '',
+  })
   const [courseRatings, setCourseRatings] = useState<{ [key: number]: string }>(
     {}
   )
@@ -383,7 +389,7 @@ const TrainerRiskRating = () => {
       }
 
       await saveCourseComment({
-        trainerId: selectedUser.user_id,
+        trainerId: trainerDetails?.data?.risk_rating_info?.id,
         body,
       }).unwrap()
 
@@ -395,13 +401,30 @@ const TrainerRiskRating = () => {
   }
 
   const handleSaveRiskSettings = async () => {
+    // Validate risk settings before saving
+    if (!validateRiskSettings(riskSettings)) {
+      showSnackbar('Please fix validation errors before saving', 'error')
+      return
+    }
+
+    const courses = Object.entries(courseRatings).map(([id, risk]) => ({
+      course_id: Number(id),
+      overall_risk_level: risk === 'Please select' ? '' : risk,
+    }))
+
+    const payload = {
+      trainer_id: selectedUser.user_id,
+      high_percentage: Number(riskSettings.high),
+      medium_percentage: Number(riskSettings.medium),
+      low_percentage: Number(riskSettings.low),
+      courses,
+    }
+
     try {
-      await saveRiskSettings({
-        trainerId: selectedUser.user_id,
-        data: riskSettings,
-      }).unwrap()
+      await saveCourseRisk({ data: payload }).unwrap()
       showSnackbar('Risk settings saved successfully', 'success')
     } catch (error) {
+      console.error('Error saving risk settings:', error)
       showSnackbar('Failed to save risk settings', 'error')
     }
   }
@@ -455,6 +478,79 @@ const TrainerRiskRating = () => {
     setSnackbar({ open: true, message, severity })
   }
 
+  // Validation function for risk settings
+  const validateRiskSettings = (settings: {
+    high: string
+    medium: string
+    low: string
+  }) => {
+    const errors = { high: '', medium: '', low: '', general: '' }
+    let hasErrors = false
+
+    // Convert to numbers for validation
+    const highValue = parseFloat(settings.high) || 0
+    const mediumValue = parseFloat(settings.medium) || 0
+    const lowValue = parseFloat(settings.low) || 0
+
+    // Check if all fields are filled
+    if (!settings.high || !settings.medium || !settings.low) {
+      errors.general = 'All risk percentage fields are required'
+      hasErrors = true
+    }
+
+    // Check if values are valid numbers and within range
+    if (
+      settings.high &&
+      (isNaN(highValue) || highValue < 0 || highValue > 100)
+    ) {
+      errors.high = 'High risk must be between 0 and 100'
+      hasErrors = true
+    }
+
+    if (
+      settings.medium &&
+      (isNaN(mediumValue) || mediumValue < 0 || mediumValue > 100)
+    ) {
+      errors.medium = 'Medium risk must be between 0 and 100'
+      hasErrors = true
+    }
+
+    if (settings.low && (isNaN(lowValue) || lowValue < 0 || lowValue > 100)) {
+      errors.low = 'Low risk must be between 0 and 100'
+      hasErrors = true
+    }
+
+    // Check if high risk value limits other fields
+    if (highValue > 0 && (mediumValue > highValue || lowValue > highValue)) {
+      errors.medium =
+        mediumValue > highValue
+          ? `Cannot exceed high risk value (${highValue})`
+          : ''
+      errors.low =
+        lowValue > highValue
+          ? `Cannot exceed high risk value (${highValue})`
+          : ''
+      hasErrors = true
+    }
+
+    // Check if medium risk value limits low risk field
+    if (mediumValue > 0 && lowValue > mediumValue) {
+      errors.low = `Cannot exceed medium risk value (${mediumValue})`
+      hasErrors = true
+    }
+
+    // Check if all values sum to 100
+    const total = highValue + mediumValue + lowValue
+    if (total !== 100) {
+      errors.general = `Risk percentages must sum to 100 (current total: ${total})`
+      hasErrors = true
+    }
+
+    setRiskSettingsErrors(errors)
+    return !hasErrors
+  }
+
+
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false })
   }
@@ -472,19 +568,19 @@ const TrainerRiskRating = () => {
           <ThemedCard elevation={2}>
             <ThemedCardContent>
               <Box display='flex' alignItems='center' gap={1} mb={2}>
-                                 <PersonIcon sx={{ color: theme.palette.primary.main }} />
-                 <ThemedTypography variant='h6' fontWeight='bold' mr={1}>
-                   Trainers
-                 </ThemedTypography>
-                 <ThemedBadge
-                   badgeContent={trainer.length}
-                   sx={{
-                     '& .MuiBadge-badge': {
-                       backgroundColor: theme.palette.primary.main,
-                       color: theme.palette.primary.contrastText,
-                     },
-                   }}
-                 />
+                <PersonIcon sx={{ color: theme.palette.primary.main }} />
+                <ThemedTypography variant='h6' fontWeight='bold' mr={1}>
+                  Trainers
+                </ThemedTypography>
+                <ThemedBadge
+                  badgeContent={trainer.length}
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      backgroundColor: theme.palette.primary.main,
+                      color: theme.palette.primary.contrastText,
+                    },
+                  }}
+                />
               </Box>
               <List sx={{ maxHeight: 600, overflow: 'auto' }}>
                 {trainer.map((user) => (
@@ -505,14 +601,14 @@ const TrainerRiskRating = () => {
                           sx={{
                             width: 40,
                             height: 40,
-                                                       bgcolor:
-                             selectedUser?.user_id === user.user_id
-                               ? theme.palette.primary.contrastText
-                               : theme.palette.primary.main,
-                           color:
-                             selectedUser?.user_id === user.user_id
-                               ? theme.palette.primary.main
-                               : theme.palette.primary.contrastText,
+                            bgcolor:
+                              selectedUser?.user_id === user.user_id
+                                ? theme.palette.primary.contrastText
+                                : theme.palette.primary.main,
+                            color:
+                              selectedUser?.user_id === user.user_id
+                                ? theme.palette.primary.main
+                                : theme.palette.primary.contrastText,
                           }}
                         >
                           {user.first_name[0]}
@@ -529,10 +625,10 @@ const TrainerRiskRating = () => {
                           color: 'inherit',
                         }}
                         secondaryTypographyProps={{
-                                                     color:
-                             selectedUser?.user_id === user.user_id
-                               ? 'rgba(255,255,255,0.7)'
-                               : theme.palette.text.secondary,
+                          color:
+                            selectedUser?.user_id === user.user_id
+                              ? 'rgba(255,255,255,0.7)'
+                              : theme.palette.text.secondary,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -573,7 +669,9 @@ const TrainerRiskRating = () => {
 
                   {isLoading && (
                     <Box display='flex' justifyContent='center' p={2}>
-                      <CircularProgress sx={{ color: theme.palette.primary.main }} />
+                      <CircularProgress
+                        sx={{ color: theme.palette.primary.main }}
+                      />
                     </Box>
                   )}
                 </ThemedCardContent>
@@ -590,54 +688,72 @@ const TrainerRiskRating = () => {
                       <ThemedTextField
                         label='High Risk %'
                         value={riskSettings.high}
-                        onChange={(e) =>
-                          setRiskSettings({
+                        onChange={(e) => {
+                          const newSettings = {
                             ...riskSettings,
                             high: e.target.value,
-                          })
-                        }
+                          }
+                          setRiskSettings(newSettings)
+                          // Validate in real-time
+                          validateRiskSettings(newSettings)
+                        }}
                         fullWidth
                         size='small'
                         type='number'
+                        error={!!riskSettingsErrors.high}
+                        helperText={riskSettingsErrors.high}
+                        inputProps={{ min: 0, max: 100 }}
                       />
                     </Grid>
                     <Grid item xs={12} sm={3}>
                       <ThemedTextField
                         label='Medium Risk %'
                         value={riskSettings.medium}
-                        onChange={(e) =>
-                          setRiskSettings({
+                        onChange={(e) => {
+                          const newSettings = {
                             ...riskSettings,
                             medium: e.target.value,
-                          })
-                        }
+                          }
+                          setRiskSettings(newSettings)
+                          // Validate in real-time
+                          validateRiskSettings(newSettings)
+                        }}
                         fullWidth
                         size='small'
                         type='number'
+                        error={!!riskSettingsErrors.medium}
+                        helperText={riskSettingsErrors.medium}
+                        inputProps={{ min: 0, max: 100 }}
                       />
                     </Grid>
                     <Grid item xs={12} sm={3}>
                       <ThemedTextField
                         label='Low Risk %'
                         value={riskSettings.low}
-                        onChange={(e) =>
-                          setRiskSettings({
+                        onChange={(e) => {
+                          const newSettings = {
                             ...riskSettings,
                             low: e.target.value,
-                          })
-                        }
+                          }
+                          setRiskSettings(newSettings)
+                          // Validate in real-time
+                          validateRiskSettings(newSettings)
+                        }}
                         fullWidth
                         size='small'
                         type='number'
+                        error={!!riskSettingsErrors.low}
+                        helperText={riskSettingsErrors.low}
+                        inputProps={{ min: 0, max: 100 }}
                       />
                     </Grid>
                     <Grid item xs={12} sm={3}>
                       <ThemedPrimaryButton
                         variant='contained'
                         onClick={handleSaveRiskSettings}
-                        disabled={savingSettings}
+                        disabled={savingCourseRisk}
                         startIcon={
-                          savingSettings ? (
+                          savingCourseRisk ? (
                             <CircularProgress size={20} />
                           ) : (
                             <SaveIcon />
@@ -645,10 +761,15 @@ const TrainerRiskRating = () => {
                         }
                         fullWidth
                       >
-                        {savingSettings ? 'Saving...' : 'Save Settings'}
+                        {savingCourseRisk ? 'Saving...' : 'Save Settings'}
                       </ThemedPrimaryButton>
                     </Grid>
                   </Grid>
+                  {riskSettingsErrors.general && (
+                    <Alert severity='error' sx={{ mt: 2 }}>
+                      {riskSettingsErrors.general}
+                    </Alert>
+                  )}
                 </ThemedCardContent>
               </ThemedCard>
 
@@ -662,54 +783,63 @@ const TrainerRiskRating = () => {
                     mb={3}
                   >
                     <Box display='flex' alignItems='center' gap={1}>
-                                             <SchoolIcon sx={{ color: theme.palette.primary.main }} />
+                      <SchoolIcon sx={{ color: theme.palette.primary.main }} />
                       <ThemedTypography variant='h6' fontWeight='bold'>
                         Courses ({courses.length})
                       </ThemedTypography>
                     </Box>
                     <Box display='flex' gap={1} flexWrap='wrap'>
-                                             <ThemedOutlinedButton
-                         variant='outlined'
-                         size='small'
-                         onClick={() => handleBulkSet('Low')}
-                         sx={{
-                           borderColor: theme.palette.success.main,
-                           color: theme.palette.success.main,
-                           '&:hover': {
-                             backgroundColor: themeHelpers.withOpacity(theme.palette.success.main, 0.08),
-                           },
-                         }}
-                       >
-                         Set All Low
-                       </ThemedOutlinedButton>
-                       <ThemedOutlinedButton
-                         variant='outlined'
-                         size='small'
-                         onClick={() => handleBulkSet('Medium')}
-                         sx={{
-                           borderColor: theme.palette.warning.main,
-                           color: theme.palette.warning.main,
-                           '&:hover': {
-                             backgroundColor: themeHelpers.withOpacity(theme.palette.warning.main, 0.08),
-                           },
-                         }}
-                       >
-                         Set All Medium
-                       </ThemedOutlinedButton>
-                       <ThemedOutlinedButton
-                         variant='outlined'
-                         size='small'
-                         onClick={() => handleBulkSet('High')}
-                         sx={{
-                           borderColor: theme.palette.error.main,
-                           color: theme.palette.error.main,
-                           '&:hover': {
-                             backgroundColor: themeHelpers.withOpacity(theme.palette.error.main, 0.08),
-                           },
-                         }}
-                       >
-                         Set All High
-                       </ThemedOutlinedButton>
+                      <ThemedOutlinedButton
+                        variant='outlined'
+                        size='small'
+                        onClick={() => handleBulkSet('Low')}
+                        sx={{
+                          borderColor: theme.palette.success.main,
+                          color: theme.palette.success.main,
+                          '&:hover': {
+                            backgroundColor: themeHelpers.withOpacity(
+                              theme.palette.success.main,
+                              0.08
+                            ),
+                          },
+                        }}
+                      >
+                        Set All Low
+                      </ThemedOutlinedButton>
+                      <ThemedOutlinedButton
+                        variant='outlined'
+                        size='small'
+                        onClick={() => handleBulkSet('Medium')}
+                        sx={{
+                          borderColor: theme.palette.warning.main,
+                          color: theme.palette.warning.main,
+                          '&:hover': {
+                            backgroundColor: themeHelpers.withOpacity(
+                              theme.palette.warning.main,
+                              0.08
+                            ),
+                          },
+                        }}
+                      >
+                        Set All Medium
+                      </ThemedOutlinedButton>
+                      <ThemedOutlinedButton
+                        variant='outlined'
+                        size='small'
+                        onClick={() => handleBulkSet('High')}
+                        sx={{
+                          borderColor: theme.palette.error.main,
+                          color: theme.palette.error.main,
+                          '&:hover': {
+                            backgroundColor: themeHelpers.withOpacity(
+                              theme.palette.error.main,
+                              0.08
+                            ),
+                          },
+                        }}
+                      >
+                        Set All High
+                      </ThemedOutlinedButton>
                       <ThemedSecondaryButton
                         variant='contained'
                         onClick={handleSaveCourseRatings}
@@ -734,7 +864,9 @@ const TrainerRiskRating = () => {
                           <ThemedTableCell sx={{ fontWeight: 'bold' }}>
                             Course Name
                           </ThemedTableCell>
-                          <ThemedTableCell sx={{ fontWeight: 'bold', width: '30%' }}>
+                          <ThemedTableCell
+                            sx={{ fontWeight: 'bold', width: '30%' }}
+                          >
                             Risk Level
                           </ThemedTableCell>
                           <ThemedTableCell
@@ -749,7 +881,10 @@ const TrainerRiskRating = () => {
                           <>
                             <TableRow key={course.course_id} hover>
                               <ThemedTableCell>
-                                <ThemedTypography variant='body1' fontWeight='medium'>
+                                <ThemedTypography
+                                  variant='body1'
+                                  fontWeight='medium'
+                                >
                                   {course.course_name}
                                 </ThemedTypography>
                               </ThemedTableCell>
@@ -800,10 +935,10 @@ const TrainerRiskRating = () => {
                                       )
                                     }
                                     sx={{
-                                                                             color:
-                                         expandedRow === index
-                                           ? theme.palette.primary.main
-                                           : theme.palette.text.secondary,
+                                      color:
+                                        expandedRow === index
+                                          ? theme.palette.primary.main
+                                          : theme.palette.text.secondary,
                                     }}
                                   >
                                     <AddCircleIcon />
@@ -821,8 +956,9 @@ const TrainerRiskRating = () => {
                                   <Box
                                     p={3}
                                     sx={{
-                                                                           backgroundColor: theme.palette.background.default,
-                                     borderTop: `1px solid ${theme.palette.divider}`,
+                                      backgroundColor:
+                                        theme.palette.background.default,
+                                      borderTop: `1px solid ${theme.palette.divider}`,
                                     }}
                                   >
                                     <ThemedTypography
@@ -897,54 +1033,65 @@ const TrainerRiskRating = () => {
                     mb={3}
                   >
                     <Box display='flex' alignItems='center' gap={1}>
-                                             <AssessmentIcon sx={{ color: theme.palette.primary.main }} />
+                      <AssessmentIcon
+                        sx={{ color: theme.palette.primary.main }}
+                      />
                       <ThemedTypography variant='h6' fontWeight='bold'>
                         Assessment Method Risk ({assessmentMethods.length})
                       </ThemedTypography>
                     </Box>
                     <Box display='flex' gap={1} flexWrap='wrap'>
-                                             <ThemedOutlinedButton
-                         variant='outlined'
-                         size='small'
-                         onClick={() => handleAssessmentRisk('Low')}
-                         sx={{
-                           borderColor: theme.palette.success.main,
-                           color: theme.palette.success.main,
-                           '&:hover': {
-                             backgroundColor: themeHelpers.withOpacity(theme.palette.success.main, 0.08),
-                           },
-                         }}
-                       >
-                         Set All Low
-                       </ThemedOutlinedButton>
-                       <ThemedOutlinedButton
-                         variant='outlined'
-                         size='small'
-                         onClick={() => handleAssessmentRisk('Medium')}
-                         sx={{
-                           borderColor: theme.palette.warning.main,
-                           color: theme.palette.warning.main,
-                           '&:hover': {
-                             backgroundColor: themeHelpers.withOpacity(theme.palette.warning.main, 0.08),
-                           },
-                         }}
-                       >
-                         Set All Medium
-                       </ThemedOutlinedButton>
-                       <ThemedOutlinedButton
-                         variant='outlined'
-                         size='small'
-                         onClick={() => handleAssessmentRisk('High')}
-                         sx={{
-                           borderColor: theme.palette.error.main,
-                           color: theme.palette.error.main,
-                           '&:hover': {
-                             backgroundColor: themeHelpers.withOpacity(theme.palette.error.main, 0.08),
-                           },
-                         }}
-                       >
-                         Set All High
-                       </ThemedOutlinedButton>
+                      <ThemedOutlinedButton
+                        variant='outlined'
+                        size='small'
+                        onClick={() => handleAssessmentRisk('Low')}
+                        sx={{
+                          borderColor: theme.palette.success.main,
+                          color: theme.palette.success.main,
+                          '&:hover': {
+                            backgroundColor: themeHelpers.withOpacity(
+                              theme.palette.success.main,
+                              0.08
+                            ),
+                          },
+                        }}
+                      >
+                        Set All Low
+                      </ThemedOutlinedButton>
+                      <ThemedOutlinedButton
+                        variant='outlined'
+                        size='small'
+                        onClick={() => handleAssessmentRisk('Medium')}
+                        sx={{
+                          borderColor: theme.palette.warning.main,
+                          color: theme.palette.warning.main,
+                          '&:hover': {
+                            backgroundColor: themeHelpers.withOpacity(
+                              theme.palette.warning.main,
+                              0.08
+                            ),
+                          },
+                        }}
+                      >
+                        Set All Medium
+                      </ThemedOutlinedButton>
+                      <ThemedOutlinedButton
+                        variant='outlined'
+                        size='small'
+                        onClick={() => handleAssessmentRisk('High')}
+                        sx={{
+                          borderColor: theme.palette.error.main,
+                          color: theme.palette.error.main,
+                          '&:hover': {
+                            backgroundColor: themeHelpers.withOpacity(
+                              theme.palette.error.main,
+                              0.08
+                            ),
+                          },
+                        }}
+                      >
+                        Set All High
+                      </ThemedOutlinedButton>
                       <ThemedSecondaryButton
                         variant='contained'
                         onClick={handleSaveAssessmentRatings}
@@ -969,7 +1116,9 @@ const TrainerRiskRating = () => {
                           <ThemedTableCell sx={{ fontWeight: 'bold' }}>
                             Assessment Method
                           </ThemedTableCell>
-                          <ThemedTableCell sx={{ fontWeight: 'bold', width: '30%' }}>
+                          <ThemedTableCell
+                            sx={{ fontWeight: 'bold', width: '30%' }}
+                          >
                             Risk Level
                           </ThemedTableCell>
                         </TableRow>
@@ -1044,7 +1193,13 @@ const TrainerRiskRating = () => {
                   alignItems='center'
                   py={8}
                 >
-                                     <PersonIcon sx={{ fontSize: 64, color: theme.palette.text.secondary, mb: 2 }} />
+                  <PersonIcon
+                    sx={{
+                      fontSize: 64,
+                      color: theme.palette.text.secondary,
+                      mb: 2,
+                    }}
+                  />
                   <ThemedTypography
                     variant='h6'
                     color='text.secondary'

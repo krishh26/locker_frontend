@@ -194,7 +194,7 @@ export default function CaseloadPage() {
 
   // API call with params
   const { data, isLoading, isError, refetch } = useGetCaseloadListQuery({
-    search: filterName,
+    line_manager_name: filterName,
     page,
     limit: rowsPerPage,
     meta: true,
@@ -232,24 +232,19 @@ export default function CaseloadPage() {
       doc.setFontSize(10)
       doc.text(`Email: ${manager.line_manager.email}`, 20, yPosition + 8)
       doc.text(
-        `Active Users: ${manager.statistics.active_users}`,
+        `Total Learners: ${manager.statistics.total_managed_learners}`,
         20,
         yPosition + 16
       )
       doc.text(
-        `Total Learners: ${manager.statistics.total_managed_learners}`,
-        20,
-        yPosition + 24
-      )
-      doc.text(
         `Total Users: ${manager.statistics.total_managed_users}`,
         20,
-        yPosition + 32
+        yPosition + 24
       )
 
       if (manager.managed_users?.length > 0) {
         ;(doc as any).autoTable({
-          startY: yPosition + 40,
+          startY: yPosition + 30,
           head: [['Name', 'Email', 'Role']],
           body: manager.managed_users.map((u: any) => [
             `${u.first_name} ${u.last_name}`,
@@ -274,7 +269,6 @@ export default function CaseloadPage() {
     const csvHeaders = [
       'Line Manager Name',
       'Managed User Email',
-      'Active Users',
       'Total Learners',
       'Total Users',
     ]
@@ -293,7 +287,6 @@ export default function CaseloadPage() {
       const rowData = [
         manager.line_manager.full_name,
         managedUserEmails,
-        manager.statistics.active_users,
         manager.statistics.total_managed_learners,
         manager.statistics.total_managed_users,
       ]
@@ -514,7 +507,7 @@ export default function CaseloadPage() {
                 {/* Statistics Cards */}
                 <ThemedCardContent sx={{ pt: 0 }}>
                   <Grid container spacing={2} mb={2}>
-                    <Grid item xs={4}>
+                    <Grid item xs={6}>
                       <ThemedPaper
                         elevation={0}
                         sx={{
@@ -526,12 +519,12 @@ export default function CaseloadPage() {
                       >
                         <PeopleIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
                         <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
-                          {manager.statistics.active_users}
+                          {manager.statistics.total_managed_users}
                         </ThemedTypography>
-                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Active</ThemedTypography>
+                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Users</ThemedTypography>
                       </ThemedPaper>
                     </Grid>
-                    <Grid item xs={4}>
+                    <Grid item xs={6}>
                       <ThemedPaper
                         elevation={0}
                         sx={{
@@ -548,30 +541,13 @@ export default function CaseloadPage() {
                         <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Learners</ThemedTypography>
                       </ThemedPaper>
                     </Grid>
-                    <Grid item xs={4}>
-                      <ThemedPaper
-                        elevation={0}
-                        sx={{
-                          p: 1.5,
-                          textAlign: 'center',
-                          bgcolor: theme.palette.success.main,
-                          color: theme.palette.success.contrastText,
-                        }}
-                      >
-                        <PersonIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
-                        <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
-                          {manager.statistics.total_managed_users}
-                        </ThemedTypography>
-                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Total</ThemedTypography>
-                      </ThemedPaper>
-                    </Grid>
                   </Grid>
 
                   {/* Status Indicator */}
                   <Box display='flex' justifyContent='center' mb={2}>
                     <ThemedChip
-                      label={`${manager.statistics.active_users} Active Users`}
-                      color={getStatusColor(manager.statistics.active_users)}
+                      label={`${manager.statistics.total_managed_users} Active Users`}
+                      color={getStatusColor(manager.statistics.total_managed_users)}
                       size='small'
                       variant='outlined'
                       sx={{
