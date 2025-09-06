@@ -344,28 +344,6 @@ export const PRESET_FIELDS: RolePresets = {
       },
     },
     {
-      type: 'list_trainer',
-      label: 'List Trainers',
-      field: {
-        id: 'list_trainer',
-        type: 'textfield',
-        label: 'List Trainers',
-        required: false,
-        presetField: 'list_trainer',
-      },
-    },
-    {
-      type: 'list_courses',
-      label: 'List Courses',
-      field: {
-        id: 'list_courses',
-        type: 'textfield',
-        label: 'List Courses',
-        required: false,
-        presetField: 'list_courses',
-      },
-    },
-    {
       type: 'location',
       label: 'Location',
       field: {
