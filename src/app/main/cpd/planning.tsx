@@ -32,7 +32,6 @@ import {
   updateCpdPlanningAPI,
 } from "app/store/cpdPlanning";
 import { selectUser } from "app/store/userSlice";
-import { data } from "src/app/component/Chart/doughnut";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import {
   DangerButton,
