@@ -1,4 +1,21 @@
-import { Box, Grid, Tab, Tabs, Typography } from '@mui/material'
+import { 
+  Box, 
+  Grid, 
+  Tab, 
+  Tabs, 
+  Typography, 
+  Card, 
+  CardContent, 
+  useTheme, 
+  Chip, 
+  Fade,
+  Stepper,
+  Step,
+  StepLabel,
+  StepConnector,
+  Avatar,
+  Divider
+} from '@mui/material'
 import React, { useEffect, useState } from 'react'
 import TNAUnits from './tnaUnits'
 import TNAQuestionaire from './tnaQuestionaire'
@@ -8,6 +25,11 @@ import { getLearnerDetails } from 'app/store/learnerManagement'
 import { useSelector } from 'react-redux'
 import { selectGlobalUser } from 'app/store/globalUser'
 import { selectSkillsScan } from 'app/store/skillsScan'
+import AssessmentIcon from '@mui/icons-material/Assessment'
+import QuizIcon from '@mui/icons-material/Quiz'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import PersonIcon from '@mui/icons-material/Person'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -17,6 +39,7 @@ interface TabPanelProps {
 
 function CustomTabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props
+  const theme = useTheme()
 
   return (
     <div
@@ -27,9 +50,19 @@ function CustomTabPanel(props: TabPanelProps) {
       {...other}
     >
       {value === index && (
-        <Box>
-          <Typography>{children}</Typography>
-        </Box>
+        <Fade in timeout={500}>
+          <Box sx={{ 
+            mt: 3,
+            minHeight: '500px',
+            background: theme.palette.mode === 'light' 
+              ? `linear-gradient(135deg, ${theme.palette.grey[50]} 0%, ${theme.palette.background.paper} 100%)`
+              : `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.background.paper} 100%)`,
+            borderRadius: 2,
+            p: 3
+          }}>
+            {children}
+          </Box>
+        </Fade>
       )}
     </div>
   )
@@ -45,10 +78,12 @@ function a11yProps(index: number) {
 const SkillsScan = () => {
   const [value, setValue] = useState(0)
   const dispatch: any = useDispatch()
+  const theme = useTheme()
   const selectedUser =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectGlobalUser)?.selectedUser
   const { selectedCourse } = useSelector(selectSkillsScan)
+  
   const handleTabChange = (event, newValue) => {
     setValue(newValue)
   }
@@ -58,107 +93,188 @@ const SkillsScan = () => {
       dispatch(getLearnerDetails(selectedUser.learner_id))
   }, [selectedUser])
 
+  const steps = [
+    { 
+      label: 'Choose TNA Units', 
+      icon: <AssessmentIcon />, 
+      description: 'Select your training units',
+      disabled: false
+    },
+    { 
+      label: 'TNA Questionnaire', 
+      icon: <QuizIcon />, 
+      description: 'Complete the assessment',
+      disabled: !selectedCourse
+    },
+    { 
+      label: 'View Results', 
+      icon: <VisibilityIcon />, 
+      description: 'Review your results',
+      disabled: !selectedCourse
+    }
+  ]
+
   return (
-    <>
-      <Grid className='m-10' sx={{ minHeight: 600 }}>
-        <Typography className='h1 pl-10'>
-          {selectedUser?.first_name + ' ' + selectedUser?.last_name}
-        </Typography>
-        <Box
-          sx={{
-            borderBottom: 1,
-            borderColor: 'divider',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Tabs
-            value={value}
-            onChange={handleTabChange}
-            aria-label='basic tabs example'
-            className='border-1 m-12 rounded-md'
+    <Box sx={{ 
+      width: "100%", 
+      p: { xs: 1, sm: 2, md: 3 },
+      minHeight: '100vh',
+      background: theme.palette.mode === 'light' 
+        ? `linear-gradient(135deg, ${theme.palette.grey[50]} 0%, ${theme.palette.grey[100]} 100%)`
+        : `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.background.paper} 100%)`
+    }}>
+      <Fade in timeout={800}>
+        <Box>
+          {/* Header Card */}
+          <Card
+            elevation={0}
             sx={{
-              '& .MuiTabs-indicator': {
-                display: 'none',
-              },
+              mb: 3,
+              borderRadius: 3,
+              background: theme.palette.mode === 'light'
+                ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+                : `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+              color: theme.palette.primary.contrastText,
+              overflow: "hidden",
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                zIndex: 1
+              }
             }}
           >
-            <Tab
-              label='Step 1: Choose TNA units'
-              {...a11yProps(0)}
+            <CardContent sx={{ position: 'relative', zIndex: 2, p: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar sx={{ 
+                    bgcolor: theme.palette.primary.contrastText, 
+                    color: theme.palette.primary.main,
+                    mr: 2,
+                    width: 56,
+                    height: 56
+                  }}>
+                    <PersonIcon sx={{ fontSize: 32 }} />
+                  </Avatar>
+                  <Box>
+                    <Typography 
+                      variant="h3" 
+                      fontWeight={700}
+                      sx={{ 
+                        background: `linear-gradient(45deg, ${theme.palette.primary.contrastText}, rgba(255,255,255,0.8))`,
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      Skills Assessment
+                    </Typography>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        opacity: 0.9,
+                        fontWeight: 400,
+                        letterSpacing: '0.5px'
+                      }}
+                    >
+                      {selectedUser?.first_name + ' ' + selectedUser?.last_name}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Chip
+                  icon={<CheckCircleIcon />}
+                  label="Training Needs Analysis"
+                  sx={{
+                    backgroundColor: theme.palette.primary.contrastText,
+                    color: theme.palette.primary.main,
+                    fontWeight: 600,
+                    fontSize: '0.9rem'
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Tab Navigation */}
+          <Card
+            elevation={0}
+            sx={{
+              mb: 2,
+              borderRadius: 2,
+              background: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`,
+              overflow: "hidden"
+            }}
+          >
+            <Tabs
+              value={value}
+              onChange={handleTabChange}
+              aria-label="skills assessment tabs"
+              variant="fullWidth"
               sx={{
-                borderRight: '1px solid #e5e7eb',
-                '&:last-child': { borderRight: 'none' },
-                '&:hover': {
-                  backgroundColor: '#6D81A3',
-                  color: '#ffffff',
-                  borderRadius: '0px',
-                },
-                '&.Mui-selected': {
-                  backgroundColor: '#6D81A3',
-                  color: '#ffffff',
-                  borderRadius: '0px',
+                '& .MuiTabs-indicator': {
+                  height: 4,
+                  borderRadius: '2px 2px 0 0',
+                  backgroundColor: theme.palette.primary.main,
                 },
               }}
-            />
-            <Tab
-              label='Step 2: TNA Questionaire'
-              {...a11yProps(1)}
-              disabled={!selectedCourse}
-              sx={{
-                borderRight: '1px solid #e5e7eb',
-                '&:last-child': { borderRight: 'none' },
-                '&.Mui-selected': {
-                  backgroundColor: '#6D81A3',
-                  color: '#ffffff',
-                  borderRadius: '0px',
-                },
-                '&.Mui-disabled': {
-                  color: '#9ca3af',
-                  backgroundColor: '#f3f4f6',
-                  cursor: 'not-allowed',
-                },
-              }}
-            />
-            <Tab
-              label='Step 3: View Results'
-              {...a11yProps(1)}
-              disabled={!selectedCourse}
-              sx={{
-                borderRight: '1px solid #e5e7eb',
-                '&:last-child': { borderRight: 'none' },
-                '&.Mui-selected': {
-                  backgroundColor: '#6D81A3',
-                  color: '#ffffff',
-                  borderRadius: '0px',
-                },
-                '&.Mui-disabled': {
-                  color: '#9ca3af',
-                  backgroundColor: '#f3f4f6',
-                  cursor: 'not-allowed',
-                },
-              }}
-            />
-          </Tabs>
+            >
+              {steps.map((step, index) => (
+                <Tab
+                  key={index}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {step.icon}
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {step.label}
+                      </Typography>
+                    </Box>
+                  }
+                  {...a11yProps(index)}
+                  disabled={step.disabled}
+                  sx={{
+                    minHeight: 64,
+                    py: 2,
+                    '&.Mui-selected': {
+                      color: theme.palette.primary.main,
+                      backgroundColor: theme.palette.primary.light + '10',
+                    },
+                    '&.Mui-disabled': {
+                      color: theme.palette.action.disabled,
+                      backgroundColor: theme.palette.action.disabledBackground,
+                    },
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.hover,
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
+                />
+              ))}
+            </Tabs>
+          </Card>
+
+          {/* Tab Content */}
+          <CustomTabPanel value={value} index={0}>
+            <TNAUnits handleTabChange={handleTabChange} />
+          </CustomTabPanel>
+
+          <CustomTabPanel value={value} index={1}>
+            <TNAQuestionaire handleTabChange={handleTabChange} />
+          </CustomTabPanel>
+
+          <CustomTabPanel value={value} index={2}>
+            <ViewResults />
+          </CustomTabPanel>
         </Box>
-
-        <CustomTabPanel value={value} index={0}>
-          <TNAUnits handleTabChange={handleTabChange} />
-          {/* <h1>TNA units</h1> */}
-        </CustomTabPanel>
-
-        <CustomTabPanel value={value} index={1}>
-          {<TNAQuestionaire handleTabChange={handleTabChange} />}
-          {/* <h1>TNA Questionaire</h1> */}
-        </CustomTabPanel>
-
-        <CustomTabPanel value={value} index={2}>
-          {<ViewResults />}
-          {/* <h1>View Results</h1> */}
-        </CustomTabPanel>
-      </Grid>
-    </>
+      </Fade>
+    </Box>
   )
 }
 
