@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Menu, MenuItem, Box, useTheme
+  Paper, Menu, MenuItem, Box, useTheme, Card, CardContent, 
+  Typography, Chip, Fade, Skeleton, Tooltip, IconButton
 } from '@mui/material';
 import { v4 as uuidv4 } from 'uuid';
 import EditableRow from './EditableRow';
@@ -19,6 +20,8 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import AddIcon from '@mui/icons-material/Add';
 import AlertDialog from 'src/app/component/Dialogs/AlertDialog';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 
 const defaultHeaders = [
   { id: 'activity', label: 'What training, learning or development activity have you done?', multiline: true },
@@ -115,57 +118,172 @@ const EditableTable = ({ data, onAddRow, onUpdateRow, onDeleteRow, loading }) =>
 
   return (
     <>
-      {/* Export Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5, width: '100%' }}>
-        <SecondaryButton
-          name="Export"
-          className="py-8 px-24 mb-6"
-          startIcon={<FileDownloadIcon sx={{ fontSize: '16px' }} />}
-          onClick={handleExportClick}
-          sx={{ backgroundColor: theme.palette.primary.main, color: theme.palette.primary.contrastText, fontSize: "1rem", fontWeight: "bold", '&:hover': { backgroundColor: theme.palette.primary.dark } }}
-        />
-        <Menu anchorEl={anchorEl} open={exportMenuOpen} onClose={handleExportClose}>
-          <MenuItem onClick={exportToCSV}><TableChartIcon sx={{ mr: 1, color: theme.palette.primary.main, fontSize: '16px' }} />Export as CSV</MenuItem>
-          <MenuItem onClick={exportToPDF}><PictureAsPdfIcon sx={{ mr: 1, color: theme.palette.primary.main, fontSize: '16px' }} />Export as PDF</MenuItem>
-        </Menu>
-      </Box>
-
-      <Paper
+      {/* Action Bar */}
+      <Card
         elevation={0}
         sx={{
-          mb: 1.5,
-          boxShadow: theme.shadows[2],
-          borderRadius: '8px',
-          overflow: 'hidden',
+          mb: 2,
+          borderRadius: 2,
+          background: theme.palette.background.paper,
           border: `1px solid ${theme.palette.divider}`,
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100%'
+          overflow: 'hidden'
+        }}
+      >
+        <CardContent sx={{ p: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2
+          }}>
+            {/* Title and Stats */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <AssessmentIcon sx={{ 
+                fontSize: 28, 
+                color: theme.palette.primary.main,
+                opacity: 0.8
+              }} />
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  Learning Activities
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip
+                    icon={<TrendingUpIcon />}
+                    label={`${tableData.filter(row => defaultHeaders.some(h => row[h.id]?.trim())).length} Entries`}
+                    size="small"
+                    sx={{
+                      backgroundColor: theme.palette.success.light,
+                      color: theme.palette.success.contrastText,
+                      fontWeight: 600
+                    }}
+                  />
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Export Button */}
+            <Tooltip title="Export your CPD data">
+              <SecondaryButton
+                name="Export Data"
+                className="py-8 px-24"
+                startIcon={<FileDownloadIcon sx={{ fontSize: '18px' }} />}
+                onClick={handleExportClick}
+                sx={{ 
+                  backgroundColor: theme.palette.primary.main, 
+                  color: theme.palette.primary.contrastText, 
+                  fontSize: "0.95rem", 
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    backgroundColor: theme.palette.primary.dark,
+                    transform: 'translateY(-1px)',
+                    boxShadow: theme.shadows[4]
+                  }
+                }}
+              />
+            </Tooltip>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Export Menu */}
+      <Menu 
+        anchorEl={anchorEl} 
+        open={exportMenuOpen} 
+        onClose={handleExportClose}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            mt: 1,
+            minWidth: 200,
+            boxShadow: theme.shadows[8]
+          }
+        }}
+      >
+        <MenuItem 
+          onClick={exportToCSV}
+          sx={{
+            py: 1.5,
+            px: 2,
+            '&:hover': {
+              backgroundColor: theme.palette.primary.light + '20'
+            }
+          }}
+        >
+          <TableChartIcon sx={{ mr: 2, color: theme.palette.primary.main, fontSize: '20px' }} />
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            Export as CSV
+          </Typography>
+        </MenuItem>
+        <MenuItem 
+          onClick={exportToPDF}
+          sx={{
+            py: 1.5,
+            px: 2,
+            '&:hover': {
+              backgroundColor: theme.palette.primary.light + '20'
+            }
+          }}
+        >
+          <PictureAsPdfIcon sx={{ mr: 2, color: theme.palette.error.main, fontSize: '20px' }} />
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            Export as PDF
+          </Typography>
+        </MenuItem>
+      </Menu>
+
+      <Card
+        elevation={0}
+        sx={{
+          mb: 2,
+          borderRadius: 2,
+          background: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
+          overflow: 'hidden',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            boxShadow: theme.shadows[4]
+          }
         }}
       >
         {loading ? (
-          <FuseLoading />
+          <CardContent sx={{ p: 3 }}>
+            <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 1 }} />
+          </CardContent>
         ) : (
           <TableContainer
             ref={tableRef}
             sx={{
-              maxHeight: 'calc(100vh - 385px)',
-              minHeight: '180px',
+              maxHeight: 'calc(100vh - 400px)',
+              minHeight: '200px',
               overflowY: 'auto',
+              overflowX: 'hidden',
               width: '100%',
               '&::-webkit-scrollbar': {
-                width: '8px',
+                width: '10px',
               },
               '&::-webkit-scrollbar-track': {
                 backgroundColor: theme.palette.mode === 'light'
                   ? theme.palette.grey[100]
                   : theme.palette.background.default,
+                borderRadius: '5px',
               },
               '&::-webkit-scrollbar-thumb': {
                 backgroundColor: theme.palette.mode === 'light'
                   ? theme.palette.grey[400]
-                  : theme.palette.grey[700],
-                borderRadius: '4px',
+                  : theme.palette.grey[600],
+                borderRadius: '5px',
+                border: `2px solid ${theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.background.default}`,
+                '&:hover': {
+                  backgroundColor: theme.palette.mode === 'light'
+                    ? theme.palette.grey[500]
+                    : theme.palette.grey[500],
+                }
               },
             }}
           >
@@ -178,48 +296,55 @@ const EditableTable = ({ data, onAddRow, onUpdateRow, onDeleteRow, loading }) =>
                 <col style={{ width: '20%' }} /> {/* impact */}
                 <col style={{ width: '10%' }} /> {/* action */}
               </colgroup>
-              <TableHead sx={{ backgroundColor: theme.palette.mode === 'light' ? theme.palette.primary.light : theme.palette.primary.dark }}>
+              <TableHead>
                 <TableRow>
                   {defaultHeaders.map((header) => (
                     <TableCell
                       key={header.id}
                       sx={{
-                        backgroundColor: theme.palette.mode === 'light'
-                          ? theme.palette.primary.light
-                          : theme.palette.primary.dark,
-                        fontWeight: 'bold',
-                        padding: '10px 4px',
+                        background: theme.palette.mode === 'light'
+                          ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+                          : `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                        fontWeight: 600,
+                        padding: '16px 12px',
                         fontSize: '14px',
-                        borderRight: `1px solid ${theme.palette.divider}`,
+                        borderRight: `1px solid ${theme.palette.primary.contrastText}20`,
                         color: theme.palette.primary.contrastText,
                         lineHeight: '1.4',
                         '&:last-child': { borderRight: 'none' },
                         position: 'sticky',
                         top: 0,
                         zIndex: 10,
-                        boxShadow: '0 3px 5px -1px rgba(0,0,0,0.2)'
+                        boxShadow: `0 4px 8px ${theme.palette.mode === 'light' ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.3)'}`,
+                        textAlign: 'left',
+                        verticalAlign: 'top'
                       }}
                     >
-                      {header.label}
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                        {header.label}
+                      </Typography>
                     </TableCell>
                   ))}
                   <TableCell
                     sx={{
-                      backgroundColor: theme.palette.mode === 'light'
-                        ? theme.palette.primary.light
-                        : theme.palette.primary.dark,
-                      fontWeight: 'bold',
-                      padding: '10px 4px',
+                      background: theme.palette.mode === 'light'
+                        ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+                        : `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                      fontWeight: 600,
+                      padding: '16px 12px',
                       fontSize: '14px',
                       color: theme.palette.primary.contrastText,
                       textAlign: 'center',
                       position: 'sticky',
                       top: 0,
                       zIndex: 10,
-                      boxShadow: '0 3px 5px -1px rgba(0,0,0,0.2)'
+                      boxShadow: `0 4px 8px ${theme.palette.mode === 'light' ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.3)'}`,
+                      verticalAlign: 'top'
                     }}
                   >
-                    Action
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      Actions
+                    </Typography>
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -231,26 +356,46 @@ const EditableTable = ({ data, onAddRow, onUpdateRow, onDeleteRow, loading }) =>
             </Table>
           </TableContainer>
         )}
-      </Paper>
+      </Card>
 
       {/* Add Row Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5, width: '100%' }}>
-        <SecondaryButton
-          name="Add Row"
-          className="py-8 px-24"
-          startIcon={<AddIcon sx={{ fontSize: '16px' }} />}
-          onClick={handleAddNewRow}
-          sx={{
-            backgroundColor: theme.palette.success.main,
-            color: theme.palette.primary.contrastText,
-            fontSize: "1rem",
-            fontWeight: "bold",
-            '&:hover': {
-              backgroundColor: theme.palette.success.dark
-            }
-          }}
-        />
-      </Box>
+      <Card
+        elevation={0}
+        sx={{
+          borderRadius: 2,
+          background: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
+          overflow: 'hidden'
+        }}
+      >
+        <CardContent sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Tooltip title="Add a new learning activity">
+              <SecondaryButton
+                name="Add New Activity"
+                className="py-8 px-24"
+                startIcon={<AddIcon sx={{ fontSize: '18px' }} />}
+                onClick={handleAddNewRow}
+                sx={{
+                  backgroundColor: theme.palette.success.main,
+                  color: theme.palette.success.contrastText,
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  px: 4,
+                  py: 1.5,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: theme.palette.success.dark,
+                    transform: 'translateY(-2px)',
+                    boxShadow: theme.shadows[6]
+                  }
+                }}
+              />
+            </Tooltip>
+          </Box>
+        </CardContent>
+      </Card>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog

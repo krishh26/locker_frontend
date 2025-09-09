@@ -7,11 +7,15 @@ import {
   Box,
   Tooltip,
   CircularProgress,
-  useTheme
+  useTheme,
+  Chip,
+  Fade
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -100,37 +104,57 @@ const EditableRow: React.FC<EditableRowProps> = ({
   };
 
   return (
-    <TableRow
-      hover
-      sx={{
-        '&:nth-of-type(odd)': {
-          backgroundColor: theme.palette.mode === 'light'
-            ? theme.palette.grey[50]
-            : theme.palette.background.default + '80' // 80% opacity
-        },
-        '& td': { borderRight: `1px solid ${theme.palette.divider}` },
-        '& td:last-child': { borderRight: 'none' },
-        // Add a subtle highlight when saving
-        ...(isSaving && {
-          backgroundColor: theme.palette.mode === 'light'
-            ? theme.palette.primary.light + '20' // 20% opacity
-            : theme.palette.primary.dark + '20',
-          transition: 'background-color 0.3s ease'
-        })
-      }}
-    >
+    <Fade in timeout={300}>
+      <TableRow
+        hover
+        sx={{
+          '&:nth-of-type(odd)': {
+            backgroundColor: theme.palette.mode === 'light'
+              ? theme.palette.grey[50]
+              : theme.palette.background.default + '80'
+          },
+          '& td': { 
+            borderRight: `1px solid ${theme.palette.divider}`,
+            padding: '8px 12px',
+            verticalAlign: 'top'
+          },
+          '& td:last-child': { borderRight: 'none' },
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            backgroundColor: theme.palette.mode === 'light'
+              ? theme.palette.primary.light + '10'
+              : theme.palette.primary.dark + '10',
+            transform: 'scale(1.001)',
+            boxShadow: theme.shadows[2]
+          },
+          // Add a subtle highlight when saving
+          ...(isSaving && {
+            backgroundColor: theme.palette.mode === 'light'
+              ? theme.palette.primary.light + '20'
+              : theme.palette.primary.dark + '20',
+            transition: 'background-color 0.3s ease',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: '4px',
+              background: theme.palette.primary.main,
+              borderRadius: '0 2px 2px 0'
+            }
+          })
+        }}
+      >
       {headers.map((header) => (
-        <TableCell key={header.id} sx={{ padding: '4px' }}>
+        <TableCell key={header.id}>
           {header.id === 'date' ? (
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 value={editedRow[header.id] ? (() => {
                   try {
-                    // Parse the date string and validate it
                     const dateStr = editedRow[header.id];
                     const date = new Date(dateStr);
-
-                    // Check if the date is valid
                     if (isValid(date)) {
                       return date;
                     }
@@ -147,10 +171,29 @@ const EditableRow: React.FC<EditableRowProps> = ({
                     fullWidth: true,
                     size: "small",
                     variant: "outlined",
-                    // Add error handling for invalid dates
+                    sx: {
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        backgroundColor: theme.palette.background.paper,
+                        '& fieldset': {
+                          borderColor: theme.palette.divider,
+                          borderWidth: 1,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: theme.palette.primary.light,
+                          borderWidth: 2,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: theme.palette.primary.main,
+                          borderWidth: 2,
+                        },
+                        '&.Mui-disabled': {
+                          backgroundColor: theme.palette.action.disabledBackground,
+                        }
+                      }
+                    },
                     onError: (error) => {
                       if (error) {
-                        // Clear the invalid date value
                         setEditedRow({
                           ...editedRow,
                           [header.id]: ''
@@ -159,7 +202,6 @@ const EditableRow: React.FC<EditableRowProps> = ({
                     }
                   }
                 }}
-                // Prevent manual input parsing errors
                 onError={(reason) => {
                   if (reason) {
                     console.log("Date error:", reason);
@@ -175,30 +217,68 @@ const EditableRow: React.FC<EditableRowProps> = ({
               value={editedRow[header.id] || ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e, header.id)}
               multiline={header.multiline}
-              rows={header.multiline ? 1 : 1}
+              rows={header.multiline ? 2 : 1}
               disabled={isSaving}
-              // placeholder={header.label}
+              placeholder={header.multiline ? `Enter ${header.label.toLowerCase()}...` : ''}
               sx={{
                 '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  backgroundColor: theme.palette.background.paper,
+                  transition: 'all 0.2s ease',
                   '& fieldset': {
                     borderColor: theme.palette.divider,
+                    borderWidth: 1,
                   },
                   '&:hover fieldset': {
-                    borderColor: theme.palette.mode === 'light'
-                      ? theme.palette.grey[400]
-                      : theme.palette.grey[600],
+                    borderColor: theme.palette.primary.light,
+                    borderWidth: 2,
                   },
                   '&.Mui-focused fieldset': {
                     borderColor: theme.palette.primary.main,
+                    borderWidth: 2,
+                    boxShadow: `0 0 0 3px ${theme.palette.primary.main}20`,
                   },
+                  '&.Mui-disabled': {
+                    backgroundColor: theme.palette.action.disabledBackground,
+                  }
                 },
+                '& .MuiInputBase-input': {
+                  fontSize: '0.875rem',
+                  lineHeight: 1.4,
+                  '&::placeholder': {
+                    opacity: 0.7,
+                    color: theme.palette.text.secondary
+                  }
+                }
               }}
             />
           )}
         </TableCell>
       ))}
-      <TableCell align="center" sx={{ padding: '4px' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+      <TableCell align="center">
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          gap: 1,
+          flexWrap: 'wrap'
+        }}>
+          {/* Status Indicators */}
+          {!isDirty && !saveError && !isSaving && (
+            <Chip
+              icon={<CheckCircleIcon />}
+              label="Saved"
+              size="small"
+              sx={{
+                backgroundColor: theme.palette.success.light,
+                color: theme.palette.success.contrastText,
+                fontSize: '0.75rem',
+                height: 24
+              }}
+            />
+          )}
+
+          {/* Save Button */}
           {isDirty && !saveError && (
             <Tooltip title="Save changes">
               <IconButton
@@ -206,43 +286,69 @@ const EditableRow: React.FC<EditableRowProps> = ({
                 onClick={handleSave}
                 size="small"
                 disabled={isSaving}
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
+                  '&:hover': {
+                    backgroundColor: theme.palette.primary.dark,
+                    transform: 'scale(1.1)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
               >
                 {isSaving ? (
                   <CircularProgress size={18} color="inherit" />
                 ) : (
-                  <SaveIcon sx={{ fontSize: '20px' }}/>
+                  <SaveIcon sx={{ fontSize: '18px' }}/>
                 )}
               </IconButton>
             </Tooltip>
           )}
 
+          {/* Error Retry Button */}
           {saveError && (
             <Tooltip title="Error saving. Click to retry">
               <IconButton
                 onClick={handleSave}
                 size="small"
-                sx={{ color: theme.palette.warning.main }}
+                sx={{ 
+                  backgroundColor: theme.palette.error.main,
+                  color: theme.palette.error.contrastText,
+                  '&:hover': {
+                    backgroundColor: theme.palette.error.dark,
+                    transform: 'scale(1.1)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
               >
-                <RefreshIcon sx={{ fontSize: '20px' }} />
+                <RefreshIcon sx={{ fontSize: '18px' }} />
               </IconButton>
             </Tooltip>
           )}
 
-          <Tooltip title="Delete row">
+          {/* Delete Button */}
+          <Tooltip title="Delete this activity">
             <IconButton
-              sx={{ color: theme.palette.error.main }}
+              sx={{ 
+                backgroundColor: theme.palette.error.light,
+                color: theme.palette.error.contrastText,
+                '&:hover': {
+                  backgroundColor: theme.palette.error.main,
+                  transform: 'scale(1.1)'
+                },
+                transition: 'all 0.2s ease'
+              }}
               onClick={onDelete}
               size="small"
               disabled={isSaving}
             >
-              <DeleteIcon sx={{ fontSize: '20px' }} />
+              <DeleteIcon sx={{ fontSize: '18px' }} />
             </IconButton>
           </Tooltip>
-
-
         </Box>
       </TableCell>
     </TableRow>
+    </Fade>
   );
 };
 
