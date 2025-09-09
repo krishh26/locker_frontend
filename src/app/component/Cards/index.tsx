@@ -230,6 +230,7 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
             onClick={() => {
               handleClick();
             }}
+            className="w-full"
           >
             <div>
               <ThemedIndex>{name?.charAt(0)}</ThemedIndex>
@@ -262,6 +263,7 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
             onClick={() => {
               handleClick();
             }}
+            className="w-full"
           >
             <div>
               <ThemedIndex>{index + 1}</ThemedIndex>
