@@ -353,34 +353,14 @@ const Portfolio: React.FC = () => {
     return <FuseLoading />
   }
 
-  // Convert incoming data to matrix format
-  const convertToMatrixData = (data: any) => {
-    if (!data) return {
-      yetToComplete: 0,
-      fullyCompleted: 0,
-      workInProgress: 0,
-      totalUnits: 0,
-      duration: 0,
-      totalDuration: 0,
-    }
-
-    // Calculate duration from start and end dates
-    const startDate = new Date(data.start_date)
-    const endDate = new Date(data.end_date)
-    const currentDate = new Date()
-    const totalDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-    const duration = Math.ceil((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-
-    return {
-      yetToComplete: data.unitsNotStarted || 0,
-      fullyCompleted: data.unitsFullyCompleted || 0,
-      workInProgress: data.unitsPartiallyCompleted || 0,
-      totalUnits: data.totalUnits || 0,
-      duration: Math.max(0, duration),
-      totalDuration: Math.max(1, totalDuration),
-    }
+  const matrixData = {
+    yetToComplete: 5,
+    fullyCompleted: 15,
+    workInProgress: 8,
+    totalUnits: 28,
+    duration: 20,
+    totalDuration: 30,
   }
-
 
   return (
     <StyledContainer>
@@ -587,7 +567,7 @@ const Portfolio: React.FC = () => {
                           }}
                         >
                           <DoughnutChart
-                            value={convertToMatrixData(value)}
+                            value={matrixData}
                             variant='matrix'
                             size={200}
                             showLabels={true}
