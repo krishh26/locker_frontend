@@ -19,6 +19,15 @@ import {
   TableRow,
   TextField,
   Typography,
+  Card,
+  CardContent,
+  Box,
+  useTheme,
+  Chip,
+  Divider,
+  Fade,
+  Skeleton,
+  Tooltip
 } from '@mui/material'
 import { SecondaryButton } from 'src/app/component/Buttons'
 import { useSelector } from 'react-redux'
@@ -30,6 +39,10 @@ import {
 import { useDispatch } from 'react-redux'
 import { selectGlobalUser } from 'app/store/globalUser'
 import { selectSkillsScan, skillsScanAction } from 'app/store/skillsScan'
+import SchoolIcon from '@mui/icons-material/School'
+import AssessmentIcon from '@mui/icons-material/Assessment'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 
 const getQuarterlyProgress = (start, end) => {
   const result = [];
@@ -59,6 +72,7 @@ const getQuarterlyProgress = (start, end) => {
 
 const TNAUnits = (props) => {
   const { handleTabChange } = props
+  const theme = useTheme()
   const { learner, courseData, dataFetchLoading } = useSelector(
     selectLearnerManagement
   )
@@ -96,116 +110,314 @@ const TNAUnits = (props) => {
   }
 
   return (
-    <Grid>
-      <Grid className='m-10 px-10 pt-10 '>
-        <Grid className='m-10 flex gap-10'>
-          <Typography className='h1 '>Choose TNA Course</Typography>
-          <Autocomplete
-            disablePortal
-            options={learner?.course}
-            value={selectedCourse}
-            getOptionLabel={(option: any) => option.course?.course_name}
-            sx={{ width: 300, marginLeft: 5 }}
-            renderInput={(params) => (
-              <TextField {...params} placeholder='Select Course' size='small' />
-            )}
-            onChange={(event, value) => getCouseDetails(value)}
-          />
-        </Grid>
-      </Grid>
-      {/* <Grid className="mx-10 px-10 ">
-                <FormControl className='flex-row items-center gap-96'>
-                    <FormLabel component="legend">Order By</FormLabel>
-                    <RadioGroup
-                        aria-label="options"
-                        defaultValue="outlined"
-                        name="radio-buttons-group"
-                        className='flex-row'
-                    // orientation="vertical"
-                    >
-                        <FormControlLabel
-                            value="Unit Number"
-                            control={<Radio />}
-                            label="Unit Number"
-                        // onChange={handleRadioChange}
-                        />
-                        <FormControlLabel
-                            value="Group"
-                            control={<Radio />}
-                            label="Group"
-                        // onChange={handleRadioChange}
-                        />
-                    </RadioGroup>
-                </FormControl>
-            </Grid> */}
-      <Grid className='m-10 px-10 pt-10 '>
-        <TableContainer sx={{ maxHeight: 'auto' }}>
-          {dataFetchLoading ? (
-            <FuseLoading />
-          ) : selectedCourse && courseData?.units?.length ? (
-            <>
-              <Table
-                sx={{ minWidth: 650, heighFaddt: '100%' }}
-                size='small'
-                aria-label='simple table'
-              >
-                <TableHead className='bg-[#F8F8F8]'>
-                  <TableRow>
-                    <TableCell align='left'>Standard Units</TableCell>
-                    <TableCell align='left'>Hours</TableCell>
-                    <TableCell align='left'>Points/Credits</TableCell>
-                    <TableCell align='left'>Level</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {courseData?.units?.map((row) => (
-                    <TableRow
-                      key={row.group}
-                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                    >
-                      <TableCell
-                        align='left'
-                        sx={{ borderBottom: '2px solid #F8F8F8', width: '50%' }}
+    <Box>
+      {/* Course Selection Card */}
+      <Card
+        elevation={0}
+        sx={{
+          mb: 3,
+          borderRadius: 2,
+          background: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
+          overflow: "hidden"
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <SchoolIcon sx={{ 
+              fontSize: 28, 
+              color: theme.palette.primary.main,
+              mr: 2,
+              opacity: 0.8
+            }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Choose Training Course
+            </Typography>
+          </Box>
+          <Divider sx={{ mb: 3 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <Typography variant="body1" sx={{ fontWeight: 500, minWidth: 'fit-content' }}>
+              Select Course:
+            </Typography>
+            <Autocomplete
+              disablePortal
+              options={learner?.course || []}
+              value={selectedCourse}
+              getOptionLabel={(option: any) => option.course?.course_name || ''}
+              sx={{ 
+                minWidth: 300,
+                flexGrow: 1,
+                maxWidth: 500
+              }}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  placeholder='Select a course to begin...' 
+                  size='small'
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: theme.palette.background.paper,
+                      '& fieldset': {
+                        borderColor: theme.palette.divider,
+                      },
+                      '&:hover fieldset': {
+                        borderColor: theme.palette.primary.light,
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: theme.palette.primary.main,
+                      },
+                    }
+                  }}
+                />
+              )}
+              onChange={(event, value) => getCouseDetails(value)}
+            />
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Course Units Table */}
+      {dataFetchLoading ? (
+        <Card elevation={0} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 1 }} />
+          </CardContent>
+        </Card>
+      ) : selectedCourse && courseData?.units?.length ? (
+        <Fade in timeout={500}>
+          <Card
+            elevation={0}
+            sx={{
+              mb: 3,
+              borderRadius: 2,
+              background: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`,
+              overflow: "hidden",
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: theme.shadows[4]
+              }
+            }}
+          >
+            <CardContent sx={{ p: 0 }}>
+              {/* Table Header */}
+              <Box sx={{ 
+                p: 3, 
+                pb: 2,
+                background: theme.palette.mode === 'light' 
+                  ? theme.palette.grey[50] 
+                  : theme.palette.background.default,
+                borderBottom: `1px solid ${theme.palette.divider}`
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <AssessmentIcon sx={{ 
+                    fontSize: 24, 
+                    color: theme.palette.primary.main,
+                    mr: 1
+                  }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Course Units
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip
+                    icon={<TrendingUpIcon />}
+                    label={`${courseData?.units?.length} Units Available`}
+                    size="small"
+                    sx={{
+                      backgroundColor: theme.palette.success.light,
+                      color: theme.palette.success.contrastText,
+                      fontWeight: 600
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              {/* Table */}
+              <TableContainer sx={{ maxHeight: 400 }}>
+                <Table size='small' aria-label='course units table'>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell 
+                        sx={{
+                          background: theme.palette.mode === 'light'
+                            ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+                            : `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                          color: theme.palette.primary.contrastText,
+                          fontWeight: 600,
+                          fontSize: '1rem',
+                          borderRight: `1px solid ${theme.palette.primary.contrastText}20`
+                        }}
                       >
-                        {row.title}
+                        Standard Units
                       </TableCell>
-                      <TableCell
-                        align='left'
-                        sx={{ borderBottom: '2px solid #F8F8F8', width: '10%' }}
+                      <TableCell 
+                        sx={{
+                          background: theme.palette.mode === 'light'
+                            ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+                            : `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                          color: theme.palette.primary.contrastText,
+                          fontWeight: 600,
+                          fontSize: '1rem',
+                          borderRight: `1px solid ${theme.palette.primary.contrastText}20`
+                        }}
                       >
-                        {row?.glh}
+                        Hours
                       </TableCell>
-                      <TableCell
-                        align='left'
-                        sx={{ borderBottom: '2px solid #F8F8F8', width: '10%' }}
+                      <TableCell 
+                        sx={{
+                          background: theme.palette.mode === 'light'
+                            ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+                            : `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                          color: theme.palette.primary.contrastText,
+                          fontWeight: 600,
+                          fontSize: '1rem',
+                          borderRight: `1px solid ${theme.palette.primary.contrastText}20`
+                        }}
                       >
-                        {row.credit_value}
+                        Credits
                       </TableCell>
-                      <TableCell
-                        align='left'
-                        sx={{ borderBottom: '2px solid #F8F8F8', width: '10%' }}
+                      <TableCell 
+                        sx={{
+                          background: theme.palette.mode === 'light'
+                            ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+                            : `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                          color: theme.palette.primary.contrastText,
+                          fontWeight: 600,
+                          fontSize: '1rem'
+                        }}
                       >
-                        {row.level}
+                        Level
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <Grid className='flex justify-center items-center w-full my-12'>
+                  </TableHead>
+                  <TableBody>
+                    {courseData?.units?.map((row, index) => (
+                      <TableRow
+                        key={row.group}
+                        sx={{
+                          '&:nth-of-type(odd)': {
+                            backgroundColor: theme.palette.mode === 'light'
+                              ? theme.palette.grey[50]
+                              : theme.palette.background.default + '80'
+                          },
+                          '&:hover': {
+                            backgroundColor: theme.palette.mode === 'light'
+                              ? theme.palette.primary.light + '10'
+                              : theme.palette.primary.dark + '10',
+                            transform: 'scale(1.001)',
+                            transition: 'all 0.2s ease'
+                          },
+                          '& td': { 
+                            borderRight: `1px solid ${theme.palette.divider}`,
+                            padding: '12px 16px'
+                          },
+                          '& td:last-child': { borderRight: 'none' }
+                        }}
+                      >
+                        <TableCell sx={{ fontWeight: 500, width: '50%' }}>
+                          {row.title}
+                        </TableCell>
+                        <TableCell sx={{ width: '15%' }}>
+                          <Chip
+                            label={row?.glh || 0}
+                            size="small"
+                            sx={{
+                              backgroundColor: theme.palette.info.light,
+                              color: theme.palette.info.contrastText,
+                              fontWeight: 600
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ width: '15%' }}>
+                          <Chip
+                            label={row.credit_value || 0}
+                            size="small"
+                            sx={{
+                              backgroundColor: theme.palette.success.light,
+                              color: theme.palette.success.contrastText,
+                              fontWeight: 600
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ width: '20%' }}>
+                          <Chip
+                            label={`Level ${row.level}`}
+                            size="small"
+                            sx={{
+                              backgroundColor: theme.palette.warning.light,
+                              color: theme.palette.warning.contrastText,
+                              fontWeight: 600
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Fade>
+      ) : (
+        <Card elevation={0} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+          <CardContent sx={{ p: 4, textAlign: 'center' }}>
+            <SchoolIcon sx={{ 
+              fontSize: 64, 
+              color: theme.palette.action.disabled,
+              mb: 2
+            }} />
+            <Typography variant="h6" sx={{ mb: 1, color: theme.palette.text.secondary }}>
+              No Units Found
+            </Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+              Please select a course to view available units
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Next Button */}
+      {selectedCourse && courseData?.units?.length && (
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            overflow: 'hidden'
+          }}
+        >
+          <CardContent sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+              <Tooltip title="Proceed to questionnaire">
                 <SecondaryButton
-                  name='Next'
+                  name='Continue to Questionnaire'
+                  startIcon={<ArrowForwardIcon />}
                   onClick={() => handleTabChange('', 1)}
+                  sx={{
+                    backgroundColor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                    fontSize: "1.5rem",
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    px: 4,
+                    py: 1.5,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: theme.palette.primary.dark,
+                      transform: 'translateY(-2px)',
+                      boxShadow: theme.shadows[6]
+                    }
+                  }}
                 />
-              </Grid>
-            </>
-          ) : (
-            <>
-              <h2>No units Found...!</h2>
-            </>
-          )}
-        </TableContainer>
-      </Grid>
-    </Grid>
+              </Tooltip>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+    </Box>
   )
 }
 
