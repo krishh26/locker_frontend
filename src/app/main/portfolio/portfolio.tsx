@@ -1,7 +1,5 @@
 import FuseLoading from '@fuse/core/FuseLoading'
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
-import PersonIcon from '@mui/icons-material/Person'
-import SchoolIcon from '@mui/icons-material/School'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import {
   alpha,
@@ -23,7 +21,7 @@ import {
   Tooltip,
   Typography,
   useMediaQuery,
-  useTheme
+  useTheme,
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { slice as courseSlice, slice } from 'app/store/courseManagement'
@@ -141,7 +139,7 @@ const StyledLearnerCard = styled(Card)(({ theme }) => ({
 const StyledLearnerHeader = styled(Box)(({ theme }) => ({
   background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
   color: theme.palette.primary.contrastText,
-  padding: theme.spacing(3),
+  padding: theme.spacing(2),
 }))
 
 const StyledLearnerContent = styled(Box)(({ theme }) => ({
@@ -353,26 +351,55 @@ const Portfolio: React.FC = () => {
     return <FuseLoading />
   }
 
-  const matrixData = {
-    yetToComplete: 5,
-    fullyCompleted: 15,
-    workInProgress: 8,
-    totalUnits: 28,
-    duration: 20,
-    totalDuration: 30,
+  // Convert incoming data to matrix format
+  const convertToMatrixData = (data: any) => {
+    if (!data)
+      return {
+        yetToComplete: 0,
+        fullyCompleted: 0,
+        workInProgress: 0,
+        totalUnits: 0,
+        duration: 0,
+        totalDuration: 0,
+        dayPending: 0,
+      }
+
+    // Calculate duration from start and end dates
+    const startDate = new Date(data.start_date)
+    const endDate = new Date(data.end_date)
+    const currentDate = new Date()
+    const totalDuration = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    )
+    const duration = Math.ceil(
+      (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    )
+    const dayPending = Math.ceil(
+      (endDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    return {
+      yetToComplete: data.unitsNotStarted || 0,
+      fullyCompleted: data.unitsFullyCompleted || 0,
+      workInProgress: data.unitsPartiallyCompleted || 0,
+      totalUnits: data.totalUnits || 0,
+      duration: Math.max(0, duration),
+      totalDuration: Math.max(1, totalDuration),
+      dayPending: Math.max(0, dayPending),
+    }
   }
 
   return (
     <StyledContainer>
       {/* Header Section */}
-      <Box>
+      <Box className='mb-10'>
         <Typography
           variant='h4'
           component='h1'
           gutterBottom
           sx={{ fontWeight: 700, color: 'text.primary' }}
         >
-          Portfolio Dashboard
+          Dashboard
         </Typography>
         <Typography variant='subtitle1' color='text.secondary'>
           Manage your learning journey and track progress
@@ -380,170 +407,174 @@ const Portfolio: React.FC = () => {
       </Box>
 
       {/* Tab Navigation */}
-      <StyledTabsContainer elevation={2}>
+      {/* <StyledTabsContainer elevation={2}>
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
           aria-label='portfolio sections'
           variant='fullWidth'
-          centered
         >
           <StyledTab
             icon={<TrendingUpIcon />}
             label='Overview'
             iconPosition='start'
           />
-          <StyledTab
-            icon={<SchoolIcon />}
-            label='Course'
-            iconPosition='start'
-          />
         </Tabs>
-      </StyledTabsContainer>
+      </StyledTabsContainer> */}
 
       {/* Tab Content with Animation */}
       <Fade in={true} timeout={500}>
         <StyledCardsContainer>
-          {activeTab === 0
-            ? // Overview Section - Cards 4, 5, 9, 10
-              overviewCards.map((value, index) => (
-                <Slide
-                  key={value.id}
-                  direction='up'
-                  in={true}
-                  timeout={300 + index * 100}
-                >
-                  <Box>
-                    <PortfolioCard
-                      data={value}
-                      index={index}
-                      learner={learner}
-                    />
-                  </Box>
-                </Slide>
-              ))
-            : // Course Section - Cards 1, 2, 3, 6, 7, 8
-              courseCards.map((value, index) => (
-                <Slide
-                  key={value.id}
-                  direction='up'
-                  in={true}
-                  timeout={300 + index * 100}
-                >
-                  <Box>
-                    <PortfolioCard
-                      data={value}
-                      index={index}
-                      learner={learner}
-                    />
-                  </Box>
-                </Slide>
-              ))}
+          {overviewCards.map((value, index) => (
+            <Slide
+              key={value.id}
+              direction='up'
+              in={true}
+              timeout={300 + index * 100}
+            >
+              <Box>
+                <PortfolioCard data={value} index={index} learner={learner} />
+              </Box>
+            </Slide>
+          ))}
         </StyledCardsContainer>
       </Fade>
       {/* Learner Information Section */}
       {learner && (
         <StyledLearnerCard elevation={4}>
           <StyledLearnerHeader>
-            <Grid container spacing={3} alignItems='center'>
-              <Grid item xs={12} sm={3} md={2}>
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <Avatar
-                    sx={{
-                      width: 100,
-                      height: 100,
-                      backgroundColor: getRandomColor(
-                        learner?.first_name?.toLowerCase().charAt(0)
-                      ),
-                      border: `4px solid ${theme.palette.primary.contrastText}`,
-                      boxShadow: theme.shadows[4],
-                    }}
-                    src={data?.learner_id ? learner?.avatar : user?.avatar?.url}
-                    alt={
-                      data?.learner_id
-                        ? learner?.first_name?.toUpperCase()?.charAt(0)
-                        : user?.displayName
-                    }
-                  />
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={9} md={10}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar
+                sx={{
+                  width: 80,
+                  height: 80,
+                  backgroundColor: getRandomColor(
+                    learner?.first_name?.toLowerCase().charAt(0)
+                  ),
+                  border: `3px solid ${theme.palette.primary.contrastText}`,
+                  boxShadow: theme.shadows[2],
+                  flexShrink: 0,
+                }}
+                src={data?.learner_id ? learner?.avatar : user?.avatar?.url}
+                alt={
+                  data?.learner_id
+                    ? learner?.first_name?.toUpperCase()?.charAt(0)
+                    : user?.displayName
+                }
+              />
+              <Box sx={{ flex: 1 }}>
                 <Typography
                   variant='h5'
                   component='h2'
                   gutterBottom
-                  sx={{ fontWeight: 600 }}
+                  sx={{ fontWeight: 600, marginBottom: 0.5 }}
                 >
                   {learner?.first_name} {learner?.last_name}
                 </Typography>
-                <Typography variant='subtitle1' sx={{ opacity: 0.9 }}>
-                  Learner Profile
-                </Typography>
-              </Grid>
-            </Grid>
+                <Link
+                  to='/profile'
+                  style={{
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateX(2px)'
+                    e.currentTarget.style.opacity = '1'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateX(0)'
+                    e.currentTarget.style.opacity = '0.9'
+                  }}
+                >
+                  <Typography
+                    variant='subtitle1'
+                    sx={{
+                      opacity: 0.9,
+                      color: theme.palette.primary.contrastText,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        opacity: 1,
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    View Profile
+                  </Typography>
+                  <Typography
+                    variant='subtitle1'
+                    sx={{
+                      opacity: 0.7,
+                      color: theme.palette.primary.contrastText,
+                      fontSize: '0.9rem',
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                  >
+                    →
+                  </Typography>
+                </Link>
+
+                {/* Personal Information in Header */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography
+                      variant='body2'
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.primary.contrastText,
+                        opacity: 0.8,
+                      }}
+                    >
+                      Trainer:
+                    </Typography>
+                    <Typography
+                      variant='body2'
+                      sx={{ color: theme.palette.primary.contrastText }}
+                    >
+                      {learner?.course?.[0]?.trainer_id?.first_name}{' '}
+                      {learner?.course?.[0]?.trainer_id?.last_name}
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography
+                      variant='body2'
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.primary.contrastText,
+                        opacity: 0.8,
+                      }}
+                    >
+                      IQA:
+                    </Typography>
+                    <Typography
+                      variant='body2'
+                      sx={{ color: theme.palette.primary.contrastText }}
+                    >
+                      {learner?.course?.[0]?.IQA_id?.first_name}{' '}
+                      {learner?.course?.[0]?.IQA_id?.last_name}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
           </StyledLearnerHeader>
 
           <StyledLearnerContent>
             <Grid container spacing={3}>
-              {/* Information Column */}
-              <Grid item xs={12} md={6}>
-                <Typography
-                  variant='h6'
-                  gutterBottom
-                  sx={{ fontWeight: 600, mb: 2 }}
-                >
-                  <PersonIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Personal Information
-                </Typography>
-                <StyledInfoGrid container spacing={1}>
-                  <Grid item xs={12}>
-                    <StyledInfoItem>
-                      <StyledInfoLabel>Learner Name:</StyledInfoLabel>
-                      <StyledInfoValue>
-                        {learner?.first_name} {learner?.last_name}
-                      </StyledInfoValue>
-                    </StyledInfoItem>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <StyledInfoItem>
-                      <StyledInfoLabel>Trainer Name:</StyledInfoLabel>
-                      <StyledInfoValue>
-                        {learner?.course?.[0]?.trainer_id?.first_name}{' '}
-                        {learner?.course?.[0]?.trainer_id?.last_name}
-                      </StyledInfoValue>
-                    </StyledInfoItem>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <StyledInfoItem>
-                      <StyledInfoLabel>IQA Name:</StyledInfoLabel>
-                      <StyledInfoValue>
-                        {learner?.course?.[0]?.IQA_id?.first_name}{' '}
-                        {learner?.course?.[0]?.IQA_id?.last_name}
-                      </StyledInfoValue>
-                    </StyledInfoItem>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <StyledInfoItem>
-                      <StyledInfoLabel>Trainer Email:</StyledInfoLabel>
-                      <StyledInfoValue>
-                        {learner?.course?.[0]?.trainer_id?.email}
-                      </StyledInfoValue>
-                    </StyledInfoItem>
-                  </Grid>
-                </StyledInfoGrid>
-              </Grid>
-
               {/* Progress Column */}
-              <Grid item xs={12} md={learner?.course?.length > 2 ? 12 : 6}>
-                <Typography
-                  variant='h6'
-                  gutterBottom
-                  sx={{ fontWeight: 600, mb: 2 }}
-                >
-                  <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Progress Overview
-                </Typography>
-                <StyledProgressSection>
+              <Grid item xs={12}>
+                <div className='flex items-center gap-10'>
+                  <Typography
+                    variant='h6'
+                    gutterBottom
+                    sx={{ fontWeight: 600, mb: 2 }}
+                  >
+                    <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                    Progress Overview
+                  </Typography>
                   <Box sx={{ mb: 2 }}>
                     <Chip
                       label='Next Visit: 02-03-2023'
@@ -552,29 +583,29 @@ const Portfolio: React.FC = () => {
                       sx={{ fontWeight: 600 }}
                     />
                   </Box>
+                </div>
+                <StyledProgressSection>
                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                     {learner?.course?.map((value, index) => (
-                      <Tooltip key={index} title={value?.course?.course_name}>
-                        <Link
-                          to='/portfolio/learnertodata'
-                          style={{
-                            color: 'inherit',
-                            textDecoration: 'none',
-                          }}
-                          onClick={(e) => {
-                            handleClickSingleData(value)
-                            handleClickData(e, value)
-                          }}
-                        >
-                          <DoughnutChart
-                            value={matrixData}
-                            variant='matrix'
-                            size={200}
-                            showLabels={true}
-                            animated={true}
-                          />
-                        </Link>
-                      </Tooltip>
+                      <Link
+                        to='/portfolio/learnertodata'
+                        style={{
+                          color: 'inherit',
+                          textDecoration: 'none',
+                        }}
+                        onClick={(e) => {
+                          handleClickSingleData(value)
+                          handleClickData(e, value)
+                        }}
+                      >
+                        <DoughnutChart
+                          value={convertToMatrixData(value)}
+                          variant='matrix'
+                          size={180}
+                          showLabels={true}
+                          animated={true}
+                        />
+                      </Link>
                     ))}
                   </Box>
                 </StyledProgressSection>
