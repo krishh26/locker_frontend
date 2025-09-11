@@ -29,6 +29,14 @@ interface ChartData {
   totalSubUnits: number
 }
 
+interface LegendItem {
+  label: string
+  value: number
+  color: string
+  icon: React.ReactNode
+  average: string
+}
+
 interface MatrixChartData {
   // Inner ring data
   yetToComplete: number
@@ -38,6 +46,8 @@ interface MatrixChartData {
   // Outer ring data
   duration: number
   totalDuration: number
+  // Additional data
+  dayPending?: number
 }
 
 interface DoughnutChartProps {
@@ -50,6 +60,8 @@ interface DoughnutChartProps {
   className?: string
   variant?: 'standard' | 'matrix'
   matrixTitle?: string
+  onExploreClick?: () => void
+  showExploreButton?: boolean
 }
 
 interface ChartColors {
@@ -193,7 +205,7 @@ const getChartOptions = (theme: any, animated: boolean = true, isMatrix: boolean
       display: false,
     },
     tooltip: {
-      enabled: true,
+      enabled: false,
       backgroundColor: alpha(theme.palette.grey[900], 0.9),
       titleColor: theme.palette.common.white,
       bodyColor: theme.palette.common.white,
@@ -266,6 +278,8 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
   className,
   variant = 'standard',
   matrixTitle = '2025 matrix',
+  onExploreClick,
+  showExploreButton = true,
 }) => {
   const theme = useTheme()
   const colors = getChartColors(theme)
@@ -425,11 +439,12 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
     }
   }, [value, isMatrix])
 
-  // Memoized legend data
+  // Memoized legend data with average calculation
   const legendData = useMemo(() => {
     if (isMatrix) {
       const matrixValue = value as MatrixChartData
-      return [
+      const totalUnits = matrixValue.totalUnits || 0
+      const items = [
         {
           label: 'Yet to Complete',
           value: matrixValue.yetToComplete || 0,
@@ -449,9 +464,16 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
           icon: <PendingIcon sx={{ fontSize: 18 }} />,
         },
       ]
+      
+      // Calculate average for each item
+      return items.map(item => ({
+        ...item,
+        average: totalUnits > 0 ? ((item.value / totalUnits) * 100).toFixed(1) : '0.0'
+      }))
     } else {
       const standardValue = value as ChartData
-      return [
+      const totalSubUnits = standardValue.totalSubUnits || 0
+      const items = [
         {
           label: 'Completed',
           value: standardValue.fullyCompleted || 0,
@@ -471,6 +493,12 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
           icon: <WarningIcon sx={{ fontSize: 14 }} />,
         },
       ]
+      
+      // Calculate average for each item
+      return items.map(item => ({
+        ...item,
+        average: totalSubUnits > 0 ? ((item.value / totalSubUnits) * 100).toFixed(1) : '0.0'
+      }))
     }
   }, [value, colors, isMatrix])
 
@@ -526,10 +554,10 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
           {/* Center progress indicator */}
           <StyledProgressContainer>
             <StyledProgressText variant="h6">
-              {progressPercentage}%
+              {Math.max(0, (value as MatrixChartData).dayPending || 0)}
             </StyledProgressText>
             <StyledProgressLabel variant="caption">
-              Complete
+              days left
             </StyledProgressLabel>
           </StyledProgressContainer>
         </Box>
@@ -540,16 +568,28 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
             {legendData.map((item, index) => (
               <MuiTooltip 
                 key={index}
-                title={`${item.label}: ${item.value} units`}
+                title={`${item.label}: ${item.value} units (${item.average}%)`}
                 arrow
               >
                 <StyledLegendItem>
                   <StyledLegendColor color={item.color} />
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {item.icon}
-                    <StyledLegendText>
-                      {item.value}
-                    </StyledLegendText>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {item.icon}
+                      <StyledLegendText>
+                        {item.value}
+                      </StyledLegendText>
+                    </Box>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: 'text.secondary',
+                        fontSize: '1rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      {item.average}%
+                    </Typography>
                   </Box>
                 </StyledLegendItem>
               </MuiTooltip>
@@ -574,7 +614,69 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
             height: 24,
           }}
         />
+
+        {/* Click to explore more button */}
+        {showExploreButton && (
+          <Box 
+            sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+              mt: 2,
+              px: 2,
+              py: 1,
+              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              borderRadius: 2,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+              cursor: 'pointer',
+              transition: 'all 0.3s ease-in-out',
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                transform: 'translateY(-2px)',
+                boxShadow: theme.shadows[4],
+                '& .explore-arrow': {
+                  transform: 'translateX(4px)'
+                }
+              }
+            }}
+            onClick={() => {
+              if (onExploreClick) {
+                onExploreClick()
+              } else {
+                console.log('Explore more clicked')
+              }
+            }}
+          >
+            <Typography 
+              variant='body2' 
+              sx={{ 
+                color: theme.palette.primary.main,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}
+            >
+              🎯 Click to explore more
+            </Typography>
+            <Typography 
+              className="explore-arrow"
+              variant='body2' 
+              sx={{ 
+                color: theme.palette.primary.main,
+                fontSize: '1.2rem',
+                transition: 'transform 0.3s ease-in-out'
+              }}
+            >
+              →
+            </Typography>
+          </Box>
+        )}
       </StyledChartContainer>
+
+        
+
     </Fade>
   )
 }
