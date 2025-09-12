@@ -588,7 +588,7 @@ const Portfolio: React.FC = () => {
                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                     {learner?.course?.map((value, index) => (
                       <Link
-                        to='/portfolio/learnertodata'
+                        to='/portfolio/courseData'
                         style={{
                           color: 'inherit',
                           textDecoration: 'none',

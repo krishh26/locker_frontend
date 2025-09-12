@@ -3,6 +3,7 @@ import '@mock-api';
 import BrowserRouter from '@fuse/core/BrowserRouter';
 import FuseLayout from '@fuse/core/FuseLayout';
 import FuseTheme from '@fuse/core/FuseTheme';
+import ScrollToTop from '@fuse/core/ScrollToTop';
 import { SnackbarProvider } from 'notistack';
 import { useDispatch, useSelector } from 'react-redux';
 import rtlPlugin from 'stylis-plugin-rtl';
@@ -109,6 +110,7 @@ function App() {
       <FuseTheme theme={mainTheme} direction={langDirection}>
         <AuthProvider>
           <BrowserRouter>
+            <ScrollToTop />
             <FuseAuthorization
               userRole={user?.role}
               loginRedirectUrl={settingsConfig.loginRedirectUrl}

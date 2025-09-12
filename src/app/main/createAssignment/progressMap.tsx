@@ -106,7 +106,7 @@ const ProgressMap = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>SubUnit Title</TableCell>
+                <TableCell>Sub Unit Title</TableCell>
                 <TableCell>Learner Map</TableCell>
                 <TableCell>Trainer Map</TableCell>
                 <TableCell>Gap</TableCell>

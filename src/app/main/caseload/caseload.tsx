@@ -38,6 +38,8 @@ import {
   ExpandLess as ExpandLessIcon,
   Download as DownloadIcon,
   Refresh as RefreshIcon,
+  PictureAsPdf as PdfIcon,
+  TableChart as CsvIcon,
 } from '@mui/icons-material'
 import jsPDF from 'jspdf'
 import { applyPlugin } from 'jspdf-autotable'
@@ -290,8 +292,8 @@ export default function CaseloadPage() {
         manager.statistics.total_managed_learners,
         manager.statistics.total_managed_users,
       ]
-      
-      csvContent += rowData.map(field => `"${field}"`).join(',') + '\n'
+
+      csvContent += rowData.map((field) => `"${field}"`).join(',') + '\n'
     })
 
     // Create and download the CSV file
@@ -299,7 +301,127 @@ export default function CaseloadPage() {
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.setAttribute('href', url)
-    link.setAttribute('download', `caseload-report-${new Date().toISOString().split('T')[0]}.csv`)
+    link.setAttribute(
+      'download',
+      `caseload-report-${new Date().toISOString().split('T')[0]}.csv`
+    )
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // Export individual manager PDF
+  const handleExportManagerPDF = (manager: any) => {
+    const doc = new jsPDF()
+    doc.setFontSize(18)
+    doc.text(`${manager.line_manager.full_name} - Caseload Report`, 14, 20)
+    doc.setFontSize(12)
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30)
+
+    let yPosition = 45
+
+    // Manager details
+    doc.setFontSize(14)
+    doc.text('Manager Information:', 14, yPosition)
+    doc.setFontSize(10)
+    doc.text(`Name: ${manager.line_manager.full_name}`, 20, yPosition + 8)
+    doc.text(`Email: ${manager.line_manager.email}`, 20, yPosition + 16)
+    doc.text(
+      `Total Learners: ${manager.statistics.total_managed_learners}`,
+      20,
+      yPosition + 24
+    )
+    doc.text(
+      `Total Users: ${manager.statistics.total_managed_users}`,
+      20,
+      yPosition + 32
+    )
+
+    yPosition += 50
+
+    // Managed users table
+    if (manager.managed_users && manager.managed_users.length > 0) {
+      doc.setFontSize(14)
+      doc.text('Managed Users:', 14, yPosition)
+      yPosition += 10
+      ;(doc as any).autoTable({
+        startY: yPosition,
+        head: [['Name', 'Email', 'Role']],
+        body: manager.managed_users.map((u: any) => [
+          `${u.first_name} ${u.last_name}`,
+          u.email,
+          u.role || 'User',
+        ]),
+        theme: 'grid',
+        margin: { left: 14 },
+      })
+    } else {
+      doc.setFontSize(12)
+      doc.text('No users assigned to this manager.', 14, yPosition)
+    }
+
+    doc.save(
+      `${manager.line_manager.full_name.replace(
+        /\s+/g,
+        '-'
+      )}-caseload-report.pdf`
+    )
+  }
+
+  // Export individual manager CSV
+  const handleExportManagerCSV = (manager: any) => {
+    const csvHeaders = [
+      'Manager Name',
+      'Manager Email',
+      'User Name',
+      'User Email',
+      'User Role',
+      'Total Learners',
+      'Total Users',
+    ]
+
+    let csvContent = csvHeaders.join(',') + '\n'
+
+    if (manager.managed_users && manager.managed_users.length > 0) {
+      manager.managed_users.forEach((user: any) => {
+        const rowData = [
+          manager.line_manager.full_name,
+          manager.line_manager.email,
+          `${user.first_name} ${user.last_name}`,
+          user.email,
+          user.role || 'User',
+          manager.statistics.total_managed_learners,
+          manager.statistics.total_managed_users,
+        ]
+        csvContent += rowData.map((field) => `"${field}"`).join(',') + '\n'
+      })
+    } else {
+      // If no users, still export manager info
+      const rowData = [
+        manager.line_manager.full_name,
+        manager.line_manager.email,
+        'No users assigned',
+        '',
+        '',
+        manager.statistics.total_managed_learners,
+        manager.statistics.total_managed_users,
+      ]
+      csvContent += rowData.map((field) => `"${field}"`).join(',') + '\n'
+    }
+
+    // Create and download the CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute(
+      'download',
+      `${manager.line_manager.full_name.replace(
+        /\s+/g,
+        '-'
+      )}-caseload-report.csv`
+    )
     link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
@@ -355,10 +477,7 @@ export default function CaseloadPage() {
           </Box>
           <Stack direction='row' spacing={2}>
             <Tooltip title='Refresh Data'>
-              <ThemedIconButton
-                onClick={() => refetch()}
-                disabled={isLoading}
-              >
+              <ThemedIconButton onClick={() => refetch()} disabled={isLoading}>
                 <RefreshIcon />
               </ThemedIconButton>
             </Tooltip>
@@ -371,7 +490,10 @@ export default function CaseloadPage() {
                 color: theme.palette.primary.main,
                 '&:hover': {
                   borderColor: theme.palette.primary.dark,
-                  backgroundColor: themeHelpers.withOpacity(theme.palette.primary.main, 0.08),
+                  backgroundColor: themeHelpers.withOpacity(
+                    theme.palette.primary.main,
+                    0.08
+                  ),
                   transition: 'all 0.3s ease',
                 },
               }}
@@ -412,7 +534,9 @@ export default function CaseloadPage() {
             }}
             InputProps={{
               startAdornment: (
-                <SearchIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />
+                <SearchIcon
+                  sx={{ mr: 1, color: theme.palette.text.secondary }}
+                />
               ),
             }}
             sx={{ maxWidth: 400 }}
@@ -434,7 +558,10 @@ export default function CaseloadPage() {
       {/* Loading State */}
       {isLoading && (
         <Box display='flex' justifyContent='center' alignItems='center' py={8}>
-          <CircularProgress size={40} sx={{ color: theme.palette.primary.main }} />
+          <CircularProgress
+            size={40}
+            sx={{ color: theme.palette.primary.main }}
+          />
           <ThemedTypography variant='h6' ml={2}>
             Loading caseload data...
           </ThemedTypography>
@@ -469,27 +596,76 @@ export default function CaseloadPage() {
                     </Avatar>
                   }
                   action={
-                    <ThemedIconButton
-                      onClick={() =>
-                        handleManagerToggle(manager.line_manager.user_id)
-                      }
-                      size='small'
-                    >
-                      {expandedManager === manager.line_manager.user_id ? (
-                        <ExpandLessIcon />
-                      ) : (
-                        <ExpandMoreIcon />
+                    <Box display='flex' alignItems='center' gap={0.5}>
+                      {manager.statistics.total_managed_users > 0 && (
+                        <>
+                          <Tooltip title='Export CSV'>
+                            <ThemedIconButton
+                              onClick={() => handleExportManagerCSV(manager)}
+                              size='small'
+                              sx={{
+                                color: '#2e7d32',
+                                '&:hover': {
+                                  backgroundColor: themeHelpers.withOpacity(
+                                    '#2e7d32',
+                                    0.08
+                                  ),
+                                },
+                              }}
+                            >
+                              <CsvIcon fontSize='small' />
+                            </ThemedIconButton>
+                          </Tooltip>
+                          <Tooltip title='Export PDF'>
+                            <ThemedIconButton
+                              onClick={() => handleExportManagerPDF(manager)}
+                              size='small'
+                              sx={{
+                                color: '#d32f2f',
+                                '&:hover': {
+                                  backgroundColor: themeHelpers.withOpacity(
+                                    '#d32f2f',
+                                    0.08
+                                  ),
+                                },
+                              }}
+                            >
+                              <PdfIcon fontSize='small' />
+                            </ThemedIconButton>
+                          </Tooltip>
+                        </>
                       )}
-                    </ThemedIconButton>
+                      <ThemedIconButton
+                        onClick={() =>
+                          handleManagerToggle(manager.line_manager.user_id)
+                        }
+                        size='small'
+                      >
+                        {expandedManager === manager.line_manager.user_id ? (
+                          <ExpandLessIcon />
+                        ) : (
+                          <ExpandMoreIcon />
+                        )}
+                      </ThemedIconButton>
+                    </Box>
                   }
                   title={
-                    <ThemedTypography variant='h6' fontWeight='bold' noWrap sx={{ color: theme.palette.text.primary }}>
+                    <ThemedTypography
+                      variant='h6'
+                      fontWeight='bold'
+                      noWrap
+                      sx={{ color: theme.palette.text.primary }}
+                    >
                       {manager.line_manager.full_name}
                     </ThemedTypography>
                   }
                   subheader={
                     <Box>
-                      <ThemedTypography variant='body2' noWrap sx={{ color: theme.palette.text.secondary }}>
+                      <ThemedTypography
+                        variant='body2'
+                        noWrap
+                        sx={{ color: theme.palette.text.secondary }}
+                      >
                         <EmailIcon
                           sx={{
                             fontSize: 14,
@@ -517,11 +693,22 @@ export default function CaseloadPage() {
                           color: theme.palette.primary.contrastText,
                         }}
                       >
-                        <PeopleIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
-                        <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
+                        <PeopleIcon
+                          sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }}
+                        />
+                        <ThemedTypography
+                          variant='h6'
+                          fontWeight='bold'
+                          sx={{ color: 'inherit' }}
+                        >
                           {manager.statistics.total_managed_users}
                         </ThemedTypography>
-                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Users</ThemedTypography>
+                        <ThemedTypography
+                          variant='caption'
+                          sx={{ color: 'inherit' }}
+                        >
+                          Users
+                        </ThemedTypography>
                       </ThemedPaper>
                     </Grid>
                     <Grid item xs={6}>
@@ -534,11 +721,22 @@ export default function CaseloadPage() {
                           color: theme.palette.secondary.contrastText,
                         }}
                       >
-                        <SchoolIcon sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }} />
-                        <ThemedTypography variant='h6' fontWeight='bold' sx={{ color: 'inherit' }}>
+                        <SchoolIcon
+                          sx={{ fontSize: 20, mb: 0.5, color: 'inherit' }}
+                        />
+                        <ThemedTypography
+                          variant='h6'
+                          fontWeight='bold'
+                          sx={{ color: 'inherit' }}
+                        >
                           {manager.statistics.total_managed_learners}
                         </ThemedTypography>
-                        <ThemedTypography variant='caption' sx={{ color: 'inherit' }}>Learners</ThemedTypography>
+                        <ThemedTypography
+                          variant='caption'
+                          sx={{ color: 'inherit' }}
+                        >
+                          Learners
+                        </ThemedTypography>
                       </ThemedPaper>
                     </Grid>
                   </Grid>
@@ -546,8 +744,10 @@ export default function CaseloadPage() {
                   {/* Status Indicator */}
                   <Box display='flex' justifyContent='center' mb={2}>
                     <ThemedChip
-                      label={`${manager.statistics.total_managed_users} Active Users`}
-                      color={getStatusColor(manager.statistics.total_managed_users)}
+                      label={`${manager.statistics.total_managed_users} Users`}
+                      color={getStatusColor(
+                        manager.statistics.total_managed_users
+                      )}
                       size='small'
                       variant='outlined'
                       sx={{
@@ -564,7 +764,11 @@ export default function CaseloadPage() {
                   {expandedManager === manager.line_manager.user_id && (
                     <Box mt={2}>
                       <ThemedDivider sx={{ mb: 2 }} />
-                      <ThemedTypography variant='subtitle2' fontWeight='bold' mb={1}>
+                      <ThemedTypography
+                        variant='subtitle2'
+                        fontWeight='bold'
+                        mb={1}
+                      >
                         Managed Users ({manager.managed_users?.length || 0})
                       </ThemedTypography>
 
@@ -609,7 +813,9 @@ export default function CaseloadPage() {
                                   secondary={
                                     <ThemedTypography
                                       variant='caption'
-                                      sx={{ color: theme.palette.text.secondary }}
+                                      sx={{
+                                        color: theme.palette.text.secondary,
+                                      }}
                                     >
                                       {user.email}
                                     </ThemedTypography>
@@ -643,7 +849,10 @@ export default function CaseloadPage() {
                               mb: 1,
                             }}
                           />
-                          <ThemedTypography variant='body2' color='text.secondary'>
+                          <ThemedTypography
+                            variant='body2'
+                            color='text.secondary'
+                          >
                             No users assigned yet
                           </ThemedTypography>
                         </Box>
@@ -668,7 +877,9 @@ export default function CaseloadPage() {
             borderRadius: 2,
           }}
         >
-          <PeopleIcon sx={{ fontSize: 80, color: theme.palette.text.secondary, mb: 2 }} />
+          <PeopleIcon
+            sx={{ fontSize: 80, color: theme.palette.text.secondary, mb: 2 }}
+          />
           <ThemedTypography variant='h5' color='text.secondary' gutterBottom>
             No Line Managers Found
           </ThemedTypography>

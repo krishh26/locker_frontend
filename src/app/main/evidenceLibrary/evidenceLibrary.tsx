@@ -18,6 +18,12 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Chip,
+  Box,
+  Tooltip,
+  Link as MuiLink,
+  useTheme,
+  alpha,
 } from '@mui/material'
 import {
   createColumnHelper,
@@ -32,6 +38,13 @@ import {
 } from '@tanstack/react-table'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import FileCopyIcon from '@mui/icons-material/FileCopy'
+import DescriptionIcon from '@mui/icons-material/Description'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import DownloadIcon from '@mui/icons-material/Download'
+import ArchiveIcon from '@mui/icons-material/Archive'
 import { useSelector } from 'react-redux'
 
 import ReactUploadFile from 'src/app/component/react-upload-files'
@@ -57,9 +70,28 @@ import { useDispatch } from 'react-redux'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import ReuploadEvidenceLibrary from './reupload-evidenceLibrary'
 
-interface SurveyData {
-  survey_number: string
-  // add other fields here
+interface EvidenceData {
+  assignment_id: number
+  file: {
+    name: string
+    key: string
+    url: string
+  } | null
+  declaration: string | null
+  title: string | null
+  description: string | null
+  trainer_feedback: string | null
+  external_feedback: string | null
+  learner_comments: string | null
+  points_for_improvement: string | null
+  assessment_method: string | null
+  session: string | null
+  grade: string | null
+  units: string | null
+  status: string
+  evidence_time_log: boolean
+  created_at: string
+  updated_at: string
 }
 
 interface Column {
@@ -69,6 +101,8 @@ interface Column {
     | 'trainer_feedback'
     | 'learner_comments'
     | 'file'
+    | 'status'
+    | 'created_at'
     | 'action'
   label: string
   minWidth?: number
@@ -77,24 +111,28 @@ interface Column {
 }
 
 const columns: readonly Column[] = [
-  { id: 'title', label: 'Title', minWidth: 10 },
-  { id: 'description', label: 'Description', minWidth: 10 },
-  { id: 'trainer_feedback', label: 'Trainer Feedback', minWidth: 10 },
-  { id: 'learner_comments', label: 'Learner Comments', minWidth: 10 },
-  { id: 'file', label: 'Files', minWidth: 10 },
-  { id: 'action', label: 'Action', minWidth: 10 },
+  { id: 'title', label: 'Title', minWidth: 200 },
+  { id: 'description', label: 'Description', minWidth: 250 },
+  { id: 'status', label: 'Status', minWidth: 120 },
+  { id: 'file', label: 'Files', minWidth: 100 },
+  { id: 'trainer_feedback', label: 'Trainer Feedback', minWidth: 200 },
+  { id: 'learner_comments', label: 'Learner Comments', minWidth: 200 },
+  { id: 'created_at', label: 'Created Date', minWidth: 150 },
+  { id: 'action', label: 'Actions', minWidth: 100 },
 ]
 
-const columnHelper = createColumnHelper<SurveyData>()
+const columnHelper = createColumnHelper<EvidenceData>()
 
 const EvidenceLibrary: FC = () => {
+  const theme = useTheme()
   const [isOpenFileUpload, setIsOpenFileUpload] = useState<boolean>(false)
   const [isOpenReupload, setIsOpenReupload] = useState<boolean>(false)
   const [isOpenDeleteBox, setIsOpenDeleteBox] = useState<boolean>(false)
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
-  const [evidenceData, setEvidenceData] = useState([])
-  const [selectedRow, setSelectedRow] = useState<any>({})
+  const [evidenceData, setEvidenceData] = useState<EvidenceData[]>([])
+  const [selectedRow, setSelectedRow] = useState<EvidenceData | null>(null)
+  const [isDownloading, setIsDownloading] = useState<boolean>(false)
 
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -289,9 +327,148 @@ const EvidenceLibrary: FC = () => {
     setAnchorEl(event.currentTarget)
   }
 
-  const openMenu = (e, id) => {
+  const openMenu = (e: React.MouseEvent<HTMLElement>, evidence: EvidenceData) => {
     handleClick(e)
-    setSelectedRow(id)
+    setSelectedRow(evidence)
+  }
+
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
+  // Helper function to get status color
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'not started':
+        return 'default'
+      case 'in progress':
+        return 'warning'
+      case 'completed':
+        return 'success'
+      case 'submitted':
+        return 'info'
+      default:
+        return 'default'
+    }
+  }
+
+  // Helper function to display value or dash
+  const displayValue = (value: string | null | undefined) => {
+    if (value === null || value === undefined || value === 'null' || value === '' || value.trim() === '') {
+      return '-'
+    }
+    return value
+  }
+
+  // Helper function to truncate text
+  const truncateText = (text: string | null, maxLength: number = 50) => {
+    if (!text || text === 'null' || text.trim() === '') return '-'
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text
+  }
+
+  // Helper function to download file
+  const downloadFile = async (url: string, filename: string): Promise<Blob> => {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`)
+      }
+      return await response.blob()
+    } catch (error) {
+      console.error('Error downloading file:', error)
+      throw error
+    }
+  }
+
+  // Helper function to create ZIP file
+  const createZipFile = async (files: { name: string; blob: Blob }[]): Promise<Blob> => {
+    // Using JSZip library - you'll need to install it: npm install jszip
+    const JSZip = (await import('jszip')).default
+    const zip = new JSZip()
+
+    files.forEach((file, index) => {
+      const fileName = file.name || `evidence_${index + 1}.pdf`
+      zip.file(fileName, file.blob)
+    })
+
+    return await zip.generateAsync({ type: 'blob' })
+  }
+
+  // Download all evidence files as ZIP
+  const handleDownloadAll = async () => {
+    if (!evidenceData || evidenceData.length === 0) {
+      dispatch(
+        showMessage({
+          message: 'No evidence files to download',
+          variant: 'warning',
+        })
+      )
+      return
+    }
+
+    setIsDownloading(true)
+    
+    try {
+      // Filter evidence with files
+      const evidenceWithFiles = evidenceData.filter(evidence => evidence.file)
+      
+      if (evidenceWithFiles.length === 0) {
+        dispatch(
+          showMessage({
+            message: 'No files found to download',
+            variant: 'warning',
+          })
+        )
+        return
+      }
+
+      // Download all files
+      const downloadPromises = evidenceWithFiles.map(async (evidence) => {
+        const fileName = evidence.file?.name || `evidence_${evidence.assignment_id}.pdf`
+        const blob = await downloadFile(evidence.file!.url, fileName)
+        return {
+          name: fileName,
+          blob: blob
+        }
+      })
+
+      const files = await Promise.all(downloadPromises)
+      
+      // Create ZIP file
+      const zipBlob = await createZipFile(files)
+      
+      // Download ZIP file
+      const url = window.URL.createObjectURL(zipBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `evidence_library_${new Date().toISOString().split('T')[0]}.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      dispatch(
+        showMessage({
+          message: `Successfully downloaded ${files.length} evidence files`,
+          variant: 'success',
+        })
+      )
+    } catch (error) {
+      console.error('Error downloading files:', error)
+      dispatch(
+        showMessage({
+          message: 'Failed to download evidence files. Please try again.',
+          variant: 'error',
+        })
+      )
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const handleClose = () => {
@@ -304,11 +481,13 @@ const EvidenceLibrary: FC = () => {
   }
 
   const handleNavigate = () => {
-    navigate(`/evidenceLibrary/${selectedRow.assignment_id}`, {
-      state: {
-        isEdit: true,
-      },
-    })
+    if (selectedRow) {
+      navigate(`/evidenceLibrary/${selectedRow.assignment_id}`, {
+        state: {
+          isEdit: true,
+        },
+      })
+    }
   }
 
   const handlePageChange = (event, newPage) => {
@@ -324,20 +503,22 @@ const EvidenceLibrary: FC = () => {
   }
 
   const handleDelete = async () => {
+    if (!selectedRow) return
+    
     try {
       await deleteEvidence({ id: selectedRow.assignment_id }).unwrap()
       setIsOpenDeleteBox(false)
       refetch()
       dispatch(
         showMessage({
-          message: 'Delete successfully',
+          message: 'Evidence deleted successfully',
           variant: 'success',
         })
       )
     } catch (error) {
       dispatch(
         showMessage({
-          message: 'Something Went Wrong !',
+          message: 'Failed to delete evidence. Please try again.',
           variant: 'error',
         })
       )
@@ -345,22 +526,68 @@ const EvidenceLibrary: FC = () => {
   }
 
   return (
-    <Container sx={{ mt: 8 }}>
-      <div className='flex items-center justify-between mb-4'>
-        <Typography variant='h4' component='h1' gutterBottom>
+    <Container sx={{ mt: 8, pb: 4 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
+        <Typography 
+          variant='h4' 
+          component='h1' 
+          sx={{ 
+            fontWeight: 600,
+            color: theme.palette.text.primary,
+            mb: 0
+          }}
+        >
           Evidence Library
         </Typography>
-        <Button
-          variant='contained'
-          className='rounded-md'
-          color='primary'
-          sx={{ mb: 2 }}
-          onClick={() => setIsOpenFileUpload(true)}
-          startIcon={<i className='material-icons'>add</i>}
-        >
-          Add Evidence
-        </Button>
-      </div>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant='outlined'
+            color='secondary'
+            size='large'
+            onClick={handleDownloadAll}
+            disabled={isDownloading || !evidenceData || evidenceData.length === 0}
+            startIcon={isDownloading ? <ArchiveIcon /> : <DownloadIcon />}
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              py: 1.5,
+              textTransform: 'none',
+              fontWeight: 600,
+              borderWidth: 2,
+              '&:hover': {
+                borderWidth: 2,
+                backgroundColor: alpha(theme.palette.secondary.main, 0.04),
+              },
+              '&:disabled': {
+                borderColor: alpha(theme.palette.action.disabled, 0.3),
+                color: alpha(theme.palette.action.disabled, 0.5),
+              }
+            }}
+          >
+            {isDownloading ? 'Downloading...' : 'Download All'}
+          </Button>
+          <Button
+            variant='contained'
+            color='primary'
+            size='large'
+            onClick={() => setIsOpenFileUpload(true)}
+            startIcon={<CloudUploadIcon />}
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              py: 1.5,
+              textTransform: 'none',
+              fontWeight: 600,
+              boxShadow: theme.shadows[2],
+              '&:hover': {
+                boxShadow: theme.shadows[4],
+              }
+            }}
+          >
+            Add Evidence
+          </Button>
+        </Box>
+      </Box>
 
       {/* <Card className='mt-5'>
         <ReactTable table={table} />
@@ -378,130 +605,271 @@ const EvidenceLibrary: FC = () => {
         onPageChange={handlePageChange}
         onRowsPerPageChange={handlePageSizeChange}
       /> */}
-      <TableContainer sx={{ maxHeight: 550, paddingBottom: '2rem' }}>
-        {isLoading ? (
-          <FuseLoading />
-        ) : evidenceData?.length > 0 ? (
-          <Table
-            stickyHeader
-            sx={{ minWidth: 650, height: '100%' }}
-            size='small'
-            aria-label='simple table'
-          >
-            <TableHead>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.id}
-                    align={column.align}
-                    style={{
-                      minWidth: column.minWidth,
-                      backgroundColor: '#F8F8F8',
+      <Card 
+        sx={{ 
+          boxShadow: theme.shadows[1],
+          borderRadius: 2,
+          overflow: 'hidden',
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+        }}
+      >
+        <TableContainer 
+          sx={{ 
+            maxHeight: 600,
+            '&::-webkit-scrollbar': {
+              width: '8px',
+              height: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: alpha(theme.palette.grey[300], 0.1),
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: alpha(theme.palette.grey[400], 0.5),
+              borderRadius: '4px',
+              '&:hover': {
+                background: alpha(theme.palette.grey[400], 0.7),
+              },
+            },
+          }}
+        >
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <FuseLoading />
+            </Box>
+          ) : evidenceData?.length > 0 ? (
+            <Table
+              stickyHeader
+              sx={{ 
+                minWidth: 1200,
+                '& .MuiTableCell-head': {
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                },
+                '& .MuiTableCell-body': {
+                  backgroundColor: 'transparent',
+                }
+              }}
+              size='medium'
+              aria-label='evidence library table'
+            >
+              <TableHead>
+                <TableRow 
+                  sx={{ 
+                    backgroundColor: alpha(theme.palette.primary.light, 1),
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 2
+                  }}
+                >
+                  {columns.map((column) => (
+                    <TableCell
+                      key={column.id}
+                      align={column.align}
+                      sx={{
+                        minWidth: column.minWidth,
+                        width: column.minWidth,
+                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                        borderBottom: `2px solid ${theme.palette.divider}`,
+                        py: 2,
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 2
+                      }}
+                    >
+                      {column.label}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {evidenceData.map((row, index) => (
+                  <TableRow 
+                    key={row.assignment_id || index}
+                    hover 
+                    sx={{ 
+                      '&:nth-of-type(odd)': {
+                        backgroundColor: alpha(theme.palette.action.hover, 0.02),
+                      },
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                      }
                     }}
                   >
-                    {column.label}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {evidenceData.map((row) => (
-                <TableRow hover role='checkbox' tabIndex={-1}>
-                  {columns.map((column) => {
-                    const value = row[column.id]
-                    return (
-                      <TableCell key={column.id} align={column.align}>
-                        {column.format && typeof value === 'number' ? (
-                          column.format(value)
-                        ) : column.id === 'action' ? (
-                          <IconButton
-                            size='small'
-                            sx={{ color: '#5B718F', marginRight: '4px' }}
-                            onClick={(e) => openMenu(e, row)}
-                          >
-                            <MoreHorizIcon fontSize='small' />
-                          </IconButton>
-                        ) : column.id === 'file' ? (
-                          <div style={{ display: 'flex' }}>
-                            <AvatarGroup
-                              max={4}
-                              className='items-center'
-                              sx={{
-                                '.MuiAvatar-root': {
-                                  backgroundColor: '#6d81a3',
-                                  width: '3.4rem',
-                                  height: '3.4rem',
-                                  fontSize: 'medium',
-                                  border: '1px solid #FFFFFF',
-                                },
-                              }}
-                            >
-                              {/* {data?.map((file, index) => ( */}
-                              <Link
-                                to={value.url}
-                                target='_blank'
-                                rel='noopener'
-                                style={{
-                                  border: '0px',
-                                  backgroundColor: 'unset',
+                    {columns.map((column) => {
+                      const value = row[column.id as keyof EvidenceData]
+                      return (
+                        <TableCell 
+                          key={column.id} 
+                          align={column.align}
+                          sx={{ 
+                            py: 2,
+                            minWidth: column.minWidth,
+                            width: column.minWidth,
+                            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                            backgroundColor: 'transparent'
+                          }}
+                        >
+                          {column.id === 'action' ? (
+                            <Tooltip title="More actions">
+                              <IconButton
+                                size='small'
+                                onClick={(e) => openMenu(e, row)}
+                                sx={{ 
+                                  color: theme.palette.text.secondary,
+                                  '&:hover': {
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                    color: theme.palette.primary.main
+                                  }
                                 }}
                               >
-                                <Avatar>
-                                  <FileCopyIcon className='text-white text-xl' />
-                                </Avatar>
-                              </Link>
-                              {/* ))} */}
-                            </AvatarGroup>
-                          </div>
-                        ) : (
-                          value
-                        )}
-                      </TableCell>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div>
-            <div
-              className='flex flex-col justify-center items-center gap-10 '
-              style={{ height: '94%' }}
+                                <MoreHorizIcon fontSize='small' />
+                              </IconButton>
+                            </Tooltip>
+                          ) : column.id === 'file' ? (
+                            row.file ? (
+                              <Tooltip title={row.file.name}>
+                                <MuiLink
+                                  href={row.file.url}
+                                  target='_blank'
+                                  rel='noopener'
+                                  sx={{ textDecoration: 'none' }}
+                                >
+                                  <Avatar
+                                    sx={{
+                                      backgroundColor: theme.palette.primary.main,
+                                      width: 40,
+                                      height: 40,
+                                      '&:hover': {
+                                        backgroundColor: theme.palette.primary.dark,
+                                        transform: 'scale(1.05)',
+                                        transition: 'all 0.2s ease-in-out'
+                                      }
+                                    }}
+                                  >
+                                    <DescriptionIcon sx={{ color: 'white' }} />
+                                  </Avatar>
+                                </MuiLink>
+                              </Tooltip>
+                            ) : (
+                              <Typography variant='body2' color='text.secondary'>
+                                -
+                              </Typography>
+                            )
+                          ) : column.id === 'status' ? (
+                            <Chip
+                              label={String(value || 'Unknown')}
+                              color={getStatusColor(String(value || ''))}
+                              size='small'
+                              variant='outlined'
+                              sx={{ fontWeight: 500 }}
+                            />
+                          ) : column.id === 'created_at' ? (
+                            <Typography variant='body2' color='text.secondary'>
+                              {value ? formatDate(String(value)) : '-'}
+                            </Typography>
+                          ) : column.id === 'title' || column.id === 'description' ? (
+                            <Tooltip title={String(value || '')}>
+                              <Typography 
+                                variant='body2' 
+                                sx={{ 
+                                  maxWidth: 200,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {truncateText(String(value), 30)}
+                              </Typography>
+                            </Tooltip>
+                          ) : (
+                            <Typography variant='body2' color='text.secondary'>
+                              {displayValue(String(value))}
+                            </Typography>
+                          )}
+                        </TableCell>
+                      )
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                py: 8,
+                px: 4
+              }}
             >
               <DataNotFound width='25%' />
-              <Typography variant='h5'>No data found</Typography>
-              <Typography variant='body2' className='text-center'>
-                It is a long established fact that a reader will be <br />
-                distracted by the readable content.
+              <Typography variant='h5' sx={{ mt: 3, mb: 1, fontWeight: 500 }}>
+                No Evidence Found
               </Typography>
-            </div>
-          </div>
-        )}
-      </TableContainer>
+              <Typography 
+                variant='body2' 
+                color='text.secondary'
+                sx={{ textAlign: 'center', maxWidth: 400 }}
+              >
+                You haven't uploaded any evidence yet. Click "Add Evidence" to get started with your portfolio.
+              </Typography>
+            </Box>
+          )}
+        </TableContainer>
+      </Card>
       <Menu
-        id='long-menu'
-        MenuListProps={{
-          'aria-labelledby': 'long-button',
-        }}
+        id='evidence-actions-menu'
         anchorEl={anchorEl}
         open={isOpenAction}
         onClose={handleClose}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: theme.shadows[8],
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            minWidth: 160
+          }
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         <MenuItem
           onClick={() => {
             handleClose()
             setIsOpenReupload(true)
-            // handleOpenFile()
+          }}
+          sx={{
+            py: 1.5,
+            px: 2,
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.primary.main, 0.08)
+            }
           }}
         >
+          <CloudUploadIcon sx={{ mr: 1.5, fontSize: 20 }} />
           Reupload
         </MenuItem>
         <MenuItem
           onClick={() => {
+            handleClose()
             handleNavigate()
           }}
+          sx={{
+            py: 1.5,
+            px: 2,
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.info.main, 0.08)
+            }
+          }}
         >
+          <VisibilityIcon sx={{ mr: 1.5, fontSize: 20 }} />
           View
         </MenuItem>
         <MenuItem
@@ -509,7 +877,16 @@ const EvidenceLibrary: FC = () => {
             handleClose()
             setIsOpenDeleteBox(true)
           }}
+          sx={{
+            py: 1.5,
+            px: 2,
+            color: theme.palette.error.main,
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.error.main, 0.08)
+            }
+          }}
         >
+          <DeleteIcon sx={{ mr: 1.5, fontSize: 20 }} />
           Delete
         </MenuItem>
       </Menu>
@@ -540,10 +917,12 @@ const EvidenceLibrary: FC = () => {
         fullWidth
         sx={{
           '.MuiDialog-paper': {
-            borderRadius: '4px',
-            padding: '1rem',
+            borderRadius: 3,
+            padding: 0,
             height: '90vh',
-            maxHeight: '90vh'
+            maxHeight: '90vh',
+            boxShadow: theme.shadows[24],
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
           },
         }}
       >
@@ -552,16 +931,20 @@ const EvidenceLibrary: FC = () => {
       <Dialog
         open={isOpenReupload}
         onClose={() => setIsOpenReupload(false)}
+        maxWidth="md"
+        fullWidth
         sx={{
           '.MuiDialog-paper': {
-            borderRadius: '4px',
-            padding: '1rem',
+            borderRadius: 3,
+            padding: 0,
+            boxShadow: theme.shadows[24],
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
           },
         }}
       >
         <ReuploadEvidenceLibrary
           handleClose={handleReuploadClose}
-          id={selectedRow.assignment_id}
+          id={selectedRow?.assignment_id}
         />
       </Dialog>
     </Container>

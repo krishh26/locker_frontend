@@ -346,14 +346,22 @@ const TrainerRiskRating = () => {
 
     if (trainerDetails?.data?.courses) {
       const updated: { [key: number]: string } = {}
+      const commentsUpdated: { [key: number]: string } = {}
       trainerDetails?.data?.courses.forEach(
-        (c: any) =>
-          (updated[c.course_id] =
+        (c: any, index: number) => {
+          updated[c.course_id] =
             c.risk_rating.overall_risk_level === ''
               ? 'Please select'
-              : c.risk_rating.overall_risk_level)
+              : c.risk_rating.overall_risk_level
+          
+          // Initialize comments with existing course.comment if available
+          if (c.comment) {
+            commentsUpdated[index] = c.comment
+          }
+        }
       )
       setCourseRatings(updated)
+      setComments(commentsUpdated)
     }
   }, [trainerDetails])
 
@@ -493,10 +501,10 @@ const TrainerRiskRating = () => {
     const lowValue = parseFloat(settings.low) || 0
 
     // Check if all fields are filled
-    if (!settings.high || !settings.medium || !settings.low) {
-      errors.general = 'All risk percentage fields are required'
-      hasErrors = true
-    }
+    // if (!settings.high || !settings.medium || !settings.low) {
+    //   errors.general = 'All risk percentage fields are required'
+    //   hasErrors = true
+    // }
 
     // Check if values are valid numbers and within range
     if (
@@ -540,11 +548,11 @@ const TrainerRiskRating = () => {
     }
 
     // Check if all values sum to 100
-    const total = highValue + mediumValue + lowValue
-    if (total !== 100) {
-      errors.general = `Risk percentages must sum to 100 (current total: ${total})`
-      hasErrors = true
-    }
+    // const total = highValue + mediumValue + lowValue
+    // if (total !== 100) {
+    //   errors.general = `Risk percentages must sum to 100 (current total: ${total})`
+    //   hasErrors = true
+    // }
 
     setRiskSettingsErrors(errors)
     return !hasErrors
@@ -973,7 +981,7 @@ const TrainerRiskRating = () => {
                                       multiline
                                       fullWidth
                                       minRows={3}
-                                      value={comments[index] || ''}
+                                      value={comments[index] || course.comment || ''}
                                       onChange={(e) =>
                                         setComments((prev) => ({
                                           ...prev,
