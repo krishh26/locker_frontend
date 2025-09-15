@@ -371,17 +371,83 @@ const EvidenceLibrary: FC = () => {
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text
   }
 
-  // Helper function to download file
+  // Helper function to get signed URL from backend
+  const getSignedUrl = async (fileKey: string): Promise<string> => {
+    try {
+      const response = await fetch(`/api/signed-url?fileKey=${encodeURIComponent(fileKey)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to get signed URL: ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      return data.signedUrl
+    } catch (error) {
+      console.error('Error getting signed URL:', error)
+      throw error
+    }
+  }
+
+  // Helper function to download file with CORS handling
   const downloadFile = async (url: string, filename: string): Promise<Blob> => {
     try {
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.statusText}`)
+      // Method 1: Try direct fetch first (for files with proper CORS headers)
+      try {
+        const response = await fetch(url, {
+          mode: 'cors',
+          credentials: 'omit'
+        })
+        if (response.ok) {
+          return await response.blob()
+        }
+      } catch (corsError) {
+        console.warn('Direct fetch failed due to CORS, trying alternative methods:', corsError)
       }
+
+      // Method 2: Use a proxy endpoint (recommended)
+      // You'll need to create a backend endpoint that proxies the S3 request
+      const proxyUrl = `/api/proxy-download?url=${encodeURIComponent(url)}`
+      const response = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download file via proxy: ${response.statusText}`)
+      }
+      
       return await response.blob()
     } catch (error) {
       console.error('Error downloading file:', error)
       throw error
+    }
+  }
+
+  // Alternative method: Download file by opening in new tab (for direct S3 URLs)
+  const downloadFileDirect = (url: string, filename: string) => {
+    try {
+      // Create a temporary link element
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Error downloading file directly:', error)
+      // Fallback: open in new tab
+      window.open(url, '_blank')
     }
   }
 
@@ -427,17 +493,60 @@ const EvidenceLibrary: FC = () => {
         return
       }
 
-      // Download all files
+      // Download all files with error handling
       const downloadPromises = evidenceWithFiles.map(async (evidence) => {
         const fileName = evidence.file?.name || `evidence_${evidence.assignment_id}.pdf`
-        const blob = await downloadFile(evidence.file!.url, fileName)
-        return {
-          name: fileName,
-          blob: blob
+        try {
+          const blob = await downloadFile(evidence.file!.url, fileName)
+          return {
+            name: fileName,
+            blob: blob,
+            success: true
+          }
+        } catch (error) {
+          console.warn(`Failed to download ${fileName}, will try direct download:`, error)
+          // Fallback to direct download
+          downloadFileDirect(evidence.file!.url, fileName)
+          return {
+            name: fileName,
+            blob: null,
+            success: false,
+            url: evidence.file!.url
+          }
         }
       })
 
-      const files = await Promise.all(downloadPromises)
+      const results = await Promise.all(downloadPromises)
+      
+      // Filter successful downloads for ZIP creation
+      const successfulFiles = results.filter(result => result.success && result.blob)
+      const failedFiles = results.filter(result => !result.success)
+      
+      // Show warning for failed downloads
+      if (failedFiles.length > 0) {
+        dispatch(
+          showMessage({
+            message: `${failedFiles.length} files opened in new tabs due to CORS restrictions`,
+            variant: 'warning',
+          })
+        )
+      }
+      
+      // Only create ZIP if we have successful downloads
+      if (successfulFiles.length === 0) {
+        dispatch(
+          showMessage({
+            message: 'All files opened in new tabs. ZIP download not available due to CORS restrictions.',
+            variant: 'info',
+          })
+        )
+        return
+      }
+      
+      const files = successfulFiles.map(result => ({
+        name: result.name,
+        blob: result.blob!
+      }))
       
       // Create ZIP file
       const zipBlob = await createZipFile(files)
@@ -468,6 +577,54 @@ const EvidenceLibrary: FC = () => {
       )
     } finally {
       setIsDownloading(false)
+    }
+  }
+
+  // Handle single file download
+  const handleSingleFileDownload = async (evidence: any) => {
+    if (!evidence.file?.url) {
+      dispatch(
+        showMessage({
+          message: 'No file available for download',
+          variant: 'warning',
+        })
+      )
+      return
+    }
+
+    const fileName = evidence.file.name || `evidence_${evidence.assignment_id}.pdf`
+    
+    try {
+      // Try to download via proxy first
+      const blob = await downloadFile(evidence.file.url, fileName)
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      dispatch(
+        showMessage({
+          message: `Successfully downloaded ${fileName}`,
+          variant: 'success',
+        })
+      )
+    } catch (error) {
+      console.warn('Proxy download failed, trying direct download:', error)
+      // Fallback to direct download
+      downloadFileDirect(evidence.file.url, fileName)
+      
+      dispatch(
+        showMessage({
+          message: `File opened in new tab due to CORS restrictions`,
+          variant: 'info',
+        })
+      )
     }
   }
 
