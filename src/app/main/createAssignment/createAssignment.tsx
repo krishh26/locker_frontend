@@ -176,12 +176,36 @@ const CreateAssignment = (props) => {
   }
 
   // Helper function to download file
+  // Helper function to download file with CORS handling
   const downloadFile = async (url: string, filename: string): Promise<Blob> => {
     try {
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.statusText}`)
+      // Method 1: Try direct fetch first (for files with proper CORS headers)
+      try {
+        const response = await fetch(url, {
+          mode: 'cors',
+          credentials: 'omit'
+        })
+        if (response.ok) {
+          return await response.blob()
+        }
+      } catch (corsError) {
+        console.warn('Direct fetch failed due to CORS, trying alternative methods:', corsError)
       }
+
+      // Method 2: Use a proxy endpoint (recommended)
+      // You'll need to create a backend endpoint that proxies the S3 request
+      const proxyUrl = `/api/proxy-download?url=${encodeURIComponent(url)}`
+      const response = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download file via proxy: ${response.statusText}`)
+      }
+      
       return await response.blob()
     } catch (error) {
       console.error('Error downloading file:', error)
@@ -189,25 +213,47 @@ const CreateAssignment = (props) => {
     }
   }
 
+  // Alternative method: Download file by opening in new tab (for direct S3 URLs)
+  const downloadFileDirect = (url: string, filename: string) => {
+    try {
+      // Create a temporary link element
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Error downloading file directly:', error)
+      // Fallback: open in new tab
+      window.open(url, '_blank')
+    }
+  }
+
   // Helper function to create ZIP file
   const createZipFile = async (files: { name: string; blob: Blob }[]): Promise<Blob> => {
+    // Using JSZip library - you'll need to install it: npm install jszip
     const JSZip = (await import('jszip')).default
     const zip = new JSZip()
 
     files.forEach((file, index) => {
-      const fileName = file.name || `assignment_${index + 1}.pdf`
+      const fileName = file.name || `evidence_${index + 1}.pdf`
       zip.file(fileName, file.blob)
     })
 
     return await zip.generateAsync({ type: 'blob' })
   }
 
-  // Download all assignment files as ZIP
+  // Download all evidence files as ZIP
   const handleDownloadAll = async () => {
     if (!data || data.length === 0) {
       dispatch(
         showMessage({
-          message: 'No assignment files to download',
+          message: 'No files to download',
           variant: 'warning',
         })
       )
@@ -217,10 +263,10 @@ const CreateAssignment = (props) => {
     setIsDownloading(true)
     
     try {
-      // Filter assignments with files
-      const assignmentsWithFiles = data.filter(assignment => assignment.file)
+      // Filter evidence with files
+      const evidenceWithFiles = data.filter(evidence => evidence.file)
       
-      if (assignmentsWithFiles.length === 0) {
+      if (evidenceWithFiles.length === 0) {
         dispatch(
           showMessage({
             message: 'No files found to download',
@@ -230,17 +276,60 @@ const CreateAssignment = (props) => {
         return
       }
 
-      // Download all files
-      const downloadPromises = assignmentsWithFiles.map(async (assignment) => {
-        const fileName = assignment.file?.name || `assignment_${assignment.assignment_id}.pdf`
-        const blob = await downloadFile(assignment.file!.url, fileName)
-        return {
-          name: fileName,
-          blob: blob
+      // Download all files with error handling
+      const downloadPromises = evidenceWithFiles.map(async (evidence) => {
+        const fileName = evidence.file?.name || `evidence_${evidence.assignment_id}.pdf`
+        try {
+          const blob = await downloadFile(evidence.file!.url, fileName)
+          return {
+            name: fileName,
+            blob: blob,
+            success: true
+          }
+        } catch (error) {
+          console.warn(`Failed to download ${fileName}, will try direct download:`, error)
+          // Fallback to direct download
+          downloadFileDirect(evidence.file!.url, fileName)
+          return {
+            name: fileName,
+            blob: null,
+            success: false,
+            url: evidence.file!.url
+          }
         }
       })
 
-      const files = await Promise.all(downloadPromises)
+      const results = await Promise.all(downloadPromises)
+      
+      // Filter successful downloads for ZIP creation
+      const successfulFiles = results.filter(result => result.success && result.blob)
+      const failedFiles = results.filter(result => !result.success)
+      
+      // Show warning for failed downloads
+      if (failedFiles.length > 0) {
+        dispatch(
+          showMessage({
+            message: `${failedFiles.length} files opened in new tabs due to CORS restrictions`,
+            variant: 'warning',
+          })
+        )
+      }
+      
+      // Only create ZIP if we have successful downloads
+      if (successfulFiles.length === 0) {
+        dispatch(
+          showMessage({
+            message: 'All files opened in new tabs. ZIP download not available due to CORS restrictions.',
+            variant: 'info',
+          })
+        )
+        return
+      }
+      
+      const files = successfulFiles.map(result => ({
+        name: result.name,
+        blob: result.blob!
+      }))
       
       // Create ZIP file
       const zipBlob = await createZipFile(files)
@@ -249,7 +338,7 @@ const CreateAssignment = (props) => {
       const url = window.URL.createObjectURL(zipBlob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `assignments_${new Date().toISOString().split('T')[0]}.zip`
+      link.download = `evidence_library_${new Date().toISOString().split('T')[0]}.zip`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -257,7 +346,7 @@ const CreateAssignment = (props) => {
 
       dispatch(
         showMessage({
-          message: `Successfully downloaded ${files.length} assignment files`,
+          message: `Successfully downloaded ${files.length} evidence files`,
           variant: 'success',
         })
       )
@@ -265,7 +354,7 @@ const CreateAssignment = (props) => {
       console.error('Error downloading files:', error)
       dispatch(
         showMessage({
-          message: 'Failed to download assignment files. Please try again.',
+          message: 'Failed to download evidence files. Please try again.',
           variant: 'error',
         })
       )
