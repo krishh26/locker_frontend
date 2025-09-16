@@ -110,10 +110,10 @@ const StyledChartTitle = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.primary,
   marginBottom: theme.spacing(1),
   textAlign: 'center',
-  fontSize: '0.9rem',
+  fontSize: '1.4rem',
   
   [theme.breakpoints.down('sm')]: {
-    fontSize: '0.8rem',
+    fontSize: '0.9rem',
   },
 }))
 
@@ -281,6 +281,7 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
   onExploreClick,
   showExploreButton = true,
 }) => {
+  console.log("🚀 ~ DoughnutChart ~ title:", title)
   const theme = useTheme()
   const colors = getChartColors(theme)
   
@@ -534,7 +535,7 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
             {matrixTitle}
           </StyledMatrixTitle>
         )} */}
-        {title && !isMatrix && (
+        {title && (
           <StyledChartTitle variant="subtitle2">
             {title}
           </StyledChartTitle>

@@ -472,7 +472,7 @@ const Portfolio: React.FC = () => {
                   {learner?.first_name} {learner?.last_name}
                 </Typography>
                 <Link
-                  to='/profile'
+                  to={`/portfolio/learner-details?learner_id=${learner?.learner_id}`}
                   style={{
                     textDecoration: 'none',
                     display: 'inline-flex',
@@ -604,6 +604,7 @@ const Portfolio: React.FC = () => {
                           size={180}
                           showLabels={true}
                           animated={true}
+                          title={value.course.course_name}
                         />
                       </Link>
                     ))}
@@ -626,7 +627,7 @@ const Portfolio: React.FC = () => {
         )}
         <SecondaryButtonOutlined name='Awaiting Signature' />
         <SecondaryButton name='Calendar' onClick={handleOpen} />
-        <SecondaryButton name='Profile' onClick={handleOpenProfile} />
+        {/* <SecondaryButton name='Profile' onClick={handleOpenProfile} /> */}
       </StyledActionButtons>
 
       {/* Calendar Dialog */}
