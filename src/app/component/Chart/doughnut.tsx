@@ -578,19 +578,9 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       {item.icon}
                       <StyledLegendText>
-                        {item.value}
+                      {item.average}%  ({item.value})
                       </StyledLegendText>
                     </Box>
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        color: 'text.secondary',
-                        fontSize: '1rem',
-                        fontWeight: 500
-                      }}
-                    >
-                      {item.average}%
-                    </Typography>
                   </Box>
                 </StyledLegendItem>
               </MuiTooltip>
