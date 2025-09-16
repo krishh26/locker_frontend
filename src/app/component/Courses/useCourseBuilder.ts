@@ -188,7 +188,7 @@ export const useCourseBuilder = (edit = 'create') => {
       brand_guidelines: formatText(preFillData.brand_guidelines) || '',
       course_core_type: course_core_type,
       active: preFillData.active || 'Yes',
-      included_in_off_the_job: preFillData.included_in_off_the_job || 'No',
+      included_in_off_the_job: preFillData.included_in_off_the_job || 'Yes',
       awarding_body: preFillData.awarding_body || 'No Awarding Body',
     }
 

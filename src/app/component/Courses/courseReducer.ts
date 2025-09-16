@@ -90,7 +90,7 @@ export const EMPTY_COURSE_DATA = {
   two_page_standard_link: '',
   assessment_plan_link: '',
   active: 'Yes',
-  included_in_off_the_job: 'No',
+  included_in_off_the_job: 'Yes',
   awarding_body: 'No Awarding Body',
   assigned_gateway_id: null,
   assigned_gateway_name: '',

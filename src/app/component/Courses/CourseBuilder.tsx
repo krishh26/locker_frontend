@@ -170,13 +170,7 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
 
     // Define course types and levels for the forms
     const courseTypes = [
-      'A2 Level', 'AS Level', 'Btec National', 'CORE', 'Core Skills - Communication',
-      'Core Skills - ICT', 'Core Skills - Numeracy', 'Core Skills - Problem Solving',
-      'Core Skills - Unknown', 'Core Skills - Working with others', 'ERR',
-      'FUNCTIONAL SKILLS', 'Functional Skills - ICT', 'Functional Skills - Maths',
-      'Functional Skills English', 'GCSE', 'Key Skills - Communication',
-      'Key Skills - ICT', 'Key Skills - Improving own learning', 'Key Skills - Number',
-      'Key Skills - unknown', 'MAIN', 'NVQ', 'PLTS', 'SVQ', 'TECH', 'VCQ', 'VRQ'
+     'Functional Skills Maths', 'Functional Skills English', 'BTEC', 'Diploma','RQF'
     ];
 
     const courseLevels = [

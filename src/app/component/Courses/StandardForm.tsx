@@ -178,7 +178,7 @@ const StandardForm: React.FC<StandardFormProps> = ({
           </Typography>
           <Autocomplete
             size='small'
-            value={courseData?.included_in_off_the_job || 'No'}
+            value={courseData?.included_in_off_the_job || 'Yes'}
             onChange={(_, newValue) =>
               handleAutocompleteChange('included_in_off_the_job', newValue)
             }
