@@ -14,15 +14,19 @@ import {
   InputAdornment,
   TextField,
   Typography,
+  Button,
+  Dialog,
 } from "@mui/material";
 import { useDispatch } from "react-redux";
 import FuseLoading from "@fuse/core/FuseLoading";
 import Close from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { Link } from "react-router-dom";
 import { getEmployerAPI, selectEmployer } from "app/store/employer";
 import EmployerManagementTable from "src/app/component/Table/EmployerManagementTable";
 import { selectGlobalUser } from "app/store/globalUser";
+import EmployerCsvUpload from "./employer-csv-upload";
 
 const Index = () => {
   const { data, dataFetchLoading, dataUpdatingLoadding, meta_data } =
@@ -31,6 +35,7 @@ const Index = () => {
   const { pagination } = useSelector(selectGlobalUser)
 
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [isOpenCSV, setIsOpenCSV] = useState(false);
 
   const searchByKeywordUser = (e) => {
     if (e.key === "Enter") {
@@ -107,19 +112,40 @@ const Index = () => {
               />
 
             </div>
-            <Link to="/admin/employer/create-employer">
-              <SecondaryButton
-                name="Create employer"
-                className="h-full"
-                startIcon={
-                  <img
-                    src="assets/images/svgimage/createcourseicon.svg"
-                    alt="Create user"
-                    className="w-6 h-6 mr-2 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
-                  />
-                }
-              />
-            </Link>
+            <div className="flex gap-3">
+              <Button
+                variant='contained'
+                component='label'
+                startIcon={<CloudUploadIcon />}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 3,
+                  py: 1.2,
+                  backgroundColor: '#007E84',
+                  '&:hover': {
+                    backgroundColor: '#00666A',
+                  },
+                }}
+                onClick={() => setIsOpenCSV(true)}
+              >
+                Upload Employers
+              </Button>
+              <Link to="/admin/employer/create-employer">
+                <SecondaryButton
+                  name="Create employer"
+                  className="h-full"
+                  startIcon={
+                    <img
+                      src="assets/images/svgimage/createcourseicon.svg"
+                      alt="Create user"
+                      className="w-6 h-6 mr-2 sm:w-8 sm:h-8 lg:w-10 lg:h-10"
+                    />
+                  }
+                />
+              </Link>
+            </div>
           </div>
           {dataFetchLoading ? (
             <FuseLoading />
@@ -149,6 +175,19 @@ const Index = () => {
 
         </div>
       </Card>
+      
+      <Dialog
+        open={isOpenCSV}
+        onClose={() => setIsOpenCSV(false)}
+        sx={{
+          '.MuiDialog-paper': {
+            borderRadius: '4px',
+            padding: '1rem',
+          },
+        }}
+      >
+        <EmployerCsvUpload handleClose={() => setIsOpenCSV(false)} />
+      </Dialog>
     </div>
   );
 };

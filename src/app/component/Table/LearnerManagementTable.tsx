@@ -20,6 +20,9 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import Style from "./style.module.css";
 import { useDispatch } from "react-redux";
 import AlertDialog from "../Dialogs/AlertDialog";
@@ -69,23 +72,39 @@ export default function LearnerManagementTable(props) {
   const [courseDialog, setCourseDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const dispatch: any = useDispatch();
-  const [courseAllocationData, setCourseAllocationData] = useState({
-    course_id: "",
-    trainer_id: "",
-    IQA_id: "",
-    learner_id: "",
-    EQA_id: "",
-    LIQA_id: "",
-    employer_id: "",
-    start_date: "",
-    end_date: ""
+  // Validation schema
+  const validationSchema = yup.object({
+    course_id: yup.string().required("Course is required"),
+    trainer_id: yup.string().required("Trainer is required"),
+    IQA_id: yup.string().required("IQA is required"),
+    EQA_id: yup.string().required("EQA is required"),
+    LIQA_id: yup.string().required("LIQA is required"),
+    start_date: yup.string().required("Start date is required"),
+    end_date: yup.string().required("End date is required")
+  });
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    setValue
+  } = useForm({
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      course_id: "",
+      trainer_id: "",
+      IQA_id: "",
+      learner_id: "",
+      EQA_id: "",
+      LIQA_id: "",
+      start_date: "",
+      end_date: ""
+    }
   });
 
   const handleUpdateData = (name, value) => {
-    setCourseAllocationData((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
+    setValue(name, value);
   };
 
   const { data } = useSelector(selectCourseManagement);
@@ -162,36 +181,23 @@ export default function LearnerManagementTable(props) {
     setOpenMenuDialog(row);
     setDeletedAt(row?.deleted_at)
 
-    setCourseAllocationData((prevState) => ({
-      ...prevState,
-      "learner_id": row.learner_id,
-    }));
+    setValue("learner_id", row.learner_id);
   };
 
   const clsoeCourseDialog = () => {
     setCourseDialog(false);
   };
 
-  const courseAllocation = async () => {
+  const courseAllocation = async (data) => {
     setLoading(true);
     const response = await dispatch(
-      courseAllocationAPI(courseAllocationData)
+      courseAllocationAPI(data)
     );
     if (response) {
       refetchLearner()
       clsoeCourseDialog();
       setOpenMenuDialog("");
-      setCourseAllocationData({
-        course_id: "",
-        trainer_id: "",
-        IQA_id: "",
-        learner_id: "",
-        EQA_id: "",
-        LIQA_id: "",
-        employer_id: "",
-        start_date: "",
-        end_date: ""
-      });
+      reset();
     }
     setLoading(false);
   };
@@ -441,32 +447,40 @@ export default function LearnerManagementTable(props) {
         <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
           <div className="w-full">
             <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              Select Course
+              Select Course <span style={{ color: "red" }}>*</span>
             </Typography>
-            <Autocomplete
-              disableClearable
-              fullWidth
-              size="small"
-              options={data}
-              getOptionLabel={(option: any) => option.course_name}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Select Course"
-                  name="role"
-                  value={courseAllocationData?.course_id}
+            <Controller
+              name="course_id"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  {...field}
+                  value={field.value ? data?.find(option => option.course_id === field.value) || null : null}
+                  disableClearable
+                  fullWidth
+                  size="small"
+                  options={data || []}
+                  getOptionLabel={(option: any) => option?.course_name || ""}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Select Course"
+                      error={!!errors.course_id}
+                      helperText={errors.course_id?.message}
+                    />
+                  )}
+                  onChange={(e, value: any) =>
+                    handleUpdateData("course_id", value?.course_id || "")
+                  }
+                  sx={{
+                    ".MuiAutocomplete-clearIndicator": {
+                      color: "#5B718F",
+                    },
+                  }}
+                  PaperComponent={({ children }) => (
+                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                  )}
                 />
-              )}
-              onChange={(e, value: any) =>
-                handleUpdateData("course_id", value.course_id)
-              }
-              sx={{
-                ".MuiAutocomplete-clearIndicator": {
-                  color: "#5B718F",
-                },
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
               )}
             />
           </div>
@@ -474,32 +488,40 @@ export default function LearnerManagementTable(props) {
         <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
           <div className="w-full">
             <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              Trainer
+              Trainer <span style={{ color: "red" }}>*</span>
             </Typography>
-            <Autocomplete
-              disableClearable
-              fullWidth
-              size="small"
-              options={trainer}
-              getOptionLabel={(option: any) => option.user_name}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Select Trainer"
-                  name="role"
-                  value={courseAllocationData?.trainer_id}
+            <Controller
+              name="trainer_id"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  {...field}
+                  value={field.value ? trainer?.find(option => option.user_id === field.value) || null : null}
+                  disableClearable
+                  fullWidth
+                  size="small"
+                  options={trainer || []}
+                  getOptionLabel={(option: any) => option?.user_name || ""}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Select Trainer"
+                      error={!!errors.trainer_id}
+                      helperText={errors.trainer_id?.message}
+                    />
+                  )}
+                  onChange={(e, value: any) =>
+                    handleUpdateData("trainer_id", value?.user_id || "")
+                  }
+                  sx={{
+                    ".MuiAutocomplete-clearIndicator": {
+                      color: "#5B718F",
+                    },
+                  }}
+                  PaperComponent={({ children }) => (
+                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                  )}
                 />
-              )}
-              onChange={(e, value: any) =>
-                handleUpdateData("trainer_id", value.user_id)
-              }
-              sx={{
-                ".MuiAutocomplete-clearIndicator": {
-                  color: "#5B718F",
-                },
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
               )}
             />
           </div>
@@ -507,32 +529,40 @@ export default function LearnerManagementTable(props) {
         <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
           <div className="w-full">
             <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              IQA
+              IQA <span style={{ color: "red" }}>*</span>
             </Typography>
-            <Autocomplete
-              disableClearable
-              fullWidth
-              size="small"
-              options={IQA}
-              getOptionLabel={(option: any) => option.user_name}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Select IQA"
-                  name="role"
-                  value={courseAllocationData?.IQA_id}
+            <Controller
+              name="IQA_id"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  {...field}
+                  value={field.value ? IQA?.find(option => option.user_id === field.value) || null : null}
+                  disableClearable
+                  fullWidth
+                  size="small"
+                  options={IQA || []}
+                  getOptionLabel={(option: any) => option?.user_name || ""}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Select IQA"
+                      error={!!errors.IQA_id}
+                      helperText={errors.IQA_id?.message}
+                    />
+                  )}
+                  onChange={(e, value: any) =>
+                    handleUpdateData("IQA_id", value?.user_id || "")
+                  }
+                  sx={{
+                    ".MuiAutocomplete-clearIndicator": {
+                      color: "#5B718F",
+                    },
+                  }}
+                  PaperComponent={({ children }) => (
+                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                  )}
                 />
-              )}
-              onChange={(e, value: any) =>
-                handleUpdateData("IQA_id", value.user_id)
-              }
-              sx={{
-                ".MuiAutocomplete-clearIndicator": {
-                  color: "#5B718F",
-                },
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
               )}
             />
           </div>
@@ -540,32 +570,40 @@ export default function LearnerManagementTable(props) {
         <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
           <div className="w-full">
             <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              LIQA
+              LIQA <span style={{ color: "red" }}>*</span>
             </Typography>
-            <Autocomplete
-              disableClearable
-              fullWidth
-              size="small"
-              options={LIQA}
-              getOptionLabel={(option: any) => option.user_name}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Select LIQA"
-                  name="role"
-                  value={courseAllocationData?.LIQA_id}
+            <Controller
+              name="LIQA_id"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  {...field}
+                  value={field.value ? LIQA?.find(option => option.user_id === field.value) || null : null}
+                  disableClearable
+                  fullWidth
+                  size="small"
+                  options={LIQA || []}
+                  getOptionLabel={(option: any) => option?.user_name || ""}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Select LIQA"
+                      error={!!errors.LIQA_id}
+                      helperText={errors.LIQA_id?.message}
+                    />
+                  )}
+                  onChange={(e, value: any) =>
+                    handleUpdateData("LIQA_id", value?.user_id || "")
+                  }
+                  sx={{
+                    ".MuiAutocomplete-clearIndicator": {
+                      color: "#5B718F",
+                    },
+                  }}
+                  PaperComponent={({ children }) => (
+                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                  )}
                 />
-              )}
-              onChange={(e, value: any) =>
-                handleUpdateData("LIQA_id", value.user_id)
-              }
-              sx={{
-                ".MuiAutocomplete-clearIndicator": {
-                  color: "#5B718F",
-                },
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
               )}
             />
           </div>
@@ -573,32 +611,40 @@ export default function LearnerManagementTable(props) {
         <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
           <div className="w-full">
             <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              EQA
+              EQA <span style={{ color: "red" }}>*</span>
             </Typography>
-            <Autocomplete
-              disableClearable
-              fullWidth
-              size="small"
-              options={EQA}
-              getOptionLabel={(option: any) => option.user_name}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Select EQA"
-                  name="role"
-                  value={courseAllocationData?.EQA_id}
+            <Controller
+              name="EQA_id"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  {...field}
+                  value={field.value ? EQA?.find(option => option.user_id === field.value) || null : null}
+                  disableClearable
+                  fullWidth
+                  size="small"
+                  options={EQA || []}
+                  getOptionLabel={(option: any) => option?.user_name || ""}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Select EQA"
+                      error={!!errors.EQA_id}
+                      helperText={errors.EQA_id?.message}
+                    />
+                  )}
+                  onChange={(e, value: any) =>
+                    handleUpdateData("EQA_id", value?.user_id || "")
+                  }
+                  sx={{
+                    ".MuiAutocomplete-clearIndicator": {
+                      color: "#5B718F",
+                    },
+                  }}
+                  PaperComponent={({ children }) => (
+                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                  )}
                 />
-              )}
-              onChange={(e, value: any) =>
-                handleUpdateData("EQA_id", value.user_id)
-              }
-              sx={{
-                ".MuiAutocomplete-clearIndicator": {
-                  color: "#5B718F",
-                },
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
               )}
             />
           </div>
@@ -606,74 +652,43 @@ export default function LearnerManagementTable(props) {
         <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
           <div className="w-full">
             <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              Employer
+              Start Date <span style={{ color: "red" }}>*</span>
             </Typography>
-            <Autocomplete
-              disableClearable
-              fullWidth
-              size="small"
-              options={employer}
-              getOptionLabel={(option: any) => option.employer?.employer_name}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  placeholder="Select Employer"
-                  name="role"
-                  value={courseAllocationData?.employer_id}
-                />
-              )}
-              onChange={(e, value: any) =>
-                handleUpdateData("employer_id", value.user_id)
-              }
-              sx={{
-                ".MuiAutocomplete-clearIndicator": {
-                  color: "#5B718F",
-                },
-              }}
-              PaperComponent={({ children }) => (
-                <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
-              )}
-            />
-          </div>
-        </Box>
-        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
-            <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              Start Date
-            </Typography>
-            <TextField
+            <Controller
               name="start_date"
-              value={courseAllocationData?.start_date}
-              size="small"
-              type='date'
-              required
-              fullWidth
-              onChange={(e) => setCourseAllocationData({
-                ...courseAllocationData,
-                start_date: e.target.value
-              })}
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  size="small"
+                  type='date'
+                  fullWidth
+                  error={!!errors.start_date}
+                  helperText={errors.start_date?.message}
+                />
+              )}
             />
-
           </div>
         </Box>
         <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
           <div className="w-full">
             <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              End Date
+              End Date <span style={{ color: "red" }}>*</span>
             </Typography>
-            <TextField
+            <Controller
               name="end_date"
-              value={courseAllocationData?.end_date}
-              size="small"
-              type='date'
-              required
-              fullWidth
-              onChange={(e) => setCourseAllocationData({
-                ...courseAllocationData,
-                end_date: e.target.value
-              })}
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  size="small"
+                  type='date'
+                  fullWidth
+                  error={!!errors.end_date}
+                  helperText={errors.end_date?.message}
+                />
+              )}
             />
-
           </div>
         </Box>
         <div className="flex justify-end mt-4">
@@ -689,7 +704,7 @@ export default function LearnerManagementTable(props) {
               <SecondaryButton
                 name="Allocate"
                 style={{ width: "10rem" }}
-                onClick={courseAllocation}
+                onClick={handleSubmit(courseAllocation)}
               />
             </>
           )}

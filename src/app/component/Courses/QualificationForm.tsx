@@ -178,44 +178,8 @@ const QualificationForm: React.FC<QualificationFormProps> = ({
         </div>
       </Box>
 
-      {/* Qualification Type, Qualification Status, Sector */}
+      {/* Sector */}
       <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-        <div className="w-1/3">
-          <Typography
-            sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-            className={Style.name}
-          >
-            Qualification Type
-          </Typography>
-          <TextField
-            name="qualification_type"
-            size="small"
-            placeholder="Enter Qualification Type"
-            fullWidth
-            value={courseData.qualification_type}
-            onChange={courseHandler}
-            disabled={edit === "view"}
-            className={Style.input_feald}
-          />
-        </div>
-        <div className="w-1/3">
-          <Typography
-            sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-            className={Style.name}
-          >
-            Qualification Status
-          </Typography>
-          <TextField
-            name="qualification_status"
-            size="small"
-            placeholder="Enter Qualification Status"
-            fullWidth
-            value={courseData.qualification_status}
-            onChange={courseHandler}
-            disabled={edit === "view"}
-            className={Style.input_feald}
-          />
-        </div>
         <div className="w-1/3">
           <Typography
             sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
@@ -234,10 +198,6 @@ const QualificationForm: React.FC<QualificationFormProps> = ({
             className={Style.input_feald}
           />
         </div>
-      </Box>
-
-      {/* Total Credits, Guided Learning Hours, Recommended Minimum Age */}
-      <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
         <div className="w-1/3">
           <Typography
             sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
@@ -276,6 +236,10 @@ const QualificationForm: React.FC<QualificationFormProps> = ({
             className={Style.input_feald}
           />
         </div>
+      </Box>
+
+      {/* Total Credits, Guided Learning Hours, Recommended Minimum Age */}
+      <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
         <div className="w-1/3">
           <Typography
             sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
@@ -295,10 +259,6 @@ const QualificationForm: React.FC<QualificationFormProps> = ({
             className={Style.input_feald}
           />
         </div>
-      </Box>
-
-      {/* Overall Grading Type, Permitted Delivery Types */}
-      <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
         <div className="w-1/3">
           <Typography
             sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
@@ -322,67 +282,6 @@ const QualificationForm: React.FC<QualificationFormProps> = ({
             sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
             className={Style.name}
           >
-            Permitted Delivery Types
-          </Typography>
-          <TextField
-            name="permitted_delivery_types"
-            size="small"
-            placeholder="Enter Permitted Delivery Types"
-            fullWidth
-            value={courseData.permitted_delivery_types}
-            onChange={courseHandler}
-            disabled={edit === "view"}
-            className={Style.input_feald}
-          />
-        </div>
-        <div className="w-1/3">
-          {/* Empty div for alignment */}
-        </div>
-      </Box>
-
-      {/* Active, Included in Off The Job Calculation, Awarding Body */}
-      <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-        <div className="w-1/3">
-          <Typography
-            sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-            className={Style.name}
-          >
-            Active
-          </Typography>
-          <Autocomplete
-            size="small"
-            value={courseData?.active || "Yes"}
-            onChange={(_, newValue) => handleAutocompleteChange('active', newValue)}
-            disabled={edit === "view"}
-            options={["Yes", "No"]}
-            className={Style.last2_input_feald}
-            isOptionEqualToValue={(option, value) => option === value}
-            renderInput={(params) => <TextField {...params} placeholder="Active" />}
-          />
-        </div>
-        <div className="w-1/3">
-          <Typography
-            sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-            className={Style.name}
-          >
-            Included in Off The Job Calculation
-          </Typography>
-          <Autocomplete
-            size="small"
-            value={courseData?.included_in_off_the_job || "No"}
-            onChange={(_, newValue) => handleAutocompleteChange('included_in_off_the_job', newValue)}
-            disabled={edit === "view"}
-            options={["Yes", "No"]}
-            className={Style.last2_input_feald}
-            isOptionEqualToValue={(option, value) => option === value}
-            renderInput={(params) => <TextField {...params} placeholder="Included in Off The Job Calculation" />}
-          />
-        </div>
-        <div className="w-1/3">
-          <Typography
-            sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
-            className={Style.name}
-          >
             Select Awarding Body
           </Typography>
           <Autocomplete
@@ -397,6 +296,7 @@ const QualificationForm: React.FC<QualificationFormProps> = ({
           />
         </div>
       </Box>
+     
     </>
   );
 };

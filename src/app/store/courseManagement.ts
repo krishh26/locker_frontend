@@ -150,7 +150,7 @@ export const fetchCourseById = (course_id) => async (dispatch) => {
             assessment_plan_link: courseData.assessment_plan_link || "",
 
             active: courseData.active || "Yes",
-            included_in_off_the_job: courseData.included_in_off_the_job || "No",
+            included_in_off_the_job: courseData.included_in_off_the_job || "Yes",
             awarding_body: courseData.awarding_body || "No Awarding Body",
 
             assigned_gateway_id: courseData.assigned_gateway_id || null,

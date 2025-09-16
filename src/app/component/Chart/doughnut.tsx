@@ -110,10 +110,10 @@ const StyledChartTitle = styled(Typography)(({ theme }) => ({
   color: theme.palette.text.primary,
   marginBottom: theme.spacing(1),
   textAlign: 'center',
-  fontSize: '0.9rem',
+  fontSize: '1.4rem',
   
   [theme.breakpoints.down('sm')]: {
-    fontSize: '0.8rem',
+    fontSize: '0.9rem',
   },
 }))
 
@@ -281,6 +281,7 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
   onExploreClick,
   showExploreButton = true,
 }) => {
+  console.log("🚀 ~ DoughnutChart ~ title:", title)
   const theme = useTheme()
   const colors = getChartColors(theme)
   
@@ -534,7 +535,7 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
             {matrixTitle}
           </StyledMatrixTitle>
         )} */}
-        {title && !isMatrix && (
+        {title && (
           <StyledChartTitle variant="subtitle2">
             {title}
           </StyledChartTitle>
@@ -577,19 +578,9 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       {item.icon}
                       <StyledLegendText>
-                        {item.value}
+                      {item.average}%  ({item.value})
                       </StyledLegendText>
                     </Box>
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        color: 'text.secondary',
-                        fontSize: '1rem',
-                        fontWeight: 500
-                      }}
-                    >
-                      {item.average}%
-                    </Typography>
                   </Box>
                 </StyledLegendItem>
               </MuiTooltip>

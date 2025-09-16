@@ -97,9 +97,9 @@ function UserMenu(props) {
       >
         {isAuthenticated ? (
           <>
-            <MenuItem onClick={() => navigate('/profile')} >
+            {/* <MenuItem onClick={() => navigate('/profile')} >
               <ListItemText primary="My Profile" />
-            </MenuItem>
+            </MenuItem> */}
             {user?.role !== 'Learner' && (
               <MenuItem onClick={handleClick}>
                 <ListItemText primary="Change Role" />

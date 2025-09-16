@@ -142,4 +142,19 @@ export const uploadPDF = (file: any) => async (dispatch) => {
         return false;
     }
 }
+
+// Bulk create employers
+export const bulkCreateEmployerAPI = (data) => async (dispatch) => {
+    try {
+        dispatch(slice.setUpdatingLoader());
+        const response = await axios.post(`${URL_BASE_LINK}/employer/bulk-create`, data)
+        dispatch(showMessage({ message: response.data.message, variant: "success" }))
+        dispatch(slice.setUpdatingLoader());
+        return response.data;
+    } catch (err) {
+        dispatch(showMessage({ message: err.response?.data.message || "Bulk upload failed", variant: "error" }))
+        dispatch(slice.setUpdatingLoader());
+        return false;
+    }
+}
 export default employerSlice.reducer;
