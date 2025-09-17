@@ -24,11 +24,12 @@ import {
 } from 'app/store/courseManagement'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { slice as globalSlice, selectGlobalUser } from 'app/store/globalUser'
+import { selectUser } from 'app/store/userSlice'
 import {
   getLearnerDetails,
   selectLearnerManagement,
 } from 'app/store/learnerManagement'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -38,6 +39,7 @@ import {
 } from 'src/app/component/Buttons'
 import DataNotFound from 'src/app/component/Pages/dataNotFound'
 import * as yup from 'yup'
+import { UserRole } from 'src/enum'
 
 // Course status enum
 enum CourseStatus {
@@ -199,6 +201,19 @@ const CourseTab = () => {
 
   const { selectedUser, dataFetchLoading } = useSelector(selectGlobalUser)
 
+  // Get current user role
+  const user = useMemo(() => {
+    try {
+      return (
+        JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
+        useSelector(selectUser)?.data
+      )
+    } catch {
+      return useSelector(selectUser)?.data
+    }
+  }, [])
+  console.log("🚀 ~ CourseTab ~ user:", user)
+
   const handleCreateCourse = () => {
     setIsEditMode(false)
     setSelectedCourse(null)
@@ -270,25 +285,27 @@ const CourseTab = () => {
 
   return (
     <>
-      <div className='bg-white rounded-lg shadow-sm p-6'>
-        <div className='flex justify-between items-center mb-6'>
+      <div className='space-y-6'>
+        <div className='flex justify-between items-center'>
           <div>
-            <h1 className='text-2xl font-bold text-gray-800 mb-2'>
-              Learner Course Management
-            </h1>
-            <p className='text-gray-600'>
+            <Typography variant='h5' className='font-bold text-gray-800 mb-2'>
+              Course Management
+            </Typography>
+            <Typography variant='body2' className='text-gray-600'>
               Manage and track learner course progress
-            </p>
+            </Typography>
           </div>
-          <SecondaryButton
-            className='py-3 px-6'
-            name='Add New Course'
-            onClick={handleCreateCourse}
-            startIcon={<Add />}
-          />
+          {!user?.roles.includes(UserRole.Learner) && (
+            <SecondaryButton
+              className='bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200'
+              name='Add New Course'
+              onClick={handleCreateCourse}
+              startIcon={<Add />}
+            />
+          )}
         </div>
 
-        <div className='bg-white rounded-lg border border-gray-200 overflow-hidden'>
+        <div className='bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm'>
           {dataFetchLoading ? (
             <div className='flex justify-center items-center h-64'>
               <FuseLoading />
@@ -316,9 +333,11 @@ const CourseTab = () => {
                     <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
                       IQA
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
-                      Actions
-                    </TableCell>
+                    {!user?.roles.includes(UserRole.Learner) && (
+                      <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                        Actions
+                      </TableCell>
+                    )}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -371,19 +390,21 @@ const CourseTab = () => {
                           ? `${row?.IQA_id?.first_name} ${row?.IQA_id?.last_name}`
                           : 'N/A'}
                       </TableCell>
+                        {!user?.roles.includes(UserRole.Learner) && (
                       <TableCell>
-                        <div className='flex gap-2'>
-                          <Tooltip title='Edit Course'>
-                            <IconButton
-                              size='small'
-                              sx={{ color: '#10b981' }}
-                              onClick={() => handleEditCourse(row)}
-                            >
-                              <Edit fontSize='small' />
-                            </IconButton>
-                          </Tooltip>
-                        </div>
+                          <div className='flex gap-2'>
+                            <Tooltip title='Edit Course'>
+                              <IconButton
+                                size='small'
+                                sx={{ color: '#10b981' }}
+                                onClick={() => handleEditCourse(row)}
+                              >
+                                <Edit fontSize='small' />
+                              </IconButton>
+                            </Tooltip>
+                          </div>
                       </TableCell>
+                        )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -401,11 +422,13 @@ const CourseTab = () => {
               >
                 Start by adding a new course to track learner progress
               </Typography>
-              <SecondaryButton
-                className='mt-4'
-                name='Add Your First Course'
-                onClick={handleCreateCourse}
-              />
+              {!user?.roles.includes(UserRole.Learner) && (
+                <SecondaryButton
+                  className='mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200'
+                  name='Add Your First Course'
+                  onClick={handleCreateCourse}
+                />
+              )}
             </div>
           )}
         </div>
@@ -731,6 +754,7 @@ const CourseTab = () => {
                 name='Cancel'
                 onClick={closeCourseDialog}
                 type='button'
+                className='px-6 py-3 rounded-lg font-medium transition-colors duration-200'
               />
               {loading ? (
                 <LoadingButton style={{ width: '120px' }} />
@@ -738,6 +762,7 @@ const CourseTab = () => {
                 <SecondaryButton
                   name={isEditMode ? 'Update Course' : 'Add Course'}
                   type='submit'
+                  className='bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200'
                 />
               )}
             </div>

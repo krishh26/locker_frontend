@@ -9,7 +9,11 @@ import {
 } from '@mui/material'
 import UploadPhoto from '../uploadPhoto'
 
-const StudentIdSection: React.FC = () => {
+interface StudentIdSectionProps {
+  disabled?: boolean
+}
+
+const StudentIdSection: React.FC<StudentIdSectionProps> = ({ disabled = false }) => {
   const { register, formState: { errors } } = useFormContext()
 
   return (
@@ -37,6 +41,7 @@ const StudentIdSection: React.FC = () => {
                   {...register('uln')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   error={!!errors.uln}
                   helperText={errors.uln?.message as string}
                   className='bg-none'
@@ -56,6 +61,7 @@ const StudentIdSection: React.FC = () => {
                   {...register('mis_learner_id')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   error={!!errors.mis_learner_id}
                   helperText={errors.mis_learner_id?.message as string}
                   className='bg-none'
@@ -75,6 +81,7 @@ const StudentIdSection: React.FC = () => {
                   {...register('student_id')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   placeholder='Internal Student Number'
                   error={!!errors.student_id}
                   helperText={errors.student_id?.message as string}

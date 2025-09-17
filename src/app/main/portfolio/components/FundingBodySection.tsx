@@ -11,7 +11,11 @@ import {
   Checkbox,
 } from '@mui/material'
 
-const FundingBodySection: React.FC = () => {
+interface FundingBodySectionProps {
+  disabled?: boolean
+}
+
+const FundingBodySection: React.FC<FundingBodySectionProps> = ({ disabled = false }) => {
   const { register, watch, formState: { errors } } = useFormContext()
   const [isChecked, setIsChecked] = useState(false)
 
@@ -41,6 +45,7 @@ const FundingBodySection: React.FC = () => {
                 User Archived{' '}
               </Typography>
               <Checkbox
+                disabled={disabled}
                 sx={{
                   marginLeft: '8px',
                   color: 'white',
@@ -67,6 +72,7 @@ const FundingBodySection: React.FC = () => {
                   {...register('allow_archived_access')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   sx={{
                     '.muiltr-156t61m-MuiSvgIcon-root-MuiSelect-icon': {
                       color: 'black',
@@ -91,6 +97,7 @@ const FundingBodySection: React.FC = () => {
                   {...register('learner_type')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   sx={{
                     '.muiltr-156t61m-MuiSvgIcon-root-MuiSelect-icon': {
                       color: 'black',
@@ -119,6 +126,7 @@ const FundingBodySection: React.FC = () => {
                   {...register('funding_body')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   sx={{
                     '.muiltr-156t61m-MuiSvgIcon-root-MuiSelect-icon': {
                       color: 'black',
@@ -166,7 +174,7 @@ const FundingBodySection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
-                  disabled={!isChecked}
+                  disabled={disabled || !isChecked}
                   sx={{
                     backgroundColor: !isChecked ? '#f0f0f0' : 'inherit',
                   }}
@@ -188,6 +196,7 @@ const FundingBodySection: React.FC = () => {
                 <Checkbox
                   className='p-0'
                   checked={isChecked}
+                  disabled={disabled}
                   onChange={handleCheckboxChange}
                 />
               </Grid>

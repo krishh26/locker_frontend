@@ -17,6 +17,7 @@ interface FundingBandsSectionProps {
   isLoading: boolean
   isUpdating: boolean
   onUpdateBand: (bandId: number, newAmount: number) => Promise<void>
+  disabled?: boolean
 }
 
 const FundingBandsSection: React.FC<FundingBandsSectionProps> = ({
@@ -24,6 +25,7 @@ const FundingBandsSection: React.FC<FundingBandsSectionProps> = ({
   isLoading,
   isUpdating,
   onUpdateBand,
+  disabled = false,
 }) => {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editedAmount, setEditedAmount] = useState<string>('')
@@ -98,12 +100,13 @@ const FundingBandsSection: React.FC<FundingBandsSectionProps> = ({
                         size='small'
                         type='number'
                         value={editedAmount}
+                        disabled={disabled}
                         onChange={(e) => setEditedAmount(e.target.value)}
                       />
                       <IconButton
                         color='primary'
                         onClick={() => handleSave(band)}
-                        disabled={isUpdating}
+                        disabled={disabled || isUpdating}
                       >
                         {isUpdating ? (
                           <CircularProgress size={20} />
@@ -111,7 +114,7 @@ const FundingBandsSection: React.FC<FundingBandsSectionProps> = ({
                           <SaveIcon />
                         )}
                       </IconButton>
-                      <IconButton color='error' onClick={handleCancel}>
+                      <IconButton color='error' onClick={handleCancel} disabled={disabled}>
                         <CancelIcon />
                       </IconButton>
                     </>
@@ -123,6 +126,7 @@ const FundingBandsSection: React.FC<FundingBandsSectionProps> = ({
                       <IconButton
                         color='primary'
                         onClick={() => handleEditClick(band)}
+                        disabled={disabled}
                       >
                         <EditIcon />
                       </IconButton>

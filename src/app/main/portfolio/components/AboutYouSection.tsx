@@ -11,7 +11,11 @@ import {
   ListSubheader,
 } from '@mui/material'
 
-const AboutYouSection: React.FC = () => {
+interface AboutYouSectionProps {
+  disabled?: boolean
+}
+
+const AboutYouSection: React.FC<AboutYouSectionProps> = ({ disabled = false }) => {
   const { register, formState: { errors } } = useFormContext()
 
   return (
@@ -39,6 +43,7 @@ const AboutYouSection: React.FC = () => {
                   {...register('first_name', { required: 'First name is required' })}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   error={!!errors.first_name}
                   helperText={errors.first_name?.message as string}
                   className='bg-none'
@@ -57,6 +62,7 @@ const AboutYouSection: React.FC = () => {
                 <TextField
                   {...register('last_name', { required: 'Last name is required' })}
                   size='small'
+                  disabled={disabled}
                   fullWidth
                   error={!!errors.last_name}
                   helperText={errors.last_name?.message as string}
@@ -79,6 +85,7 @@ const AboutYouSection: React.FC = () => {
                 <TextField
                   {...register('user_name')}
                   size='small'
+                  disabled={disabled}
                   fullWidth
                   placeholder='User Name'
                   className='bg-none'
@@ -104,6 +111,7 @@ const AboutYouSection: React.FC = () => {
                   })}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   error={!!errors.email}
                   helperText={errors.email?.message as string}
                   className='bg-none'
@@ -127,6 +135,7 @@ const AboutYouSection: React.FC = () => {
                   type='number'
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -145,6 +154,7 @@ const AboutYouSection: React.FC = () => {
                   type='number'
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -166,6 +176,7 @@ const AboutYouSection: React.FC = () => {
                   size='small'
                   type='date'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -183,6 +194,7 @@ const AboutYouSection: React.FC = () => {
                   {...register('gender')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   sx={{
                     '.muiltr-156t61m-MuiSvgIcon-root-MuiSelect-icon': {
                       color: 'black',
@@ -213,6 +225,7 @@ const AboutYouSection: React.FC = () => {
                   type='number'
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -231,6 +244,7 @@ const AboutYouSection: React.FC = () => {
                   type='text'
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -248,6 +262,7 @@ const AboutYouSection: React.FC = () => {
                   {...register('learner_disability')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   sx={{
                     '.muiltr-156t61m-MuiSvgIcon-root-MuiSelect-icon': {
                       color: 'black',
@@ -287,6 +302,7 @@ const AboutYouSection: React.FC = () => {
                   {...register('learner_difficulity')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   sx={{
                     '.muiltr-156t61m-MuiSvgIcon-root-MuiSelect-icon': {
                       color: 'black',
@@ -338,6 +354,7 @@ const AboutYouSection: React.FC = () => {
                   type='text'
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -356,6 +373,7 @@ const AboutYouSection: React.FC = () => {
                   type='text'
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>

@@ -7,6 +7,7 @@ import NewSession from "./newsession";
 import NewAssignment from "src/app/component/Cards/newAssignment";
 import LearnerToData from "./learnerData/learnertodata";
 import LearnerDetails from "./learnerDeatils";
+import ProfileInformation from "./ProfileInformation";
 import ResourceData from "./learnerData/resourse";
 import ProgressWidget from "./learnerData/progressWidget";
 import AssignmentData from "./learnerData/assignmentData";
@@ -82,6 +83,10 @@ const PortfolioConfig = {
     {
       path: "/portfolio/learner-details",
       element: <LearnerDetails />,
+    },
+    {
+      path: "/portfolio/profile-information",
+      element: <ProfileInformation />,
     },
     {
       path: "/portfolio/courseData",
