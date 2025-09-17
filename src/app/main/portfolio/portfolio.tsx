@@ -232,18 +232,19 @@ const Portfolio: React.FC = () => {
   )
   const data = useSelector(selectstoreDataSlice)
   const { singleData } = useSelector(selectLearnerManagement)
-  const { learnerTab } = useSelector(selectGlobalUser)
+  const userData = useSelector(selectUser)
 
+  // Get current user role
   const user = useMemo(() => {
     try {
       return (
         JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
-        useSelector(selectUser)?.data
+        userData?.data
       )
     } catch {
-      return useSelector(selectUser)?.data
+      return userData?.data
     }
-  }, [])
+  }, [userData])
 
   // Memoized filtered cards
   const { overviewCards, courseCards } = useMemo(

@@ -49,18 +49,19 @@ const ProfileInformation = () => {
   
   const { learner_id } = useSelector(selectGlobalUser).selectedUser
   const { employer, learner } = useSelector(selectLearnerManagement)
+  const userData = useSelector(selectUser)
 
   // Get current user role
   const user = useMemo(() => {
     try {
       return (
         JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
-        useSelector(selectUser)?.data
+        userData?.data
       )
     } catch {
-      return useSelector(selectUser)?.data
+      return userData?.data
     }
-  }, [])
+  }, [userData])
 
   useEffect(() => {
    if(learner){

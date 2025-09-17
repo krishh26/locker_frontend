@@ -75,6 +75,8 @@ const courseSchema = yup.object().shape({
       return new Date(value) > new Date(start_date)
     }),
   course_status: yup.string().optional(),
+  predicted_grade: yup.string().required('Please enter predicted grade'),
+  final_grade: yup.string().required('Please enter final grade'),
 })
 
 const CourseTab = () => {
@@ -114,6 +116,8 @@ const CourseTab = () => {
       start_date: '',
       end_date: '',
       course_status: '',
+      predicted_grade: '',
+      final_grade: '',
     },
   })
 
@@ -195,24 +199,26 @@ const CourseTab = () => {
     setValue('start_date', course?.start_date?.substr(0, 10) || '')
     setValue('end_date', course?.end_date?.substr(0, 10) || '')
     setValue('course_status', course?.course_status || '')
+    setValue('predicted_grade', course?.predicted_grade || '')
+    setValue('final_grade', course?.final_grade || '')
 
     setCourseDialog(true)
   }
 
   const { selectedUser, dataFetchLoading } = useSelector(selectGlobalUser)
+  const userData = useSelector(selectUser)
 
   // Get current user role
   const user = useMemo(() => {
     try {
       return (
         JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
-        useSelector(selectUser)?.data
+        userData?.data
       )
     } catch {
-      return useSelector(selectUser)?.data
+      return userData?.data
     }
-  }, [])
-  console.log("🚀 ~ CourseTab ~ user:", user)
+  }, [userData])
 
   const handleCreateCourse = () => {
     setIsEditMode(false)
@@ -743,6 +749,50 @@ const CourseTab = () => {
                       variant='outlined'
                       error={!!errors.end_date}
                       helperText={errors.end_date?.message}
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  Predicted Grade <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='predicted_grade'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      size='small'
+                      fullWidth
+                      variant='outlined'
+                      placeholder='Enter predicted grade'
+                      error={!!errors.predicted_grade}
+                      helperText={errors.predicted_grade?.message}
+                    />
+                  )}
+                />
+              </div>
+
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  Final Grade <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='final_grade'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      size='small'
+                      fullWidth
+                      variant='outlined'
+                      placeholder='Enter final grade'
+                      error={!!errors.final_grade}
+                      helperText={errors.final_grade?.message}
                     />
                   )}
                 />
