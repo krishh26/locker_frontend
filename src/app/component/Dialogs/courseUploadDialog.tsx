@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useReducer, useState } from "react";
 import {
   LoadingButton,
   SecondaryButton,
@@ -13,10 +13,12 @@ import {
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import samplePDF from "./sample.pdf";
+import { courseReducer, initialState } from "../Courses/courseReducer";
 
 const CourseUploadDialog = (props) => {
   const { handleClose } = props.dialogFn;
   const { dataUpdatingLoadding } = useSelector(selectCourseManagement);
+  const [, courseDispatch] = useReducer(courseReducer, initialState)
   const dispatch: any = useDispatch();
   const navigate = useNavigate();
 
@@ -33,7 +35,12 @@ const CourseUploadDialog = (props) => {
 
     const response = await dispatch(jsonConverter(fromData));
     if (response) {
-      navigate("/courseBuilder/course");
+      navigate("/courseBuilder/course?type=Qualification");
+      courseDispatch({
+        type: 'UPDATE_COURSE_FIELD',
+        field: 'course_core_type',
+        value: 'Qualification'
+      });
     }
   };
 

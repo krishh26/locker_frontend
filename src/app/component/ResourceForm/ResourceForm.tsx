@@ -157,7 +157,7 @@ const fileTypes = [
 // Form validation schema
 const createValidationSchema = (isEdit: boolean) => {
   return yup.object().shape({
-    title: yup.string().required('Resource name is required'),
+    resource_name: yup.string().required('Resource name is required'),
     resourceType: yup.string().oneOf(['FILE', 'URL'], 'Resource type is required').required('Resource type is required'),
     location: yup.string().when('resourceType', {
       is: 'URL',
@@ -170,7 +170,7 @@ const createValidationSchema = (isEdit: boolean) => {
 };
 
 export interface ResourceFormData {
-  title: string;
+  resource_name: string;
   resourceType: 'FILE' | 'URL';
   location: string | File;
   description: string;
@@ -209,7 +209,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
   } = useForm<ResourceFormData>({
     resolver: yupResolver(createValidationSchema(isEdit)),
     defaultValues: {
-      title: initialData?.title || '',
+      resource_name: initialData?.resource_name || '',
       resourceType: initialData?.content?.startsWith('http') ? 'URL' : 'FILE',
       location: initialData?.content || '',
       description: initialData?.description || '',
@@ -223,7 +223,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
   useEffect(() => {
     if (initialData && isEdit) {
       reset({
-        title: initialData.title,
+        resource_name: initialData.resource_name,
         resourceType: initialData.content?.startsWith('http') ? 'URL' : 'FILE',
         location: initialData.content,
         description: initialData.description,
@@ -261,7 +261,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
       }
 
       const payload = {
-        title: data.title,
+        resource_name: data.resource_name,
         description: data.description,
         content: location,
         category: 'wellbeing', // Default category
@@ -285,15 +285,15 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
       <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} sx={{ mt: 3 }}>
         {/* Resource Name */}
         <Controller
-          name="title"
+          name="resource_name"
           control={control}
           render={({ field }) => (
             <ThemedTextField
               {...field}
               fullWidth
               label="Resource Name"
-              error={!!errors.title}
-              helperText={errors.title?.message}
+              error={!!errors.resource_name}
+              helperText={errors.resource_name?.message}
               margin="normal"
               required
             />

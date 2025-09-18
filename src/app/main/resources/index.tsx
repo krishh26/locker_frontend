@@ -343,7 +343,7 @@ const AdminResourcesPage: React.FC = () => {
                     <TableCell>
                       <Box>
                         <ThemedTypography variant="subtitle2" fontWeight="medium">
-                          {resource.title}
+                          {resource.resource_name}
                         </ThemedTypography>
                         <ThemedTypography variant="body2" color="text.secondary" noWrap>
                           {resource.description}
@@ -378,7 +378,7 @@ const AdminResourcesPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <ThemedTypography variant="body2">
-                        {resource.createdBy}
+                        {resource.createdByName}
                       </ThemedTypography>
                     </TableCell>
                     <TableCell align="center">
@@ -482,7 +482,7 @@ const AdminResourcesPage: React.FC = () => {
         <DialogTitle>Delete Resource</DialogTitle>
         <DialogContent>
           <ThemedTypography>
-            Are you sure you want to delete "{resourceToDelete?.title}"? This action cannot be undone.
+            Are you sure you want to delete "{resourceToDelete?.resource_name}"? This action cannot be undone.
           </ThemedTypography>
         </DialogContent>
         <DialogActions>

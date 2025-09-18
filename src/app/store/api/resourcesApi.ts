@@ -4,7 +4,7 @@ import createBaseQueryWithReAuth from 'src/utils/fetch-base-query';
 // Types for WellbeingResource
 export interface WellbeingResource {
   id: string;
-  title: string;
+  resource_name: string;
   description: string;
   content: string;
   category: string;
@@ -12,7 +12,7 @@ export interface WellbeingResource {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  createdBy: string;
+  createdByName: string;
   updatedBy: string;
 }
 
@@ -28,7 +28,7 @@ export interface LearnerResourceActivity {
 
 // Types for API requests
 export interface AddResourcePayload {
-  title: string;
+  resource_name: string;
   description: string;
   content: string;
   category: string;
@@ -36,7 +36,7 @@ export interface AddResourcePayload {
 }
 
 export interface UpdateResourcePayload {
-  title?: string;
+  resource_name?: string;
   description?: string;
   content?: string;
   category?: string;
@@ -90,7 +90,7 @@ export const resourcesApi = createApi({
         params.append('limit', limit.toString());
         
         return {
-          url: `/admin?${params.toString()}`,
+          url: `/wellbeing/admin/resources?${params.toString()}`,
           method: 'GET',
         };
       },
@@ -105,7 +105,7 @@ export const resourcesApi = createApi({
      */
     addResource: builder.mutation<ResourceResponse, AddResourcePayload>({
       query: (payload) => ({
-        url: '/admin',
+        url: '/wellbeing/admin/resources',
         method: 'POST',
         body: payload,
       }),
@@ -120,7 +120,7 @@ export const resourcesApi = createApi({
      */
     updateResource: builder.mutation<ResourceResponse, { id: string; payload: UpdateResourcePayload }>({
       query: ({ id, payload }) => ({
-        url: `/admin/${id}`,
+        url: `/wellbeing/admin/resources/${id}`,
         method: 'PUT',
         body: payload,
       }),
@@ -135,7 +135,7 @@ export const resourcesApi = createApi({
      */
     toggleResource: builder.mutation<ResourceResponse, { id: string; isActive: boolean }>({
       query: ({ id, isActive }) => ({
-        url: `/admin/${id}/toggle`,
+        url: `/wellbeing/admin/resources/${id}`,
         method: 'PATCH',
         body: { isActive },
       }),
@@ -166,7 +166,7 @@ export const resourcesApi = createApi({
      */
     getLearnerResources: builder.query<LearnerResourcesResponse, void>({
       query: () => ({
-        url: '/learner',
+        url: '/wellbeing/learner/resources',
         method: 'GET',
       }),
       providesTags: ['WellbeingResource'],
@@ -180,7 +180,7 @@ export const resourcesApi = createApi({
      */
     trackResourceOpen: builder.mutation<ActivityResponse, string>({
       query: (id) => ({
-        url: `/learner/${id}/track`,
+        url: `/wellbeing/learner/resources/track`,
         method: 'POST',
       }),
       invalidatesTags: ['LearnerResourceActivity'],
@@ -192,11 +192,11 @@ export const resourcesApi = createApi({
     /**
      * Submit feedback for a resource
      */
-    submitFeedback: builder.mutation<FeedbackResponse, { id: string; feedback: string }>({
-      query: ({ id, feedback }) => ({
-        url: `/learner/${id}/feedback`,
+    submitFeedback: builder.mutation<FeedbackResponse, { resourceId: number; feedback: string }>({
+      query: ({ resourceId, feedback }) => ({
+        url: `/wellbeing/learner/resources/feedback`,
         method: 'POST',
-        body: { feedback },
+        body: {resourceId, feedback },
       }),
       invalidatesTags: ['LearnerResourceActivity'],
       transformErrorResponse: (response: any) => {
