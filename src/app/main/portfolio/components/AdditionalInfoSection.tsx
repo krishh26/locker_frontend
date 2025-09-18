@@ -2,7 +2,11 @@ import React from 'react'
 import { useFormContext } from 'react-hook-form'
 import { Box, Card, Grid, TextField, Typography } from '@mui/material'
 
-const AdditionalInfoSection: React.FC = () => {
+interface AdditionalInfoSectionProps {
+  disabled?: boolean
+}
+
+const AdditionalInfoSection: React.FC<AdditionalInfoSectionProps> = ({ disabled = false }) => {
   const {
     register,
     formState: { errors },
@@ -33,6 +37,7 @@ const AdditionalInfoSection: React.FC = () => {
                   {...register('awarding_body')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -50,6 +55,7 @@ const AdditionalInfoSection: React.FC = () => {
                   {...register('registration_number')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -71,6 +77,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='date'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -88,6 +95,7 @@ const AdditionalInfoSection: React.FC = () => {
                   {...register('lara_code')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -108,6 +116,7 @@ const AdditionalInfoSection: React.FC = () => {
                   {...register('iqas_name')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -127,6 +136,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -148,6 +158,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -166,6 +177,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -184,6 +196,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -205,6 +218,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -223,6 +237,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -241,6 +256,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -262,6 +278,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -280,6 +297,7 @@ const AdditionalInfoSection: React.FC = () => {
                   size='small'
                   type='number'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>

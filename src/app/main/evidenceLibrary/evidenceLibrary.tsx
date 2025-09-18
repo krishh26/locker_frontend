@@ -24,6 +24,17 @@ import {
   Link as MuiLink,
   useTheme,
   alpha,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  ListItemIcon,
+  Checkbox,
+  Divider,
+  FormControlLabel,
 } from '@mui/material'
 import {
   createColumnHelper,
@@ -45,6 +56,9 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import DownloadIcon from '@mui/icons-material/Download'
 import ArchiveIcon from '@mui/icons-material/Archive'
+import SchoolIcon from '@mui/icons-material/School'
+import CheckBoxIcon from '@mui/icons-material/CheckBox'
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import { useSelector } from 'react-redux'
 
 import ReactUploadFile from 'src/app/component/react-upload-files'
@@ -92,6 +106,11 @@ interface EvidenceData {
   evidence_time_log: boolean
   created_at: string
   updated_at: string
+  course_id: {
+    course_id: number
+    course_name: string
+    course_code: string
+  }
 }
 
 interface Column {
@@ -128,11 +147,14 @@ const EvidenceLibrary: FC = () => {
   const [isOpenFileUpload, setIsOpenFileUpload] = useState<boolean>(false)
   const [isOpenReupload, setIsOpenReupload] = useState<boolean>(false)
   const [isOpenDeleteBox, setIsOpenDeleteBox] = useState<boolean>(false)
+  const [isOpenCourseSelection, setIsOpenCourseSelection] = useState<boolean>(false)
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState('')
   const [evidenceData, setEvidenceData] = useState<EvidenceData[]>([])
   const [selectedRow, setSelectedRow] = useState<EvidenceData | null>(null)
   const [isDownloading, setIsDownloading] = useState<boolean>(false)
+  const [selectedCourses, setSelectedCourses] = useState<Set<number>>(new Set())
+  const [selectAll, setSelectAll] = useState<boolean>(false)
 
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -371,6 +393,63 @@ const EvidenceLibrary: FC = () => {
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text
   }
 
+  // Helper function to get unique courses from evidence data
+  const getUniqueCourses = () => {
+    const courseMap = new Map()
+    evidenceData.forEach(evidence => {
+      if (evidence.course_id) {
+        courseMap.set(evidence.course_id.course_id, {
+          course_id: evidence.course_id.course_id,
+          course_name: evidence.course_id.course_name,
+          course_code: evidence.course_id.course_code,
+          fileCount: 0
+        })
+      }
+    })
+    
+    // Count files per course
+    evidenceData.forEach(evidence => {
+      if (evidence.course_id && evidence.file) {
+        const course = courseMap.get(evidence.course_id.course_id)
+        if (course) {
+          course.fileCount++
+        }
+      }
+    })
+    
+    return Array.from(courseMap.values())
+  }
+
+  // Handle course selection
+  const handleCourseSelection = (courseId: number) => {
+    const newSelectedCourses = new Set(selectedCourses)
+    if (newSelectedCourses.has(courseId)) {
+      newSelectedCourses.delete(courseId)
+    } else {
+      newSelectedCourses.add(courseId)
+    }
+    setSelectedCourses(newSelectedCourses)
+  }
+
+  // Handle select all courses
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedCourses(new Set())
+      setSelectAll(false)
+    } else {
+      const allCourseIds = getUniqueCourses().map(course => course.course_id)
+      setSelectedCourses(new Set(allCourseIds))
+      setSelectAll(true)
+    }
+  }
+
+  // Reset course selection when dialog opens
+  const handleOpenCourseSelection = () => {
+    setSelectedCourses(new Set())
+    setSelectAll(false)
+    setIsOpenCourseSelection(true)
+  }
+
   // Helper function to get signed URL from backend
   const getSignedUrl = async (fileKey: string): Promise<string> => {
     try {
@@ -396,14 +475,40 @@ const EvidenceLibrary: FC = () => {
   // Helper function to download file with CORS handling
   const downloadFile = async (url: string, filename: string): Promise<Blob> => {
     try {
+      console.log(`Attempting to download file: ${filename} from URL: ${url}`)
+      
       // Method 1: Try direct fetch first (for files with proper CORS headers)
       try {
         const response = await fetch(url, {
           mode: 'cors',
-          credentials: 'omit'
+          credentials: 'omit',
+          headers: {
+            'Accept': '*/*',
+          }
         })
+        
         if (response.ok) {
-          return await response.blob()
+          const blob = await response.blob()
+          console.log(`Direct fetch successful. Blob type: ${blob.type}, size: ${blob.size}`)
+          
+          // Validate that we got a proper file blob
+          if (blob.size === 0) {
+            throw new Error('Downloaded file is empty')
+          }
+          
+          // Detect and set proper MIME type based on file extension
+          const extension = filename.split('.').pop()?.toLowerCase()
+          let mimeType = blob.type
+          
+          // If blob type is empty or generic, set based on extension
+          if (!mimeType || mimeType === 'application/octet-stream' || mimeType === 'text/html') {
+            mimeType = getMimeTypeFromExtension(extension)
+          }
+          
+          const properBlob = new Blob([blob], { type: mimeType })
+          return properBlob
+        } else {
+          console.warn(`Direct fetch failed with status: ${response.status}`)
         }
       } catch (corsError) {
         console.warn('Direct fetch failed due to CORS, trying alternative methods:', corsError)
@@ -415,7 +520,7 @@ const EvidenceLibrary: FC = () => {
       const response = await fetch(proxyUrl, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
+          'Accept': '*/*',
         }
       })
       
@@ -423,7 +528,20 @@ const EvidenceLibrary: FC = () => {
         throw new Error(`Failed to download file via proxy: ${response.statusText}`)
       }
       
-      return await response.blob()
+      const blob = await response.blob()
+      console.log(`Proxy download successful. Blob type: ${blob.type}, size: ${blob.size}`)
+      
+      // Detect and set proper MIME type based on file extension
+      const extension = filename.split('.').pop()?.toLowerCase()
+      let mimeType = blob.type
+      
+      // If blob type is empty or generic, set based on extension
+      if (!mimeType || mimeType === 'application/octet-stream' || mimeType === 'text/html') {
+        mimeType = getMimeTypeFromExtension(extension)
+      }
+      
+      const properBlob = new Blob([blob], { type: mimeType })
+      return properBlob
     } catch (error) {
       console.error('Error downloading file:', error)
       throw error
@@ -451,6 +569,84 @@ const EvidenceLibrary: FC = () => {
     }
   }
 
+  // Helper function to get MIME type from file extension
+  const getMimeTypeFromExtension = (extension: string | undefined): string => {
+    if (!extension) return 'application/octet-stream'
+    
+    const mimeTypes: { [key: string]: string } = {
+      // Documents
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'txt': 'text/plain',
+      'rtf': 'application/rtf',
+      
+      // Spreadsheets
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'csv': 'text/csv',
+      
+      // Presentations
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      
+      // Images
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'bmp': 'image/bmp',
+      'svg': 'image/svg+xml',
+      'webp': 'image/webp',
+      'tiff': 'image/tiff',
+      
+      // Audio
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'ogg': 'audio/ogg',
+      'm4a': 'audio/mp4',
+      
+      // Video
+      'mp4': 'video/mp4',
+      'avi': 'video/x-msvideo',
+      'mov': 'video/quicktime',
+      'wmv': 'video/x-ms-wmv',
+      'webm': 'video/webm',
+      
+      // Archives
+      'zip': 'application/zip',
+      'rar': 'application/x-rar-compressed',
+      '7z': 'application/x-7z-compressed',
+      'tar': 'application/x-tar',
+      'gz': 'application/gzip',
+      
+      // Code
+      'html': 'text/html',
+      'css': 'text/css',
+      'js': 'application/javascript',
+      'json': 'application/json',
+      'xml': 'application/xml',
+      
+      // Other
+      'exe': 'application/x-msdownload',
+      'dmg': 'application/x-apple-diskimage',
+      'iso': 'application/x-iso9660-image'
+    }
+    
+    return mimeTypes[extension.toLowerCase()] || 'application/octet-stream'
+  }
+
+  // Helper function to sanitize filename
+  const sanitizeFileName = (filename: string): string => {
+    // Remove or replace problematic characters
+    return filename
+      .replace(/[<>:"/\\|?*]/g, '_') // Replace invalid characters with underscore
+      .replace(/\s+/g, '_') // Replace spaces with underscore
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .replace(/^_|_$/g, '') // Remove leading/trailing underscores
+      .substring(0, 200) // Limit length to prevent issues
+  }
+
   // Helper function to create ZIP file
   const createZipFile = async (files: { name: string; blob: Blob }[]): Promise<Blob> => {
     // Using JSZip library - you'll need to install it: npm install jszip
@@ -458,15 +654,43 @@ const EvidenceLibrary: FC = () => {
     const zip = new JSZip()
 
     files.forEach((file, index) => {
-      const fileName = file.name || `evidence_${index + 1}.pdf`
-      zip.file(fileName, file.blob)
+      const originalName = file.name || `evidence_${index + 1}.pdf`
+      const sanitizedName = sanitizeFileName(originalName)
+      const finalName = sanitizedName || `evidence_${index + 1}.pdf`
+      
+      console.log(`Adding file to ZIP: ${finalName}, Blob type: ${file.blob.type}, size: ${file.blob.size}`)
+      
+      // Ensure the file has a proper extension
+      if (!finalName.includes('.')) {
+        const extension = originalName.split('.').pop() || 'pdf'
+        const fileNameWithExt = `${finalName}.${extension}`
+        
+        // Create a new blob with proper MIME type
+        const mimeType = getMimeTypeFromExtension(extension)
+        const properBlob = new Blob([file.blob], { type: mimeType })
+        
+        zip.file(fileNameWithExt, properBlob)
+      } else {
+        // Create a new blob with proper MIME type based on extension
+        const extension = finalName.split('.').pop()?.toLowerCase()
+        const mimeType = getMimeTypeFromExtension(extension)
+        
+        const properBlob = new Blob([file.blob], { type: mimeType })
+        zip.file(finalName, properBlob)
+      }
     })
 
-    return await zip.generateAsync({ type: 'blob' })
+    return await zip.generateAsync({ 
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: {
+        level: 6 // Balanced compression
+      }
+    })
   }
 
-  // Download all evidence files as ZIP
-  const handleDownloadAll = async () => {
+  // Open course selection dialog for download all
+  const handleDownloadAll = () => {
     if (!evidenceData || evidenceData.length === 0) {
       dispatch(
         showMessage({
@@ -477,16 +701,48 @@ const EvidenceLibrary: FC = () => {
       return
     }
 
+    const evidenceWithFiles = evidenceData.filter(evidence => evidence.file)
+    
+    if (evidenceWithFiles.length === 0) {
+      dispatch(
+        showMessage({
+          message: 'No files found to download',
+          variant: 'warning',
+        })
+      )
+      return
+    }
+
+    handleOpenCourseSelection()
+  }
+
+  // Download selected courses evidence files as ZIP
+  const handleDownloadSelectedCourses = async () => {
+    if (selectedCourses.size === 0) {
+      dispatch(
+        showMessage({
+          message: 'Please select at least one course to download',
+          variant: 'warning',
+        })
+      )
+      return
+    }
+
     setIsDownloading(true)
+    setIsOpenCourseSelection(false)
     
     try {
-      // Filter evidence with files
-      const evidenceWithFiles = evidenceData.filter(evidence => evidence.file)
+      // Filter evidence with files from selected courses
+      const evidenceWithFiles = evidenceData.filter(evidence => 
+        evidence.file && 
+        evidence.course_id && 
+        selectedCourses.has(evidence.course_id.course_id)
+      )
       
       if (evidenceWithFiles.length === 0) {
         dispatch(
           showMessage({
-            message: 'No files found to download',
+            message: 'No files found for selected courses',
             variant: 'warning',
           })
         )
@@ -498,6 +754,56 @@ const EvidenceLibrary: FC = () => {
         const fileName = evidence.file?.name || `evidence_${evidence.assignment_id}.pdf`
         try {
           const blob = await downloadFile(evidence.file!.url, fileName)
+          
+          // Validate the blob
+          if (!blob || blob.size === 0) {
+            throw new Error('Downloaded file is empty or invalid')
+          }
+          
+          // Check if the file content matches the expected type
+          const arrayBuffer = await blob.arrayBuffer()
+          const uint8Array = new Uint8Array(arrayBuffer)
+          const extension = fileName.split('.').pop()?.toLowerCase()
+          
+          // Validate file signatures for common types
+          let isValidFile = true
+          if (extension === 'pdf') {
+            // PDF files start with %PDF
+            const isPDF = uint8Array.length >= 4 && 
+                         uint8Array[0] === 0x25 && // %
+                         uint8Array[1] === 0x50 && // P
+                         uint8Array[2] === 0x44 && // D
+                         uint8Array[3] === 0x46    // F
+            if (!isPDF) {
+              console.warn(`File ${fileName} appears to not be a valid PDF`)
+              isValidFile = false
+            }
+          } else if (extension === 'jpg' || extension === 'jpeg') {
+            // JPEG files start with FF D8
+            const isJPEG = uint8Array.length >= 2 && 
+                          uint8Array[0] === 0xFF && 
+                          uint8Array[1] === 0xD8
+            if (!isJPEG) {
+              console.warn(`File ${fileName} appears to not be a valid JPEG`)
+              isValidFile = false
+            }
+          } else if (extension === 'png') {
+            // PNG files start with 89 50 4E 47
+            const isPNG = uint8Array.length >= 4 && 
+                         uint8Array[0] === 0x89 && 
+                         uint8Array[1] === 0x50 && 
+                         uint8Array[2] === 0x4E && 
+                         uint8Array[3] === 0x47
+            if (!isPNG) {
+              console.warn(`File ${fileName} appears to not be a valid PNG`)
+              isValidFile = false
+            }
+          }
+          
+          if (!isValidFile) {
+            console.warn(`File ${fileName} may not be a valid ${extension} file, but will still be included`)
+          }
+          
           return {
             name: fileName,
             blob: blob,
@@ -542,6 +848,16 @@ const EvidenceLibrary: FC = () => {
         )
         return
       }
+
+      // If we have both successful and failed files, show a warning
+      if (failedFiles.length > 0 && successfulFiles.length > 0) {
+        dispatch(
+          showMessage({
+            message: `Downloaded ${successfulFiles.length} files as ZIP. ${failedFiles.length} files opened in new tabs due to CORS restrictions.`,
+            variant: 'warning',
+          })
+        )
+      }
       
       const files = successfulFiles.map(result => ({
         name: result.name,
@@ -551,19 +867,58 @@ const EvidenceLibrary: FC = () => {
       // Create ZIP file
       const zipBlob = await createZipFile(files)
       
+      // Validate ZIP file
+      if (!zipBlob || zipBlob.size === 0) {
+        throw new Error('Failed to create ZIP file')
+      }
+      
+      console.log(`Created ZIP file with size: ${zipBlob.size} bytes`)
+      console.log(`Files in ZIP: ${files.map(f => f.name).join(', ')}`)
+      
+      // Test ZIP file by trying to read it
+      try {
+        const testZip = new (await import('jszip')).default()
+        await testZip.loadAsync(zipBlob)
+        console.log('ZIP file validation successful')
+      } catch (zipError) {
+        console.error('ZIP file validation failed:', zipError)
+        throw new Error('Created ZIP file is corrupted')
+      }
+      
       // Download ZIP file
       const url = window.URL.createObjectURL(zipBlob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `evidence_library_${new Date().toISOString().split('T')[0]}.zip`
+      
+      // Create a more descriptive filename
+      const timestamp = new Date().toISOString().split('T')[0]
+      const selectedCourseNames = getUniqueCourses()
+        .filter(course => selectedCourses.has(course.course_id))
+        .map(course => course.course_name.replace(/\s+/g, '_'))
+        .join('_')
+      
+      const zipFileName = selectedCourseNames 
+        ? `Evidence_Files_${selectedCourseNames}_${timestamp}.zip`
+        : `Evidence_Library_${timestamp}.zip`
+      
+      link.download = sanitizeFileName(zipFileName)
+      
+      // Add some additional attributes for better compatibility
+      link.setAttribute('download', sanitizeFileName(zipFileName))
+      link.style.display = 'none'
+      
       document.body.appendChild(link)
       link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      
+      // Clean up after a short delay
+      setTimeout(() => {
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      }, 100)
 
       dispatch(
         showMessage({
-          message: `Successfully downloaded ${files.length} evidence files`,
+          message: `Successfully downloaded ${files.length} evidence files from selected courses`,
           variant: 'success',
         })
       )
@@ -721,7 +1076,7 @@ const EvidenceLibrary: FC = () => {
               }
             }}
           >
-            {isDownloading ? 'Downloading...' : 'Download All'}
+            {isDownloading ? 'Downloading...' : 'Download Evidence Files'}
           </Button>
           <Button
             variant='contained'
@@ -1103,6 +1458,174 @@ const EvidenceLibrary: FC = () => {
           handleClose={handleReuploadClose}
           id={selectedRow?.assignment_id}
         />
+      </Dialog>
+
+      {/* Course Selection Dialog */}
+      <Dialog
+        open={isOpenCourseSelection}
+        onClose={() => setIsOpenCourseSelection(false)}
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          '.MuiDialog-paper': {
+            borderRadius: 3,
+            boxShadow: theme.shadows[24],
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            py: 3,
+            px: 3,
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            backgroundColor: alpha(theme.palette.primary.main, 0.02)
+          }}
+        >
+          <SchoolIcon sx={{ color: theme.palette.primary.main, fontSize: 28 }} />
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+              Select Courses to Download
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Choose which courses you want to download evidence files from
+            </Typography>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ p: 2, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={selectAll}
+                  onChange={handleSelectAll}
+                  icon={<CheckBoxOutlineBlankIcon />}
+                  checkedIcon={<CheckBoxIcon />}
+                  sx={{
+                    color: theme.palette.primary.main,
+                    '&.Mui-checked': {
+                      color: theme.palette.primary.main,
+                    },
+                  }}
+                />
+              }
+              label={
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Select All Courses
+                </Typography>
+              }
+              sx={{ m: 0 }}
+            />
+          </Box>
+
+          <List sx={{ p: 0, maxHeight: 400, overflow: 'auto' }}>
+            {getUniqueCourses().map((course, index) => (
+              <ListItem key={course.course_id} disablePadding>
+                <ListItemButton
+                  onClick={() => handleCourseSelection(course.course_id)}
+                  sx={{
+                    py: 2,
+                    px: 3,
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                    },
+                    backgroundColor: selectedCourses.has(course.course_id) 
+                      ? alpha(theme.palette.primary.main, 0.08) 
+                      : 'transparent'
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    <Checkbox
+                      checked={selectedCourses.has(course.course_id)}
+                      icon={<CheckBoxOutlineBlankIcon />}
+                      checkedIcon={<CheckBoxIcon />}
+                      sx={{
+                        color: theme.palette.primary.main,
+                        '&.Mui-checked': {
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={
+                      <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                        {course.course_name}
+                      </Typography>
+                    }
+                    secondary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Code: {course.course_code}
+                        </Typography>
+                        <Chip
+                          label={`${course.fileCount} file${course.fileCount !== 1 ? 's' : ''}`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          sx={{ fontSize: '0.75rem', height: 20 }}
+                        />
+                      </Box>
+                    }
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            p: 3,
+            borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            backgroundColor: alpha(theme.palette.grey[50], 0.5)
+          }}
+        >
+          <Button
+            onClick={() => setIsOpenCourseSelection(false)}
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              textTransform: 'none',
+              fontWeight: 600,
+              borderWidth: 2,
+              '&:hover': {
+                borderWidth: 2,
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDownloadSelectedCourses}
+            variant="contained"
+            disabled={selectedCourses.size === 0 || isDownloading}
+            startIcon={isDownloading ? <ArchiveIcon /> : <DownloadIcon />}
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              textTransform: 'none',
+              fontWeight: 600,
+              boxShadow: theme.shadows[2],
+              '&:hover': {
+                boxShadow: theme.shadows[4],
+              },
+              '&:disabled': {
+                backgroundColor: alpha(theme.palette.action.disabled, 0.3),
+                color: alpha(theme.palette.action.disabled, 0.5),
+              }
+            }}
+          >
+            {isDownloading ? 'Downloading...' : `Download (${selectedCourses.size} course${selectedCourses.size !== 1 ? 's' : ''})`}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Container>
   )

@@ -12,9 +12,10 @@ import {
 
 interface EmployerSectionProps {
   employer: any[]
+  disabled?: boolean
 }
 
-const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
+const EmployerSection: React.FC<EmployerSectionProps> = ({ employer, disabled = false }) => {
   const { register, setValue, watch, formState: { errors } } = useFormContext()
   const employerId = watch('employer_id')
 
@@ -43,6 +44,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   disableClearable
                   fullWidth
                   size='small'
+                  disabled={disabled}
                   options={employer}
                   getOptionLabel={(option: any) =>
                     option.employer?.employer_name
@@ -58,6 +60,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                       {...params}
                       placeholder='Select Employer'
                       name='role'
+                      disabled={disabled}
                       error={!!errors.employer_id}
                       helperText={errors.employer_id?.message as string}
                     />
@@ -91,6 +94,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('cost_centre')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -111,6 +115,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('job_title')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -128,6 +133,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('location')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -148,6 +154,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('manager_name')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -165,6 +172,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('manager_job_title')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -185,6 +193,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('mentor')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -202,6 +211,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('funding_contractor')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -222,6 +232,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('partner')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -239,6 +250,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('sub_area')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -259,6 +271,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('cohort')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -276,6 +289,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('curriculum_area')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -296,6 +310,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('ssa1')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -313,6 +328,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('ssa2')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -333,6 +349,7 @@ const EmployerSection: React.FC<EmployerSectionProps> = ({ employer }) => {
                   {...register('director_of_curriculum')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>

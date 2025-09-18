@@ -24,11 +24,12 @@ import {
 } from 'app/store/courseManagement'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { slice as globalSlice, selectGlobalUser } from 'app/store/globalUser'
+import { selectUser } from 'app/store/userSlice'
 import {
   getLearnerDetails,
   selectLearnerManagement,
 } from 'app/store/learnerManagement'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -38,6 +39,7 @@ import {
 } from 'src/app/component/Buttons'
 import DataNotFound from 'src/app/component/Pages/dataNotFound'
 import * as yup from 'yup'
+import { UserRole } from 'src/enum'
 
 // Course status enum
 enum CourseStatus {
@@ -73,6 +75,8 @@ const courseSchema = yup.object().shape({
       return new Date(value) > new Date(start_date)
     }),
   course_status: yup.string().optional(),
+  predicted_grade: yup.string().required('Please enter predicted grade'),
+  final_grade: yup.string().required('Please enter final grade'),
 })
 
 const CourseTab = () => {
@@ -112,6 +116,8 @@ const CourseTab = () => {
       start_date: '',
       end_date: '',
       course_status: '',
+      predicted_grade: '',
+      final_grade: '',
     },
   })
 
@@ -193,11 +199,26 @@ const CourseTab = () => {
     setValue('start_date', course?.start_date?.substr(0, 10) || '')
     setValue('end_date', course?.end_date?.substr(0, 10) || '')
     setValue('course_status', course?.course_status || '')
+    setValue('predicted_grade', course?.predicted_grade || '')
+    setValue('final_grade', course?.final_grade || '')
 
     setCourseDialog(true)
   }
 
   const { selectedUser, dataFetchLoading } = useSelector(selectGlobalUser)
+  const userData = useSelector(selectUser)
+
+  // Get current user role
+  const user = useMemo(() => {
+    try {
+      return (
+        JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
+        userData?.data
+      )
+    } catch {
+      return userData?.data
+    }
+  }, [userData])
 
   const handleCreateCourse = () => {
     setIsEditMode(false)
@@ -270,25 +291,27 @@ const CourseTab = () => {
 
   return (
     <>
-      <div className='bg-white rounded-lg shadow-sm p-6'>
-        <div className='flex justify-between items-center mb-6'>
+      <div className='space-y-6'>
+        <div className='flex justify-between items-center'>
           <div>
-            <h1 className='text-2xl font-bold text-gray-800 mb-2'>
-              Learner Course Management
-            </h1>
-            <p className='text-gray-600'>
+            <Typography variant='h5' className='font-bold text-gray-800 mb-2'>
+              Course Management
+            </Typography>
+            <Typography variant='body2' className='text-gray-600'>
               Manage and track learner course progress
-            </p>
+            </Typography>
           </div>
-          <SecondaryButton
-            className='py-3 px-6'
-            name='Add New Course'
-            onClick={handleCreateCourse}
-            startIcon={<Add />}
-          />
+          {!user?.roles.includes(UserRole.Learner) && (
+            <SecondaryButton
+              className='bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200'
+              name='Add New Course'
+              onClick={handleCreateCourse}
+              startIcon={<Add />}
+            />
+          )}
         </div>
 
-        <div className='bg-white rounded-lg border border-gray-200 overflow-hidden'>
+        <div className='bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm'>
           {dataFetchLoading ? (
             <div className='flex justify-center items-center h-64'>
               <FuseLoading />
@@ -316,9 +339,11 @@ const CourseTab = () => {
                     <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
                       IQA
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
-                      Actions
-                    </TableCell>
+                    {!user?.roles.includes(UserRole.Learner) && (
+                      <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                        Actions
+                      </TableCell>
+                    )}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -371,19 +396,21 @@ const CourseTab = () => {
                           ? `${row?.IQA_id?.first_name} ${row?.IQA_id?.last_name}`
                           : 'N/A'}
                       </TableCell>
+                        {!user?.roles.includes(UserRole.Learner) && (
                       <TableCell>
-                        <div className='flex gap-2'>
-                          <Tooltip title='Edit Course'>
-                            <IconButton
-                              size='small'
-                              sx={{ color: '#10b981' }}
-                              onClick={() => handleEditCourse(row)}
-                            >
-                              <Edit fontSize='small' />
-                            </IconButton>
-                          </Tooltip>
-                        </div>
+                          <div className='flex gap-2'>
+                            <Tooltip title='Edit Course'>
+                              <IconButton
+                                size='small'
+                                sx={{ color: '#10b981' }}
+                                onClick={() => handleEditCourse(row)}
+                              >
+                                <Edit fontSize='small' />
+                              </IconButton>
+                            </Tooltip>
+                          </div>
                       </TableCell>
+                        )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -401,11 +428,13 @@ const CourseTab = () => {
               >
                 Start by adding a new course to track learner progress
               </Typography>
-              <SecondaryButton
-                className='mt-4'
-                name='Add Your First Course'
-                onClick={handleCreateCourse}
-              />
+              {!user?.roles.includes(UserRole.Learner) && (
+                <SecondaryButton
+                  className='mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200'
+                  name='Add Your First Course'
+                  onClick={handleCreateCourse}
+                />
+              )}
             </div>
           )}
         </div>
@@ -726,11 +755,56 @@ const CourseTab = () => {
               </div>
             </div>
 
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  Predicted Grade <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='predicted_grade'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      size='small'
+                      fullWidth
+                      variant='outlined'
+                      placeholder='Enter predicted grade'
+                      error={!!errors.predicted_grade}
+                      helperText={errors.predicted_grade?.message}
+                    />
+                  )}
+                />
+              </div>
+
+              <div>
+                <Typography className='text-sm font-medium text-gray-700 mb-2'>
+                  Final Grade <span className='text-red-500'>*</span>
+                </Typography>
+                <Controller
+                  name='final_grade'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      size='small'
+                      fullWidth
+                      variant='outlined'
+                      placeholder='Enter final grade'
+                      error={!!errors.final_grade}
+                      helperText={errors.final_grade?.message}
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
             <div className='flex justify-end gap-3 mt-6'>
               <SecondaryButtonOutlined
                 name='Cancel'
                 onClick={closeCourseDialog}
                 type='button'
+                className='px-6 py-3 rounded-lg font-medium transition-colors duration-200'
               />
               {loading ? (
                 <LoadingButton style={{ width: '120px' }} />
@@ -738,6 +812,7 @@ const CourseTab = () => {
                 <SecondaryButton
                   name={isEditMode ? 'Update Course' : 'Add Course'}
                   type='submit'
+                  className='bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200'
                 />
               )}
             </div>

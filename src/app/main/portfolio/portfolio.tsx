@@ -232,18 +232,19 @@ const Portfolio: React.FC = () => {
   )
   const data = useSelector(selectstoreDataSlice)
   const { singleData } = useSelector(selectLearnerManagement)
-  const { learnerTab } = useSelector(selectGlobalUser)
+  const userData = useSelector(selectUser)
 
+  // Get current user role
   const user = useMemo(() => {
     try {
       return (
         JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
-        useSelector(selectUser)?.data
+        userData?.data
       )
     } catch {
-      return useSelector(selectUser)?.data
+      return userData?.data
     }
-  }, [])
+  }, [userData])
 
   // Memoized filtered cards
   const { overviewCards, courseCards } = useMemo(
@@ -270,7 +271,7 @@ const Portfolio: React.FC = () => {
   const handleOpenProfile = useCallback(() => {
     const learnerId = learner?.learner_id
     if (learnerId) {
-      navigate(`/portfolio/learner-details?learner_id=${learnerId}`)
+      navigate(`/portfolio/profile-information?learner_id=${learnerId}`)
     }
   }, [learner?.learner_id, navigate])
 
@@ -472,7 +473,7 @@ const Portfolio: React.FC = () => {
                   {learner?.first_name} {learner?.last_name}
                 </Typography>
                 <Link
-                  to={`/portfolio/learner-details?learner_id=${learner?.learner_id}`}
+                  to={`/portfolio/profile-information?learner_id=${learner?.learner_id}`}
                   style={{
                     textDecoration: 'none',
                     display: 'inline-flex',
@@ -627,7 +628,6 @@ const Portfolio: React.FC = () => {
         )}
         <SecondaryButtonOutlined name='Awaiting Signature' />
         <SecondaryButton name='Calendar' onClick={handleOpen} />
-        {/* <SecondaryButton name='Profile' onClick={handleOpenProfile} /> */}
       </StyledActionButtons>
 
       {/* Calendar Dialog */}

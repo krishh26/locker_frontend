@@ -10,7 +10,11 @@ import {
   MenuItem,
 } from '@mui/material'
 
-const AddressSection: React.FC = () => {
+interface AddressSectionProps {
+  disabled?: boolean
+}
+
+const AddressSection: React.FC<AddressSectionProps> = ({ disabled = false }) => {
   const { register, formState: { errors } } = useFormContext()
 
   return (
@@ -38,6 +42,7 @@ const AddressSection: React.FC = () => {
                   {...register('street')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -55,6 +60,7 @@ const AddressSection: React.FC = () => {
                   {...register('suburb')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -74,6 +80,7 @@ const AddressSection: React.FC = () => {
                   {...register('town')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -91,6 +98,7 @@ const AddressSection: React.FC = () => {
                   {...register('country')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -112,6 +120,7 @@ const AddressSection: React.FC = () => {
                   type='number'
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   className='bg-none'
                 />
               </Grid>
@@ -129,6 +138,7 @@ const AddressSection: React.FC = () => {
                   {...register('country_of_domicile')}
                   size='small'
                   fullWidth
+                  disabled={disabled}
                   sx={{
                     '.muiltr-156t61m-MuiSvgIcon-root-MuiSelect-icon': {
                       color: 'black',

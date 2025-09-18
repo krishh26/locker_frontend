@@ -24,11 +24,11 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         name='Email Password Reset'
         onClick={onEmailReset}
       />
-      <SecondaryButtonOutlined
+      {/* <SecondaryButtonOutlined
         className='bg-[#46c2c5] !text-white hover:bg-[#37a1a3]'
         name='Create Employer'
         onClick={onCreateEmployer}
-      />
+      /> */}
     </div>
   )
 }
