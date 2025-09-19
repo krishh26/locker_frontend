@@ -57,7 +57,7 @@ const downloadSampleCSV = () => {
   ]
 
   const sampleData = [
-    'ABC Company Ltd',
+    'ABC Company Ltd - Test',
     'MSI001',
     'IT Department',
     'London Office',
@@ -74,7 +74,7 @@ const downloadSampleCSV = () => {
     'https://www.abccompany.com',
     'John Smith',
     '+44 20 7123 4568',
-    'contact@abccompany.com',
+    'contactTest@abccompany.com',
     'Leading technology solutions provider',
     'Regular client with good payment history',
     '01-01-2024',
@@ -97,7 +97,7 @@ const downloadSampleCSV = () => {
   document.body.removeChild(link)
 }
 
-const UploadEmployerDialog = ({ handleClose }) => {
+const UploadEmployerDialog = ({ handleClose, refetchEmployer }) => {
   const dispatch: any = useDispatch()
   const navigate = useNavigate()
   const fileTypes = ['CSV']
@@ -195,6 +195,7 @@ const UploadEmployerDialog = ({ handleClose }) => {
           })
         )
         handleClose()
+        refetchEmployer()
       } 
     } catch (err) {
       console.error('Error uploading file:', err)

@@ -162,6 +162,14 @@ const navigationConfig = [
     visible: [UserRole.Admin],
   },
   {
+    id: 'dashboards.wellbeing',
+    title: 'Wellbeing',
+    type: 'item',
+    icon: 'material-outline:health_and_safety',
+    url: '/wellbeing/resources',
+    visible: [UserRole.Admin],
+  },
+  {
     id: 'dashboards.proposeYourInnovations',
     title: 'Propose Your Innovations',
     type: 'item',
