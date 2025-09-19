@@ -62,7 +62,7 @@ const CreateEmployerDetails = (props) => {
             city: "",
             county: "",
             employer_county: "",
-            postcode: "",
+            postal_code: "",
             business_category: "",
             number_of_employees: "",
             telephone: "",
@@ -480,23 +480,23 @@ const CreateEmployerDetails = (props) => {
                                             }}
                                             className={Style.name}
                                         >
-                                            Postcode <span style={{ color: "red" }}>*</span>
+                                            Postal Code <span style={{ color: "red" }}>*</span>
                                         </Typography>
                                         <Controller
-                                            name="postcode"
+                                            name="postal_code"
                                             control={control}
                                             rules={{
-                                                required: "Postcode is required",
+                                                required: "Postal Code is required",
                                             }}
                                             render={({ field }) => (
-                                                <div data-field="postcode">
+                                                <div data-field="postal_code">
                                                     <TextField
                                                         {...field}
                                                         placeholder="e.g., SW1A 1AA"
                                                         size="small"
                                                         fullWidth
-                                                        error={!!errors.postcode}
-                                                        helperText={errors.postcode?.message}
+                                                        error={!!errors.postal_code}
+                                                        helperText={errors.postal_code?.message}
                                                     />
                                                 </div>
                                             )}

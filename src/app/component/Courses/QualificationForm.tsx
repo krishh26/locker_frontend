@@ -289,7 +289,7 @@ const QualificationForm: React.FC<QualificationFormProps> = ({
             value={courseData?.awarding_body || null}
             onChange={(_, newValue) => handleAutocompleteChange('awarding_body', newValue)}
             disabled={edit === "view"}
-            options={["No Awarding Body"]}
+            options={["No Awarding Body",'other']}
             className={Style.last2_input_feald}
             isOptionEqualToValue={(option, value) => option === value}
             renderInput={(params) => <TextField {...params} placeholder="Select Awarding Body" />}

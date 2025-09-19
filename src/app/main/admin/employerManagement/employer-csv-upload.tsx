@@ -144,7 +144,7 @@ const UploadEmployerDialog = ({ handleClose }) => {
                 city: row['City'] || '',
                 county: row['County'] || '',
                 country: row['Country'] || '',
-                postcode: row['Postcode'] || '',
+                postal_code: row['Postcode'] || '',
                 business_category: row['BusinessCategory'] || '',
                 number_of_employees: row['NumberOfEmployees'] || '',
                 telephone: row['Telephone'],
@@ -195,46 +195,7 @@ const UploadEmployerDialog = ({ handleClose }) => {
           })
         )
         handleClose()
-      } else {
-        // Fallback to individual uploads if bulk fails
-        let successCount = 0
-        let errorCount = 0
-
-        for (const employerData of parsedData) {
-          try {
-            const { createEmployerAPI } = await import('app/store/employer')
-            const result = await dispatch(createEmployerAPI(employerData))
-            if (result) {
-              successCount++
-            } else {
-              errorCount++
-            }
-          } catch (err) {
-            console.error('Error creating employer:', err)
-            errorCount++
-          }
-        }
-
-        if (successCount > 0) {
-          dispatch(
-            showMessage({
-              variant: 'success',
-              message: `Successfully uploaded ${successCount} employers.${
-                errorCount > 0 ? ` ${errorCount} failed.` : ''
-              }`,
-            })
-          )
-          handleClose()
-        } else {
-          dispatch(
-            showMessage({
-              variant: 'error',
-              message:
-                'Failed to upload any employers. Please check your data and try again.',
-            })
-          )
-        }
-      }
+      } 
     } catch (err) {
       console.error('Error uploading file:', err)
       dispatch(showMessage({ message: 'File upload failed', variant: 'error' }))
@@ -345,9 +306,6 @@ const UploadEmployerDialog = ({ handleClose }) => {
                   <div className='bg-green-100 dark:bg-green-900/30 p-4 rounded-lg border border-green-200 dark:border-green-700'>
                     <p className='text-lg font-semibold text-green-800 dark:text-green-200'>
                       {file.name}
-                    </p>
-                    <p className='text-sm text-green-600 dark:text-green-400'>
-                      File size: {(file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
                 </div>

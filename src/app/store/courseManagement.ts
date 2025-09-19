@@ -326,6 +326,7 @@ export const jsonConverter = (data) => async (dispatch) => {
     try {
         dispatch(slice.setUpdatingLoader());
         const response = await axios.post(`${URL_BASE_LINK}/course/convert`, data);
+        console.log("🚀 ~ jsonConverter ~ response:", response.data)
         dispatch(slice.setUpdatingLoader());
         dispatch(slice.updatePreFillData(response.data));
         return true;
@@ -378,22 +379,12 @@ export const fetchAllLearnerByUserAPI = (id, role) => async (dispatch) => {
 export const fetchActiveGatewayCourses = async () => {
     try {
         const url = `${URL_BASE_LINK}/course/list?limit=100&core_type=Gateway`;
-        console.log('fetchActiveGatewayCourses - Fetching from URL:', url);
         const response = await axios.get(url);
-        console.log('fetchActiveGatewayCourses - Raw response:', response.data);
 
         const activeGateways = response.data.data.filter(
             (course) => course.active === "Yes"
         );
 
-        console.log('fetchActiveGatewayCourses - Filtered active gateways:',
-            activeGateways.map(g => ({
-                course_id: g.course_id,
-                course_name: g.course_name,
-                course_code: g.course_code,
-                active: g.active
-            }))
-        );
 
         return activeGateways;
     } catch (err) {

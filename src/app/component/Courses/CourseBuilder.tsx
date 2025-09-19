@@ -170,7 +170,7 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
 
     // Define course types and levels for the forms
     const courseTypes = [
-     'Functional Skills Maths', 'Functional Skills English', 'BTEC', 'Diploma','RQF'
+     'Functional Skills Maths', 'Functional Skills English', 'Btec National', 'Diploma','RQF'
     ];
 
     const courseLevels = [
@@ -178,7 +178,9 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
       'Level 5', 'Level 6', 'Level 7', 'Level 8'
     ];
 
-    switch (courseData.course_core_type) {
+    const courseCoreType = courseData.course_core_type || 'Qualification';
+
+    switch (courseCoreType) {
       case 'Standard':
         return (
           <StandardForm
@@ -272,7 +274,7 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
           <Select
             labelId="global-course-type-label"
             id="global-course-type"
-            value={courseData.course_core_type}
+            value={courseData.course_core_type || 'Qualification'}
             label="Course Type"
             onChange={handleGlobalCourseTypeChange}
             disabled={edit === 'view' || courseSaved}
@@ -304,7 +306,7 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
           </Typography>
 
           <Typography variant="body2" color="textSecondary" className="mb-4">
-            Enter the details for your {courseData.course_core_type} course.
+            Enter the details for your {courseData.course_core_type || 'Qualification'} course.
           </Typography>
 
           {renderCourseForm()}
@@ -353,7 +355,7 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
                 setCourseSaved={setCourseSaved}
                 edit={edit}
                 saveCourse={saveCourse}
-                courseType={courseData.course_core_type}
+                courseType={courseData.course_core_type || 'Qualification'}
               />
             </>
           )}
