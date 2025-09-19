@@ -197,14 +197,7 @@ const AdminResourcesPage: React.FC = () => {
 
   const handleEdit = useCallback(() => {
     if (selectedResource) {
-      navigate(`/admin/resources/edit/${selectedResource.id}`);
-    }
-    handleMenuClose();
-  }, [selectedResource, navigate, handleMenuClose]);
-
-  const handleView = useCallback(() => {
-    if (selectedResource) {
-      navigate(`/admin/resources/view/${selectedResource.id}`);
+      navigate(`/wellbeing/resources/edit/${selectedResource.id}`);
     }
     handleMenuClose();
   }, [selectedResource, navigate, handleMenuClose]);
@@ -236,7 +229,7 @@ const AdminResourcesPage: React.FC = () => {
   }, []);
 
   const handleAddResource = useCallback(() => {
-    navigate('/admin/resources/add');
+    navigate('/wellbeing/resources/add');
   }, [navigate]);
 
   const handleChangePage = useCallback((event: unknown, newPage: number) => {
@@ -452,12 +445,6 @@ const AdminResourcesPage: React.FC = () => {
           horizontal: 'right',
         }}
       >
-        <MenuItem onClick={handleView}>
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>View</ListItemText>
-        </MenuItem>
         <MenuItem onClick={handleEdit}>
           <ListItemIcon>
             <EditIcon fontSize="small" />

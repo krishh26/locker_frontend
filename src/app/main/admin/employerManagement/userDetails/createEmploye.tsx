@@ -61,7 +61,7 @@ const CreateEmployerDetails = (props) => {
             address_2: "",
             city: "",
             county: "",
-            employer_county: "",
+            country: "",
             postal_code: "",
             business_category: "",
             number_of_employees: "",
@@ -72,9 +72,9 @@ const CreateEmployerDetails = (props) => {
             email: "",
             business_description: "",
             comments: "",
-            assessment_date: "",
-            assessment_renewal_date: "",
-            insurance_renewal_date: "",
+            assessment_date: null,
+            assessment_renewal_date: null,
+            insurance_renewal_date: null,
         },
     });
 
@@ -453,18 +453,18 @@ const CreateEmployerDetails = (props) => {
                                             Country <span style={{ color: "red" }}>*</span>
                                         </Typography>
                                         <Controller
-                                            name="employer_county"
+                                            name="country"
                                             control={control}
                                             rules={{ required: "Country is required" }}
                                             render={({ field }) => (
-                                                <div data-field="employer_county">
+                                                <div data-field="country">
                                                     <TextField
                                                         {...field}
                                                         placeholder="Country"
                                                         size="small"
                                                         fullWidth
-                                                        error={!!errors.employer_county}
-                                                        helperText={errors.employer_county?.message}
+                                                        error={!!errors.country}
+                                                        helperText={errors.country?.message}
                                                     />
                                                 </div>
                                             )}
@@ -480,13 +480,13 @@ const CreateEmployerDetails = (props) => {
                                             }}
                                             className={Style.name}
                                         >
-                                            Postal Code <span style={{ color: "red" }}>*</span>
+                                            Postcode <span style={{ color: "red" }}>*</span>
                                         </Typography>
                                         <Controller
                                             name="postal_code"
                                             control={control}
                                             rules={{
-                                                required: "Postal Code is required",
+                                                required: "Postcode is required",
                                             }}
                                             render={({ field }) => (
                                                 <div data-field="postal_code">
@@ -699,12 +699,13 @@ const CreateEmployerDetails = (props) => {
                                             }}
                                             className={Style.name}
                                         >
-                                            Email
+                                            Email <span style={{ color: "red" }}>*</span>
                                         </Typography>
                                         <Controller
                                             name="email"
                                             control={control}
                                             rules={{
+                                                required: "Email is required",
                                                 pattern: {
                                                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                                                     message: "Please enter a valid email address"

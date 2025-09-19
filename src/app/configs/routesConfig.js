@@ -32,6 +32,7 @@ import FundingBandConfig from '../main/funding-band/funding-band-config'
 import CaseloadConfig from '../main/caseload/caseloadConfig'
 import TrainerRiskRatingConfig from '../main/trainer-risk-rating/trainer-risk-rating-config'
 import ThemeDemoConfig from '../pages/themedemoConfig'
+import WellbeingConfig from '../main/wellbeing/wellbeingConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -54,6 +55,7 @@ const routeConfigs = [
   CourseBuilderConfig,
   FormsConfig,
   CommunicationsConfig,
+  WellbeingConfig,
   ForgotConfig,
   MyProfileConfig,
   NotificationConfig,

@@ -186,7 +186,7 @@ const Index = () => {
           },
         }}
       >
-        <EmployerCsvUpload handleClose={() => setIsOpenCSV(false)} />
+        <EmployerCsvUpload handleClose={() => setIsOpenCSV(false)} refetchEmployer={refetchEmployer}/>
       </Dialog>
     </div>
   );
