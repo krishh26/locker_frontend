@@ -170,7 +170,7 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
 
     // Define course types and levels for the forms
     const courseTypes = [
-    //  'Functional Skills - Maths', 
+     'Functional Skills - Maths', 
      'Functional Skills English', 'Btec National', 'Diploma','RQF'
     ];
 

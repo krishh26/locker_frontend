@@ -8,6 +8,7 @@ import { FileUploader } from "react-drag-drop-files";
 import { useDispatch } from "react-redux";
 import {
   jsonConverter,
+  resetCourseData,
   selectCourseManagement,
 } from "app/store/courseManagement";
 import { useSelector } from "react-redux";
@@ -33,14 +34,10 @@ const CourseUploadDialog = (props) => {
     const fromData = new FormData();
     fromData.append("pdf", file);
 
+    dispatch(resetCourseData());
     const response = await dispatch(jsonConverter(fromData));
     if (response) {
       navigate("/courseBuilder/course?type=Qualification");
-      courseDispatch({
-        type: 'UPDATE_COURSE_FIELD',
-        field: 'course_core_type',
-        value: 'Qualification'
-      });
     }
   };
 

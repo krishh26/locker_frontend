@@ -181,7 +181,7 @@ export const useCourseBuilder = (edit = 'create') => {
     if (!preFillData || Object.keys(preFillData).length === 0) {
       return
     }
-    const course_core_type = preFillData.course_core_type || ''
+    const course_core_type = preFillData.course_core_type || 'Qualification'
     const courseData = {
       ...EMPTY_COURSE_DATA,
       ...preFillData,
