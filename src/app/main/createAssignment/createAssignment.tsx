@@ -138,8 +138,11 @@ const CreateAssignment = (props) => {
   const [edit, setEdit] = useState("Save");
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [isOpenCourseSelection, setIsOpenCourseSelection] = useState<boolean>(false);
+  const [isOpenFileSelection, setIsOpenFileSelection] = useState<boolean>(false);
   const [selectedCourses, setSelectedCourses] = useState<Set<number>>(new Set());
+  const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
   const [selectAll, setSelectAll] = useState<boolean>(false);
+  const [selectAllFiles, setSelectAllFiles] = useState<boolean>(false);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const oopen = Boolean(anchorEl);
@@ -224,6 +227,15 @@ const CreateAssignment = (props) => {
     return Array.from(courseMap.values())
   }
 
+  // Helper function to get files from selected courses
+  const getFilesFromSelectedCourses = () => {
+    return data.filter(assignment => 
+      assignment.file && 
+      assignment.course_id && 
+      selectedCourses.has(assignment.course_id.course_id)
+    )
+  }
+
   // Handle course selection
   const handleCourseSelection = (courseId: number) => {
     const newSelectedCourses = new Set(selectedCourses)
@@ -247,11 +259,65 @@ const CreateAssignment = (props) => {
     }
   }
 
+  // Handle file selection
+  const handleFileSelection = (assignmentId: number) => {
+    const newSelectedFiles = new Set(selectedFiles)
+    if (newSelectedFiles.has(assignmentId)) {
+      newSelectedFiles.delete(assignmentId)
+    } else {
+      newSelectedFiles.add(assignmentId)
+    }
+    setSelectedFiles(newSelectedFiles)
+  }
+
+  // Handle select all files
+  const handleSelectAllFiles = () => {
+    if (selectAllFiles) {
+      setSelectedFiles(new Set())
+      setSelectAllFiles(false)
+    } else {
+      const allFileIds = getFilesFromSelectedCourses().map(file => file.assignment_id)
+      setSelectedFiles(new Set(allFileIds))
+      setSelectAllFiles(true)
+    }
+  }
+
   // Reset course selection when dialog opens
   const handleOpenCourseSelection = () => {
     setSelectedCourses(new Set())
     setSelectAll(false)
     setIsOpenCourseSelection(true)
+  }
+
+  // Handle proceeding to file selection
+  const handleProceedToFileSelection = () => {
+    if (selectedCourses.size === 0) {
+      dispatch(
+        showMessage({
+          message: 'Please select at least one course to proceed',
+          variant: 'warning',
+        })
+      )
+      return
+    }
+
+    // Get all files from selected courses and select them by default
+    const filesFromSelectedCourses = getFilesFromSelectedCourses()
+    const allFileIds = filesFromSelectedCourses.map(file => file.assignment_id)
+    setSelectedFiles(new Set(allFileIds))
+    setSelectAllFiles(true)
+    
+    setIsOpenCourseSelection(false)
+    setIsOpenFileSelection(true)
+  }
+
+  // Reset file selection when dialog opens
+  const handleOpenFileSelection = () => {
+    const filesFromSelectedCourses = getFilesFromSelectedCourses()
+    const allFileIds = filesFromSelectedCourses.map(file => file.assignment_id)
+    setSelectedFiles(new Set(allFileIds))
+    setSelectAllFiles(true)
+    setIsOpenFileSelection(true)
   }
 
   // Helper function to get MIME type from file extension
@@ -499,12 +565,12 @@ const CreateAssignment = (props) => {
     handleOpenCourseSelection()
   }
 
-  // Download selected courses assignment files as ZIP
-  const handleDownloadSelectedCourses = async () => {
-    if (selectedCourses.size === 0) {
+  // Download selected files as ZIP
+  const handleDownloadSelectedFiles = async () => {
+    if (selectedFiles.size === 0) {
       dispatch(
         showMessage({
-          message: 'Please select at least one course to download',
+          message: 'Please select at least one file to download',
           variant: 'warning',
         })
       )
@@ -512,20 +578,19 @@ const CreateAssignment = (props) => {
     }
 
     setIsDownloading(true)
-    setIsOpenCourseSelection(false)
+    setIsOpenFileSelection(false)
     
     try {
-      // Filter assignments with files from selected courses
+      // Filter assignments with selected files
       const assignmentsWithFiles = data.filter(assignment => 
         assignment.file && 
-        assignment.course_id && 
-        selectedCourses.has(assignment.course_id.course_id)
+        selectedFiles.has(assignment.assignment_id)
       )
       
       if (assignmentsWithFiles.length === 0) {
         dispatch(
           showMessage({
-            message: 'No files found for selected courses',
+            message: 'No files found for selected files',
             variant: 'warning',
           })
         )
@@ -701,7 +766,7 @@ const CreateAssignment = (props) => {
 
       dispatch(
         showMessage({
-          message: `Successfully downloaded ${files.length} assignment files from selected courses`,
+          message: `Successfully downloaded ${files.length} selected assignment files`,
           variant: 'success',
         })
       )
@@ -1400,9 +1465,204 @@ const CreateAssignment = (props) => {
               Cancel
             </Button>
             <Button
-              onClick={handleDownloadSelectedCourses}
+              onClick={handleProceedToFileSelection}
               variant="contained"
-              disabled={selectedCourses.size === 0 || isDownloading}
+              disabled={selectedCourses.size === 0}
+              startIcon={<DownloadIcon />}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1,
+                textTransform: 'none',
+                fontWeight: 600,
+                boxShadow: theme.shadows[2],
+                '&:hover': {
+                  boxShadow: theme.shadows[4],
+                },
+                '&:disabled': {
+                  backgroundColor: alpha(theme.palette.action.disabled, 0.3),
+                  color: alpha(theme.palette.action.disabled, 0.5),
+                }
+              }}
+            >
+              Next ({selectedCourses.size} course{selectedCourses.size !== 1 ? 's' : ''})
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* File Selection Dialog */}
+        <Dialog
+          open={isOpenFileSelection}
+          onClose={() => setIsOpenFileSelection(false)}
+          maxWidth="md"
+          fullWidth
+          sx={{
+            '.MuiDialog-paper': {
+              borderRadius: 3,
+              boxShadow: theme.shadows[24],
+              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+            },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              py: 3,
+              px: 3,
+              borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              backgroundColor: alpha(theme.palette.primary.main, 0.02)
+            }}
+          >
+            <DescriptionIcon sx={{ color: theme.palette.primary.main, fontSize: 28 }} />
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                Select Files to Download
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Choose which files you want to download from the selected courses
+              </Typography>
+            </Box>
+          </DialogTitle>
+
+          <DialogContent sx={{ p: 0 }}>
+            <Box sx={{ p: 2, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={selectAllFiles}
+                    onChange={handleSelectAllFiles}
+                    icon={<CheckBoxOutlineBlankIcon />}
+                    checkedIcon={<CheckBoxIcon />}
+                    sx={{
+                      color: theme.palette.primary.main,
+                      '&.Mui-checked': {
+                        color: theme.palette.primary.main,
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Select All Files
+                  </Typography>
+                }
+                sx={{ m: 0 }}
+              />
+            </Box>
+
+            <List sx={{ p: 0, maxHeight: 400, overflow: 'auto' }}>
+              {getFilesFromSelectedCourses().map((assignment, index) => (
+                <ListItem key={assignment.assignment_id} disablePadding>
+                  <ListItemButton
+                    onClick={() => handleFileSelection(assignment.assignment_id)}
+                    sx={{
+                      py: 2,
+                      px: 3,
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                      },
+                      backgroundColor: selectedFiles.has(assignment.assignment_id) 
+                        ? alpha(theme.palette.primary.main, 0.08) 
+                        : 'transparent'
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <Checkbox
+                        checked={selectedFiles.has(assignment.assignment_id)}
+                        icon={<CheckBoxOutlineBlankIcon />}
+                        checkedIcon={<CheckBoxIcon />}
+                        sx={{
+                          color: theme.palette.primary.main,
+                          '&.Mui-checked': {
+                            color: theme.palette.primary.main,
+                          },
+                        }}
+                      />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                          {assignment.title || `Assignment ${assignment.assignment_id}`}
+                        </Typography>
+                      }
+                      secondary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            {assignment.file?.name || 'No file name'}
+                          </Typography>
+                          <Chip
+                            label={assignment.course_id?.course_name || 'Unknown Course'}
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            sx={{ fontSize: '0.75rem', height: 20 }}
+                          />
+                          <Chip
+                            label={assignment.status || 'Unknown'}
+                            size="small"
+                            color={getStatusColor(assignment.status || '')}
+                            variant="outlined"
+                            sx={{ fontSize: '0.75rem', height: 20 }}
+                          />
+                        </Box>
+                      }
+                    />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </DialogContent>
+
+          <DialogActions
+            sx={{
+              p: 3,
+              borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              backgroundColor: alpha(theme.palette.grey[50], 0.5)
+            }}
+          >
+            <Button
+              onClick={() => {
+                setIsOpenFileSelection(false)
+                setIsOpenCourseSelection(true)
+              }}
+              variant="outlined"
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1,
+                textTransform: 'none',
+                fontWeight: 600,
+                borderWidth: 2,
+                '&:hover': {
+                  borderWidth: 2,
+                }
+              }}
+            >
+              Back
+            </Button>
+            <Button
+              onClick={() => setIsOpenFileSelection(false)}
+              variant="outlined"
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1,
+                textTransform: 'none',
+                fontWeight: 600,
+                borderWidth: 2,
+                '&:hover': {
+                  borderWidth: 2,
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDownloadSelectedFiles}
+              variant="contained"
+              disabled={selectedFiles.size === 0 || isDownloading}
               startIcon={isDownloading ? <ArchiveIcon /> : <DownloadIcon />}
               sx={{
                 borderRadius: 2,
@@ -1420,7 +1680,7 @@ const CreateAssignment = (props) => {
                 }
               }}
             >
-              {isDownloading ? 'Downloading...' : `Download (${selectedCourses.size} course${selectedCourses.size !== 1 ? 's' : ''})`}
+              {isDownloading ? 'Downloading...' : `Download (${selectedFiles.size} file${selectedFiles.size !== 1 ? 's' : ''})`}
             </Button>
           </DialogActions>
         </Dialog>
