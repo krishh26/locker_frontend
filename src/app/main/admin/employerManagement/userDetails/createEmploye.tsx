@@ -60,7 +60,7 @@ const CreateEmployerDetails = (props) => {
             address_1: "",
             address_2: "",
             city: "",
-            county: "",
+            employer_county: "",
             country: "",
             postal_code: "",
             business_category: "",
@@ -423,18 +423,18 @@ const CreateEmployerDetails = (props) => {
                                             County <span style={{ color: "red" }}>*</span>
                                         </Typography>
                                         <Controller
-                                            name="county"
+                                            name="employer_county"
                                             control={control}
                                             rules={{ required: "County is required" }}
                                             render={({ field }) => (
-                                                <div data-field="county">
+                                                <div data-field="employer_county">
                                                     <TextField
                                                         {...field}
                                                         placeholder="County"
                                                         size="small"
                                                         fullWidth
-                                                        error={!!errors.county}
-                                                        helperText={errors.county?.message}
+                                                        error={!!errors.employer_county}
+                                                        helperText={errors.employer_county?.message}
                                                     />
                                                 </div>
                                             )}

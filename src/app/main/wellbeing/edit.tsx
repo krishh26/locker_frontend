@@ -7,7 +7,6 @@ import ResourceForm from 'src/app/component/ResourceForm/ResourceForm';
 import {
   useGetAdminResourcesQuery,
   useUpdateResourceMutation,
-  type UpdateResourcePayload,
 } from 'app/store/api/resourcesApi';
 
 const EditResourcePage: React.FC = () => {
@@ -30,7 +29,7 @@ const EditResourcePage: React.FC = () => {
   // Find the specific resource by ID
   const resource = resourcesData?.data?.find(r => r.id === id);
 
-  const handleSubmit = async (data: UpdateResourcePayload) => {
+  const handleSubmit = async (data: any) => {
     if (!id) {
       enqueueSnackbar('Resource ID not found', { variant: 'error' });
       return;

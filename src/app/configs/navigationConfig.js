@@ -95,6 +95,14 @@ const navigationConfig = [
     visible: [UserRole.Learner],
   },
   {
+    id: 'dashboards.learnerWellbeing',
+    title: 'Wellbeing Resources',
+    type: 'item',
+    icon: 'heroicons-outline:heart',
+    url: '/learner-wellbeing',
+    visible: [UserRole.Learner],
+  },
+  {
     id: 'dashboards.createAssignment',
     title: 'Assignment',
     type: 'item',

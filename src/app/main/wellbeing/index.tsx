@@ -318,7 +318,7 @@ const AdminResourcesPage: React.FC = () => {
                 <TableCell>Status</TableCell>
                 <TableCell>Created At</TableCell>
                 <TableCell>Created By</TableCell>
-                <TableCell align="center">Actions</TableCell>
+                {/* <TableCell align="center">Actions</TableCell> */}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -374,14 +374,14 @@ const AdminResourcesPage: React.FC = () => {
                         {resource.createdByName}
                       </ThemedTypography>
                     </TableCell>
-                    <TableCell align="center">
+                    {/* <TableCell align="center">
                       <IconButton
                         onClick={(e) => handleMenuOpen(e, resource)}
                         size="small"
                       >
                         <MoreVertIcon />
                       </IconButton>
-                    </TableCell>
+                    </TableCell> */}
                   </TableRow>
                 ))
               )}
@@ -451,12 +451,12 @@ const AdminResourcesPage: React.FC = () => {
           </ListItemIcon>
           <ListItemText>Edit</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
+        {/* <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
           <ListItemIcon>
             <DeleteIcon fontSize="small" color="error" />
           </ListItemIcon>
           <ListItemText>Delete</ListItemText>
-        </MenuItem>
+        </MenuItem> */}
       </Menu>
 
       {/* Delete Confirmation Dialog */}

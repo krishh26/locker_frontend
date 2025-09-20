@@ -33,6 +33,7 @@ import CaseloadConfig from '../main/caseload/caseloadConfig'
 import TrainerRiskRatingConfig from '../main/trainer-risk-rating/trainer-risk-rating-config'
 import ThemeDemoConfig from '../pages/themedemoConfig'
 import WellbeingConfig from '../main/wellbeing/wellbeingConfig'
+import LearnerWellbeingConfig from '../main/learner-wellbeing/learnerWellbeingConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -65,7 +66,8 @@ const routeConfigs = [
   FundingBandConfig,
   CaseloadConfig,
   TrainerRiskRatingConfig,
-  ThemeDemoConfig
+  ThemeDemoConfig,
+  LearnerWellbeingConfig
 ]
 
 const routes = [
