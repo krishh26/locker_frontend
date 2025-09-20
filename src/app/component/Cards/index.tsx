@@ -207,13 +207,16 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
     } else if (id === 3) {
       navigate('/cpd')
     } else if (id === 5) {
-      navigate('/timeLog');
+      navigate('/learner-wellbeing');
     } else if (id === 4) {
       navigate('/resources-card');
     } else if (id === 6) {
       navigate('/skillsScan');
     } else if (id === 7) {
       navigate(`/session-list/${learner?.learner_id}`);
+    }
+    else if (id === 9) {
+      navigate('/timeLog');
     }
   };
   

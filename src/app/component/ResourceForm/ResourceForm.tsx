@@ -180,7 +180,7 @@ export interface ResourceFormData {
 export interface ResourceFormProps {
   mode: 'add' | 'edit';
   initialData?: WellbeingResource;
-  onSubmit: (data: AddResourcePayload | UpdateResourcePayload) => Promise<void>;
+  onSubmit: (formData: FormData) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -240,8 +240,16 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
 
   const handleFormSubmit = async (data: ResourceFormData) => {
     try {
-      let location: string;
-
+      // Create FormData object
+      const formData = new FormData();
+      
+      // Add name
+      formData.append('name', data.resource_name);
+      
+      // Add resourceType
+      formData.append('resourceType', data.resourceType);
+      
+      // Add file or URL
       if (data.resourceType === 'FILE') {
         if (!uploadedFile && !initialData) {
           setFileUploadError('Please upload a file');
@@ -249,27 +257,33 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
         }
         
         if (uploadedFile) {
-          // In a real implementation, you would upload the file here
-          // For now, we'll use a placeholder path
-          location = `/uploads/resources/${uploadedFile.name}`;
-        } else {
-          // Use existing file path for edit mode
-          location = typeof data.location === 'string' ? data.location : '/uploads/resources/existing-file';
+          // Append the actual file to FormData
+          formData.append('file', uploadedFile);
+        } else if (initialData && isEdit) {
+          // For edit mode, if no new file is uploaded, we might need to handle existing file
+          // This depends on your backend implementation
+          formData.append('file', 'existing');
         }
       } else {
-        location = data.location as string;
+        // For URL type, append the URL as a string
+        formData.append('url', data.location as string);
+      }
+      
+      // Add description
+      formData.append('description', data.description || '');
+      
+      // Add additional fields if needed
+      if (isEdit) {
+        formData.append('isActive', data.isActive.toString());
       }
 
-      const payload = {
-        resource_name: data.resource_name,
-        description: data.description,
-        content: location,
-        category: 'wellbeing', // Default category
-        tags: [], // Default empty tags
-        ...(isEdit && { isActive: data.isActive }),
-      };
+      // Log FormData contents for debugging
+      formData.forEach((value, key) => {
+        console.log(`${key}:`, value);
+      })
 
-      await onSubmit(payload);
+      // Pass FormData to the onSubmit function
+      await onSubmit(formData as any);
     } catch (error) {
       console.error('Form submission error:', error);
       enqueueSnackbar('Failed to save resource', { variant: 'error' });
@@ -277,7 +291,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
   };
 
   return (
-    <ThemedPaper elevation={2} sx={{ p: 4, maxWidth: 800, mx: 'auto' }}>
+    <ThemedPaper elevation={2} sx={{ p: 4, width: 800, mx: 'auto' }}>
       <ThemedTypography variant="h5" gutterBottom>
         {isEdit ? 'Edit Resource' : 'Add New Resource'}
       </ThemedTypography>

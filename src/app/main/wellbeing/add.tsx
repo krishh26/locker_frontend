@@ -5,7 +5,6 @@ import { useSnackbar } from 'notistack';
 import ResourceForm from 'src/app/component/ResourceForm/ResourceForm';
 import {
   useAddResourceMutation,
-  type AddResourcePayload,
 } from 'app/store/api/resourcesApi';
 
 const AddResourcePage: React.FC = () => {
@@ -14,7 +13,7 @@ const AddResourcePage: React.FC = () => {
   
   const [addResource, { isLoading }] = useAddResourceMutation();
 
-  const handleSubmit = async (data: AddResourcePayload) => {
+  const handleSubmit = async (data: any) => {
     try {
       await addResource(data).unwrap();
       enqueueSnackbar('Resource added successfully', { variant: 'success' });

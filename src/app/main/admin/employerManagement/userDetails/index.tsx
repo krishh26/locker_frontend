@@ -6,6 +6,10 @@ import {
   Select,
   TextField,
   Typography,
+  FormControl,
+  InputLabel,
+  Alert,
+  IconButton,
 } from "@mui/material";
 import {
   AdminRedirect,
@@ -17,15 +21,18 @@ import {
   SecondaryButtonOutlined,
 } from "src/app/component/Buttons";
 import { FileUploader } from "react-drag-drop-files";
+import { useState } from "react";
 import Breadcrumb from "src/app/component/Breadcrumbs";
 import Style from "./style.module.css";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { updateEmployerAPI, uploadPDF } from "app/store/employer";
 import MobileNumberInput from "src/app/component/Input/MobileNumberInput";
+import { useForm, Controller } from "react-hook-form";
+import { useEffect } from "react";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 const EmployerDetails = (props) => {
-
   const {
     setEditEmployer = () => { },
     setEmployerData = () => { },
@@ -33,35 +40,125 @@ const EmployerDetails = (props) => {
     handleDataUpdate,
     refetchEmployer
   } = props;
+    console.log("🚀 ~ EmployerDetails ~ employerData:", employerData)
 
   const navigate = useNavigate();
   const dispatch: any = useDispatch();
 
-  const createUser = Object.values(employerData).find((data) => data === "") === undefined;
+  const [uploadedFile, setUploadedFile] = useState(employerData?.file || null);
+  const [shouldScrollToError, setShouldScrollToError] = useState(false);
 
-  const updateUserHandler = async () => {
+  // UK Postcode validation regex
+  const ukPostcodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+    setValue,
+    watch,
+    trigger,
+  } = useForm({
+    mode: "onChange",
+    defaultValues: {
+      employer_name: employerData?.employer_name || "",
+      msi_employer_id: employerData?.msi_employer_id || "",
+      business_department: employerData?.business_department || "",
+      business_location: employerData?.business_location || "",
+      branch_code: employerData?.branch_code || "",
+      address_1: employerData?.address_1 || "",
+      address_2: employerData?.address_2 || "",
+      city: employerData?.city || "",
+      employer_county: employerData?.employer_county || "",
+      country: employerData?.country || "",
+      postal_code: employerData?.postal_code || "",
+      business_category: employerData?.business_category || "",
+      number_of_employees: employerData?.number_of_employees || "",
+      telephone: employerData?.telephone || "",
+      website: employerData?.website || "",
+      key_contact_name: employerData?.key_contact_name || "",
+      key_contact_number: employerData?.key_contact_number || "",
+      email: employerData?.email || "",
+      business_description: employerData?.business_description || "",
+      comments: employerData?.comments || "",
+      assessment_date: employerData?.assessment_date ? employerData.assessment_date.substr(0, 10) : null,
+      assessment_renewal_date: employerData?.assessment_renewal_date ? employerData.assessment_renewal_date.substr(0, 10) : null,
+      insurance_renewal_date: employerData?.insurance_renewal_date ? employerData.insurance_renewal_date.substr(0, 10) : null,
+    },
+  });
+
+  // Scroll to first error field when there are validation errors
+  useEffect(() => {
+    if (shouldScrollToError && Object.keys(errors).length > 0) {
+      const firstErrorField = Object.keys(errors)[0];
+      
+      // Try multiple selectors to find the input field
+      let errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+      
+      // If not found, try finding by input type
+      if (!errorElement) {
+        errorElement = document.querySelector(`input[name="${firstErrorField}"]`);
+      }
+      
+      // If still not found, try finding the TextField container
+      if (!errorElement) {
+        const fieldContainer = document.querySelector(`[data-field="${firstErrorField}"]`);
+        if (fieldContainer) {
+          errorElement = fieldContainer.querySelector('input');
+        }
+      }
+      
+      if (errorElement) {
+        errorElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        // Focus on the input after scrolling
+        setTimeout(() => {
+          (errorElement as HTMLInputElement).focus();
+        }, 500);
+      }
+      setShouldScrollToError(false);
+    }
+  }, [errors, shouldScrollToError]);
+
+  const updateUserHandler = async (data) => {
     try {
-      let response;
-      response = await dispatch(updateEmployerAPI(employerData));
-      refetchEmployer()
+      const payload = {  
+        ...data,
+        file: uploadedFile,
+        employer_id: employerData?.employer_id,
+      };
+      console.log("🚀 ~ updateUserHandler ~ payload:", payload)
+      await dispatch(updateEmployerAPI(payload));
+      refetchEmployer();
+      handleClose();
     } catch (err) {
       console.log(err);
-    } finally {
-      handleClose();
     }
   };
 
+  const onSubmit = async (data) => {
+    // Trigger validation for all fields
+    const isValid = await trigger();
+    
+    if (!isValid) {
+      // Set flag to scroll to first error
+      setShouldScrollToError(true);
+      return;
+    }
+    
+    // If validation passes, proceed with form submission
+    await updateUserHandler(data);
+  };
+
   const fileTypes = ["PDF"];
+  const handleFileChange = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
 
-  const handleChange = async (file) => {
-    const fromData = new FormData();
-    fromData.append("file", file);
-
-    const response = await dispatch(uploadPDF(fromData));
-    setEmployerData(prevState => ({
-      ...prevState,
-      file: response.data[0]
-    }));
+    const response = await dispatch(uploadPDF(formData));
+    setUploadedFile(response.data[0]);
   };
 
   const handleClose = () => {
@@ -69,666 +166,837 @@ const EmployerDetails = (props) => {
     setEditEmployer(false);
   };
 
-
   const formatDate = (date) => {
     if (!date) return "";
     const formattedDate = date.substr(0, 10);
     return formattedDate;
   };
 
+  const getErrorMessage = (error: any): string => {
+    if (error && typeof error === 'object' && 'message' in error) {
+      return error.message as string;
+    }
+    return "";
+  };
+
   return (
     <div>
-      <Breadcrumb
-        linkData={[AdminRedirect, EmployerRedirect]}
-        currPage="Create Employer"
-      />
+      <div className="mb-4 mx-20 flex items-center">
+        <IconButton 
+          onClick={handleClose}
+          sx={{ 
+            marginRight: 2,
+            color: "#1976d2"
+          }}
+        >
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          Edit Employer
+        </Typography>
+      </div>
       <div className="mb-20 mx-20">
-        <Card className="rounded-6 items-center " variant="outlined">
-          <div className="h-full flex flex-col">
-            <Box>
-              <Grid xs={12} className="p-10 font-600 border-b-2 bg-gray-100">
-                <p>Company</p>
-              </Grid>
-              <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-1/2">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Company Name
-                  </Typography>
-                  <TextField
-                    name="employer_name"
-                    value={employerData?.employer_name}
-                    size="small"
-                    placeholder="Company name"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/2">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    MIS Employer ID
-                  </Typography>
-                  <TextField
-                    name="msi_employer_id"
-                    type="number"
-                    value={employerData?.msi_employer_id}
-                    size="small"
-                    placeholder="Enter ID"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-              </Box>
-              <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Business Department
-                  </Typography>
-
-                  <TextField
-                    name="business_department"
-                    placeholder="Business Department"
-                    value={employerData?.business_department}
-                    size="small"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Business Location
-                  </Typography>
-                  <TextField
-                    name="business_location"
-                    placeholder="Business Location"
-                    value={employerData?.business_location}
-                    size="small"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/3 ">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Branch Code
-                  </Typography>
-                  <TextField
-                    name="branch_code"
-                    type="number"
-                    placeholder="Branch Code"
-                    value={employerData?.branch_code}
-                    size="small"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-              </Box>
-              <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-1/2">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Address 1
-                  </Typography>
-                  <TextField
-                    name="address_1"
-                    value={employerData?.address_1}
-                    size="small"
-                    placeholder="Address"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/2">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Address 2
-                  </Typography>
-                  <TextField
-                    name="address_2"
-                    value={employerData?.address_2}
-                    size="small"
-                    placeholder="Address"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-              </Box>
-              <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Town/City
-                  </Typography>
-
-                  <TextField
-                    name="city"
-                    placeholder="City"
-                    value={employerData?.city}
-                    size="small"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Country
-                  </Typography>
-                  <TextField
-                    name="country"
-                    placeholder="Country"
-                    value={employerData?.country}
-                    size="small"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/3 ">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Postal Code
-                  </Typography>
-                  <TextField
-                    name="postal_code"
-                    placeholder="Postal Code"
-                    type="number"
-                    value={employerData?.postal_code}
-                    size="small"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-              </Box>
-            </Box>
-
-            <Box>
-              <Grid xs={12} className="p-10 font-600 border-y-2 bg-gray-100 ">
-                <p>Company Details</p>
-              </Grid>
-
-              <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    A44 - Employer Identifier / EDRS Number
-                  </Typography>
-                  <TextField
-                    name="edrs_number"
-                    type="number"
-                    value={employerData?.edrs_number}
-                    size="small"
-                    placeholder="ID"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Business Category
-                  </Typography>
-                  <Select
-                    name="business_category"
-                    value={employerData?.business_category}
-                    size="small"
-                    required
-                    fullWidth
-                    labelId="demo-simple-select-label"
-                    id="demo-simple-select"
-                    label="Category"
-                    onChange={handleDataUpdate}
-                  >
-                    <MenuItem value={"Media and creative services"}>Media and creative services</MenuItem>
-                    <MenuItem value={"Mining, energy and utilities"}>Mining, energy and utilities</MenuItem>
-                    <MenuItem value={"Personal services"}>Personal services</MenuItem>
-                    <MenuItem value={"Professional and business services"}>Professional and business services</MenuItem>
-                    <MenuItem value={"Retail, hire and repair"}>Retail, hire and repair</MenuItem>
-                    <MenuItem value={"Transport and distribution"}>Transport and distribution</MenuItem>
-                    <MenuItem value={"Wholesale"}>Wholesale</MenuItem>
-                    <MenuItem value={"Agriculture, forestry and fishing"}>Agriculture, forestry and fishing</MenuItem>
-                    <MenuItem value={"Arts, sports and recreation"}>Arts, sports and recreation</MenuItem>
-                    <MenuItem value={"Catering and accommodation"}>Catering and accommodation</MenuItem>
-                    <MenuItem value={"Construction"}>Construction</MenuItem>
-                    <MenuItem value={"Education"}>Education</MenuItem>
-                    <MenuItem value={"Health and social care services"}>Health and social care services</MenuItem>
-                    <MenuItem value={"IT and telecommunications servicesManufacturing"}>IT and telecommunications servicesManufacturing</MenuItem>
-                    <MenuItem value={"Manufacturing"}>Manufacturing</MenuItem>
-                    <MenuItem value={"Animal Care"}>Animal Care</MenuItem>
-                  </Select>
-                </div>
-
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    # of Employee
-                  </Typography>
-                  <TextField
-                    name="number"
-                    type="number"
-                    value={employerData?.number}
-                    size="small"
-                    placeholder="number"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-              </Box>
-
-              <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    External Data Code
-                  </Typography>
-
-                  <TextField
-                    name="external_data_code"
-                    placeholder="Code"
-                    type="number"
-                    value={employerData?.external_data_code}
-                    size="small"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Telephone
-                  </Typography>
-                  {/* <TextField
-                    name="telephone"
-                    type="number"
-                    placeholder="Phone Number"
-                    value={employerData?.telephone}
-                    size="small"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  /> */}
-                  <MobileNumberInput
-                    value={employerData?.telephone}
-                    handleChange={handleDataUpdate}
-                    name={"telephone"}
-                  />
-                </div>
-
-                <div className="w-1/3 ">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Website
-                  </Typography>
-                  <TextField
-                    name="website"
-                    placeholder="Link"
-                    value={employerData?.website}
-                    size="small"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-              </Box>
-
-              <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-1/2">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Key Contact
-                  </Typography>
-                  <TextField
-                    name="key_contact"
-                    value={employerData?.key_contact}
-                    size="small"
-                    placeholder="Contact"
-                    required
-                    type="number"
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/2">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Email
-                  </Typography>
-                  <TextField
-                    name="email"
-                    value={employerData?.email}
-                    size="small"
-                    type="email"
-                    placeholder="Email"
-                    required
-                    fullWidth
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-              </Box>
-            </Box>
-
-            <Box>
-              <Grid xs={12} className="p-10 font-600 border-y-2 bg-gray-100 ">
-                <p>Business Description / Comments</p>
-              </Grid>
-
-              <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-1/2">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Business Description
-                  </Typography>
-                  <TextField
-                    name="business_description"
-                    value={employerData?.business_description}
-                    size="small"
-                    placeholder="Business Description"
-                    fullWidth
-                    multiline
-                    rows={8}
-                    id="outlined-multiline-static"
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/2">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Comments
-                  </Typography>
-                  <TextField
-                    name="comments"
-                    value={employerData?.comments}
-                    size="small"
-                    placeholder="Comments"
-                    required
-                    fullWidth
-                    multiline
-                    rows={8}
-                    id="outlined-multiline-static"
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-              </Box>
-            </Box>
-
-            <Grid>
-              <Grid xs={12} className="p-10 font-600 border-y-2 bg-gray-100 ">
-                <p>Assesment Date</p>
-              </Grid>
-
-              <Grid className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Health and Safety Assessment Date
-                  </Typography>
-                  <TextField
-                    name="assessment_date"
-                    type="date"
-                    value={formatDate(employerData?.assessment_date)}
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Health and Safety Assessment renewal Date
-                  </Typography>
-                  <TextField
-                    name="assessment_renewal_date"
-                    type="date"
-                    value={formatDate(employerData?.assessment_renewal_date)}
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-
-                <div className="w-1/3">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Liability Insurance renewal date
-                  </Typography>
-                  <TextField
-                    name="insurance_renewal_date"
-                    type="date"
-                    value={formatDate(employerData?.insurance_renewal_date)}
-                    onChange={handleDataUpdate}
-                  />
-                </div>
-              </Grid>
-            </Grid>
-            <Box>
-
-              <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
-                <div className="w-full">
-                  <Typography
-                    sx={{
-                      fontSize: "0.9vw",
-                      marginBottom: "0.5rem",
-                      fontWeight: "500",
-                    }}
-                    className={Style.name}
-                  >
-                    Choose File for Employer
-                  </Typography>
-
-                  <FileUploader
-                    children={
-                      <div
-                        style={{
-                          border: "1px dotted lightgray",
-                          padding: "5rem",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <div className="flex justify-center mt-8">
-                          <img
-                            src="assets/images/svgImage/uploadimage.svg"
-                            alt="Alert"
-                            className="w-64 pb-8 "
+        <Card className="rounded-6 items-center" variant="outlined">
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="h-full flex flex-col">
+              <Box>
+                <Grid xs={12} className="p-10 font-600 border-b-2 bg-gray-100">
+                  <p>Company</p>
+                </Grid>
+                
+                {/* Company Name and MIS ID */}
+                <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Company Name <span style={{ color: "red" }}>*</span>
+                    </Typography>
+                    <Controller
+                      name="employer_name"
+                      control={control}
+                      rules={{ required: "Company Name is required" }}
+                      render={({ field }) => (
+                        <div data-field="employer_name">
+                          <TextField
+                            {...field}
+                            size="small"
+                            placeholder="Company name"
+                            fullWidth
+                            error={!!errors.employer_name}
+                            helperText={getErrorMessage(errors.employer_name)}
                           />
                         </div>
-                        {employerData.file ? (
-                          <p className="text-center mb-4">{employerData.file.url}</p>
-                        ) : (
-                          <>
-                            <p className="text-center mb-4">
-                              Drag and drop your files here or{" "}
-                              <a className="text-blue-500 font-500 ">Browse</a>
-                            </p>
-                            <p className="text-center mb-4">
-                              Max 10MB files are allowed
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    }
-                    handleChange={handleChange}
-                    name="file"
-                    types={fileTypes}
-                  />
-                </div>
-              </Box>
-            </Box>
+                      )}
+                    />
+                  </div>
 
-            <Box style={{ margin: "auto 1rem 1rem auto" }}>
-              {false ? (
-                <LoadingButton />
-              ) : (
-                <>
-                  <SecondaryButtonOutlined
-                    name="Cancel"
-                    onClick={handleClose}
-                    style={{ width: "10rem", marginRight: "2rem" }}
-                  />
-                  <SecondaryButton name={"Update"} disable={!createUser} style={{ width: "10rem" }} onClick={updateUserHandler} />
-                </>
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      MIS ID <span style={{ color: "red" }}>*</span>
+                    </Typography>
+                    <Controller
+                      name="msi_employer_id"
+                      control={control}
+                      rules={{ required: "MIS ID is required" }}
+                      render={({ field }) => (
+                        <div data-field="msi_employer_id">
+                          <TextField
+                            {...field}
+                            type="number"
+                            size="small"
+                            placeholder="Enter ID"
+                            fullWidth
+                            error={!!errors.msi_employer_id}
+                            helperText={getErrorMessage(errors.msi_employer_id)}
+                          />
+                        </div>
+                      )}
+                    />
+                  </div>
+                </Box>
+
+                {/* Business Department, Location, Branch Code */}
+                <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-1/3">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Business Department
+                    </Typography>
+                    <Controller
+                      name="business_department"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          placeholder="Business Department"
+                          size="small"
+                          fullWidth
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/3">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Business Location
+                    </Typography>
+                    <Controller
+                      name="business_location"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          placeholder="Business Location"
+                          size="small"
+                          fullWidth
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/3">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Branch Code
+                    </Typography>
+                    <Controller
+                      name="branch_code"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          type="number"
+                          placeholder="Branch Code"
+                          size="small"
+                          fullWidth
+                        />
+                      )}
+                    />
+                  </div>
+                </Box>
+
+                {/* Address 1 and Address 2 */}
+                <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Address 1 <span style={{ color: "red" }}>*</span>
+                    </Typography>
+                    <Controller
+                      name="address_1"
+                      control={control}
+                      rules={{ required: "Address 1 is required" }}
+                      render={({ field }) => (
+                        <div data-field="address_1">
+                          <TextField
+                            {...field}
+                            size="small"
+                            placeholder="Address"
+                            fullWidth
+                            error={!!errors.address_1}
+                            helperText={getErrorMessage(errors.address_1)}
+                          />
+                        </div>
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Address 2 <span style={{ color: "red" }}>*</span>
+                    </Typography>
+                    <Controller
+                      name="address_2"
+                      control={control}
+                      rules={{ required: "Address 2 is required" }}
+                      render={({ field }) => (
+                        <div data-field="address_2">
+                          <TextField
+                            {...field}
+                            size="small"
+                            placeholder="Address"
+                            fullWidth
+                            error={!!errors.address_2}
+                            helperText={getErrorMessage(errors.address_2)}
+                          />
+                        </div>
+                      )}
+                    />
+                  </div>
+                </Box>
+
+                {/* Town, County, Country, Postcode */}
+                <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-1/4">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Town <span style={{ color: "red" }}>*</span>
+                    </Typography>
+                    <Controller
+                      name="city"
+                      control={control}
+                      rules={{ required: "Town is required" }}
+                      render={({ field }) => (
+                        <div data-field="city">
+                          <TextField
+                            {...field}
+                            placeholder="City"
+                            size="small"
+                            fullWidth
+                            error={!!errors.city}
+                            helperText={getErrorMessage(errors.city)}
+                          />
+                        </div>
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/4">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      County <span style={{ color: "red" }}>*</span>
+                    </Typography>
+                    <Controller
+                      name="employer_county"
+                      control={control}
+                      rules={{ required: "County is required" }}
+                      render={({ field }) => (
+                        <div data-field="employer_county">
+                          <TextField
+                            {...field}
+                            placeholder="County"
+                            size="small"
+                            fullWidth
+                            error={!!errors.employer_county}
+                            helperText={getErrorMessage(errors.employer_county)}
+                          />
+                        </div>
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/4">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Country <span style={{ color: "red" }}>*</span>
+                    </Typography>
+                    <Controller
+                      name="country"
+                      control={control}
+                      rules={{ required: "Country is required" }}
+                      render={({ field }) => (
+                        <div data-field="country">
+                          <TextField
+                            {...field}
+                            placeholder="Country"
+                            size="small"
+                            fullWidth
+                            error={!!errors.country}
+                            helperText={getErrorMessage(errors.country)}
+                          />
+                        </div>
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/4">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Postcode <span style={{ color: "red" }}>*</span>
+                    </Typography>
+                    <Controller
+                      name="postal_code"
+                      control={control}
+                      rules={{
+                        required: "Postcode is required",
+                      }}
+                      render={({ field }) => (
+                        <div data-field="postal_code">
+                          <TextField
+                            {...field}
+                            placeholder="e.g., SW1A 1AA"
+                            size="small"
+                            fullWidth
+                            error={!!errors.postal_code}
+                            helperText={getErrorMessage(errors.postal_code)}
+                          />
+                        </div>
+                      )}
+                    />
+                  </div>
+                </Box>
+              </Box>
+
+              <Box>
+                <Grid xs={12} className="p-10 font-600 border-y-2 bg-gray-100">
+                  <p>Company Details</p>
+                </Grid>
+
+                {/* Business Category and Number of Employees */}
+                <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Business Category
+                    </Typography>
+                    <Controller
+                      name="business_category"
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl fullWidth size="small">
+                          <Select
+                            {...field}
+                            displayEmpty
+                            labelId="business-category-label"
+                            id="business-category-select"
+                          >
+                            <MenuItem value="">
+                              <em>Select Category</em>
+                            </MenuItem>
+                            <MenuItem value="Media and creative services">Media and creative services</MenuItem>
+                            <MenuItem value="Mining, energy and utilities">Mining, energy and utilities</MenuItem>
+                            <MenuItem value="Personal services">Personal services</MenuItem>
+                            <MenuItem value="Professional and business services">Professional and business services</MenuItem>
+                            <MenuItem value="Retail, hire and repair">Retail, hire and repair</MenuItem>
+                            <MenuItem value="Transport and distribution">Transport and distribution</MenuItem>
+                            <MenuItem value="Wholesale">Wholesale</MenuItem>
+                            <MenuItem value="Agriculture, forestry and fishing">Agriculture, forestry and fishing</MenuItem>
+                            <MenuItem value="Arts, sports and recreation">Arts, sports and recreation</MenuItem>
+                            <MenuItem value="Catering and accommodation">Catering and accommodation</MenuItem>
+                            <MenuItem value="Construction">Construction</MenuItem>
+                            <MenuItem value="Education">Education</MenuItem>
+                            <MenuItem value="Health and social care services">Health and social care services</MenuItem>
+                            <MenuItem value="IT and telecommunications services">IT and telecommunications services</MenuItem>
+                            <MenuItem value="Manufacturing">Manufacturing</MenuItem>
+                            <MenuItem value="Animal Care">Animal Care</MenuItem>
+                          </Select>
+                        </FormControl>
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Number of employees
+                    </Typography>
+                    <Controller
+                      name="number_of_employees"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          type="number"
+                          size="small"
+                          placeholder="Number of employees"
+                          fullWidth
+                        />
+                      )}
+                    />
+                  </div>
+                </Box>
+
+                {/* Telephone and Website */}
+                <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Telephone
+                    </Typography>
+                    <Controller
+                      name="telephone"
+                      control={control}
+                      render={({ field }) => (
+                        <MobileNumberInput
+                          value={field.value}
+                          handleChange={(e) => field.onChange(e)}
+                          name="telephone"
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Website
+                    </Typography>
+                    <Controller
+                      name="website"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          placeholder="https://example.com"
+                          size="small"
+                          fullWidth
+                        />
+                      )}
+                    />
+                  </div>
+                </Box>
+
+                {/* Key Contact Name, Key Contact Number, and Email */}
+                <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-1/3">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Key Contact Name
+                    </Typography>
+                    <Controller
+                      name="key_contact_name"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          size="small"
+                          placeholder="Contact Name"
+                          fullWidth
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/3">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Key Contact Number
+                    </Typography>
+                    <Controller
+                      name="key_contact_number"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          size="small"
+                          placeholder="Contact Number"
+                          fullWidth
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/3">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Email <span style={{ color: "red" }}>*</span>
+                    </Typography>
+                    <Controller
+                      name="email"
+                      control={control}
+                      rules={{
+                        required: "Email is required",
+                        pattern: {
+                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                          message: "Please enter a valid email address"
+                        }
+                      }}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          size="small"
+                          type="email"
+                          placeholder="Email"
+                          fullWidth
+                          disabled
+                          error={!!errors.email}
+                          helperText={getErrorMessage(errors.email)}
+                        />
+                      )}
+                    />
+                  </div>
+                </Box>
+              </Box>
+
+              <Box>
+                <Grid xs={12} className="p-10 font-600 border-y-2 bg-gray-100">
+                  <p>Business Description / Comments</p>
+                </Grid>
+
+                <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Business Description
+                    </Typography>
+                    <Controller
+                      name="business_description"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          size="small"
+                          placeholder="Business Description"
+                          fullWidth
+                          multiline
+                          rows={8}
+                          id="business-description"
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/2">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Comments
+                    </Typography>
+                    <Controller
+                      name="comments"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          size="small"
+                          placeholder="Comments"
+                          fullWidth
+                          multiline
+                          rows={8}
+                          id="comments"
+                        />
+                      )}
+                    />
+                  </div>
+                </Box>
+              </Box>
+
+              <Box>
+                <Grid xs={12} className="p-10 font-600 border-y-2 bg-gray-100">
+                  <p>Assessment Date</p>
+                </Grid>
+
+                <Grid className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-1/3">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Health and Safety Assessment Date
+                    </Typography>
+                    <Controller
+                      name="assessment_date"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          type="date"
+                          size="small"
+                          fullWidth
+                          InputLabelProps={{
+                            shrink: true,
+                          }}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/3">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Health and Safety Assessment Renewal Date
+                    </Typography>
+                    <Controller
+                      name="assessment_renewal_date"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          type="date"
+                          size="small"
+                          fullWidth
+                          InputLabelProps={{
+                            shrink: true,
+                          }}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="w-1/3">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Liability Insurance Renewal Date
+                    </Typography>
+                    <Controller
+                      name="insurance_renewal_date"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          type="date"
+                          size="small"
+                          fullWidth
+                          InputLabelProps={{
+                            shrink: true,
+                          }}
+                        />
+                      )}
+                    />
+                  </div>
+                </Grid>
+              </Box>
+
+              <Box>
+                <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+                  <div className="w-full">
+                    <Typography
+                      sx={{
+                        fontSize: "0.9vw",
+                        marginBottom: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                      className={Style.name}
+                    >
+                      Choose File for Employer
+                    </Typography>
+
+                    <FileUploader
+                      children={
+                        <div
+                          style={{
+                            border: "1px dotted lightgray",
+                            padding: "5rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <div className="flex justify-center mt-8">
+                            <img
+                              src="assets/images/svgImage/uploadimage.svg"
+                              alt="Upload"
+                              className="w-64 pb-8"
+                            />
+                          </div>
+                          {uploadedFile ? (
+                            <p className="text-center mb-4">{uploadedFile.key?.split('/').pop() || uploadedFile.url}</p>
+                          ) : (
+                            <>
+                              <p className="text-center mb-4">
+                                Drag and drop your files here or{" "}
+                                <a className="text-blue-500 font-500">Browse</a>
+                              </p>
+                              <p className="text-center mb-4">
+                                Max 10MB files are allowed
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      }
+                      handleChange={handleFileChange}
+                      name="file"
+                      types={fileTypes}
+                    />
+                  </div>
+                </Box>
+              </Box>
+
+              {/* Error Display for Required Fields */}
+              {Object.keys(errors).length > 0 && (
+                <Box className="m-12">
+                  <Alert severity="error">
+                    Please fill in all required fields marked with *
+                  </Alert>
+                </Box>
               )}
-            </Box>
-          </div>
+
+              <Box style={{ margin: "auto 1rem 1rem auto" }}>
+                {false ? (
+                  <LoadingButton />
+                ) : (
+                  <>
+                    <SecondaryButtonOutlined
+                      name="Cancel"
+                      onClick={handleClose}
+                      style={{ width: "10rem", marginRight: "2rem" }}
+                    />
+                    <SecondaryButton
+                      name="Update"
+                      style={{ width: "10rem" }}
+                      type="submit"
+                    />
+                  </>
+                )}
+              </Box>
+            </div>
+          </form>
         </Card>
       </div>
     </div>

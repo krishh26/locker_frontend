@@ -14,6 +14,8 @@ export interface WellbeingResource {
   updatedAt: string;
   createdByName: string;
   updatedBy: string;
+  resourceType: 'FILE' | 'URL';
+  lastOpenedDate?: string;
 }
 
 // Types for LearnerResourceActivity
