@@ -38,7 +38,7 @@ const EditResourcePage: React.FC = () => {
     try {
       await updateResource({ id, payload: data }).unwrap();
       enqueueSnackbar('Resource updated successfully', { variant: 'success' });
-      navigate('/admin/resources');
+      navigate('/wellbeing/resources');
     } catch (error) {
       console.error('Error updating resource:', error);
       enqueueSnackbar('Failed to update resource', { variant: 'error' });
@@ -47,7 +47,7 @@ const EditResourcePage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate('/admin/resources');
+    navigate('/wellbeing/resources');
   };
 
   // Loading state

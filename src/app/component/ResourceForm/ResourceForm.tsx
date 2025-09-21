@@ -155,7 +155,7 @@ const fileTypes = [
 ];
 
 // Form validation schema
-const createValidationSchema = (isEdit: boolean) => {
+const createValidationSchema = (isEdit: boolean, includeFeedback: boolean = false) => {
   return yup.object().shape({
     resource_name: yup.string().required('Resource name is required'),
     resourceType: yup.string().oneOf(['FILE', 'URL'], 'Resource type is required').required('Resource type is required'),
@@ -166,6 +166,7 @@ const createValidationSchema = (isEdit: boolean) => {
     }),
     description: yup.string().optional(),
     isActive: yup.boolean().default(true),
+    feedback: includeFeedback ? yup.string().optional() : yup.string().optional(),
   });
 };
 
@@ -175,14 +176,17 @@ export interface ResourceFormData {
   location: string | File;
   description: string;
   isActive: boolean;
+  feedback?: string;
 }
 
 export interface ResourceFormProps {
-  mode: 'add' | 'edit';
+  mode: 'add' | 'edit' | 'feedback';
   initialData?: WellbeingResource;
   onSubmit: (formData: FormData) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
+  onFeedbackSubmit?: (feedback: string) => Promise<void>;
+  showFeedback?: boolean;
 }
 
 const ResourceForm: React.FC<ResourceFormProps> = ({
@@ -191,6 +195,8 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
   onSubmit,
   onCancel,
   isLoading = false,
+  onFeedbackSubmit,
+  showFeedback = false,
 }) => {
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
@@ -198,6 +204,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
   const [fileUploadError, setFileUploadError] = useState<string>('');
 
   const isEdit = mode === 'edit';
+  const isFeedback = mode === 'feedback';
 
   const {
     control,
@@ -207,13 +214,14 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
     formState: { errors },
     reset,
   } = useForm<ResourceFormData>({
-    resolver: yupResolver(createValidationSchema(isEdit)),
+    resolver: yupResolver(createValidationSchema(isEdit, showFeedback || isFeedback)),
     defaultValues: {
       resource_name: initialData?.resource_name || '',
-      resourceType: initialData?.content?.startsWith('http') ? 'URL' : 'FILE',
-      location: initialData?.content || '',
+      resourceType: initialData?.location?.startsWith('http') ? 'URL' : 'FILE',
+      location: initialData?.location || '',
       description: initialData?.description || '',
       isActive: initialData?.isActive ?? true,
+      feedback: '',
     },
   });
 
@@ -224,8 +232,8 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
     if (initialData && isEdit) {
       reset({
         resource_name: initialData.resource_name,
-        resourceType: initialData.content?.startsWith('http') ? 'URL' : 'FILE',
-        location: initialData.content,
+        resourceType: initialData.location?.startsWith('http') ? 'URL' : 'FILE',
+        location: initialData.location,
         description: initialData.description,
         isActive: initialData.isActive,
       });
@@ -240,6 +248,12 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
 
   const handleFormSubmit = async (data: ResourceFormData) => {
     try {
+      // Handle feedback mode
+      if (isFeedback && onFeedbackSubmit && data.feedback) {
+        await onFeedbackSubmit(data.feedback);
+        return;
+      }
+
       // Create FormData object
       const formData = new FormData();
       
@@ -293,26 +307,48 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
   return (
     <ThemedPaper elevation={2} sx={{ p: 4, width: 800, mx: 'auto' }}>
       <ThemedTypography variant="h5" gutterBottom>
-        {isEdit ? 'Edit Resource' : 'Add New Resource'}
+        {isFeedback ? 'Submit Feedback' : isEdit ? 'Edit Resource' : 'Add New Resource'}
       </ThemedTypography>
 
       <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} sx={{ mt: 3 }}>
-        {/* Resource Name */}
-        <Controller
-          name="resource_name"
-          control={control}
-          render={({ field }) => (
-            <ThemedTextField
-              {...field}
-              fullWidth
-              label="Resource Name"
-              error={!!errors.resource_name}
-              helperText={errors.resource_name?.message}
-              margin="normal"
-              required
+        {/* Feedback Mode - Only show feedback field */}
+        {isFeedback ? (
+          <Controller
+            name="feedback"
+            control={control}
+            render={({ field }) => (
+              <ThemedTextField
+                {...field}
+                fullWidth
+                label="Your Feedback"
+                multiline
+                rows={6}
+                placeholder="Please share your thoughts about this resource..."
+                error={!!errors.feedback}
+                helperText={errors.feedback?.message || 'Share your experience with this resource'}
+                margin="normal"
+                required
+              />
+            )}
+          />
+        ) : (
+          <>
+            {/* Resource Name */}
+            <Controller
+              name="resource_name"
+              control={control}
+              render={({ field }) => (
+                <ThemedTextField
+                  {...field}
+                  fullWidth
+                  label="Resource Name"
+                  error={!!errors.resource_name}
+                  helperText={errors.resource_name?.message}
+                  margin="normal"
+                  required
+                />
+              )}
             />
-          )}
-        />
 
         {/* Resource Type */}
         <Controller
@@ -364,7 +400,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
                     ) : initialData && isEdit ? (
                       <Box>
                         <ThemedTypography variant="body1" color="text.secondary">
-                          Current file: {initialData.content}
+                          Current file: {initialData.location}
                         </ThemedTypography>
                         <ThemedTypography variant="body2" color="text.secondary">
                           Upload a new file to replace
@@ -453,24 +489,47 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
           />
         )}
 
-        {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 2, mt: 4, justifyContent: 'flex-end' }}>
-          <ThemedButton
-            variant="outlined"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
-            Cancel
-          </ThemedButton>
-          <ThemedButton
-            type="submit"
-            variant="contained"
-            disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} /> : null}
-          >
-            {isLoading ? 'Saving...' : isEdit ? 'Update Resource' : 'Add Resource'}
-          </ThemedButton>
-        </Box>
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 2, mt: 4, justifyContent: 'flex-end' }}>
+              <ThemedButton
+                variant="outlined"
+                onClick={onCancel}
+                disabled={isLoading}
+              >
+                Cancel
+              </ThemedButton>
+              <ThemedButton
+                type="submit"
+                variant="contained"
+                disabled={isLoading}
+                startIcon={isLoading ? <CircularProgress size={20} /> : null}
+              >
+                {isLoading ? 'Saving...' : isEdit ? 'Update Resource' : 'Add Resource'}
+              </ThemedButton>
+            </Box>
+          </>
+        )}
+
+        {/* Action Buttons for Feedback Mode */}
+        {isFeedback && (
+          <Box sx={{ display: 'flex', gap: 2, mt: 4, justifyContent: 'flex-end' }}>
+            <ThemedButton
+              variant="outlined"
+              onClick={onCancel}
+              disabled={isLoading}
+            >
+              Cancel
+            </ThemedButton>
+            <ThemedButton
+              type="submit"
+              variant="contained"
+              disabled={isLoading}
+              startIcon={isLoading ? <CircularProgress size={20} /> : null}
+            >
+              {isLoading ? 'Submitting...' : 'Submit Feedback'}
+            </ThemedButton>
+          </Box>
+        )}
       </Box>
     </ThemedPaper>
   );

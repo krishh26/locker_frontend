@@ -17,7 +17,7 @@ const AddResourcePage: React.FC = () => {
     try {
       await addResource(data).unwrap();
       enqueueSnackbar('Resource added successfully', { variant: 'success' });
-      navigate('/admin/resources');
+      navigate('/wellbeing/resources');
     } catch (error) {
       console.error('Error adding resource:', error);
       enqueueSnackbar('Failed to add resource', { variant: 'error' });
@@ -26,7 +26,7 @@ const AddResourcePage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate('/admin/resources');
+    navigate('/wellbeing/resources');
   };
 
   return (
