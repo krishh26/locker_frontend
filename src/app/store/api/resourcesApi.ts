@@ -6,7 +6,7 @@ export interface WellbeingResource {
   id: string;
   resource_name: string;
   description: string;
-  content: string;
+  location: string;
   category: string;
   tags: string[];
   isActive: boolean;
@@ -171,7 +171,7 @@ export const resourcesApi = createApi({
         url: '/wellbeing/learner/resources',
         method: 'GET',
       }),
-      providesTags: ['WellbeingResource'],
+      providesTags: ['LearnerResourceActivity'],
       transformErrorResponse: (response: any) => {
         throw new Error(`Failed to fetch learner resources: ${response?.data?.message || response?.statusText || 'Unknown error'}`);
       },
@@ -180,10 +180,11 @@ export const resourcesApi = createApi({
     /**
      * Track when a learner opens a resource
      */
-    trackResourceOpen: builder.mutation<ActivityResponse, string>({
-      query: (id) => ({
+    trackResourceOpen: builder.mutation<ActivityResponse, { resourceId: string }>({
+      query: (body) => ({
         url: `/wellbeing/learner/resources/track`,
         method: 'POST',
+        body: body,
       }),
       invalidatesTags: ['LearnerResourceActivity'],
       transformErrorResponse: (response: any) => {
@@ -206,19 +207,6 @@ export const resourcesApi = createApi({
       },
     }),
 
-    /**
-     * Get learner feedback for a specific resource
-     */
-    getLearnerFeedback: builder.query<FeedbackResponse, string>({
-      query: (id) => ({
-        url: `/learner/${id}/feedback`,
-        method: 'GET',
-      }),
-      providesTags: ['LearnerResourceActivity'],
-      transformErrorResponse: (response: any) => {
-        throw new Error(`Failed to fetch learner feedback: ${response?.data?.message || response?.statusText || 'Unknown error'}`);
-      },
-    }),
   }),
 });
 
@@ -232,6 +220,5 @@ export const {
   useGetLearnerResourcesQuery,
   useTrackResourceOpenMutation,
   useSubmitFeedbackMutation,
-  useGetLearnerFeedbackQuery,
 } = resourcesApi;
 

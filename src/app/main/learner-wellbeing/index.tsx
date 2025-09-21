@@ -6,8 +6,6 @@ import {
   CircularProgress,
   Alert,
   Chip,
-  IconButton,
-  Tooltip,
   Table,
   TableBody,
   TableCell,
@@ -16,6 +14,11 @@ import {
   TableRow,
   Paper,
   TablePagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +29,7 @@ import { showMessage } from 'app/store/fuse/messageSlice';
 import { 
   useGetLearnerResourcesQuery, 
   useTrackResourceOpenMutation,
+  useSubmitFeedbackMutation,
   WellbeingResource 
 } from 'app/store/api/resourcesApi';
 
@@ -79,6 +83,9 @@ const LearnerWellbeingPage = () => {
   const dispatch = useDispatch();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<WellbeingResource | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
 
   // API hooks
   const { 
@@ -89,6 +96,7 @@ const LearnerWellbeingPage = () => {
   } = useGetLearnerResourcesQuery();
 
   const [trackResourceOpen, { isLoading: isTracking }] = useTrackResourceOpenMutation();
+  const [submitFeedback, { isLoading: isSubmittingFeedback }] = useSubmitFeedbackMutation();
 
   const resources = resourcesResponse?.data || [];
 
@@ -96,14 +104,16 @@ const LearnerWellbeingPage = () => {
   const handleResourceAction = async (resource: WellbeingResource) => {
     try {
       // Track resource opening
-      await trackResourceOpen(resource.id).unwrap();
+      await trackResourceOpen({
+        resourceId: resource.id,
+      }).unwrap();
       
       if (resource.resourceType === 'FILE') {
         // For files, open in new tab
-        window.open(resource.content, '_blank');
+        window.open(resource.location, '_blank');
       } else if (resource.resourceType === 'URL') {
         // For URLs, open external link
-        window.open(resource.content, '_blank');
+        window.open(resource.location, '_blank');
       }
     } catch (error) {
       console.error('Error tracking resource:', error);
@@ -114,10 +124,42 @@ const LearnerWellbeingPage = () => {
     }
   };
 
-  // Handle view details navigation
-  const handleViewDetails = (resourceId: string) => {
-    navigate(`/learner/resources/${resourceId}`);
+  // Handle feedback dialog
+  const handleOpenFeedback = (resource: WellbeingResource) => {
+    setSelectedResource(resource);
+    setFeedbackText('');
+    setFeedbackDialogOpen(true);
   };
+
+  const handleCloseFeedback = () => {
+    setFeedbackDialogOpen(false);
+    setSelectedResource(null);
+    setFeedbackText('');
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!selectedResource || !feedbackText.trim()) return;
+
+    try {
+      await submitFeedback({
+        resourceId: parseInt(selectedResource.id),
+        feedback: feedbackText.trim(),
+      }).unwrap();
+      
+      dispatch(showMessage({ 
+        message: 'Feedback submitted successfully!', 
+        variant: 'success' 
+      }));
+      handleCloseFeedback();
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      dispatch(showMessage({ 
+        message: 'Failed to submit feedback. Please try again.', 
+        variant: 'error' 
+      }));
+    }
+  };
+
 
   // Handle pagination
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -213,7 +255,6 @@ const LearnerWellbeingPage = () => {
             <TableRow>
               <TableCell>Resource Name</TableCell>
               <TableCell>Description</TableCell>
-              <TableCell>Type</TableCell>
               <TableCell>Created Date</TableCell>
               <TableCell>Last Opened</TableCell>
               <TableCell align="center">Actions</TableCell>
@@ -244,13 +285,6 @@ const LearnerWellbeingPage = () => {
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <ResourceTypeChip 
-                    label={resource.resourceType} 
-                    size="small"
-                    resourceType={resource.resourceType}
-                  />
-                </TableCell>
-                <TableCell>
                   <Typography variant="body2" color="text.secondary">
                     {formatDate(resource.createdAt)}
                   </Typography>
@@ -276,15 +310,14 @@ const LearnerWellbeingPage = () => {
                       {resource.resourceType === 'FILE' ? 'Open / Download' : 'Visit Link'}
                     </Button>
                     
-                    <Tooltip title="View Details">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleViewDetails(resource.id)}
-                        color="primary"
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleOpenFeedback(resource)}
+                      disabled={isSubmittingFeedback}
                       >
-                        <FuseSvgIcon size={16}>heroicons-outline:eye</FuseSvgIcon>
-                      </IconButton>
-                    </Tooltip>
+                      Feedback
+                    </Button>
                   </Box>
                 </TableCell>
               </StyledTableRow>
@@ -302,6 +335,41 @@ const LearnerWellbeingPage = () => {
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
+
+      {/* Feedback Dialog */}
+      <Dialog open={feedbackDialogOpen} onClose={handleCloseFeedback} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Submit Feedback for: {selectedResource?.resource_name}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              multiline
+              rows={6}
+              label="Your Feedback"
+              placeholder="Please share your thoughts about this resource..."
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              helperText="Share your experience with this resource"
+              variant="outlined"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseFeedback} disabled={isSubmittingFeedback}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmitFeedback} 
+            variant="contained" 
+            disabled={isSubmittingFeedback || !feedbackText.trim()}
+            startIcon={isSubmittingFeedback ? <CircularProgress size={20} /> : null}
+          >
+            {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </StyledContainer>
   );
 };
