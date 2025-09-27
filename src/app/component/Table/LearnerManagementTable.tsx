@@ -19,6 +19,7 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Chip,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -38,6 +39,7 @@ import {
   selectLearnerManagement,
 } from "app/store/learnerManagement";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import EditIcon from "@mui/icons-material/Edit";
 import { useSelector } from "react-redux";
 import {
   courseAllocationAPI,
@@ -61,7 +63,9 @@ export default function LearnerManagementTable(props) {
     meta_data,
     dataUpdatingLoadding,
     refetchLearner,
-    handleChangePage
+    handleChangePage,
+    handleCommentDialog = () => { },
+    canEditComments = false
   } = props;
 
   const navigate = useNavigate();
@@ -124,6 +128,7 @@ export default function LearnerManagementTable(props) {
       funding_body,
       national_ins_no,
       job_title,
+      comment,
     } = rows.filter((item) => item.learner_id === openMenuDialog.learner_id)[0];
     setUserData({
       first_name,
@@ -137,6 +142,7 @@ export default function LearnerManagementTable(props) {
       funding_body,
       national_ins_no,
       job_title: job_title || "",
+      comment: comment || "",
     });
     handleOpen();
   };
@@ -330,6 +336,32 @@ export default function LearnerManagementTable(props) {
                               ) : (
                                 <strong>-</strong>
                               )
+                            ) : column.id === "comment" ? (
+                              <div className="flex items-center gap-2">
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    maxWidth: 150, 
+                                    overflow: 'hidden', 
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {row.comment || 'No comment'}
+                                </Typography>
+                                {canEditComments && (
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleCommentDialog(row)}
+                                    sx={{ 
+                                      color: "#5B718F",
+                                      padding: '2px'
+                                    }}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                )}
+                              </div>
                             ) : column.id === "status" ? (
                               row.deleted_at ? "Archived" : "Active"
                             ) : (

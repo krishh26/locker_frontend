@@ -5,12 +5,16 @@ import DataNotFound from 'src/app/component/Pages/dataNotFound'
 import { AdminRedirect, learnerManagementTableColumn } from 'src/app/contanst'
 import Style from '../style.module.css'
 import { useSelector } from 'react-redux'
+import { selectUser } from 'app/store/userSlice'
 import {
   Autocomplete,
   Button,
   Card,
   Checkbox,
   Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControlLabel,
   FormGroup,
   Grid,
@@ -58,6 +62,22 @@ const Index = () => {
   const dispatch: any = useDispatch()
   const course = useSelector(selectCourseManagement)?.data
   const employer = useSelector(selectEmployer)?.data
+  const currentUserData = useSelector(selectUser)?.data
+
+  // Get current user role
+  const currentUser = React.useMemo(() => {
+    try {
+      return (
+        JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
+        currentUserData
+      )
+    } catch {
+      return currentUserData
+    }
+  }, [currentUserData])
+
+  // Check if user is admin or trainer
+  const canEditComments = currentUser?.role === 'Admin' || currentUser?.role === 'Trainer'
 
   const [open, setOpen] = useState(false)
   const [isOpenCSV, setIsOpenCSV] = useState(false)
@@ -67,6 +87,9 @@ const Index = () => {
   const [filterValue, setFilterValue] = useState('')
   const [employerId, setEmployereId] = useState('')
   const [searchEmployer, setSearchEmployer] = useState('')
+  const [commentDialog, setCommentDialog] = useState(false)
+  const [selectedLearner, setSelectedLearner] = useState(null)
+  const [commentText, setCommentText] = useState('')
   const [checkedLabels, setCheckedLabels] = useState({
     'Awaiting Induction': false,
     Certificated: false,
@@ -85,7 +108,7 @@ const Index = () => {
     dispatch(getEmployerAPI())
   }, [dispatch])
 
-  const [userData, setUserData] = useState({
+  const [learnerFormData, setLearnerFormData] = useState({
     first_name: '',
     last_name: '',
     user_name: '',
@@ -97,9 +120,10 @@ const Index = () => {
     funding_body: '',
     national_ins_no: '',
     job_title: '',
+    comment: '',
   })
 
-  const [userDataError, setUserDataError] = useState({
+  const [learnerFormDataError, setLearnerFormDataError] = useState({
     first_name: false,
     last_name: false,
     user_name: false,
@@ -122,14 +146,36 @@ const Index = () => {
     setOpen(false)
   }
 
+  const handleCommentDialog = (learner) => {
+    setSelectedLearner(learner)
+    setCommentText(learner.comment || '')
+    setCommentDialog(true)
+  }
+
+  const handleCommentClose = () => {
+    setCommentDialog(false)
+    setSelectedLearner(null)
+    setCommentText('')
+  }
+
+  const handleCommentSave = async () => {
+    if (selectedLearner) {
+      const response = await dispatch(updateLearnerAPI(selectedLearner.learner_id, { comment: commentText }))
+      if (response) {
+        handleCommentClose()
+        refetchLearner()
+      }
+    }
+  }
+
   const handleUpdate = (e) => {
     const { name, value } = e.target
-    setUserData((prev) => ({ ...prev, [name]: value }))
-    setUserDataError((prev) => ({ ...prev, [name]: false }))
+    setLearnerFormData((prev) => ({ ...prev, [name]: value }))
+    setLearnerFormDataError((prev) => ({ ...prev, [name]: false }))
   }
 
   const resetValue = () => {
-    setUserData({
+    setLearnerFormData({
       first_name: '',
       last_name: '',
       user_name: '',
@@ -141,8 +187,9 @@ const Index = () => {
       funding_body: '',
       national_ins_no: '',
       job_title: '',
+      comment: '',
     })
-    setUserDataError({
+    setLearnerFormDataError({
       first_name: false,
       last_name: false,
       user_name: false,
@@ -158,7 +205,7 @@ const Index = () => {
 
   const createUserHandler = async () => {
     if (validation()) {
-      const response = await dispatch(createLearnerAPI(userData))
+      const response = await dispatch(createLearnerAPI(learnerFormData))
       if (response) {
         resetValue()
         setOpen(false)
@@ -167,7 +214,7 @@ const Index = () => {
   }
 
   const updateUserHandler = async () => {
-    const response = await dispatch(updateLearnerAPI(updateData, userData))
+    const response = await dispatch(updateLearnerAPI(updateData, learnerFormData))
     if (response) {
       handleClose()
       setUpdateData('')
@@ -218,31 +265,31 @@ const Index = () => {
   ]
 
   const validation = () => {
-    setUserDataError({
-      first_name: !nameReg.test(userData?.first_name),
-      last_name: !nameReg.test(userData?.last_name),
-      user_name: !usernameReg.test(userData?.user_name),
-      email: !emailReg.test(userData?.email),
-      password: !passwordReg.test(userData?.password),
+    setLearnerFormDataError({
+      first_name: !nameReg.test(learnerFormData?.first_name),
+      last_name: !nameReg.test(learnerFormData?.last_name),
+      user_name: !usernameReg.test(learnerFormData?.user_name),
+      email: !emailReg.test(learnerFormData?.email),
+      password: !passwordReg.test(learnerFormData?.password),
       confirmPassword:
-        userData?.password !== userData?.confirmPassword ||
-        !passwordReg.test(userData?.password),
-      mobile: !mobileReg.test(userData.mobile),
-      employer_id: userData?.employer_id === '',
-      funding_body: userData?.funding_body === '',
-      job_title: userData?.job_title === '',
+        learnerFormData?.password !== learnerFormData?.confirmPassword ||
+        !passwordReg.test(learnerFormData?.password),
+      mobile: !mobileReg.test(learnerFormData.mobile),
+      employer_id: learnerFormData?.employer_id === '',
+      funding_body: learnerFormData?.funding_body === '',
+      job_title: learnerFormData?.job_title === '',
     })
     if (
-      nameReg.test(userData?.first_name) &&
-      nameReg.test(userData?.last_name) &&
-      usernameReg.test(userData?.user_name) &&
-      emailReg.test(userData?.email) &&
-      passwordReg.test(userData?.password) &&
-      userData?.password === userData?.confirmPassword &&
-      // mobileReg.test(userData.mobile) &&
-      userData?.employer_id !== '' &&
-      userData?.funding_body !== '' &&
-      userData?.job_title !== ''
+      nameReg.test(learnerFormData?.first_name) &&
+      nameReg.test(learnerFormData?.last_name) &&
+      usernameReg.test(learnerFormData?.user_name) &&
+      emailReg.test(learnerFormData?.email) &&
+      passwordReg.test(learnerFormData?.password) &&
+      learnerFormData?.password === learnerFormData?.confirmPassword &&
+      // mobileReg.test(learnerFormData.mobile) &&
+      learnerFormData?.employer_id !== '' &&
+      learnerFormData?.funding_body !== '' &&
+      learnerFormData?.job_title !== ''
     ) {
       return true
     }
@@ -462,12 +509,14 @@ const Index = () => {
               columns={learnerManagementTableColumn}
               rows={data}
               handleOpen={handleOpen}
-              setUserData={setUserData}
+              setUserData={setLearnerFormData}
               setUpdateData={setUpdateData}
               meta_data={meta_data}
               dataUpdatingLoadding={dataUpdatingLoadding}
               refetchLearner={refetchLearner}
               handleChangePage={handleChangePage}
+              handleCommentDialog={handleCommentDialog}
+              canEditComments={canEditComments}
             />
           ) : (
             <div
@@ -497,15 +546,58 @@ const Index = () => {
             <UserDetails
               handleClose={handleClose}
               updateData={Boolean(updateData)}
-              userData={userData}
+              userData={learnerFormData}
               handleUpdate={handleUpdate}
               createUserHandler={createUserHandler}
               updateUserHandler={updateUserHandler}
               dataUpdatingLoadding={dataUpdatingLoadding}
-              userDataError={userDataError}
+              userDataError={learnerFormDataError}
               search_course={filterValue}
               search_employer={searchEmployer}
             />
+          </Dialog>
+
+          {/* Comment Dialog */}
+          <Dialog
+            open={commentDialog}
+            onClose={handleCommentClose}
+            fullWidth
+            maxWidth="sm"
+            sx={{
+              '.MuiDialog-paper': {
+                borderRadius: '4px',
+                padding: '1rem',
+              },
+            }}
+          >
+            <DialogTitle>
+              Add/Edit Comment for {selectedLearner?.first_name} {selectedLearner?.last_name}
+            </DialogTitle>
+            <DialogContent>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Enter your comment here..."
+                variant="outlined"
+                sx={{ mt: 2 }}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCommentClose} color="primary">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCommentSave} 
+                color="primary" 
+                variant="contained"
+                disabled={dataUpdatingLoadding}
+              >
+                {dataUpdatingLoadding ? 'Saving...' : 'Save Comment'}
+              </Button>
+            </DialogActions>
           </Dialog>
         </div>
       </Card>

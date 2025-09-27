@@ -472,6 +472,27 @@ const UserDetails = (props) => {
             {/* Empty div to maintain layout */}
           </div>
         </Box>
+
+        <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-row">
+          <div className="w-full">
+            <Typography
+              sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}
+              className={Style.name}
+            >
+              Comment
+            </Typography>
+            <TextField
+              name="comment"
+              placeholder="Enter comment"
+              value={userData?.comment || ''}
+              size="small"
+              multiline
+              rows={3}
+              fullWidth
+              onChange={handleUpdate}
+            />
+          </div>
+        </Box>
       </Box>
       <Box style={{ margin: "auto 1rem 1rem auto" }}>
         {dataUpdatingLoadding ? (
