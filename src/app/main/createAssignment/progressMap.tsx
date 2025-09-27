@@ -18,7 +18,6 @@ const ProgressMap = () => {
       ? learner.course[0].units[0]
       : {}
   );
-
   const learnerData = useSelector(selectstoreDataSlice);
 
   const dispatch: any = useDispatch();

@@ -25,6 +25,7 @@ import { PortfolioCard } from 'src/app/component/Cards'
 import { portfolioCard } from 'src/app/contanst'
 import FuseSvgIcon from '@fuse/core/FuseSvgIcon'
 import { getAllPortfolioCounts, PortfolioCountData } from 'src/app/utils/portfolioCountUtils'
+import { selectUser } from 'app/store/userSlice'
 
 // Type-safe wrapper for FuseSvgIcon
 const Icon = (props: { size?: number; color?: string; children: string }) => {
@@ -243,22 +244,22 @@ const CourseData = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
+
+  const user = sessionStorage.getItem('learnerToken')
+  ? { data: JSON.parse(sessionStorage.getItem('learnerToken'))?.user }
+  : useSelector(selectUser)
   
   // State for count data
   const [countData, setCountData] = useState<PortfolioCountData>({
     evidenceTotal: 0,
-    evidenceUploaded: 0,
     unitsTotal: 0,
     unitsCompleted: 0,
     progressPercentage: 0,
     gapsTotal: 0,
-    gapsResolved: 0,
     availableUnits: 0,
     selectedUnits: 0,
     sessionsTotal: 0,
-    sessionsCompleted: 0,
     resourcesTotal: 0,
-    resourcesAccessed: 0,
   })
   
   // Selectors
@@ -275,43 +276,6 @@ const CourseData = () => {
       ),
     }),
     []
-  )
-
-
-  const handleCourseClick = useCallback(
-    (id, userId) => {
-      // For demonstration, create mock course data based on the card clicked
-      const mockCourseData = {
-        course_id: id,
-        course: {
-          course_name: `Course ${id}`,
-          course_code: `C${id.toString().padStart(3, '0')}`,
-          level: 'Level 3',
-          sector: 'Education',
-          qualification_type: 'NVQ',
-          recommended_minimum_age: '16',
-          total_credits: '120',
-          operational_start_date: '2024-01-01',
-          guided_learning_hours: '600',
-          brand_guidelines: 'Standard Guidelines',
-          qualification_status: 'Active',
-          overall_grading_type: 'Pass/Fail',
-        },
-        course_status: 'In Training',
-        user_course_id: `uc_${id}`,
-        // Mock progress data
-        unitsNotStarted: 2,
-        unitsFullyCompleted: 3,
-        unitsPartiallyCompleted: 1,
-        totalUnits: 6,
-        duration: 30,
-        totalDuration: 90,
-        dayPending: 60,
-      }
-
-      dispatch(slice.setSingleData(mockCourseData))
-    },
-    [dispatch]
   )
 
   const handleBackToCourses = useCallback(() => {
@@ -336,8 +300,7 @@ const CourseData = () => {
       if (singleData && singleData.course) {
         try {
           // Get learner ID from session storage or props
-          const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user
-          const learnerId = user?.learner_id || user?.user_id
+          const learnerId = user?.data?.user_id
           
           if (learnerId) {
             const counts = await getAllPortfolioCounts(learnerId, singleData.course)
@@ -472,8 +435,8 @@ const CourseData = () => {
                 <PortfolioCard
                   data={value}
                   index={index}
-                  handleClickData={handleCourseClick}
                   countData={countData}
+                  learner={user?.data}
                 />
               </Box>
             </Slide>

@@ -3,20 +3,21 @@
  * This file contains helper functions to get dynamic counts for portfolio cards
  */
 
+import axios from "axios";
+import jsonData from "src/url.json";
+
+
+const URL_BASE_LINK = jsonData.API_LOCAL_URL;
 export interface PortfolioCountData {
   evidenceTotal: number;
-  evidenceUploaded: number;
   unitsTotal: number;
   unitsCompleted: number;
   progressPercentage: number;
   gapsTotal: number;
-  gapsResolved: number;
   availableUnits: number;
   selectedUnits: number;
   sessionsTotal: number;
-  sessionsCompleted: number;
   resourcesTotal: number;
-  resourcesAccessed: number;
 }
 
 /**
@@ -25,20 +26,20 @@ export interface PortfolioCountData {
  * @param courseId - The course ID
  * @returns Promise with evidence counts
  */
-export const getEvidenceCounts = async (learnerId: string, courseId: string): Promise<{total: number, uploaded: number}> => {
+export const getEvidenceCounts = async (learnerId: string, courseId: string): Promise<{total: number}> => {
   try {
-    // TODO: Replace with actual API calls
-    // const response = await fetch(`/api/evidence/counts?learnerId=${learnerId}&courseId=${courseId}`)
-    // const data = await response.json()
+
+    let url = `${URL_BASE_LINK}/assignment/list?user_id=${learnerId}`
+
+    const response = await axios.get(url);
     
     // Mock data for now
     return {
-      total: 12, // Total evidence required for the course
-      uploaded: 8, // Evidence uploaded by the learner
+      total: response.data.data.length, // Total evidence required for the course
     }
   } catch (error) {
     console.error('Error fetching evidence counts:', error)
-    return { total: 0, uploaded: 0 }
+    return { total: 0 }
   }
 }
 
@@ -77,20 +78,18 @@ export const getUnitProgressCounts = (courseData: any): {total: number, complete
  * @param courseId - The course ID
  * @returns Promise with gap analysis counts
  */
-export const getGapAnalysisCounts = async (learnerId: string, courseId: string): Promise<{total: number, resolved: number}> => {
+export const getGapAnalysisCounts = async (learnerId: string, courseId: string): Promise<{total: number}> => {
   try {
-    // TODO: Replace with actual API calls
-    // const response = await fetch(`/api/gap-analysis/counts?learnerId=${learnerId}&courseId=${courseId}`)
-    // const data = await response.json()
+
+    const response = await axios.get(`${URL_BASE_LINK}/cpd/learner/list?user_id=${learnerId}`);
     
     // Mock data for now
     return {
-      total: 5, // Total gaps identified
-      resolved: 3, // Gaps that have been resolved
+      total: response.data.data.length, // Total gaps identified
     }
   } catch (error) {
     console.error('Error fetching gap analysis counts:', error)
-    return { total: 0, resolved: 0 }
+    return { total: 0 }
   }
 }
 
@@ -100,20 +99,19 @@ export const getGapAnalysisCounts = async (learnerId: string, courseId: string):
  * @param courseId - The course ID
  * @returns Promise with session counts
  */
-export const getSessionCounts = async (learnerId: string, courseId: string): Promise<{total: number, completed: number}> => {
+export const getSessionCounts = async (learnerId: string, courseId: string): Promise<{total: number}> => {
   try {
-    // TODO: Replace with actual API calls
-    // const response = await fetch(`/api/sessions/counts?learnerId=${learnerId}&courseId=${courseId}`)
-    // const data = await response.json()
+     const url = `${URL_BASE_LINK}/learner-plan/list?user_id=${learnerId}`
+
+     const response = await axios.get(url);
     
     // Mock data for now
     return {
-      total: 20, // Total planned sessions
-      completed: 12, // Completed sessions
+      total: response.data.data.length, // Total planned sessions
     }
   } catch (error) {
     console.error('Error fetching session counts:', error)
-    return { total: 0, completed: 0 }
+    return { total: 0 }
   }
 }
 
@@ -123,20 +121,18 @@ export const getSessionCounts = async (learnerId: string, courseId: string): Pro
  * @param courseId - The course ID
  * @returns Promise with resource counts
  */
-export const getResourceCounts = async (learnerId: string, courseId: string): Promise<{total: number, accessed: number}> => {
+export const getResourceCounts = async (learnerId: string, courseId: string): Promise<{total: number}> => {
   try {
-    // TODO: Replace with actual API calls
-    // const response = await fetch(`/api/resources/counts?learnerId=${learnerId}&courseId=${courseId}`)
-    // const data = await response.json()
+    let url = `${URL_BASE_LINK}/resource/list-by-course?course_id=${courseId}&user_id=${learnerId}`;
+    const response = await axios.get(url);
     
     // Mock data for now
     return {
-      total: 25, // Total resources available
-      accessed: 18, // Resources accessed by the learner
+      total: response.data.data.length, // Total resources available
     }
   } catch (error) {
     console.error('Error fetching resource counts:', error)
-    return { total: 0, accessed: 0 }
+    return { total: 0 }
   }
 }
 
@@ -167,36 +163,28 @@ export const getAllPortfolioCounts = async (learnerId: string, courseData: any):
 
     return {
       evidenceTotal: evidenceCounts.total,
-      evidenceUploaded: evidenceCounts.uploaded,
       unitsTotal: unitProgressCounts.total,
       unitsCompleted: unitProgressCounts.completed,
       progressPercentage: unitProgressCounts.progressPercentage,
       gapsTotal: gapCounts.total,
-      gapsResolved: gapCounts.resolved,
-      availableUnits: courseData?.available_units || 15, // Mock: Available units to choose from
+      availableUnits: courseData?.available_units || 0, // Mock: Available units to choose from
       selectedUnits: unitProgressCounts.total, // Units selected by learner
       sessionsTotal: sessionCounts.total,
-      sessionsCompleted: sessionCounts.completed,
       resourcesTotal: resourceCounts.total,
-      resourcesAccessed: resourceCounts.accessed,
     }
   } catch (error) {
     console.error('Error fetching portfolio counts:', error)
     // Return default values on error
     return {
       evidenceTotal: 0,
-      evidenceUploaded: 0,
       unitsTotal: 0,
       unitsCompleted: 0,
       progressPercentage: 0,
       gapsTotal: 0,
-      gapsResolved: 0,
       availableUnits: 0,
       selectedUnits: 0,
       sessionsTotal: 0,
-      sessionsCompleted: 0,
       resourcesTotal: 0,
-      resourcesAccessed: 0,
     }
   }
 }
@@ -210,7 +198,6 @@ export const formatCountDataForDisplay = (countData: PortfolioCountData) => {
   return {
     evidenceLibrary: {
       total: countData.evidenceTotal,
-      uploaded: countData.evidenceUploaded,
       label: 'Evidence Files'
     },
     unitProgress: {
@@ -221,7 +208,6 @@ export const formatCountDataForDisplay = (countData: PortfolioCountData) => {
     },
     gapAnalysis: {
       total: countData.gapsTotal,
-      resolved: countData.gapsResolved,
       label: 'Gaps'
     },
     chooseUnits: {
@@ -231,12 +217,10 @@ export const formatCountDataForDisplay = (countData: PortfolioCountData) => {
     },
     learningPlan: {
       total: countData.sessionsTotal,
-      completed: countData.sessionsCompleted,
       label: 'Sessions'
     },
     resources: {
       total: countData.resourcesTotal,
-      accessed: countData.resourcesAccessed,
       label: 'Resources'
     }
   }

@@ -236,7 +236,6 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
       case 1: // Evidence Library
         return {
           total: countData.evidenceTotal || 0,
-          uploaded: countData.evidenceUploaded || 0,
           label: 'Evidence'
         };
       case 2: // Unit Progress
@@ -261,13 +260,11 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
       case 7: // Learning Plan
         return {
           total: countData.sessionsTotal || 0,
-          completed: countData.sessionsCompleted || 0,
           label: 'Sessions'
         };
       case 8: // Resources
         return {
           total: countData.resourcesTotal || 0,
-          accessed: countData.resourcesAccessed || 0,
           label: 'Resources'
         };
       default:
@@ -302,6 +299,9 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
       navigate('/timeLog');
     }else if (id === 10) {
       navigate('/learner-wellbeing');
+    }
+    else if (id === 8) {
+      navigate('/portfolio/resourceData');
     }
   };
   
