@@ -127,6 +127,42 @@ const ThemedTitle = styled('div')(({ theme }) => ({
   fontSize: '13px',
 }));
 
+const CountBadge = styled('div')(({ theme }) => ({
+  position: 'absolute',
+  top: '8px',
+  right: '8px',
+  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  color: theme.palette.text.primary,
+  borderRadius: '12px',
+  padding: '2px 8px',
+  fontSize: '11px',
+  fontWeight: 600,
+  minWidth: '20px',
+  textAlign: 'center',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+}));
+
+const CountContainer = styled('div')(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '4px',
+  marginTop: '4px',
+}));
+
+const CountRow = styled('div')(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  fontSize: '10px',
+  color: 'rgba(255, 255, 255, 0.9)',
+}));
+
+const CountValue = styled('span')(({ theme }) => ({
+  fontWeight: 700,
+  color: 'white',
+}));
+
 export const Card = (props) => {
   const {
     isIcon,
@@ -185,7 +221,7 @@ export const Card = (props) => {
   );
 };
 
-export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id, user_id) => { }, index }) => {
+export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id, user_id) => { }, index, countData = {} }) => {
   const [open, setOpen] = useState(false);
   const dispatch: any = useDispatch();
   const navigate = useNavigate();
@@ -193,6 +229,50 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
   const colors = useThemeColors();
 
   const { id = 0, name = "No title", color = colors.primary.main } = data;
+  
+  // Function to get count information for each card type
+  const getCountInfo = (cardId, countData) => {
+    switch (cardId) {
+      case 1: // Evidence Library
+        return {
+          total: countData.evidenceTotal || 0,
+          label: 'Evidence'
+        };
+      case 2: // Unit Progress
+        return {
+          total: countData.unitsTotal || 0,
+          completed: countData.unitsCompleted || 0,
+          progress: countData.progressPercentage || 0,
+          label: 'Units'
+        };
+      case 3: // Gap Analysis
+        return {
+          total: countData.gapsTotal || 0,
+          resolved: countData.gapsResolved || 0,
+          label: 'Gaps'
+        };
+      case 6: // Choose Units
+        return {
+          total: countData.availableUnits || 0,
+          selected: countData.selectedUnits || 0,
+          label: 'Units'
+        };
+      case 7: // Learning Plan
+        return {
+          total: countData.sessionsTotal || 0,
+          label: 'Sessions'
+        };
+      case 8: // Resources
+        return {
+          total: countData.resourcesTotal || 0,
+          label: 'Resources'
+        };
+      default:
+        return null;
+    }
+  };
+
+  const countInfo = getCountInfo(id, countData);
   
   const handleClick = (row = "") => {
     if (learner) {
@@ -217,6 +297,11 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
     }
     else if (id === 9) {
       navigate('/timeLog');
+    }else if (id === 10) {
+      navigate('/learner-wellbeing');
+    }
+    else if (id === 8) {
+      navigate('/portfolio/resourceData');
     }
   };
   
@@ -234,7 +319,13 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
               handleClick();
             }}
             className="w-full"
+            style={{ position: 'relative' }}
           >
+            {countInfo && (
+              <CountBadge>
+                {countInfo.progress ? `${Math.round(countInfo.progress)}%` : countInfo.total}
+              </CountBadge>
+            )}
             <div>
               <ThemedIndex>{name?.charAt(0)}</ThemedIndex>
               <div className={Style.emptyRing}></div>
@@ -267,7 +358,13 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
               handleClick();
             }}
             className="w-full"
+            style={{ position: 'relative' }}
           >
+            {countInfo && (
+              <CountBadge>
+                {countInfo.progress ? `${Math.round(countInfo.progress)}%` : countInfo.total}
+              </CountBadge>
+            )}
             <div>
               <ThemedIndex>{index + 1}</ThemedIndex>
               <div className={Style.emptyRing}></div>

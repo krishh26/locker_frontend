@@ -1,29 +1,39 @@
 import {
-    Avatar,
-    Box,
-    Card,
-    CardContent,
-    Fade,
-    Grid,
-    Slide,
-    Typography,
-    alpha,
-    useMediaQuery,
-    useTheme
+  Autocomplete,
+  Avatar,
+  Box,
+  Card,
+  CardContent,
+  Fade,
+  Grid,
+  Slide,
+  TextField,
+  Typography,
+  alpha,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import {
-    fetchCourseAPI,
-    selectCourseManagement,
-    slice
+  fetchCourseAPI,
+  selectCourseManagement,
+  slice,
+  updateUserCourse,
 } from 'app/store/courseManagement'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { PortfolioCard } from 'src/app/component/Cards'
 import { portfolioCard } from 'src/app/contanst'
 import FuseSvgIcon from '@fuse/core/FuseSvgIcon'
+import {
+  getAllPortfolioCounts,
+  PortfolioCountData,
+} from 'src/app/utils/portfolioCountUtils'
+import { selectUser } from 'app/store/userSlice'
+import { UserRole } from 'src/enum'
+import { showMessage } from 'app/store/fuse/messageSlice'
 
 // Type-safe wrapper for FuseSvgIcon
 const Icon = (props: { size?: number; color?: string; children: string }) => {
@@ -131,7 +141,7 @@ const StyledUserCard = styled(Card)(({ theme }) => ({
 
 const UserCard = ({ user }) => {
   const theme = useTheme()
-  
+
   return (
     <StyledUserCard>
       <CardContent sx={{ p: 3 }}>
@@ -140,19 +150,22 @@ const UserCard = ({ user }) => {
             <Avatar
               src={user.avatar?.url || '/default-avatar.png'}
               alt={`${user.first_name} ${user.last_name}`}
-              sx={{ 
-                width: 64, 
+              sx={{
+                width: 64,
                 height: 64,
                 border: `3px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
+                boxShadow: `0 4px 12px ${alpha(
+                  theme.palette.primary.main,
+                  0.2
+                )}`,
               }}
             />
           </Grid>
           <Grid item xs>
-            <Typography 
-              variant='h6' 
-              sx={{ 
-                fontWeight: 700, 
+            <Typography
+              variant='h6'
+              sx={{
+                fontWeight: 700,
                 color: 'text.primary',
                 mb: 1,
                 background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
@@ -165,42 +178,48 @@ const UserCard = ({ user }) => {
                 ? user?.employer?.employer_name
                 : user.first_name + ' ' + user.last_name}
             </Typography>
-            <Typography 
-              variant='body2' 
-              sx={{ 
+            <Typography
+              variant='body2'
+              sx={{
                 color: 'text.secondary',
                 mb: 0.5,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 1
+                gap: 1,
               }}
             >
-              <Icon size={16} color="primary">heroicons-outline:envelope</Icon>
+              <Icon size={16} color='primary'>
+                heroicons-outline:envelope
+              </Icon>
               {user.email}
             </Typography>
-            <Typography 
-              variant='body2' 
-              sx={{ 
+            <Typography
+              variant='body2'
+              sx={{
                 color: 'text.secondary',
                 mb: 0.5,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 1
+                gap: 1,
               }}
             >
-              <Icon size={16} color="primary">heroicons-outline:phone</Icon>
+              <Icon size={16} color='primary'>
+                heroicons-outline:phone
+              </Icon>
               {user.mobile}
             </Typography>
-            <Typography 
-              variant='body2' 
-              sx={{ 
+            <Typography
+              variant='body2'
+              sx={{
                 color: 'text.secondary',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 1
+                gap: 1,
               }}
             >
-              <Icon size={16} color="primary">heroicons-outline:user-group</Icon>
+              <Icon size={16} color='primary'>
+                heroicons-outline:user-group
+              </Icon>
               {user.role.join(', ')}
             </Typography>
           </Grid>
@@ -209,6 +228,18 @@ const UserCard = ({ user }) => {
     </StyledUserCard>
   )
 }
+
+const courseStatusOptions = [
+  'Awaiting Induction',
+  'Certificated',
+  'Completed',
+  'Early Leaver',
+  'Exempt',
+  'In Training',
+  'IQA Approved',
+  'Training Suspended',
+  'Transferred',
+]
 
 function getUniqueUserData(singleData) {
   // Extract user IDs
@@ -242,11 +273,32 @@ const CourseData = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
+
+  const user = sessionStorage.getItem('learnerToken')
+    ? { data: JSON.parse(sessionStorage.getItem('learnerToken'))?.user }
+    : useSelector(selectUser)
+
+  // State for count data
+  const [countData, setCountData] = useState<PortfolioCountData>({
+    evidenceTotal: 0,
+    unitsTotal: 0,
+    unitsCompleted: 0,
+    progressPercentage: 0,
+    gapsTotal: 0,
+    availableUnits: 0,
+    selectedUnits: 0,
+    sessionsTotal: 0,
+    resourcesTotal: 0,
+  })
+
   // Selectors
   const { singleData, data, dataFetchLoading } = useSelector(
     selectCourseManagement
   )
   const course = singleData?.course
+  const [courseStatus, setCourseStatus] = useState(
+    singleData?.course_status || ''
+  )
 
   // Memoized filtered cards
   const { courseCards } = useMemo(
@@ -258,42 +310,6 @@ const CourseData = () => {
     []
   )
 
-  const handleCourseClick = useCallback(
-    (id, userId) => {
-      // For demonstration, create mock course data based on the card clicked
-      const mockCourseData = {
-        course_id: id,
-        course: {
-          course_name: `Course ${id}`,
-          course_code: `C${id.toString().padStart(3, '0')}`,
-          level: 'Level 3',
-          sector: 'Education',
-          qualification_type: 'NVQ',
-          recommended_minimum_age: '16',
-          total_credits: '120',
-          operational_start_date: '2024-01-01',
-          guided_learning_hours: '600',
-          brand_guidelines: 'Standard Guidelines',
-          qualification_status: 'Active',
-          overall_grading_type: 'Pass/Fail',
-        },
-        course_status: 'In Training',
-        user_course_id: `uc_${id}`,
-        // Mock progress data
-        unitsNotStarted: 2,
-        unitsFullyCompleted: 3,
-        unitsPartiallyCompleted: 1,
-        totalUnits: 6,
-        duration: 30,
-        totalDuration: 90,
-        dayPending: 60,
-      }
-
-      dispatch(slice.setSingleData(mockCourseData))
-    },
-    [dispatch]
-  )
-
   const handleBackToCourses = useCallback(() => {
     navigate('/home')
   }, [])
@@ -302,7 +318,6 @@ const CourseData = () => {
     return dayjs(dateString).format('D MMMM YYYY')
   }, [])
 
-
   useEffect(() => {
     // Fetch courses if not already loaded
     if (!data || data.length === 0) {
@@ -310,38 +325,68 @@ const CourseData = () => {
     }
   }, [data, dispatch])
 
+  // Fetch count data when singleData changes
+  useEffect(() => {
+    const fetchCountData = async () => {
+      if (singleData && singleData.course) {
+        try {
+          // Get learner ID from session storage or props
+          const learnerId = user?.data?.user_id
+
+          if (learnerId) {
+            const counts = await getAllPortfolioCounts(
+              learnerId,
+              singleData.course
+            )
+            setCountData(counts)
+          }
+        } catch (error) {
+          console.error('Error fetching portfolio count data:', error)
+        }
+      }
+    }
+
+    fetchCountData()
+  }, [singleData])
+
   // Loading state
   if (dataFetchLoading) {
     return (
       <StyledContainer>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          minHeight: '60vh',
-          gap: 3
-        }}>
-          <Box sx={{
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+        <Box
+          sx={{
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            animation: 'pulse 2s infinite',
-            '@keyframes pulse': {
-              '0%': { transform: 'scale(1)', opacity: 1 },
-              '50%': { transform: 'scale(1.1)', opacity: 0.7 },
-              '100%': { transform: 'scale(1)', opacity: 1 },
-            }
-          }}>
-            <Icon size={40} color="white">heroicons-outline:academic-cap</Icon>
+            minHeight: '60vh',
+            gap: 3,
+          }}
+        >
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animation: 'pulse 2s infinite',
+              '@keyframes pulse': {
+                '0%': { transform: 'scale(1)', opacity: 1 },
+                '50%': { transform: 'scale(1.1)', opacity: 0.7 },
+                '100%': { transform: 'scale(1)', opacity: 1 },
+              },
+            }}
+          >
+            <Icon size={40} color='white'>
+              heroicons-outline:academic-cap
+            </Icon>
           </Box>
-          <Typography 
-            variant="h5" 
-            sx={{ 
+          <Typography
+            variant='h5'
+            sx={{
               color: 'text.primary',
               fontWeight: 600,
               background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
@@ -352,7 +397,7 @@ const CourseData = () => {
           >
             Loading Course Data...
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant='body1' color='text.secondary'>
             Please wait while we fetch the latest information
           </Typography>
         </Box>
@@ -360,156 +405,256 @@ const CourseData = () => {
     )
   }
 
+  const handleStatusChange = async (event, newValue) => {
+    setCourseStatus(newValue)
+
+    if (singleData?.user_course_id && newValue) {
+      const success = await dispatch(
+        updateUserCourse(singleData.user_course_id, { course_status: newValue })
+      )
+      if (success) {
+        dispatch(
+          showMessage({
+            message: 'Course status updated successfully',
+            variant: 'success',
+          })
+        )
+      }
+    }
+  }
+
   return (
     <StyledContainer>
       {/* Header Section */}
-      <StyledHeader>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography
-              variant='h4'
-              component='h1'
-              sx={{ 
-                fontWeight: 700, 
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                m: 0
-              }}
-            >
-              Course Details
-            </Typography>
-          </Box>
-
-          <Box>
-            <button
-              onClick={handleBackToCourses}
-              style={{
-                padding: '8px 16px',
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 600,
-                boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`,
-                transition: 'all 0.3s ease',
+      {user?.data?.role === UserRole.Learner && (
+        <>
+          <StyledHeader>
+            <Box
+              sx={{
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '6px'
-              }}
-              onMouseEnter={(e) => {
-                const target = e.target as HTMLButtonElement
-                target.style.transform = 'translateY(-1px)'
-                target.style.boxShadow = `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`
-              }}
-              onMouseLeave={(e) => {
-                const target = e.target as HTMLButtonElement
-                target.style.transform = 'translateY(0)'
-                target.style.boxShadow = `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`
+                gap: 2,
               }}
             >
-              <Icon size={14} color="inherit">heroicons-outline:arrow-left</Icon>
-              Back to Courses
-            </button>
-          </Box>
-        </Box>
-      </StyledHeader>
-      <Fade in={true} timeout={500}>
-        <StyledCardsContainer>
-          {courseCards.map((value, index) => (
-            <Slide
-              key={value.id}
-              direction='up'
-              in={true}
-              timeout={300 + index * 100}
-            >
-              <Box>
-                <PortfolioCard
-                  data={value}
-                  index={index}
-                  handleClickData={handleCourseClick}
-                />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography
+                  variant='h4'
+                  component='h1'
+                  sx={{
+                    fontWeight: 700,
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    m: 0,
+                  }}
+                >
+                  Course Details
+                </Typography>
               </Box>
-            </Slide>
-          ))}
-        </StyledCardsContainer>
-      </Fade>
+
+              <Box>
+                <button
+                  onClick={handleBackToCourses}
+                  style={{
+                    padding: '8px 16px',
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    boxShadow: `0 2px 8px ${alpha(
+                      theme.palette.primary.main,
+                      0.3
+                    )}`,
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                  onMouseEnter={(e) => {
+                    const target = e.target as HTMLButtonElement
+                    target.style.transform = 'translateY(-1px)'
+                    target.style.boxShadow = `0 4px 12px ${alpha(
+                      theme.palette.primary.main,
+                      0.4
+                    )}`
+                  }}
+                  onMouseLeave={(e) => {
+                    const target = e.target as HTMLButtonElement
+                    target.style.transform = 'translateY(0)'
+                    target.style.boxShadow = `0 2px 8px ${alpha(
+                      theme.palette.primary.main,
+                      0.3
+                    )}`
+                  }}
+                >
+                  <Icon size={14} color='inherit'>
+                    heroicons-outline:arrow-left
+                  </Icon>
+                  Back to Courses
+                </button>
+              </Box>
+            </Box>
+          </StyledHeader>
+          <Fade in={true} timeout={500}>
+            <StyledCardsContainer>
+              {courseCards.map((value, index) => (
+                <Slide
+                  key={value.id}
+                  direction='up'
+                  in={true}
+                  timeout={300 + index * 100}
+                >
+                  <Box>
+                    <PortfolioCard
+                      data={value}
+                      index={index}
+                      countData={countData}
+                      learner={user?.data}
+                    />
+                  </Box>
+                </Slide>
+              ))}
+            </StyledCardsContainer>
+          </Fade>
+        </>
+      )}
       <Fade in={true} timeout={500}>
         <StyledSection>
           {/* Course Information Cards */}
-          <Typography
-            variant='h4'
-            sx={{ 
-              fontWeight: 700, 
-              color: 'text.primary',
-              mb: 4,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2
-            }}
-          >
-            <Icon size={28} color="primary">heroicons-outline:book-open</Icon>
-            Course Information
-          </Typography>
-          
+          <div className='flex justify-between items-center'>
+            <Typography
+              variant='h4'
+              sx={{
+                fontWeight: 700,
+                color: 'text.primary',
+                mb: 4,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+              }}
+            >
+              <Icon size={28} color='primary'>
+                heroicons-outline:book-open
+              </Icon>
+              Course Information
+            </Typography>
+
+            {user?.data?.role !== UserRole.Learner && (
+              <Autocomplete
+                className='w-200'
+                size='small'
+                sx={{
+                  '.muiltr-1okx3q8-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator':
+                    { color: 'black' },
+                }}
+                options={courseStatusOptions}
+                value={courseStatus}
+                onChange={handleStatusChange}
+                renderInput={(params) => (
+                  <TextField {...params} placeholder='Status' />
+                )}
+              />
+            )}
+          </div>
           <Grid container spacing={3}>
             {/* Card 1 - Course Details */}
             <Grid item xs={12} md={6}>
-              <Card sx={{
-                height: '100%',
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.primary.light, 0.02)} 100%)`,
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                borderLeft: `4px solid ${theme.palette.primary.main}`,
-                borderRadius: 2,
-                boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: `0 8px 30px ${alpha(theme.palette.primary.main, 0.15)}`,
-                }
-              }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  background: `linear-gradient(135deg, ${alpha(
+                    theme.palette.primary.main,
+                    0.05
+                  )} 0%, ${alpha(theme.palette.primary.light, 0.02)} 100%)`,
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                  borderLeft: `4px solid ${theme.palette.primary.main}`,
+                  borderRadius: 2,
+                  boxShadow: `0 4px 20px ${alpha(
+                    theme.palette.primary.main,
+                    0.1
+                  )}`,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 8px 30px ${alpha(
+                      theme.palette.primary.main,
+                      0.15
+                    )}`,
+                  },
+                }}
+              >
                 <CardContent sx={{ p: 3 }}>
                   <Typography
                     variant='h5'
-                    sx={{ 
-                      fontWeight: 700, 
+                    sx={{
+                      fontWeight: 700,
                       color: 'primary.main',
                       mb: 3,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 1
+                      gap: 1,
                     }}
                   >
-                    <Icon size={24} color="primary">heroicons-outline:academic-cap</Icon>
+                    <Icon size={24} color='primary'>
+                      heroicons-outline:academic-cap
+                    </Icon>
                     {course?.course_name || 'Course Name'}
                   </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                  >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="primary">heroicons-outline:tag</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='primary'>
+                        heroicons-outline:tag
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Course Code:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'primary.main' }}
+                        >
                           {course?.course_code || 'N/A'}
                         </Typography>
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="primary">heroicons-outline:chart-bar</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='primary'>
+                        heroicons-outline:chart-bar
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Level:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'primary.main' }}
+                        >
                           {course?.level || 'N/A'}
                         </Typography>
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="primary">heroicons-outline:building-office</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='primary'>
+                        heroicons-outline:building-office
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Sector:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'primary.main' }}
+                        >
                           {course?.sector || 'N/A'}
                         </Typography>
                       </Typography>
@@ -521,58 +666,100 @@ const CourseData = () => {
 
             {/* Card 2 - Qualification Details */}
             <Grid item xs={12} md={6}>
-              <Card sx={{
-                height: '100%',
-                background: `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.light, 0.02)} 100%)`,
-                border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`,
-                borderLeft: `4px solid ${theme.palette.secondary.main}`,
-                borderRadius: 2,
-                boxShadow: `0 4px 20px ${alpha(theme.palette.secondary.main, 0.1)}`,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: `0 8px 30px ${alpha(theme.palette.secondary.main, 0.15)}`,
-                }
-              }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  background: `linear-gradient(135deg, ${alpha(
+                    theme.palette.secondary.main,
+                    0.05
+                  )} 0%, ${alpha(theme.palette.secondary.light, 0.02)} 100%)`,
+                  border: `1px solid ${alpha(
+                    theme.palette.secondary.main,
+                    0.2
+                  )}`,
+                  borderLeft: `4px solid ${theme.palette.secondary.main}`,
+                  borderRadius: 2,
+                  boxShadow: `0 4px 20px ${alpha(
+                    theme.palette.secondary.main,
+                    0.1
+                  )}`,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 8px 30px ${alpha(
+                      theme.palette.secondary.main,
+                      0.15
+                    )}`,
+                  },
+                }}
+              >
                 <CardContent sx={{ p: 3 }}>
                   <Typography
                     variant='h5'
-                    sx={{ 
-                      fontWeight: 700, 
+                    sx={{
+                      fontWeight: 700,
                       color: 'secondary.main',
                       mb: 3,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 1
+                      gap: 1,
                     }}
                   >
-                    <Icon size={24} color="secondary">heroicons-outline:document-text</Icon>
+                    <Icon size={24} color='secondary'>
+                      heroicons-outline:document-text
+                    </Icon>
                     Qualification Details
                   </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                  >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="secondary">heroicons-outline:document</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='secondary'>
+                        heroicons-outline:document
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Qualification Type:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'secondary.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'secondary.main' }}
+                        >
                           {course?.qualification_type || 'N/A'}
                         </Typography>
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="secondary">heroicons-outline:calendar</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='secondary'>
+                        heroicons-outline:calendar
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Min. Age:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'secondary.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'secondary.main' }}
+                        >
                           {course?.recommended_minimum_age || 'N/A'}
                         </Typography>
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="secondary">heroicons-outline:star</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='secondary'>
+                        heroicons-outline:star
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Total Credits:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'secondary.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'secondary.main' }}
+                        >
                           {course?.total_credits || 'N/A'}
                         </Typography>
                       </Typography>
@@ -584,49 +771,80 @@ const CourseData = () => {
 
             {/* Card 3 - Key Dates */}
             <Grid item xs={12} md={6}>
-              <Card sx={{
-                height: '100%',
-                background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.05)} 0%, ${alpha(theme.palette.warning.light, 0.02)} 100%)`,
-                border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
-                borderLeft: `4px solid ${theme.palette.warning.main}`,
-                borderRadius: 2,
-                boxShadow: `0 4px 20px ${alpha(theme.palette.warning.main, 0.1)}`,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: `0 8px 30px ${alpha(theme.palette.warning.main, 0.15)}`,
-                }
-              }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  background: `linear-gradient(135deg, ${alpha(
+                    theme.palette.warning.main,
+                    0.05
+                  )} 0%, ${alpha(theme.palette.warning.light, 0.02)} 100%)`,
+                  border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+                  borderLeft: `4px solid ${theme.palette.warning.main}`,
+                  borderRadius: 2,
+                  boxShadow: `0 4px 20px ${alpha(
+                    theme.palette.warning.main,
+                    0.1
+                  )}`,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 8px 30px ${alpha(
+                      theme.palette.warning.main,
+                      0.15
+                    )}`,
+                  },
+                }}
+              >
                 <CardContent sx={{ p: 3 }}>
                   <Typography
                     variant='h5'
-                    sx={{ 
-                      fontWeight: 700, 
+                    sx={{
+                      fontWeight: 700,
                       color: 'warning.main',
                       mb: 3,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 1
+                      gap: 1,
                     }}
                   >
-                    <Icon size={24} color="warning">heroicons-outline:clock</Icon>
+                    <Icon size={24} color='warning'>
+                      heroicons-outline:clock
+                    </Icon>
                     Key Dates & Hours
                   </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                  >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="warning">heroicons-outline:calendar-days</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='warning'>
+                        heroicons-outline:calendar-days
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Start Date:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'warning.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'warning.main' }}
+                        >
                           {formatDate(course?.operational_start_date) || 'N/A'}
                         </Typography>
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="warning">heroicons-outline:clock</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='warning'>
+                        heroicons-outline:clock
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Learning Hours:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'warning.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'warning.main' }}
+                        >
                           {course?.guided_learning_hours || 'N/A'}
                         </Typography>
                       </Typography>
@@ -638,58 +856,97 @@ const CourseData = () => {
 
             {/* Card 4 - Additional Information */}
             <Grid item xs={12} md={6}>
-              <Card sx={{
-                height: '100%',
-                background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.05)} 0%, ${alpha(theme.palette.info.light, 0.02)} 100%)`,
-                border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
-                borderLeft: `4px solid ${theme.palette.info.main}`,
-                borderRadius: 2,
-                boxShadow: `0 4px 20px ${alpha(theme.palette.info.main, 0.1)}`,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: `0 8px 30px ${alpha(theme.palette.info.main, 0.15)}`,
-                }
-              }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  background: `linear-gradient(135deg, ${alpha(
+                    theme.palette.info.main,
+                    0.05
+                  )} 0%, ${alpha(theme.palette.info.light, 0.02)} 100%)`,
+                  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                  borderLeft: `4px solid ${theme.palette.info.main}`,
+                  borderRadius: 2,
+                  boxShadow: `0 4px 20px ${alpha(
+                    theme.palette.info.main,
+                    0.1
+                  )}`,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 8px 30px ${alpha(
+                      theme.palette.info.main,
+                      0.15
+                    )}`,
+                  },
+                }}
+              >
                 <CardContent sx={{ p: 3 }}>
                   <Typography
                     variant='h5'
-                    sx={{ 
-                      fontWeight: 700, 
+                    sx={{
+                      fontWeight: 700,
                       color: 'info.main',
                       mb: 3,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 1
+                      gap: 1,
                     }}
                   >
-                    <Icon size={24} color="info">heroicons-outline:information-circle</Icon>
+                    <Icon size={24} color='info'>
+                      heroicons-outline:information-circle
+                    </Icon>
                     Additional Information
                   </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                  >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="info">heroicons-outline:document-duplicate</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='info'>
+                        heroicons-outline:document-duplicate
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Brand Guidelines:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'info.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'info.main' }}
+                        >
                           {course?.brand_guidelines || 'N/A'}
                         </Typography>
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="info">heroicons-outline:check-circle</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='info'>
+                        heroicons-outline:check-circle
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Status:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'info.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'info.main' }}
+                        >
                           {course?.qualification_status || 'N/A'}
                         </Typography>
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Icon size={16} color="info">heroicons-outline:chart-bar-square</Icon>
-                      <Typography variant='body1' sx={{ color: 'text.primary' }}>
+                      <Icon size={16} color='info'>
+                        heroicons-outline:chart-bar-square
+                      </Icon>
+                      <Typography
+                        variant='body1'
+                        sx={{ color: 'text.primary' }}
+                      >
                         Grading Type:{' '}
-                        <Typography component="span" sx={{ fontWeight: 600, color: 'info.main' }}>
+                        <Typography
+                          component='span'
+                          sx={{ fontWeight: 600, color: 'info.main' }}
+                        >
                           {course?.overall_grading_type || 'N/A'}
                         </Typography>
                       </Typography>
@@ -704,16 +961,18 @@ const CourseData = () => {
           <Box sx={{ mt: 6 }}>
             <Typography
               variant='h4'
-              sx={{ 
-                fontWeight: 700, 
+              sx={{
+                fontWeight: 700,
                 color: 'text.primary',
                 mb: 4,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 2
+                gap: 2,
               }}
             >
-              <Icon size={28} color="primary">heroicons-outline:user-group</Icon>
+              <Icon size={28} color='primary'>
+                heroicons-outline:user-group
+              </Icon>
               Learner Supervisors
             </Typography>
 

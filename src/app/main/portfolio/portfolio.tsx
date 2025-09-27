@@ -518,7 +518,7 @@ const Portfolio: React.FC = () => {
                 </Link>
 
                 {/* Personal Information in Header */}
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1, alignItems: 'center' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Typography
                       variant='body2'
@@ -558,6 +558,40 @@ const Portfolio: React.FC = () => {
                       {learner?.course?.[0]?.IQA_id?.last_name}
                     </Typography>
                   </Box>
+
+                  {/* Next Visit Date Chip */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Chip
+                      label='Next Visit: 02-03-2023'
+                      color='primary'
+                      variant='filled'
+                      size='medium'
+                      sx={{ 
+                        fontWeight: 700,
+                        backgroundColor: alpha(theme.palette.primary.contrastText, 0.15),
+                        border: `2px solid ${alpha(theme.palette.primary.contrastText, 0.3)}`,
+                        color: theme.palette.primary.contrastText,
+                        height: '32px',
+                        borderRadius: '16px',
+                        boxShadow: `0 2px 8px ${alpha(theme.palette.primary.contrastText, 0.2)}`,
+                        transition: 'all 0.3s ease-in-out',
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.contrastText, 0.25),
+                          transform: 'translateY(-1px)',
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.contrastText, 0.3)}`,
+                        },
+                        '& .MuiChip-label': {
+                          fontSize: '1rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.5px',
+                        },
+                        '& .MuiChip-icon': {
+                          color: theme.palette.primary.contrastText,
+                          fontSize: '1rem',
+                        },
+                      }}
+                    />
+                  </Box>
                 </Box>
               </Box>
             </Box>
@@ -567,24 +601,14 @@ const Portfolio: React.FC = () => {
             <Grid container spacing={3}>
               {/* Progress Column */}
               <Grid item xs={12}>
-                <div className='flex items-center gap-10'>
-                  <Typography
-                    variant='h6'
-                    gutterBottom
-                    sx={{ fontWeight: 600, mb: 2 }}
-                  >
-                    <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Progress Overview
-                  </Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <Chip
-                      label='Next Visit: 02-03-2023'
-                      color='primary'
-                      variant='outlined'
-                      sx={{ fontWeight: 600 }}
-                    />
-                  </Box>
-                </div>
+                <Typography
+                  variant='h6'
+                  gutterBottom
+                  sx={{ fontWeight: 600, mb: 2 }}
+                >
+                  <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Progress Overview
+                </Typography>
                 <StyledProgressSection>
                   <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                     {learner?.course?.map((value, index) => (

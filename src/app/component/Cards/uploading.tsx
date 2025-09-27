@@ -6,11 +6,6 @@ import {
 } from "../Buttons";
 import { FileUploader } from "react-drag-drop-files";
 import { useDispatch } from "react-redux";
-import {
-  fetchCourseAPI,
-  jsonConverter,
-  selectCourseManagement,
-} from "app/store/courseManagement";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { createAssignmentAPI, selectAssignment, slice, uploadPDF } from "app/store/assignment";

@@ -294,6 +294,7 @@ export const learnerManagementTableColumn = [
   { id: 'email', label: 'Email', minWidth: 170, align: 'left' },
   { id: 'mobile', label: 'Mobile', minWidth: 170, align: 'left' },
   { id: 'course', label: 'Course', minWidth: 170, align: 'left' },
+  { id: 'comment', label: 'Comment', minWidth: 200, align: 'left' },
   { id: 'status', label: 'Status', minWidth: 100, align: 'left' },
   { id: 'actions', label: 'Actions', minWidth: 170, align: 'center' },
 ]

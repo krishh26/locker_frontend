@@ -18,7 +18,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
@@ -85,7 +86,24 @@ const LearnerWellbeingPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<WellbeingResource | null>(null);
-  const [feedbackText, setFeedbackText] = useState('');
+  const [selectedEmoji, setSelectedEmoji] = useState<string>('');
+  const [selectedFeedbackValue, setSelectedFeedbackValue] = useState<string>('');
+
+  // Feedback mapping - emoji to meaningful text
+  const feedbackMapping = {
+    '😊': 'very_helpful',
+    '🙂': 'helpful', 
+    '😐': 'neutral',
+    '😕': 'not_helpful'
+  };
+
+  // Reverse mapping - text to display text
+  const feedbackDisplayMapping = {
+    'very_helpful': 'Very Helpful',
+    'helpful': 'Helpful',
+    'neutral': 'Neutral', 
+    'not_helpful': 'Not Helpful'
+  };
 
   // API hooks
   const { 
@@ -127,23 +145,25 @@ const LearnerWellbeingPage = () => {
   // Handle feedback dialog
   const handleOpenFeedback = (resource: WellbeingResource) => {
     setSelectedResource(resource);
-    setFeedbackText('');
+    setSelectedEmoji('');
+    setSelectedFeedbackValue('');
     setFeedbackDialogOpen(true);
   };
 
   const handleCloseFeedback = () => {
     setFeedbackDialogOpen(false);
     setSelectedResource(null);
-    setFeedbackText('');
+    setSelectedEmoji('');
+    setSelectedFeedbackValue('');
   };
 
   const handleSubmitFeedback = async () => {
-    if (!selectedResource || !feedbackText.trim()) return;
+    if (!selectedResource || !selectedEmoji) return;
 
     try {
       await submitFeedback({
         resourceId: parseInt(selectedResource.id),
-        feedback: feedbackText.trim(),
+        feedback: selectedFeedbackValue,
       }).unwrap();
       
       dispatch(showMessage({ 
@@ -257,6 +277,7 @@ const LearnerWellbeingPage = () => {
               <TableCell>Description</TableCell>
               <TableCell>Created Date</TableCell>
               <TableCell>Last Opened</TableCell>
+              <TableCell>Feedback</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
           </StyledTableHead>
@@ -292,6 +313,14 @@ const LearnerWellbeingPage = () => {
                 <TableCell>
                   <Typography variant="body2" color="text.secondary">
                     {resource.lastOpenedDate ? formatDate(resource.lastOpenedDate) : 'Never'}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
+                    {resource.feedbacks && resource.feedbacks.length > 0 
+                      ? feedbackDisplayMapping[resource.feedbacks[0].feedback as keyof typeof feedbackDisplayMapping] || 'Unknown'
+                      : 'No feedback'
+                    }
                   </Typography>
                 </TableCell>
                 <TableCell align="center">
@@ -337,23 +366,107 @@ const LearnerWellbeingPage = () => {
       />
 
       {/* Feedback Dialog */}
-      <Dialog open={feedbackDialogOpen} onClose={handleCloseFeedback} maxWidth="md" fullWidth>
+      <Dialog open={feedbackDialogOpen} onClose={handleCloseFeedback} maxWidth="sm" fullWidth>
         <DialogTitle>
-          Submit Feedback for: {selectedResource?.resource_name}
+          How was this resource for you?
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              multiline
-              rows={6}
-              label="Your Feedback"
-              placeholder="Please share your thoughts about this resource..."
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-              helperText="Share your experience with this resource"
-              variant="outlined"
-            />
+          <Box sx={{ mt: 2, mb: 3 }}>
+            <Typography variant="h6" align="center" gutterBottom>
+              {selectedResource?.resource_name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
+              Please select an emoji to rate your experience
+            </Typography>
+            
+            <Box 
+              display="flex" 
+              justifyContent="center" 
+              gap={2}
+              sx={{ 
+                '& .emoji-button': {
+                  fontSize: '3rem',
+                  padding: 1,
+                  borderRadius: '50%',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'scale(1.1)',
+                    backgroundColor: 'action.hover',
+                  },
+                  '&.selected': {
+                    backgroundColor: 'primary.main',
+                    color: 'primary.contrastText',
+                    transform: 'scale(1.1)',
+                  }
+                }
+              }}
+            >
+              <Tooltip title="Very Helpful">
+                <IconButton
+                  className={`emoji-button ${selectedEmoji === '😊' ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedEmoji('😊');
+                    setSelectedFeedbackValue(feedbackMapping['😊']);
+                  }}
+                  size="large"
+                >
+                  😊
+                </IconButton>
+              </Tooltip>
+              
+              <Tooltip title="Helpful">
+                <IconButton
+                  className={`emoji-button ${selectedEmoji === '🙂' ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedEmoji('🙂');
+                    setSelectedFeedbackValue(feedbackMapping['🙂']);
+                  }}
+                  size="large"
+                >
+                  🙂
+                </IconButton>
+              </Tooltip>
+              
+              <Tooltip title="Neutral">
+                <IconButton
+                  className={`emoji-button ${selectedEmoji === '😐' ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedEmoji('😐');
+                    setSelectedFeedbackValue(feedbackMapping['😐']);
+                  }}
+                  size="large"
+                >
+                  😐
+                </IconButton>
+              </Tooltip>
+              
+              <Tooltip title="Not Helpful">
+                <IconButton
+                  className={`emoji-button ${selectedEmoji === '😕' ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedEmoji('😕');
+                    setSelectedFeedbackValue(feedbackMapping['😕']);
+                  }}
+                  size="large"
+                >
+                  😕
+                </IconButton>
+              </Tooltip>
+            </Box>
+            
+            {selectedEmoji && (
+              <Typography 
+                variant="body2" 
+                color="primary" 
+                align="center" 
+                sx={{ mt: 2, fontWeight: 600 }}
+              >
+                {selectedEmoji === '😊' && 'Great! This resource was very helpful'}
+                {selectedEmoji === '🙂' && 'Good! This resource was helpful'}
+                {selectedEmoji === '😐' && 'Okay, this resource was okay'}
+                {selectedEmoji === '😕' && 'This resource could be improved'}
+              </Typography>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
@@ -363,7 +476,7 @@ const LearnerWellbeingPage = () => {
           <Button 
             onClick={handleSubmitFeedback} 
             variant="contained" 
-            disabled={isSubmittingFeedback || !feedbackText.trim()}
+            disabled={isSubmittingFeedback || !selectedEmoji}
             startIcon={isSubmittingFeedback ? <CircularProgress size={20} /> : null}
           >
             {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}

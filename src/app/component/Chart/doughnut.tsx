@@ -281,7 +281,6 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
   onExploreClick,
   showExploreButton = true,
 }) => {
-  console.log("🚀 ~ DoughnutChart ~ title:", title)
   const theme = useTheme()
   const colors = getChartColors(theme)
   
