@@ -1,6 +1,18 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import createBaseQueryWithReAuth from 'src/utils/fetch-base-query';
 
+// Types for Feedback
+export interface Feedback {
+  id: number;
+  feedback: string | null;
+  learner: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    user_name: string;
+  };
+}
+
 // Types for WellbeingResource
 export interface WellbeingResource {
   id: string;
@@ -16,6 +28,7 @@ export interface WellbeingResource {
   updatedBy: string;
   resourceType: 'FILE' | 'URL';
   lastOpenedDate?: string;
+  feedbacks?: Feedback[];
 }
 
 // Types for LearnerResourceActivity

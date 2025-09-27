@@ -37,12 +37,14 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
+  FileDownload as FileDownloadIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useSnackbar } from 'notistack';
 
 import { themeHelpers } from 'src/app/utils/themeUtils';
+import { exportFeedbacksToCSV, downloadCSV, generateFilename } from 'src/utils/csvExport';
 
 import {
   useGetAdminResourcesQuery,
@@ -232,6 +234,35 @@ const AdminResourcesPage: React.FC = () => {
     navigate('/wellbeing/resources/add');
   }, [navigate]);
 
+  const handleExportFeedbacks = useCallback(() => {
+    if (!resourcesData?.data) {
+      enqueueSnackbar('No data available to export', { variant: 'warning' });
+      return;
+    }
+
+    try {
+      // Filter resources that have feedbacks
+      const resourcesWithFeedbacks = resourcesData.data.filter(resource => 
+        resource.feedbacks && resource.feedbacks.length > 0
+      );
+
+      if (resourcesWithFeedbacks.length === 0) {
+        enqueueSnackbar('No feedback data available to export', { variant: 'info' });
+        return;
+      }
+
+      // Export to CSV
+      const csvContent = exportFeedbacksToCSV(resourcesWithFeedbacks);
+      const filename = generateFilename('wellbeing_feedbacks');
+      downloadCSV(csvContent, filename);
+
+      enqueueSnackbar(`Feedback report exported successfully as ${filename}`, { variant: 'success' });
+    } catch (error) {
+      console.error('Export error:', error);
+      enqueueSnackbar('Failed to export feedback report', { variant: 'error' });
+    }
+  }, [resourcesData, enqueueSnackbar]);
+
   const handleChangePage = useCallback((event: unknown, newPage: number) => {
     setPage(newPage);
   }, []);
@@ -280,14 +311,24 @@ const AdminResourcesPage: React.FC = () => {
         <ThemedTypography variant="h4">
           Wellbeing Resources Management
         </ThemedTypography>
-        <ThemedButton
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleAddResource}
-          sx={{ minWidth: 150 }}
-        >
-          Add Resource
-        </ThemedButton>
+        <Box display="flex" gap={2}>
+          <ThemedButton
+            variant="outlined"
+            startIcon={<FileDownloadIcon />}
+            onClick={handleExportFeedbacks}
+            sx={{ minWidth: 180 }}
+          >
+            Export Feedbacks
+          </ThemedButton>
+          <ThemedButton
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddResource}
+            sx={{ minWidth: 150 }}
+          >
+            Add Resource
+          </ThemedButton>
+        </Box>
       </Box>
 
       {/* Search Bar */}
