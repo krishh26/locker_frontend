@@ -18,12 +18,13 @@ import {
     slice
 } from 'app/store/courseManagement'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { PortfolioCard } from 'src/app/component/Cards'
 import { portfolioCard } from 'src/app/contanst'
 import FuseSvgIcon from '@fuse/core/FuseSvgIcon'
+import { getAllPortfolioCounts, PortfolioCountData } from 'src/app/utils/portfolioCountUtils'
 
 // Type-safe wrapper for FuseSvgIcon
 const Icon = (props: { size?: number; color?: string; children: string }) => {
@@ -242,6 +243,24 @@ const CourseData = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
+  
+  // State for count data
+  const [countData, setCountData] = useState<PortfolioCountData>({
+    evidenceTotal: 0,
+    evidenceUploaded: 0,
+    unitsTotal: 0,
+    unitsCompleted: 0,
+    progressPercentage: 0,
+    gapsTotal: 0,
+    gapsResolved: 0,
+    availableUnits: 0,
+    selectedUnits: 0,
+    sessionsTotal: 0,
+    sessionsCompleted: 0,
+    resourcesTotal: 0,
+    resourcesAccessed: 0,
+  })
+  
   // Selectors
   const { singleData, data, dataFetchLoading } = useSelector(
     selectCourseManagement
@@ -257,6 +276,7 @@ const CourseData = () => {
     }),
     []
   )
+
 
   const handleCourseClick = useCallback(
     (id, userId) => {
@@ -309,6 +329,28 @@ const CourseData = () => {
       dispatch(fetchCourseAPI({ page: 1, page_size: 25 }))
     }
   }, [data, dispatch])
+
+  // Fetch count data when singleData changes
+  useEffect(() => {
+    const fetchCountData = async () => {
+      if (singleData && singleData.course) {
+        try {
+          // Get learner ID from session storage or props
+          const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user
+          const learnerId = user?.learner_id || user?.user_id
+          
+          if (learnerId) {
+            const counts = await getAllPortfolioCounts(learnerId, singleData.course)
+            setCountData(counts)
+          }
+        } catch (error) {
+          console.error('Error fetching portfolio count data:', error)
+        }
+      }
+    }
+
+    fetchCountData()
+  }, [singleData])
 
   // Loading state
   if (dataFetchLoading) {
@@ -431,6 +473,7 @@ const CourseData = () => {
                   data={value}
                   index={index}
                   handleClickData={handleCourseClick}
+                  countData={countData}
                 />
               </Box>
             </Slide>
