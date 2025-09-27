@@ -87,6 +87,23 @@ const LearnerWellbeingPage = () => {
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<WellbeingResource | null>(null);
   const [selectedEmoji, setSelectedEmoji] = useState<string>('');
+  const [selectedFeedbackValue, setSelectedFeedbackValue] = useState<string>('');
+
+  // Feedback mapping - emoji to meaningful text
+  const feedbackMapping = {
+    '😊': 'very_helpful',
+    '🙂': 'helpful', 
+    '😐': 'neutral',
+    '😕': 'not_helpful'
+  };
+
+  // Reverse mapping - text to display text
+  const feedbackDisplayMapping = {
+    'very_helpful': 'Very Helpful',
+    'helpful': 'Helpful',
+    'neutral': 'Neutral', 
+    'not_helpful': 'Not Helpful'
+  };
 
   // API hooks
   const { 
@@ -129,6 +146,7 @@ const LearnerWellbeingPage = () => {
   const handleOpenFeedback = (resource: WellbeingResource) => {
     setSelectedResource(resource);
     setSelectedEmoji('');
+    setSelectedFeedbackValue('');
     setFeedbackDialogOpen(true);
   };
 
@@ -136,6 +154,7 @@ const LearnerWellbeingPage = () => {
     setFeedbackDialogOpen(false);
     setSelectedResource(null);
     setSelectedEmoji('');
+    setSelectedFeedbackValue('');
   };
 
   const handleSubmitFeedback = async () => {
@@ -144,7 +163,7 @@ const LearnerWellbeingPage = () => {
     try {
       await submitFeedback({
         resourceId: parseInt(selectedResource.id),
-        feedback: selectedEmoji,
+        feedback: selectedFeedbackValue,
       }).unwrap();
       
       dispatch(showMessage({ 
@@ -258,6 +277,7 @@ const LearnerWellbeingPage = () => {
               <TableCell>Description</TableCell>
               <TableCell>Created Date</TableCell>
               <TableCell>Last Opened</TableCell>
+              <TableCell>Feedback</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
           </StyledTableHead>
@@ -293,6 +313,14 @@ const LearnerWellbeingPage = () => {
                 <TableCell>
                   <Typography variant="body2" color="text.secondary">
                     {resource.lastOpenedDate ? formatDate(resource.lastOpenedDate) : 'Never'}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
+                    {resource.feedbacks && resource.feedbacks.length > 0 
+                      ? feedbackDisplayMapping[resource.feedbacks[0].feedback as keyof typeof feedbackDisplayMapping] || 'Unknown'
+                      : 'No feedback'
+                    }
                   </Typography>
                 </TableCell>
                 <TableCell align="center">
@@ -376,7 +404,10 @@ const LearnerWellbeingPage = () => {
               <Tooltip title="Very Helpful">
                 <IconButton
                   className={`emoji-button ${selectedEmoji === '😊' ? 'selected' : ''}`}
-                  onClick={() => setSelectedEmoji('😊')}
+                  onClick={() => {
+                    setSelectedEmoji('😊');
+                    setSelectedFeedbackValue(feedbackMapping['😊']);
+                  }}
                   size="large"
                 >
                   😊
@@ -386,7 +417,10 @@ const LearnerWellbeingPage = () => {
               <Tooltip title="Helpful">
                 <IconButton
                   className={`emoji-button ${selectedEmoji === '🙂' ? 'selected' : ''}`}
-                  onClick={() => setSelectedEmoji('🙂')}
+                  onClick={() => {
+                    setSelectedEmoji('🙂');
+                    setSelectedFeedbackValue(feedbackMapping['🙂']);
+                  }}
                   size="large"
                 >
                   🙂
@@ -396,7 +430,10 @@ const LearnerWellbeingPage = () => {
               <Tooltip title="Neutral">
                 <IconButton
                   className={`emoji-button ${selectedEmoji === '😐' ? 'selected' : ''}`}
-                  onClick={() => setSelectedEmoji('😐')}
+                  onClick={() => {
+                    setSelectedEmoji('😐');
+                    setSelectedFeedbackValue(feedbackMapping['😐']);
+                  }}
                   size="large"
                 >
                   😐
@@ -406,7 +443,10 @@ const LearnerWellbeingPage = () => {
               <Tooltip title="Not Helpful">
                 <IconButton
                   className={`emoji-button ${selectedEmoji === '😕' ? 'selected' : ''}`}
-                  onClick={() => setSelectedEmoji('😕')}
+                  onClick={() => {
+                    setSelectedEmoji('😕');
+                    setSelectedFeedbackValue(feedbackMapping['😕']);
+                  }}
                   size="large"
                 >
                   😕

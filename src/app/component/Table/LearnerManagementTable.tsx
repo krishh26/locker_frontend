@@ -349,7 +349,7 @@ export default function LearnerManagementTable(props) {
                                 >
                                   {row.comment || 'No comment'}
                                 </Typography>
-                                {canEditComments && (
+                                {/* {canEditComments && (
                                   <IconButton
                                     size="small"
                                     onClick={() => handleCommentDialog(row)}
@@ -360,7 +360,7 @@ export default function LearnerManagementTable(props) {
                                   >
                                     <EditIcon fontSize="small" />
                                   </IconButton>
-                                )}
+                                )} */}
                               </div>
                             ) : column.id === "status" ? (
                               row.deleted_at ? "Archived" : "Active"
