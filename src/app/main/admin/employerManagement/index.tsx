@@ -27,6 +27,8 @@ import { getEmployerAPI, selectEmployer } from "app/store/employer";
 import EmployerManagementTable from "src/app/component/Table/EmployerManagementTable";
 import { selectGlobalUser } from "app/store/globalUser";
 import EmployerCsvUpload from "./employer-csv-upload";
+import { exportEmployersToCSV, downloadCSV, generateFilename } from "src/utils/csvExport";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 
 const Index = () => {
   const { data, dataFetchLoading, dataUpdatingLoadding, meta_data } =
@@ -58,6 +60,14 @@ const Index = () => {
 
   const refetchEmployer = (search = searchKeyword, page = 1) => {
     dispatch(getEmployerAPI({ page, page_size: pagination?.page_size }, search))
+  }
+
+  const handleExportCSV = () => {
+    if (data && data.length > 0) {
+      const csvContent = exportEmployersToCSV(data);
+      const filename = generateFilename('employers');
+      downloadCSV(csvContent, filename);
+    }
   }
 
   useEffect(() => {
@@ -112,7 +122,7 @@ const Index = () => {
               />
 
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-9">
               <Button
                 variant='contained'
                 component='label'
@@ -131,6 +141,28 @@ const Index = () => {
                 onClick={() => setIsOpenCSV(true)}
               >
                 Upload Employers
+              </Button>
+              <Button
+                variant='outlined'
+                startIcon={<FileDownloadIcon />}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 3,
+                  py: 1.2,
+                  borderColor: '#007E84',
+                  color: '#007E84',
+                  '&:hover': {
+                    borderColor: '#00666A',
+                    color: '#00666A',
+                    backgroundColor: 'rgba(0, 126, 132, 0.04)',
+                  },
+                }}
+                onClick={handleExportCSV}
+                disabled={!data || data.length === 0}
+              >
+                Export CSV
               </Button>
               <Link to="/admin/employer/create-employer">
                 <SecondaryButton
