@@ -289,5 +289,13 @@ const navigationConfig = [
     url: '/learner-list',
     visible: [UserRole.Admin, UserRole.Trainer],
   },
+  {
+    id: 'dashboards.safeguarding',
+    title: 'Safeguarding',
+    type: 'item',
+    icon: 'heroicons-outline:shield-check',
+    url: '/safeguarding',
+    visible: [UserRole.Admin],
+  },
 ]
 export default navigationConfig
