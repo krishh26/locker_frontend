@@ -106,7 +106,6 @@ const FundingBodySection: React.FC<FundingBodySectionProps> = ({ disabled = fals
                 >
                   <MenuItem value={'Apprentice'}>Apprentice</MenuItem>
                   <MenuItem value={'Commercial'}>Commercial</MenuItem>
-                  <MenuItem value={'Learner'}>Learner</MenuItem>
                 </Select>
               </Grid>
             </Grid>

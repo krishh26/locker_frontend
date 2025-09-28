@@ -52,7 +52,7 @@ function Layout1(props) {
             <SettingsPanel />
           </div>
 
-          <div className={`flex flex-col flex-auto min-h-0 relative z-10 ${location.pathname !== '/' && "overflow-y-auto"}`}>
+          <div className={`flex flex-col flex-auto min-h-0 relative z-10 mb-14 ${location.pathname !== '/' && "overflow-y-auto"}`}>
             <FuseDialog />
 
             <FuseSuspense>{useRoutes(routes)}</FuseSuspense>

@@ -105,3 +105,93 @@ export const generateFilename = (prefix: string = 'wellbeing_feedbacks'): string
   
   return `${prefix}_${dateStr}_${timeStr}.csv`;
 };
+
+export interface EmployerData {
+  employer_id: number;
+  employer_name: string;
+  msi_employer_id: string;
+  business_department: string;
+  business_location: string;
+  branch_code: string;
+  address_1: string;
+  address_2: string;
+  city: string;
+  country: string;
+  postal_code: string;
+  business_category: string;
+  telephone: string;
+  website: string;
+  key_contact_name: string;
+  key_contact_number: string;
+  business_description: string;
+  comments: string;
+  assessment_date: string;
+  assessment_renewal_date: string;
+  insurance_renewal_date: string;
+  employer_county: string | null;
+  health_safety_renewal_date: string | null;
+  employer_postcode: string | null;
+  employer_town_city: string | null;
+  employer_telephone: string | null;
+  file: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  user: {
+    email: string;
+    mobile: string;
+  };
+  email: string;
+  number: string;
+  number_of_learners: number;
+}
+
+/**
+ * Converts employer data to CSV format
+ * @param employers - Array of employer data
+ * @returns CSV string
+ */
+export const exportEmployersToCSV = (employers: EmployerData[]): string => {
+  // CSV headers as specified by user
+  const headers = [
+    'Employer',
+    'Active Learners',
+    'EDRS no',
+    'Telephone',
+    'Coordinator',
+    'Coordinator Email',
+    'Address 1',
+    'Address 2',
+    'Town/City',
+    'Postcode',
+    'Business Description',
+    'Comments',
+    'Health and Safety Assessment Date',
+    'Health and Safety Renewal Date',
+    'Liability Insurance Renewal Date'
+  ];
+  
+  // Create CSV content
+  const csvContent = [
+    headers.join(','),
+    ...employers.map(employer => [
+      `"${employer.employer_name || ''}"`,
+      `"${employer.number_of_learners || 0}"`,
+      `"${employer.msi_employer_id || ''}"`,
+      `"${employer.telephone || ''}"`,
+      `"${employer.key_contact_name || ''}"`,
+      `"${employer.email || ''}"`,
+      `"${employer.address_1 || ''}"`,
+      `"${employer.address_2 || ''}"`,
+      `"${employer.city || ''}"`,
+      `"${employer.postal_code || ''}"`,
+      `"${employer.business_description || ''}"`,
+      `"${employer.comments || ''}"`,
+      `"${employer.assessment_date ? new Date(employer.assessment_date).toLocaleDateString() : ''}"`,
+      `"${employer.assessment_renewal_date ? new Date(employer.assessment_renewal_date).toLocaleDateString() : ''}"`,
+      `"${employer.insurance_renewal_date ? new Date(employer.insurance_renewal_date).toLocaleDateString() : ''}"`
+    ].join(','))
+  ].join('\n');
+
+  return csvContent;
+};
