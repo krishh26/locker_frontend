@@ -1,6 +1,9 @@
 import FuseLoading from '@fuse/core/FuseLoading'
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import FavoriteIcon from '@mui/icons-material/Favorite'
+import MenuBookIcon from '@mui/icons-material/MenuBook'
 import {
   alpha,
   Avatar,
@@ -91,6 +94,7 @@ const StyledContainer = styled(Box)(({ theme }) => ({
     0.05
   )} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
   minHeight: '100vh',
+  marginBottom: '20px',
 }))
 
 const StyledTabsContainer = styled(Paper)(({ theme }) => ({
@@ -206,6 +210,79 @@ const StyledEmailDialog = styled(Dialog)(({ theme }) => ({
       margin: theme.spacing(2),
     },
   },
+}))
+
+const StyledSafeguardingCard = styled(Card)(({ theme }) => ({
+  margin: theme.spacing(3, 0),
+  borderRadius: theme.spacing(2),
+  border: `2px solid ${theme.palette.primary.main}`,
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: theme.shadows[2],
+  overflow: 'hidden',
+  position: 'relative',
+  width: '50%',
+  marginBottom: '20px',
+}))
+
+const StyledSafeguardingHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: theme.spacing(2),
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  width: '100%',
+}))
+
+const StyledSafeguardingContent = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2),
+  width: '100%',
+}))
+
+const StyledContactItem = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: theme.spacing(1, 0),
+  '&:not(:last-child)': {
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
+}))
+
+const StyledContactLabel = styled(Typography)(({ theme }) => ({
+  fontWeight: 600,
+  minWidth: 80,
+  color: theme.palette.text.primary,
+  fontSize: '1.5rem',
+}))
+
+const StyledContactValue = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.primary,
+  fontSize: '1.5rem',
+  marginLeft: theme.spacing(1),
+}))
+
+const StyledRedIcon = styled(Box)(({ theme }) => ({
+  width: 60,
+  height: 60,
+  borderRadius: '50%',
+  backgroundColor: '#d32f2f',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginRight: theme.spacing(2),
+  flexShrink: 0,
+}))
+
+const StyledBlueIcon = styled(Box)(({ theme }) => ({
+  width: 40,
+  height: 40,
+  borderRadius: theme.spacing(1),
+  backgroundColor: theme.palette.primary.main,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  position: 'absolute',
+  top: theme.spacing(2),
+  right: theme.spacing(2),
 }))
 
 const Portfolio: React.FC = () => {
@@ -745,6 +822,82 @@ const Portfolio: React.FC = () => {
           />
         </DialogActions>
       </StyledEmailDialog>
+
+      {/* Safeguarding Contact Section */}
+      <StyledSafeguardingCard elevation={2}>
+        <StyledSafeguardingHeader>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <StyledRedIcon>
+              <MenuBookIcon sx={{ color: 'white', fontSize: 30 }} />
+            </StyledRedIcon>
+            <Box>
+              <Typography
+                variant='h6'
+                component='h3'
+                sx={{ fontWeight: 700, color: 'text.primary' }}
+              >
+                Safeguarding Contact
+              </Typography>
+            </Box>
+            <InfoOutlinedIcon 
+              sx={{ 
+                ml: 1, 
+                color: 'text.secondary',
+                fontSize: 20 
+              }} 
+            />
+          </Box>
+          <StyledBlueIcon>
+            <FavoriteIcon sx={{ color: 'white', fontSize: 20 }} />
+          </StyledBlueIcon>
+        </StyledSafeguardingHeader>
+
+        <StyledSafeguardingContent>
+          <StyledContactItem>
+            <StyledContactLabel>Tel:</StyledContactLabel>
+            <StyledContactValue>02081912616</StyledContactValue>
+          </StyledContactItem>
+          
+          <StyledContactItem>
+            <StyledContactLabel>Mobile:</StyledContactLabel>
+            <StyledContactValue>07830295875</StyledContactValue>
+          </StyledContactItem>
+          
+          <StyledContactItem>
+            <StyledContactLabel>Email:</StyledContactLabel>
+            <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+              <StyledContactValue>
+                <a 
+                  href="mailto:safeguarding@p4t.co.uk"
+                  style={{
+                    color: 'inherit',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = theme.palette.primary.main;
+                    e.currentTarget.style.textDecoration = 'underline';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'inherit';
+                    e.currentTarget.style.textDecoration = 'none';
+                  }}
+                >
+                  safeguarding@p4t.co.uk
+                </a>
+              </StyledContactValue>
+              <EmailOutlinedIcon 
+                sx={{ 
+                  ml: 1, 
+                  color: theme.palette.primary.main,
+                  fontSize: 18 
+                }} 
+              />
+            </Box>
+          </StyledContactItem>
+        </StyledSafeguardingContent>
+      </StyledSafeguardingCard>
     </StyledContainer>
   )
 }
