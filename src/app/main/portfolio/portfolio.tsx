@@ -36,6 +36,7 @@ import {
 import { selectstoreDataSlice } from 'app/store/reloadData'
 import { sendMail } from 'app/store/userManagement'
 import { selectUser } from 'app/store/userSlice'
+import { useGetSafeguardingContactsQuery } from 'app/store/api/safeguarding-api'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
@@ -310,6 +311,13 @@ const Portfolio: React.FC = () => {
   const data = useSelector(selectstoreDataSlice)
   const { singleData } = useSelector(selectLearnerManagement)
   const userData = useSelector(selectUser)
+  
+  // Safeguarding API
+  const { 
+    data: safeguardingData, 
+    isLoading: isLoadingSafeguarding, 
+    error: safeguardingError 
+  } = useGetSafeguardingContactsQuery()
 
   // Get current user role
   const user = useMemo(() => {
@@ -853,49 +861,77 @@ const Portfolio: React.FC = () => {
         </StyledSafeguardingHeader>
 
         <StyledSafeguardingContent>
-          <StyledContactItem>
-            <StyledContactLabel>Tel:</StyledContactLabel>
-            <StyledContactValue>02081912616</StyledContactValue>
-          </StyledContactItem>
-          
-          <StyledContactItem>
-            <StyledContactLabel>Mobile:</StyledContactLabel>
-            <StyledContactValue>07830295875</StyledContactValue>
-          </StyledContactItem>
-          
-          <StyledContactItem>
-            <StyledContactLabel>Email:</StyledContactLabel>
-            <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-              <StyledContactValue>
-                <a 
-                  href="mailto:safeguarding@p4t.co.uk"
-                  style={{
-                    color: 'inherit',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease-in-out',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = theme.palette.primary.main;
-                    e.currentTarget.style.textDecoration = 'underline';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'inherit';
-                    e.currentTarget.style.textDecoration = 'none';
-                  }}
-                >
-                  safeguarding@p4t.co.uk
-                </a>
-              </StyledContactValue>
-              <EmailOutlinedIcon 
-                sx={{ 
-                  ml: 1, 
-                  color: theme.palette.primary.main,
-                  fontSize: 18 
-                }} 
-              />
+          {isLoadingSafeguarding ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Loading contact information...
+              </Typography>
             </Box>
-          </StyledContactItem>
+          ) : safeguardingError ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <Typography variant="body2" color="error">
+                Unable to load contact information
+              </Typography>
+            </Box>
+          ) : safeguardingData?.data && safeguardingData.data.length > 0 ? (
+            <>
+              {safeguardingData.data[0].telNumber && (
+                <StyledContactItem>
+                  <StyledContactLabel>Tel:</StyledContactLabel>
+                  <StyledContactValue>{safeguardingData.data[0].telNumber}</StyledContactValue>
+                </StyledContactItem>
+              )}
+              
+              {safeguardingData.data[0].mobileNumber && (
+                <StyledContactItem>
+                  <StyledContactLabel>Mobile:</StyledContactLabel>
+                  <StyledContactValue>{safeguardingData.data[0].mobileNumber}</StyledContactValue>
+                </StyledContactItem>
+              )}
+              
+              {safeguardingData.data[0].emailAddress && (
+                <StyledContactItem>
+                  <StyledContactLabel>Email:</StyledContactLabel>
+                  <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                    <StyledContactValue>
+                      <a 
+                        href={`mailto:${safeguardingData.data[0].emailAddress}`}
+                        style={{
+                          color: 'inherit',
+                          textDecoration: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = theme.palette.primary.main;
+                          e.currentTarget.style.textDecoration = 'underline';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = 'inherit';
+                          e.currentTarget.style.textDecoration = 'none';
+                        }}
+                      >
+                        {safeguardingData.data[0].emailAddress}
+                      </a>
+                    </StyledContactValue>
+                    <EmailOutlinedIcon 
+                      sx={{ 
+                        ml: 1, 
+                        color: theme.palette.primary.main,
+                        fontSize: 18 
+                      }} 
+                    />
+                  </Box>
+                </StyledContactItem>
+              )}
+            </>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                No contact information available
+              </Typography>
+            </Box>
+          )}
         </StyledSafeguardingContent>
       </StyledSafeguardingCard>
     </StyledContainer>
