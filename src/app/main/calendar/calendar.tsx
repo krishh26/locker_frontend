@@ -56,6 +56,7 @@ import AlertDialog from 'src/app/component/Dialogs/AlertDialog';
 import DataNotFound from 'src/app/component/Pages/dataNotFound';
 import CustomPagination from 'src/app/component/Pagination/CustomPagination';
 import { themeHelpers, useThemeColors } from '../../utils/themeUtils';
+import { exportSessionsToCSV, downloadCSV, generateFilename } from '../../../utils/csvExport';
 import NewSession from '../portfolio/newsession';
 import './calendar.css';
 import SortByVisitDateDropdown from './SortByVisitDateDropdown';
@@ -218,6 +219,16 @@ const ThemedCalendar = () => {
   
   const handleFilterChange = (event: string, value: string) => {
     setfilter({ ...filter, [event]: value })
+  }
+
+  const handleExportCSV = () => {
+    if (!session?.data || session.data.length === 0) {
+      return
+    }
+    
+    const csvContent = exportSessionsToCSV(session.data)
+    const filename = generateFilename('sessions_export')
+    downloadCSV(csvContent, filename)
   }
 
   useEffect(() => {
@@ -462,6 +473,65 @@ const ThemedCalendar = () => {
                   }}
                 />
               </Box>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <ButtonGroup variant='outlined' size='small'>
+                  <ThemedButton
+                    variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
+                    onClick={() => setViewMode('calendar')}
+                    sx={{
+                      backgroundColor: viewMode === 'calendar' ? colors.primary.main : 'transparent',
+                      color: viewMode === 'calendar' ? colors.primary.contrastText : colors.primary.main,
+                      '&:hover': {
+                        backgroundColor: viewMode === 'calendar' ? colors.primary.dark : themeHelpers.withOpacity(colors.primary.main, 0.1),
+                      },
+                    }}
+                  >
+                    Calendar
+                  </ThemedButton>
+                  <ThemedButton
+                    variant={viewMode === 'list' ? 'contained' : 'outlined'}
+                    onClick={() => setViewMode('list')}
+                    sx={{
+                      backgroundColor: viewMode === 'list' ? colors.primary.main : 'transparent',
+                      color: viewMode === 'list' ? colors.primary.contrastText : colors.primary.main,
+                      '&:hover': {
+                        backgroundColor: viewMode === 'list' ? colors.primary.dark : themeHelpers.withOpacity(colors.primary.main, 0.1),
+                      },
+                    }}
+                  >
+                    List
+                  </ThemedButton>
+                </ButtonGroup>
+                <ThemedButton
+                  variant='outlined'
+                  onClick={handleExportCSV}
+                  disabled={!session?.data || session.data.length === 0}
+                  sx={{
+                    backgroundColor: 'transparent',
+                    color: colors.primary.main,
+                    borderColor: colors.primary.main,
+                    '&:hover': {
+                      backgroundColor: themeHelpers.withOpacity(colors.primary.main, 0.1),
+                    },
+                    '&:disabled': {
+                      color: colors.text.disabled,
+                      borderColor: colors.divider,
+                    },
+                  }}
+                >
+                  Export CSV
+                </ThemedButton>
+              </Box>
+            </Box>
+          </ThemedCard>
+        </Box>
+      )}
+
+      {/* View Toggle for Learners */}
+      {user?.role === 'Learner' && (
+        <Box sx={{ m: 5, mb: 0, display: 'flex', justifyContent: 'flex-end' }}>
+          <ThemedCard sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <ButtonGroup variant='outlined' size='small'>
                 <ThemedButton
                   variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
@@ -490,43 +560,26 @@ const ThemedCalendar = () => {
                   List
                 </ThemedButton>
               </ButtonGroup>
+              <ThemedButton
+                variant='outlined'
+                onClick={handleExportCSV}
+                disabled={!session?.data || session.data.length === 0}
+                sx={{
+                  backgroundColor: 'transparent',
+                  color: colors.primary.main,
+                  borderColor: colors.primary.main,
+                  '&:hover': {
+                    backgroundColor: themeHelpers.withOpacity(colors.primary.main, 0.1),
+                  },
+                  '&:disabled': {
+                    color: colors.text.disabled,
+                    borderColor: colors.divider,
+                  },
+                }}
+              >
+                Export CSV
+              </ThemedButton>
             </Box>
-          </ThemedCard>
-        </Box>
-      )}
-
-      {/* View Toggle for Learners */}
-      {user?.role === 'Learner' && (
-        <Box sx={{ m: 5, mb: 0, display: 'flex', justifyContent: 'flex-end' }}>
-          <ThemedCard sx={{ p: 2 }}>
-            <ButtonGroup variant='outlined' size='small'>
-              <ThemedButton
-                variant={viewMode === 'calendar' ? 'contained' : 'outlined'}
-                onClick={() => setViewMode('calendar')}
-                sx={{
-                  backgroundColor: viewMode === 'calendar' ? colors.primary.main : 'transparent',
-                  color: viewMode === 'calendar' ? colors.primary.contrastText : colors.primary.main,
-                  '&:hover': {
-                    backgroundColor: viewMode === 'calendar' ? colors.primary.dark : themeHelpers.withOpacity(colors.primary.main, 0.1),
-                  },
-                }}
-              >
-                Calendar
-              </ThemedButton>
-              <ThemedButton
-                variant={viewMode === 'list' ? 'contained' : 'outlined'}
-                onClick={() => setViewMode('list')}
-                sx={{
-                  backgroundColor: viewMode === 'list' ? colors.primary.main : 'transparent',
-                  color: viewMode === 'list' ? colors.primary.contrastText : colors.primary.main,
-                  '&:hover': {
-                    backgroundColor: viewMode === 'list' ? colors.primary.dark : themeHelpers.withOpacity(colors.primary.main, 0.1),
-                  },
-                }}
-              >
-                List
-              </ThemedButton>
-            </ButtonGroup>
           </ThemedCard>
         </Box>
       )}

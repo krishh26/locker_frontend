@@ -106,6 +106,27 @@ export const generateFilename = (prefix: string = 'wellbeing_feedbacks'): string
   return `${prefix}_${dateStr}_${timeStr}.csv`;
 };
 
+export interface SessionData {
+  session_id: number;
+  title: string;
+  description: string;
+  location: string;
+  startDate: string;
+  Duration: string;
+  type: string;
+  Attended: string;
+  trainer_id: {
+    user_id: number;
+    user_name: string;
+    email: string;
+  };
+  learners: Array<{
+    learner_id: number;
+    user_name: string;
+    email: string;
+  }>;
+}
+
 export interface EmployerData {
   employer_id: number;
   employer_name: string;
@@ -191,6 +212,109 @@ export const exportEmployersToCSV = (employers: EmployerData[]): string => {
       `"${employer.assessment_renewal_date ? new Date(employer.assessment_renewal_date).toLocaleDateString() : ''}"`,
       `"${employer.insurance_renewal_date ? new Date(employer.insurance_renewal_date).toLocaleDateString() : ''}"`
     ].join(','))
+  ].join('\n');
+
+  return csvContent;
+};
+
+/**
+ * Converts duration from "H:MM" format to minutes
+ * @param duration - Duration string in "H:MM" format
+ * @returns Duration in minutes as number
+ */
+export const convertDurationToMinutes = (duration: string): number => {
+  if (!duration) return 0;
+  
+  const parts = duration.split(':');
+  if (parts.length !== 2) return 0;
+  
+  const hours = parseInt(parts[0], 10) || 0;
+  const minutes = parseInt(parts[1], 10) || 0;
+  
+  return (hours * 60) + minutes;
+};
+
+/**
+ * Formats date to Excel-compatible format (en-US)
+ * @param dateString - ISO date string
+ * @returns Formatted date string
+ */
+export const formatDateForExcel = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+};
+
+/**
+ * Converts session data to CSV format
+ * Creates separate rows for each learner in a session
+ * @param sessions - Array of session data
+ * @returns CSV string
+ */
+export const exportSessionsToCSV = (sessions: SessionData[]): string => {
+  // CSV headers as specified by user
+  const headers = [
+    'Session ID',
+    'Trainer Name',
+    'Start Time',
+    'Session Type',
+    'Duration Minutes',
+    'Session Location',
+    'Formative Notes',
+    'Learner First Name',
+    'Session Attendance'
+  ];
+  
+  // Create rows for each learner in each session
+  const csvRows: string[] = [];
+  
+  sessions.forEach(session => {
+    // If no learners, create one row with empty learner info
+    if (!session.learners || session.learners.length === 0) {
+      csvRows.push([
+        session.session_id.toString(),
+        `"${session.trainer_id?.user_name || ''}"`,
+        `"${formatDateForExcel(session.startDate)}"`,
+        `"${session.type || ''}"`,
+        convertDurationToMinutes(session.Duration).toString(),
+        `"${session.location || ''}"`,
+        `"${session.description || ''}"`,
+        '""',
+        `"${session.Attended || ''}"`
+      ].join(','));
+    } else {
+      // Create a separate row for each learner
+      session.learners.forEach(learner => {
+        csvRows.push([
+          session.session_id.toString(),
+          `"${session.trainer_id?.user_name || ''}"`,
+          `"${formatDateForExcel(session.startDate)}"`,
+          `"${session.type || ''}"`,
+          convertDurationToMinutes(session.Duration).toString(),
+          `"${session.location || ''}"`,
+          `"${session.description || ''}"`,
+          `"${learner.user_name || ''}"`,
+          `"${session.Attended || ''}"`
+        ].join(','));
+      });
+    }
+  });
+  
+  // Create CSV content
+  const csvContent = [
+    headers.join(','),
+    ...csvRows
   ].join('\n');
 
   return csvContent;
