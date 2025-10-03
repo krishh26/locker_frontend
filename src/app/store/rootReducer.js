@@ -32,6 +32,7 @@ import { caseloadAPI } from './api/caseload-api'
 import { trainerRiskAPI } from './api/trainer-risk-rating-api'
 import { resourcesApi } from './api/resourcesApi'
 import { safeguardingAPI } from './api/safeguarding-api'
+import { acknowledgementApi } from './api/acknowledgementApi'
 
 const createReducer = (asyncReducers) => (state, action) => {
   const combinedReducer = combineReducers({
@@ -68,6 +69,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     [trainerRiskAPI.reducerPath]: trainerRiskAPI.reducer,
     [resourcesApi.reducerPath]: resourcesApi.reducer,
     [safeguardingAPI.reducerPath]: safeguardingAPI.reducer,
+    [acknowledgementApi.reducerPath]: acknowledgementApi.reducer,
     ...asyncReducers,
   })
 
@@ -88,6 +90,7 @@ export const concatMiddleware = [
   trainerRiskAPI.middleware,
   resourcesApi.middleware,
   safeguardingAPI.middleware,
+  acknowledgementApi.middleware,
 ]
 
 export default createReducer

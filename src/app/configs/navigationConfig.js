@@ -95,14 +95,6 @@ const navigationConfig = [
     visible: [UserRole.Learner],
   },
   {
-    id: 'dashboards.learnerWellbeing',
-    title: 'Wellbeing Resources',
-    type: 'item',
-    icon: 'heroicons-outline:heart',
-    url: '/learner-wellbeing',
-    visible: [UserRole.Learner],
-  },
-  {
     id: 'dashboards.createAssignment',
     title: 'Assignment',
     type: 'item',
@@ -295,6 +287,14 @@ const navigationConfig = [
     type: 'item',
     icon: 'heroicons-outline:shield-check',
     url: '/safeguarding',
+    visible: [UserRole.Admin],
+  },
+  {
+    id: 'dashboards.acknowledgeMessage',
+    title: 'Acknowledge Message',
+    type: 'item',
+    icon: 'heroicons-outline:information-circle',
+    url: '/admin/acknowledge-message',
     visible: [UserRole.Admin],
   },
 ]

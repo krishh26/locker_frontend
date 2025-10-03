@@ -28,13 +28,12 @@ import {
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { slice as courseSlice, slice } from 'app/store/courseManagement'
-import { selectGlobalUser } from 'app/store/globalUser'
 import {
   getLearnerDetails,
   selectLearnerManagement,
 } from 'app/store/learnerManagement'
 import { selectstoreDataSlice } from 'app/store/reloadData'
-import { sendMail } from 'app/store/userManagement'
+import { sendMail, updateUserAPI } from 'app/store/userManagement'
 import { selectUser } from 'app/store/userSlice'
 import { useGetSafeguardingContactsQuery } from 'app/store/api/safeguarding-api'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
@@ -49,6 +48,8 @@ import DoughnutChart from 'src/app/component/Chart/doughnut'
 import { portfolioCard } from 'src/app/contanst'
 import { getRandomColor } from 'src/utils/randomColor'
 import Calendar from './calendar'
+import { useAcknowledgementPopup } from 'src/app/hooks/useAcknowledgementPopup'
+import AcknowledgementPopup from 'src/app/component/AcknowledgementPopup'
 
 // TypeScript Interfaces
 interface EmailData {
@@ -289,6 +290,8 @@ const StyledBlueIcon = styled(Box)(({ theme }) => ({
 const Portfolio: React.FC = () => {
   // State management
   const [open, setOpen] = useState<boolean>(false)
+  const [isAcknowledgementOpen, setIsAcknowledgementOpen] =
+    useState<boolean>(false)
   const [activeTab, setActiveTab] = useState<number>(0)
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
   const [emailData, setEmailData] = useState<EmailData>({
@@ -300,9 +303,17 @@ const Portfolio: React.FC = () => {
 
   // Hooks
   const navigate = useNavigate()
-  const dispatch = useDispatch()
+  const dispatch: any = useDispatch()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
+  // Acknowledgement popup hook
+  // const {
+  //   isOpen: isAcknowledgementOpen,
+  //   shouldShow: shouldShowAcknowledgement,
+  //   handleClose: handleAcknowledgementClose,
+  //   handleAccept: handleAcknowledgementAccept,
+  // } = useAcknowledgementPopup()
 
   // Selectors
   const { learner, dataUpdatingLoadding, dataFetchLoading } = useSelector(
@@ -311,13 +322,19 @@ const Portfolio: React.FC = () => {
   const data = useSelector(selectstoreDataSlice)
   const { singleData } = useSelector(selectLearnerManagement)
   const userData = useSelector(selectUser)
-  
+
   // Safeguarding API
-  const { 
-    data: safeguardingData, 
-    isLoading: isLoadingSafeguarding, 
-    error: safeguardingError 
+  const {
+    data: safeguardingData,
+    isLoading: isLoadingSafeguarding,
+    error: safeguardingError,
   } = useGetSafeguardingContactsQuery()
+
+  useEffect(() => {
+    if (learner && learner.isShowMessage) {
+      setIsAcknowledgementOpen(true)
+    }
+  }, [learner])
 
   // Get current user role
   const user = useMemo(() => {
@@ -603,7 +620,15 @@ const Portfolio: React.FC = () => {
                 </Link>
 
                 {/* Personal Information in Header */}
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1, alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 2,
+                    mt: 1,
+                    alignItems: 'center',
+                  }}
+                >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Typography
                       variant='body2'
@@ -651,19 +676,34 @@ const Portfolio: React.FC = () => {
                       color='primary'
                       variant='filled'
                       size='medium'
-                      sx={{ 
+                      sx={{
                         fontWeight: 700,
-                        backgroundColor: alpha(theme.palette.primary.contrastText, 0.15),
-                        border: `2px solid ${alpha(theme.palette.primary.contrastText, 0.3)}`,
+                        backgroundColor: alpha(
+                          theme.palette.primary.contrastText,
+                          0.15
+                        ),
+                        border: `2px solid ${alpha(
+                          theme.palette.primary.contrastText,
+                          0.3
+                        )}`,
                         color: theme.palette.primary.contrastText,
                         height: '32px',
                         borderRadius: '16px',
-                        boxShadow: `0 2px 8px ${alpha(theme.palette.primary.contrastText, 0.2)}`,
+                        boxShadow: `0 2px 8px ${alpha(
+                          theme.palette.primary.contrastText,
+                          0.2
+                        )}`,
                         transition: 'all 0.3s ease-in-out',
                         '&:hover': {
-                          backgroundColor: alpha(theme.palette.primary.contrastText, 0.25),
+                          backgroundColor: alpha(
+                            theme.palette.primary.contrastText,
+                            0.25
+                          ),
                           transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.contrastText, 0.3)}`,
+                          boxShadow: `0 4px 12px ${alpha(
+                            theme.palette.primary.contrastText,
+                            0.3
+                          )}`,
                         },
                         '& .MuiChip-label': {
                           fontSize: '1rem',
@@ -847,12 +887,12 @@ const Portfolio: React.FC = () => {
                 Safeguarding Contact
               </Typography>
             </Box>
-            <InfoOutlinedIcon 
-              sx={{ 
-                ml: 1, 
+            <InfoOutlinedIcon
+              sx={{
+                ml: 1,
                 color: 'text.secondary',
-                fontSize: 20 
-              }} 
+                fontSize: 20,
+              }}
             />
           </Box>
           <StyledBlueIcon>
@@ -863,13 +903,13 @@ const Portfolio: React.FC = () => {
         <StyledSafeguardingContent>
           {isLoadingSafeguarding ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant='body2' color='text.secondary'>
                 Loading contact information...
               </Typography>
             </Box>
           ) : safeguardingError ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <Typography variant="body2" color="error">
+              <Typography variant='body2' color='error'>
                 Unable to load contact information
               </Typography>
             </Box>
@@ -878,23 +918,27 @@ const Portfolio: React.FC = () => {
               {safeguardingData.data[0].telNumber && (
                 <StyledContactItem>
                   <StyledContactLabel>Tel:</StyledContactLabel>
-                  <StyledContactValue>{safeguardingData.data[0].telNumber}</StyledContactValue>
+                  <StyledContactValue>
+                    {safeguardingData.data[0].telNumber}
+                  </StyledContactValue>
                 </StyledContactItem>
               )}
-              
+
               {safeguardingData.data[0].mobileNumber && (
                 <StyledContactItem>
                   <StyledContactLabel>Mobile:</StyledContactLabel>
-                  <StyledContactValue>{safeguardingData.data[0].mobileNumber}</StyledContactValue>
+                  <StyledContactValue>
+                    {safeguardingData.data[0].mobileNumber}
+                  </StyledContactValue>
                 </StyledContactItem>
               )}
-              
+
               {safeguardingData.data[0].emailAddress && (
                 <StyledContactItem>
                   <StyledContactLabel>Email:</StyledContactLabel>
                   <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                     <StyledContactValue>
-                      <a 
+                      <a
                         href={`mailto:${safeguardingData.data[0].emailAddress}`}
                         style={{
                           color: 'inherit',
@@ -903,23 +947,24 @@ const Portfolio: React.FC = () => {
                           transition: 'all 0.2s ease-in-out',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = theme.palette.primary.main;
-                          e.currentTarget.style.textDecoration = 'underline';
+                          e.currentTarget.style.color =
+                            theme.palette.primary.main
+                          e.currentTarget.style.textDecoration = 'underline'
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = 'inherit';
-                          e.currentTarget.style.textDecoration = 'none';
+                          e.currentTarget.style.color = 'inherit'
+                          e.currentTarget.style.textDecoration = 'none'
                         }}
                       >
                         {safeguardingData.data[0].emailAddress}
                       </a>
                     </StyledContactValue>
-                    <EmailOutlinedIcon 
-                      sx={{ 
-                        ml: 1, 
+                    <EmailOutlinedIcon
+                      sx={{
+                        ml: 1,
                         color: theme.palette.primary.main,
-                        fontSize: 18 
-                      }} 
+                        fontSize: 18,
+                      }}
                     />
                   </Box>
                 </StyledContactItem>
@@ -927,13 +972,32 @@ const Portfolio: React.FC = () => {
             </>
           ) : (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant='body2' color='text.secondary'>
                 No contact information available
               </Typography>
             </Box>
           )}
         </StyledSafeguardingContent>
       </StyledSafeguardingCard>
+      {/* Acknowledgement Popup */}
+      <AcknowledgementPopup
+        open={isAcknowledgementOpen}
+        onClose={async () => {
+          setIsAcknowledgementOpen(false)
+          // Update learner isShowMessage to false
+          if (learner?.user_id) {
+            await dispatch(updateUserAPI(learner.user_id, { isShowMessage: false }))
+          }
+        }}
+        onAccept={async () => {
+          setIsAcknowledgementOpen(false)
+          // Update learner isShowMessage to false
+          if (learner?.user_id) {
+            await dispatch(updateUserAPI(learner.user_id, { isShowMessage: false }))
+          }
+        }}
+        name={learner?.first_name + ' ' + learner?.last_name}
+      />
     </StyledContainer>
   )
 }
