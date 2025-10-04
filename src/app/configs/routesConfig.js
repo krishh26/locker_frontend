@@ -37,6 +37,7 @@ import LearnerWellbeingConfig from '../main/learner-wellbeing/learnerWellbeingCo
 import SafeguardingConfig from '../main/safegurd/safegurdConfig'
 import AcknowledgeMessageConfig from '../main/acknowledgeMessage/acknowledgeMessageConfig'
 import DefaultReviewWeeksConfig from '../main/defaultReviewWeeks/defaultReviewWeeksConfig'
+import TimelogDataExportConfig from '../main/timelogDataExport/timelogDataExportConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -73,7 +74,8 @@ const routeConfigs = [
   LearnerWellbeingConfig,
   SafeguardingConfig,
   AcknowledgeMessageConfig,
-  DefaultReviewWeeksConfig
+  DefaultReviewWeeksConfig,
+  TimelogDataExportConfig
 ]
 
 const routes = [

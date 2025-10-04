@@ -39,6 +39,7 @@ declare module 'xlsx' {
 
   export const utils: {
     json_to_sheet: (data: any[]) => WorkSheet;
+    aoa_to_sheet: (data: any[][]) => WorkSheet;
     book_new: () => WorkBook;
     book_append_sheet: (workbook: WorkBook, worksheet: WorkSheet, name: string) => void;
   };

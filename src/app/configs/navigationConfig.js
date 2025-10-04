@@ -305,5 +305,13 @@ const navigationConfig = [
     url: '/default-review-weeks',
     visible: [UserRole.Admin],
   },
+  {
+    id: 'dashboards.timelogDataExport',
+    title: 'Timelog Data Export',
+    type: 'item',
+    icon: 'heroicons-outline:chart-pie',
+    url: '/timelog-data-export',
+    visible: [UserRole.Admin],
+  },
 ]
 export default navigationConfig
