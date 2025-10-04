@@ -31,6 +31,7 @@ import { slice as courseSlice, slice } from 'app/store/courseManagement'
 import {
   getLearnerDetails,
   selectLearnerManagement,
+  updateLearnerAPI,
 } from 'app/store/learnerManagement'
 import { selectstoreDataSlice } from 'app/store/reloadData'
 import { sendMail, updateUserAPI } from 'app/store/userManagement'
@@ -985,15 +986,15 @@ const Portfolio: React.FC = () => {
         onClose={async () => {
           setIsAcknowledgementOpen(false)
           // Update learner isShowMessage to false
-          if (learner?.user_id) {
-            await dispatch(updateUserAPI(learner.user_id, { isShowMessage: false }))
+          if (learner?.learner_id) {
+            await dispatch(updateLearnerAPI(learner.learner_id, { isShowMessage: false }))
           }
         }}
         onAccept={async () => {
           setIsAcknowledgementOpen(false)
           // Update learner isShowMessage to false
-          if (learner?.user_id) {
-            await dispatch(updateUserAPI(learner.user_id, { isShowMessage: false }))
+          if (learner?.learner_id) {
+            await dispatch(updateLearnerAPI(learner.learner_id, { isShowMessage: false }))
           }
         }}
         name={learner?.first_name + ' ' + learner?.last_name}
