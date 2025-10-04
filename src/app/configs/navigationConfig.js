@@ -313,5 +313,13 @@ const navigationConfig = [
     url: '/timelog-data-export',
     visible: [UserRole.Admin],
   },
+  {
+    id: 'dashboards.learnersWaitingToBeSampled',
+    title: 'Learners Waiting to be Sampled',
+    type: 'item',
+    icon: 'heroicons-outline:user-group',
+    url: '/learners-waiting-to-be-sampled',
+    visible: [UserRole.Admin],
+  },
 ]
 export default navigationConfig

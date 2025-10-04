@@ -23,6 +23,7 @@ import globalUser from './globalUser'
 import timeLog from './timeLog'
 import broadcast from './broadcast'
 import contractWork from './contractedWork'
+import learnersWaitingToBeSampled from './learnersWaitingToBeSampled'
 
 import { evidenceAPI } from './api/evidence-api'
 import { learnerPlanAPI } from './api/learner-plan-api'
@@ -60,6 +61,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     timeLog,
     broadcast,
     contractWork,
+    learnersWaitingToBeSampled,
 
     // Add the API reducer
     [evidenceAPI.reducerPath]: evidenceAPI.reducer,
