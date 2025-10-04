@@ -18,6 +18,22 @@ export const formAPI = createApi({
       },
       keepUnusedDataFor: 0,
     }),
+    getAllForms: builder.query({
+      query: (params = {}) => {
+        const { page = 1, page_size = 1000, search_keyword = '', user_id = '' } = params
+        let url = `form/list?meta=true&page=${page}&limit=${page_size}`
+        
+        if (search_keyword) {
+          url = `${url}&keyword=${search_keyword}`
+        }
+        if (user_id) {
+          url = `${url}&user_id=${user_id}`
+        }
+        
+        return { url }
+      },
+      keepUnusedDataFor: 0,
+    }),
   }),
 })
-export const { useGetFormDetailsQuery, useGetSavedFormDetailsQuery } = formAPI
+export const { useGetFormDetailsQuery, useGetSavedFormDetailsQuery, useGetAllFormsQuery } = formAPI

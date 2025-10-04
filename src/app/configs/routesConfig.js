@@ -35,6 +35,11 @@ import ThemeDemoConfig from '../pages/themedemoConfig'
 import WellbeingConfig from '../main/wellbeing/wellbeingConfig'
 import LearnerWellbeingConfig from '../main/learner-wellbeing/learnerWellbeingConfig'
 import SafeguardingConfig from '../main/safegurd/safegurdConfig'
+import AcknowledgeMessageConfig from '../main/acknowledgeMessage/acknowledgeMessageConfig'
+import DefaultReviewWeeksConfig from '../main/defaultReviewWeeks/defaultReviewWeeksConfig'
+import TimelogDataExportConfig from '../main/timelogDataExport/timelogDataExportConfig'
+import LearnersWaitingToBeSampledConfig from '../main/learnersWaitingToBeSampled/learnersWaitingToBeSampledConfig'
+import AwaitingSignatureConfig from '../main/awaitingSignature/awaitingSignatureConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -69,7 +74,12 @@ const routeConfigs = [
   TrainerRiskRatingConfig,
   ThemeDemoConfig,
   LearnerWellbeingConfig,
-  SafeguardingConfig
+  SafeguardingConfig,
+  AcknowledgeMessageConfig,
+  DefaultReviewWeeksConfig,
+  TimelogDataExportConfig,
+  LearnersWaitingToBeSampledConfig,
+  AwaitingSignatureConfig
 ]
 
 const routes = [

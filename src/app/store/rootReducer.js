@@ -23,6 +23,7 @@ import globalUser from './globalUser'
 import timeLog from './timeLog'
 import broadcast from './broadcast'
 import contractWork from './contractedWork'
+import learnersWaitingToBeSampled from './learnersWaitingToBeSampled'
 
 import { evidenceAPI } from './api/evidence-api'
 import { learnerPlanAPI } from './api/learner-plan-api'
@@ -32,6 +33,9 @@ import { caseloadAPI } from './api/caseload-api'
 import { trainerRiskAPI } from './api/trainer-risk-rating-api'
 import { resourcesApi } from './api/resourcesApi'
 import { safeguardingAPI } from './api/safeguarding-api'
+import { acknowledgementApi } from './api/acknowledgementApi'
+import { defaultReviewWeeksApi } from './api/default-review-weeks-api'
+import { awaitingSignatureAPI } from './api/awaiting-signature-api'
 
 const createReducer = (asyncReducers) => (state, action) => {
   const combinedReducer = combineReducers({
@@ -58,6 +62,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     timeLog,
     broadcast,
     contractWork,
+    learnersWaitingToBeSampled,
 
     // Add the API reducer
     [evidenceAPI.reducerPath]: evidenceAPI.reducer,
@@ -68,6 +73,9 @@ const createReducer = (asyncReducers) => (state, action) => {
     [trainerRiskAPI.reducerPath]: trainerRiskAPI.reducer,
     [resourcesApi.reducerPath]: resourcesApi.reducer,
     [safeguardingAPI.reducerPath]: safeguardingAPI.reducer,
+    [acknowledgementApi.reducerPath]: acknowledgementApi.reducer,
+    [defaultReviewWeeksApi.reducerPath]: defaultReviewWeeksApi.reducer,
+    [awaitingSignatureAPI.reducerPath]: awaitingSignatureAPI.reducer,
     ...asyncReducers,
   })
 
@@ -88,6 +96,9 @@ export const concatMiddleware = [
   trainerRiskAPI.middleware,
   resourcesApi.middleware,
   safeguardingAPI.middleware,
+  acknowledgementApi.middleware,
+  defaultReviewWeeksApi.middleware,
+  awaitingSignatureAPI.middleware,
 ]
 
 export default createReducer
