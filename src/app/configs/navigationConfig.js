@@ -297,5 +297,13 @@ const navigationConfig = [
     url: '/admin/acknowledge-message',
     visible: [UserRole.Admin],
   },
+  {
+    id: 'dashboards.defaultReviewWeeks',
+    title: 'Default Review Weeks',
+    type: 'item',
+    icon: 'heroicons-outline:clock',
+    url: '/default-review-weeks',
+    visible: [UserRole.Admin],
+  },
 ]
 export default navigationConfig

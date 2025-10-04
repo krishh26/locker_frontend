@@ -36,6 +36,7 @@ import WellbeingConfig from '../main/wellbeing/wellbeingConfig'
 import LearnerWellbeingConfig from '../main/learner-wellbeing/learnerWellbeingConfig'
 import SafeguardingConfig from '../main/safegurd/safegurdConfig'
 import AcknowledgeMessageConfig from '../main/acknowledgeMessage/acknowledgeMessageConfig'
+import DefaultReviewWeeksConfig from '../main/defaultReviewWeeks/defaultReviewWeeksConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -71,7 +72,8 @@ const routeConfigs = [
   ThemeDemoConfig,
   LearnerWellbeingConfig,
   SafeguardingConfig,
-  AcknowledgeMessageConfig
+  AcknowledgeMessageConfig,
+  DefaultReviewWeeksConfig
 ]
 
 const routes = [
