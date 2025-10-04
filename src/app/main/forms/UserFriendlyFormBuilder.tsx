@@ -28,6 +28,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 import PreviewIcon from '@mui/icons-material/Preview'
+import FileCopyIcon from '@mui/icons-material/FileCopy'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { SimpleFormBuilder } from 'src/app/component/FormBuilder'
@@ -40,7 +41,7 @@ import {
 } from 'app/store/formData'
 import { LoadingButton } from 'src/app/component/Buttons'
 import DynamicFormPreview from './DynamicFormPreview'
-import { useGetFormDetailsQuery } from 'app/store/api/form-api'
+import { useGetFormDetailsQuery, useGetAllFormsQuery } from 'app/store/api/form-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
 
 // Typed roles
@@ -83,6 +84,7 @@ const generateRoleObject = () =>
     return acc
   }, {} as Record<Role, yup.BooleanSchema>)
 
+// Yup schema without duplicate validation (only used for regular form validation)
 const schema = yup.object().shape({
   form_name: yup.string().required('Form name is required'),
   type: yup.string().required('Form type is required'),
@@ -161,12 +163,34 @@ const UserFriendlyFormBuilder: React.FC = () => {
   >('idle')
 
   const {
+    data: formDetails,
+    isLoading: isFormDetailsLoading,
+    isError: isFormDetailsError,
+    error: formDetailsError,
+  } = useGetFormDetailsQuery(
+    { id: formId },
+    { skip: !formId, refetchOnMountOrArgChange: false }
+  )
+
+  const {
+    data: allForms,
+    isLoading: isAllFormsLoading,
+  } = useGetAllFormsQuery(
+    {},
+    { skip: false, refetchOnMountOrArgChange: false }
+  )
+
+  // Get existing forms data for validation (only used in handleSaveAsForm)
+  const existingForms = allForms?.data || []
+  
+  const {
     control,
     handleSubmit,
     getValues,
     reset,
     watch,
     trigger,
+    setError,
     formState: { errors },
   } = useForm<MetadataFormValues>({
     defaultValues: {
@@ -189,16 +213,6 @@ const UserFriendlyFormBuilder: React.FC = () => {
     resolver: yupResolver(schema),
     mode: 'all',
   })
-
-  const {
-    data: formDetails,
-    isLoading: isFormDetailsLoading,
-    isError: isFormDetailsError,
-    error: formDetailsError,
-  } = useGetFormDetailsQuery(
-    { id: formId },
-    { skip: !formId, refetchOnMountOrArgChange: false }
-  )
 
   useEffect(() => {
     if (isFormDetailsError && formDetailsError) {
@@ -345,6 +359,74 @@ const UserFriendlyFormBuilder: React.FC = () => {
     }
   }
 
+  const handleSaveAsForm = async () => {
+    const values = getValues()
+    console.log('🚀 ~ handleSaveAsForm ~ values:', values)
+
+    if (!values.form_name.trim()) {
+      alert('Please enter a form name')
+      return
+    }
+
+    if (formFields.length === 0) {
+      alert('Please add at least one field to the form')
+      return
+    }
+
+    // Check for duplicate name
+    const newFormName = `${values.form_name}`
+    const existingFormNames = existingForms
+      ?.map((form: any) => form.form_name?.toLowerCase().trim())
+      .filter(Boolean) || []
+
+    if (existingFormNames.includes(newFormName.toLowerCase().trim())) {
+      setError('form_name', {
+        type: 'manual',
+        message: 'A form with this name already exists. Please choose a different name.'
+      })
+      return
+    }
+
+    setSaveStatus('saving')
+
+    const formData = {
+      id: null, // Always null for new form
+      form_name: newFormName, // Add "Copy of" prefix
+      description: values.description,
+      type: values.type,
+      form_data: formFields,
+      access_rights: Object.entries(values.accessRights)
+        .filter(([_, value]) => value)
+        .map(([key]) => `'${key}'`) // wrap each key in single quotes
+        .join(','),
+      completion_roles: Object.entries(values.completionRoles)
+        .filter(([_, value]) => value)
+        .map(([key]) => `'${key}'`) // wrap each key in single quotes
+        .join(','),
+      enable_complete_function: values.enableCompleteFunction,
+      set_request_signature: values.requestSignature,
+      email_roles: Object.entries(values.emails)
+        .filter(([_, value]) => value)
+        .map(([key]) => `'${key}'`) // wrap each key in single quotes
+        .join(','),
+      other_emails: values.otherEmail || null,
+    }
+
+    try {
+      const response = await dispatch(createFormDataAPI(formData))
+
+      if (response) {
+        setSaveStatus('saved')
+        setTimeout(() => navigate('/forms'), 1500)
+      } else {
+        setSaveStatus('error')
+      }
+    } catch (error) {
+      console.error('Error saving form as new:', error)
+      setSaveStatus('error')
+    }
+  }
+
   const handleCancel = () => {
     navigate('/forms')
     dispatch(slice.setSingleData({ form_data: [] }))
@@ -433,13 +515,25 @@ const UserFriendlyFormBuilder: React.FC = () => {
             {dataUpdatingLoadding || saveStatus === 'saving' ? (
               <LoadingButton />
             ) : (
-              <Button
-                variant='contained'
-                startIcon={<SaveIcon />}
-                onClick={handleSubmit(handleSave)}
-              >
-                Save Form
-              </Button>
+              <>
+                {formId && (
+                  <Button
+                    variant='outlined'
+                    startIcon={<FileCopyIcon />}
+                    onClick={handleSubmit(handleSaveAsForm)}
+                    sx={{ mr: 1 }}
+                  >
+                    Save As Form
+                  </Button>
+                )}
+                <Button
+                  variant='contained'
+                  startIcon={<SaveIcon />}
+                  onClick={handleSubmit(handleSave)}
+                >
+                  Save Form
+                </Button>
+              </>
             )}
           </Box>
         </Toolbar>
