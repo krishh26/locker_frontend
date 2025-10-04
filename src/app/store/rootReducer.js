@@ -35,6 +35,7 @@ import { resourcesApi } from './api/resourcesApi'
 import { safeguardingAPI } from './api/safeguarding-api'
 import { acknowledgementApi } from './api/acknowledgementApi'
 import { defaultReviewWeeksApi } from './api/default-review-weeks-api'
+import { awaitingSignatureAPI } from './api/awaiting-signature-api'
 
 const createReducer = (asyncReducers) => (state, action) => {
   const combinedReducer = combineReducers({
@@ -74,6 +75,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     [safeguardingAPI.reducerPath]: safeguardingAPI.reducer,
     [acknowledgementApi.reducerPath]: acknowledgementApi.reducer,
     [defaultReviewWeeksApi.reducerPath]: defaultReviewWeeksApi.reducer,
+    [awaitingSignatureAPI.reducerPath]: awaitingSignatureAPI.reducer,
     ...asyncReducers,
   })
 
@@ -96,6 +98,7 @@ export const concatMiddleware = [
   safeguardingAPI.middleware,
   acknowledgementApi.middleware,
   defaultReviewWeeksApi.middleware,
+  awaitingSignatureAPI.middleware,
 ]
 
 export default createReducer

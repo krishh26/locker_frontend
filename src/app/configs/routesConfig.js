@@ -39,6 +39,7 @@ import AcknowledgeMessageConfig from '../main/acknowledgeMessage/acknowledgeMess
 import DefaultReviewWeeksConfig from '../main/defaultReviewWeeks/defaultReviewWeeksConfig'
 import TimelogDataExportConfig from '../main/timelogDataExport/timelogDataExportConfig'
 import LearnersWaitingToBeSampledConfig from '../main/learnersWaitingToBeSampled/learnersWaitingToBeSampledConfig'
+import AwaitingSignatureConfig from '../main/awaitingSignature/awaitingSignatureConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -77,7 +78,8 @@ const routeConfigs = [
   AcknowledgeMessageConfig,
   DefaultReviewWeeksConfig,
   TimelogDataExportConfig,
-  LearnersWaitingToBeSampledConfig
+  LearnersWaitingToBeSampledConfig,
+  AwaitingSignatureConfig
 ]
 
 const routes = [

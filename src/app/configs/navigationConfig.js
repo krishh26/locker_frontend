@@ -321,5 +321,13 @@ const navigationConfig = [
     url: '/learners-waiting-to-be-sampled',
     visible: [UserRole.Admin],
   },
+  {
+    id: 'dashboards.awaitingSignature',
+    title: 'Awaiting Signature',
+    type: 'item',
+    icon: 'heroicons-outline:document-text',
+    url: '/awaiting-signature',
+    visible: [UserRole.Admin],
+  },
 ]
 export default navigationConfig
