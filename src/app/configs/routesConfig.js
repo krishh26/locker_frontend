@@ -40,6 +40,7 @@ import DefaultReviewWeeksConfig from '../main/defaultReviewWeeks/defaultReviewWe
 import TimelogDataExportConfig from '../main/timelogDataExport/timelogDataExportConfig'
 import LearnersWaitingToBeSampledConfig from '../main/learnersWaitingToBeSampled/learnersWaitingToBeSampledConfig'
 import AwaitingSignatureConfig from '../main/awaitingSignature/awaitingSignatureConfig'
+import GatewayReportConfig from '../main/gatewayReport/gatewayReportConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -79,7 +80,8 @@ const routeConfigs = [
   DefaultReviewWeeksConfig,
   TimelogDataExportConfig,
   LearnersWaitingToBeSampledConfig,
-  AwaitingSignatureConfig
+  AwaitingSignatureConfig,
+  GatewayReportConfig
 ]
 
 const routes = [

@@ -329,5 +329,13 @@ const navigationConfig = [
     url: '/awaiting-signature',
     visible: [UserRole.Admin],
   },
+  {
+    id: 'dashboards.gatewayReport',
+    title: 'Gateway Report',
+    type: 'item',
+    icon: 'heroicons-outline:chart-bar',
+    url: '/gateway-report',
+    visible: [UserRole.Admin],
+  },
 ]
 export default navigationConfig
