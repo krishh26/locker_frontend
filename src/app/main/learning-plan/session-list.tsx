@@ -488,7 +488,6 @@ const SessionList = () => {
           {learner.first_name} {learner.last_name} - All Courses
         </Typography>
         <div>
-          {user.roles.includes('Trainer') && (
             <Button
               variant='contained'
               color='primary'
@@ -496,7 +495,6 @@ const SessionList = () => {
             >
               Add Session
             </Button>
-          )}
         </div>
       </div>
 

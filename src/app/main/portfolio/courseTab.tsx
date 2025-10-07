@@ -4,6 +4,7 @@ import { Add, Edit } from '@mui/icons-material'
 import {
   Autocomplete,
   Box,
+  Checkbox,
   Chip,
   Dialog,
   IconButton,
@@ -77,6 +78,7 @@ const courseSchema = yup.object().shape({
   course_status: yup.string().optional(),
   predicted_grade: yup.string().required('Please enter predicted grade'),
   final_grade: yup.string().required('Please enter final grade'),
+  is_main_course: yup.boolean().optional(),
 })
 
 const CourseTab = () => {
@@ -118,6 +120,7 @@ const CourseTab = () => {
       course_status: '',
       predicted_grade: '',
       final_grade: '',
+      is_main_course: false,
     },
   })
 
@@ -133,42 +136,12 @@ const CourseTab = () => {
     try {
       if (isEditMode) {
         // Update course logic
-        const response = await dispatch(
+        await dispatch(
           updateUserCourse(selectedCourse?.user_course_id, formData)
         )
-        if (response) {
-          dispatch(
-            showMessage({
-              message: 'Course updated successfully!',
-              variant: 'success',
-            })
-          )
-        } else {
-          dispatch(
-            showMessage({
-              message: 'Failed to update course. Please try again.',
-              variant: 'error',
-            })
-          )
-        }
       } else {
         // Add course logic
-        const response = await dispatch(courseAllocationAPI(formData))
-        if (response) {
-          dispatch(
-            showMessage({
-              message: 'Course added successfully!',
-              variant: 'success',
-            })
-          )
-        } else {
-          dispatch(
-            showMessage({
-              message: 'Failed to add course. Please try again.',
-              variant: 'error',
-            })
-          )
-        }
+        await dispatch(courseAllocationAPI(formData))
       }
       closeCourseDialog()
       handleLearnerRefetch()
@@ -396,8 +369,8 @@ const CourseTab = () => {
                           ? `${row?.IQA_id?.first_name} ${row?.IQA_id?.last_name}`
                           : 'N/A'}
                       </TableCell>
-                        {!user?.roles.includes(UserRole.Learner) && (
-                      <TableCell>
+                      {!user?.roles.includes(UserRole.Learner) && (
+                        <TableCell>
                           <div className='flex gap-2'>
                             <Tooltip title='Edit Course'>
                               <IconButton
@@ -409,8 +382,8 @@ const CourseTab = () => {
                               </IconButton>
                             </Tooltip>
                           </div>
-                      </TableCell>
-                        )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -797,6 +770,26 @@ const CourseTab = () => {
                   )}
                 />
               </div>
+            </div>
+
+            <div className='mt-4'>
+              <Controller
+                name='is_main_course'
+                control={control}
+                render={({ field }) => (
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox
+                      {...field}
+                      checked={field.value || false}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      color='primary'
+                    />
+                    <Typography className='text-sm font-medium text-gray-700'>
+                      Main Aim Course
+                    </Typography>
+                  </div>
+                )}
+              />
             </div>
 
             <div className='flex justify-end gap-3 mt-6'>

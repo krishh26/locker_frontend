@@ -11,6 +11,7 @@ import {
   Avatar,
   AvatarGroup,
   Box,
+  Checkbox,
   Dialog,
   Grid,
   IconButton,
@@ -84,7 +85,8 @@ export default function LearnerManagementTable(props) {
     EQA_id: yup.string().required("EQA is required"),
     LIQA_id: yup.string().required("LIQA is required"),
     start_date: yup.string().required("Start date is required"),
-    end_date: yup.string().required("End date is required")
+    end_date: yup.string().required("End date is required"),
+    is_main_course: yup.boolean().optional()
   });
 
   const {
@@ -103,7 +105,8 @@ export default function LearnerManagementTable(props) {
       EQA_id: "",
       LIQA_id: "",
       start_date: "",
-      end_date: ""
+      end_date: "",
+      is_main_course: false
     }
   });
 
@@ -349,7 +352,7 @@ export default function LearnerManagementTable(props) {
                                 >
                                   {row.comment || 'No comment'}
                                 </Typography>
-                                {/* {canEditComments && (
+                                {canEditComments && (
                                   <IconButton
                                     size="small"
                                     onClick={() => handleCommentDialog(row)}
@@ -360,7 +363,7 @@ export default function LearnerManagementTable(props) {
                                   >
                                     <EditIcon fontSize="small" />
                                   </IconButton>
-                                )} */}
+                                )}
                               </div>
                             ) : column.id === "status" ? (
                               row.deleted_at ? "Archived" : "Active"
@@ -719,6 +722,27 @@ export default function LearnerManagementTable(props) {
                   error={!!errors.end_date}
                   helperText={errors.end_date?.message}
                 />
+              )}
+            />
+          </div>
+        </Box>
+        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
+          <div className="w-full">
+            <Controller
+              name="is_main_course"
+              control={control}
+              render={({ field }) => (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    {...field}
+                    checked={field.value || false}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    color="primary"
+                  />
+                  <Typography sx={{ fontSize: "0.9vw" }} className={Style.name}>
+                    Main Aim Course
+                  </Typography>
+                </div>
               )}
             />
           </div>
