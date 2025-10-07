@@ -261,12 +261,6 @@ export const AdminPageData = [
     info: 'Optimize learner administration by seamlessly adding, updating, and deleting learners, while also facilitating the assignment of courses, trainers, employers, IQAs, and EQAs within the dedicated Learner Management tab.',
     svg: 'assets/images/svgImage/employermanagement.svg',
   },
-  {
-    path: '/admin/default-review-weeks',
-    name: 'Default Review Weeks',
-    info: 'Configure default review period settings for all learner types without custom review periods. Set warning periods for reviews and inductions.',
-    svg: 'assets/images/svgImage/defaultreviewweeks.svg',
-  },
 ]
 
 export const AdminRedirect = {
