@@ -65,7 +65,6 @@ const courseSchema = yup.object().shape({
   IQA_id: yup.string().required('Please select an IQA'),
   LIQA_id: yup.string().required('Please select a LIQA'),
   EQA_id: yup.string().required('Please select an EQA'),
-  employer_id: yup.string().required('Please select an employer'),
   start_date: yup.string().required('Please select a start date'),
   end_date: yup
     .string()
@@ -85,7 +84,7 @@ const CourseTab = () => {
   const dispatch: any = useDispatch()
 
   const { data } = useSelector(selectCourseManagement)
-  const { LIQA, IQA, trainer, employer, EQA, learner } = useSelector(
+  const { LIQA, IQA, trainer, EQA, learner } = useSelector(
     selectLearnerManagement
   )
   const learnerUser =
@@ -114,7 +113,6 @@ const CourseTab = () => {
       learner_id: learner?.learner_id,
       EQA_id: '',
       LIQA_id: '',
-      employer_id: '',
       start_date: '',
       end_date: '',
       course_status: '',
@@ -168,12 +166,12 @@ const CourseTab = () => {
     setValue('IQA_id', course?.IQA_id?.user_id || '')
     setValue('EQA_id', course?.EQA_id?.user_id || '')
     setValue('LIQA_id', course?.LIQA_id?.user_id || '')
-    setValue('employer_id', course?.employer_id?.user_id || '')
     setValue('start_date', course?.start_date?.substr(0, 10) || '')
     setValue('end_date', course?.end_date?.substr(0, 10) || '')
     setValue('course_status', course?.course_status || '')
     setValue('predicted_grade', course?.predicted_grade || '')
     setValue('final_grade', course?.final_grade || '')
+    setValue('is_main_course', course?.is_main_course || false)
 
     setCourseDialog(true)
   }
@@ -645,43 +643,6 @@ const CourseTab = () => {
                   )}
                 />
               </div>
-            </div>
-
-            <div>
-              <Typography className='text-sm font-medium text-gray-700 mb-2'>
-                Employer <span className='text-red-500'>*</span>
-              </Typography>
-              <Controller
-                name='employer_id'
-                control={control}
-                render={({ field }) => (
-                  <Autocomplete
-                    {...field}
-                    disableClearable
-                    fullWidth
-                    size='small'
-                    options={employer || []}
-                    getOptionLabel={(option: any) =>
-                      option.employer?.employer_name
-                    }
-                    value={
-                      employer?.find((e) => e.user_id === field.value) || null
-                    }
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        placeholder='Select employer'
-                        variant='outlined'
-                        error={!!errors.employer_id}
-                        helperText={errors.employer_id?.message}
-                      />
-                    )}
-                    onChange={(e, value: any) =>
-                      field.onChange(value?.user_id || '')
-                    }
-                  />
-                )}
-              />
             </div>
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>

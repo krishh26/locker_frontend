@@ -1,11 +1,11 @@
-import React, { useState } from "react";
-import Paper from "@mui/material/Paper";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
+import React, { useState } from 'react'
+import Paper from '@mui/material/Paper'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
 import {
   Autocomplete,
   Avatar,
@@ -21,104 +21,110 @@ import {
   Tooltip,
   Typography,
   Chip,
-} from "@mui/material";
-import { useForm, Controller } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
-import Style from "./style.module.css";
-import { useDispatch } from "react-redux";
-import AlertDialog from "../Dialogs/AlertDialog";
+} from '@mui/material'
+import { useForm, Controller } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
+import Style from './style.module.css'
+import { useDispatch } from 'react-redux'
+import AlertDialog from '../Dialogs/AlertDialog'
 import {
   DangerButton,
   LoadingButton,
   SecondaryButton,
   SecondaryButtonOutlined,
-} from "../Buttons";
+} from '../Buttons'
 import {
   deleteLearnerHandler,
   restoreLearnerHandler,
   selectLearnerManagement,
-} from "app/store/learnerManagement";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import EditIcon from "@mui/icons-material/Edit";
-import { useSelector } from "react-redux";
+} from 'app/store/learnerManagement'
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
+import EditIcon from '@mui/icons-material/Edit'
+import { useSelector } from 'react-redux'
 import {
   courseAllocationAPI,
   selectCourseManagement,
-} from "app/store/courseManagement";
-import { useNavigate } from "react-router-dom";
+} from 'app/store/courseManagement'
+import { useNavigate } from 'react-router-dom'
 import { slice } from 'app/store/reloadData'
-import { getRandomColor, IconsData } from "src/utils/randomColor";
-import { FaFolderOpen } from "react-icons/fa";
-import { slice as courseSlice } from "app/store/courseManagement";
-import { slice as globalSlice } from "app/store/globalUser";
-import CustomPagination from "../Pagination/CustomPagination";
+import { getRandomColor, IconsData } from 'src/utils/randomColor'
+import { FaFolderOpen } from 'react-icons/fa'
+import { slice as courseSlice } from 'app/store/courseManagement'
+import { slice as globalSlice, tokenGetFetch } from 'app/store/globalUser'
+import CustomPagination from '../Pagination/CustomPagination'
 
 export default function LearnerManagementTable(props) {
   const {
     columns,
     rows,
-    handleOpen = () => { },
-    setUserData = () => { },
-    setUpdateData = () => { },
+    handleOpen = () => {},
+    setUserData = () => {},
+    setUpdateData = () => {},
     meta_data,
     dataUpdatingLoadding,
     refetchLearner,
     handleChangePage,
-    handleCommentDialog = () => { },
-    canEditComments = false
-  } = props;
+    handleCommentDialog = () => {},
+    canEditComments = false,
+  } = props
 
-  const navigate = useNavigate();
-  const [archiveId, setArchiveId] = useState("");
-  const [unArchiveId, setUnArchiveId] = useState("");
-  const [openMenuDialog, setOpenMenuDialog]: any = useState("");
-  const [deletedAt, setDeletedAt] = useState("");
-  const [courseDialog, setCourseDialog] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const dispatch: any = useDispatch();
+  const navigate = useNavigate()
+  const [archiveId, setArchiveId] = useState('')
+  const [unArchiveId, setUnArchiveId] = useState('')
+  const [openMenuDialog, setOpenMenuDialog]: any = useState('')
+  const [deletedAt, setDeletedAt] = useState('')
+  const [courseDialog, setCourseDialog] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const dispatch: any = useDispatch()
   // Validation schema
   const validationSchema = yup.object({
-    course_id: yup.string().required("Course is required"),
-    trainer_id: yup.string().required("Trainer is required"),
-    IQA_id: yup.string().required("IQA is required"),
-    EQA_id: yup.string().required("EQA is required"),
-    LIQA_id: yup.string().required("LIQA is required"),
-    start_date: yup.string().required("Start date is required"),
-    end_date: yup.string().required("End date is required"),
-    is_main_course: yup.boolean().optional()
-  });
+    course_id: yup.string().required('Course is required'),
+    trainer_id: yup.string().required('Trainer is required'),
+    IQA_id: yup.string().required('IQA is required'),
+    EQA_id: yup.string().required('EQA is required'),
+    LIQA_id: yup.string().required('LIQA is required'),
+    start_date: yup.string().required('Start date is required'),
+    end_date: yup.string().required('End date is required'),
+    predicted_grade: yup.string().required('Predicted grade is required'),
+    final_grade: yup.string().required('Final grade is required'),
+    is_main_course: yup.boolean().optional(),
+  })
 
   const {
     control,
     handleSubmit,
     formState: { errors },
     reset,
-    setValue
+    setValue,
   } = useForm({
     resolver: yupResolver(validationSchema),
     defaultValues: {
-      course_id: "",
-      trainer_id: "",
-      IQA_id: "",
-      learner_id: "",
-      EQA_id: "",
-      LIQA_id: "",
-      start_date: "",
-      end_date: "",
-      is_main_course: false
-    }
-  });
+      course_id: '',
+      trainer_id: '',
+      IQA_id: '',
+      learner_id: '',
+      EQA_id: '',
+      LIQA_id: '',
+      start_date: '',
+      end_date: '',
+      predicted_grade: '',
+      final_grade: '',
+      is_main_course: false,
+    },
+  })
 
   const handleUpdateData = (name, value) => {
-    setValue(name, value);
-  };
+    setValue(name, value)
+  }
 
-  const { data } = useSelector(selectCourseManagement);
-  const { LIQA, IQA, trainer, employer, EQA } = useSelector(selectLearnerManagement);
+  const { data } = useSelector(selectCourseManagement)
+  const { LIQA, IQA, trainer, employer, EQA } = useSelector(
+    selectLearnerManagement
+  )
 
   const editIcon = () => {
-    setUpdateData(openMenuDialog.learner_id);
+    setUpdateData(openMenuDialog.learner_id)
     const {
       first_name,
       last_name,
@@ -132,7 +138,7 @@ export default function LearnerManagementTable(props) {
       national_ins_no,
       job_title,
       comment,
-    } = rows.filter((item) => item.learner_id === openMenuDialog.learner_id)[0];
+    } = rows.filter((item) => item.learner_id === openMenuDialog.learner_id)[0]
     setUserData({
       first_name,
       last_name,
@@ -144,72 +150,65 @@ export default function LearnerManagementTable(props) {
       employer_id: employer_id?.employer_id,
       funding_body,
       national_ins_no,
-      job_title: job_title || "",
-      comment: comment || "",
-    });
-    handleOpen();
-  };
+      job_title: job_title || '',
+      comment: comment || '',
+    })
+    handleOpen()
+  }
 
   const archiveItem = (id) => {
-    setArchiveId(id?.learner_id);
-  };
+    setArchiveId(id?.learner_id)
+  }
 
   const archiveConfromation = async () => {
-    await dispatch(
-      deleteLearnerHandler(archiveId)
-    );
+    await dispatch(deleteLearnerHandler(archiveId))
     refetchLearner()
-    setArchiveId("");
-  };
-
+    setArchiveId('')
+  }
 
   const UnarchiveItem = (id) => {
-    setUnArchiveId(id?.learner_id);
-  };
+    setUnArchiveId(id?.learner_id)
+  }
 
   const UnarchiveConfromation = async () => {
-    await dispatch(
-      restoreLearnerHandler(unArchiveId)
-    );
+    await dispatch(restoreLearnerHandler(unArchiveId))
 
     refetchLearner()
-    setUnArchiveId("");
-  };
+    setUnArchiveId('')
+  }
 
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
+  const open = Boolean(anchorEl)
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+    setAnchorEl(event.currentTarget)
+  }
   const handleClose = () => {
-    setAnchorEl(null);
-  };
+    setAnchorEl(null)
+  }
 
   const openMenu = (e, row) => {
-    handleClick(e);
-    setOpenMenuDialog(row);
+    handleClick(e)
+    setOpenMenuDialog(row)
     setDeletedAt(row?.deleted_at)
 
-    setValue("learner_id", row.learner_id);
-  };
+    setValue('learner_id', row.learner_id)
+  }
 
   const clsoeCourseDialog = () => {
-    setCourseDialog(false);
-  };
+    setCourseDialog(false)
+  }
 
   const courseAllocation = async (data) => {
-    setLoading(true);
-    const response = await dispatch(
-      courseAllocationAPI(data)
-    );
+    setLoading(true)
+    const response = await dispatch(courseAllocationAPI(data))
     if (response) {
       refetchLearner()
-      clsoeCourseDialog();
-      setOpenMenuDialog("");
-      reset();
+      clsoeCourseDialog()
+      setOpenMenuDialog('')
+      reset()
     }
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
   const redirection = (row) => {
     dispatch(slice.setLeanerId({ id: row.learner_id, user_id: row.user_id }))
@@ -217,17 +216,38 @@ export default function LearnerManagementTable(props) {
     navigate('/portfolio')
   }
 
-  const handleLearnerCourse = (id, user_id, course) => {
-    dispatch(slice.setLeanerId({ id, user_id }))
-    dispatch(courseSlice.setSingleData(course));
-    navigate("/portfolio/learnertodata")
+  const handleLearnerCourse = async (row) => {
+    const data = await dispatch(tokenGetFetch(row.email))
+    const newTab = window.open('/home', '_blank')
+    newTab.sessionStorage.setItem(
+      'learnerToken',
+      JSON.stringify({
+        ...data,
+        user: {
+          ...data.user,
+          displayName: data.user.first_name + ' ' + data.user.last_name,
+        },
+      })
+    )
+    newTab.onload = async () => {
+      if (data) {
+        newTab.focus()
+      }
+    }
   }
 
   return (
     <>
-      <div style={{ width: "100%", overflow: "hidden", marginTop: "0.5rem" }}>
-        <TableContainer sx={{ minHeight: 480, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-          <Table stickyHeader aria-label="sticky table" size="small">
+      <div style={{ width: '100%', overflow: 'hidden', marginTop: '0.5rem' }}>
+        <TableContainer
+          sx={{
+            minHeight: 480,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Table stickyHeader aria-label='sticky table' size='small'>
             <TableHead>
               <TableRow>
                 {columns?.map((column) => (
@@ -235,7 +255,7 @@ export default function LearnerManagementTable(props) {
                     key={column.id}
                     align={column.align}
                     style={{ minWidth: column.minWidth }}
-                    sx={{ backgroundColor: "#F8F8F8" }}
+                    sx={{ backgroundColor: '#F8F8F8' }}
                   >
                     {column.label}
                   </TableCell>
@@ -245,137 +265,216 @@ export default function LearnerManagementTable(props) {
             <TableBody>
               {rows?.map((row) => {
                 return (
-                  <TableRow role="checkbox" tabIndex={-1} key={row.learner_id}>
+                  <TableRow role='checkbox' tabIndex={-1} key={row.learner_id}>
                     {columns?.map((column) => {
-                      const value = row[column.id];
-                      if (column.id === "actions") {
+                      const value = row[column.id]
+                      if (column.id === 'actions') {
                         return (
                           <TableCell
                             key={column.id}
                             align={column.align}
-                            sx={{ borderBottom: "2px solid #F8F8F8" }}
+                            sx={{ borderBottom: '2px solid #F8F8F8' }}
                           >
                             <IconButton
-                              size="small"
-                              sx={{ color: "#5B718F", marginRight: "4px" }}
+                              size='small'
+                              sx={{ color: '#5B718F', marginRight: '4px' }}
                               onClick={(e) => openMenu(e, row)}
                             >
-                              <MoreHorizIcon fontSize="small" />
+                              <MoreHorizIcon fontSize='small' />
                             </IconButton>
                           </TableCell>
-                        );
+                        )
                       }
                       return (
                         <TableCell
                           key={column.id}
                           align={column.align}
-                          sx={{ borderBottom: "2px solid #F8F8F8" }}
+                          sx={{ borderBottom: '2px solid #F8F8F8' }}
                         >
                           <div className={Style.avatar}>
-                            {column.id === "first_name" ? (
+                            {column.id === 'first_name' ? (
                               <>
                                 <Avatar
                                   alt={value}
                                   src={row?.avatar}
                                   sx={{
-                                    marginRight: "8px",
-                                    width: "24px",
-                                    height: "24px",
-                                    backgroundColor: getRandomColor(row?.user_name?.toLowerCase().charAt(0))
+                                    marginRight: '8px',
+                                    width: '24px',
+                                    height: '24px',
+                                    backgroundColor: getRandomColor(
+                                      row?.user_name?.toLowerCase().charAt(0)
+                                    ),
                                   }}
                                 />
-                                <div className="hover:text-[#2D6498] cursor-pointer " onClick={() => redirection(row)}>
-                                  {value} {row["last_name"]}
+                                <div
+                                  className='hover:text-[#2D6498] cursor-pointer '
+                                  onClick={() => redirection(row)}
+                                >
+                                  {value} {row['last_name']}
                                 </div>
                               </>
-                            ) : column.id === "course" ? (
+                            ) : column.id === 'course' ? (
                               row?.course && row.course?.length > 0 ? (
                                 <AvatarGroup
                                   max={4}
-                                  className="items-center gap-8"
+                                  className='items-center gap-8'
                                   sx={{
-                                    ".MuiAvatar-root": {
-                                      backgroundColor: "#6d81a3",
-                                      width: "3rem",
-                                      height: "3rem",
-                                      fontSize: "medium",
-                                      border: "1px solid #FFFFFF",
+                                    '.MuiAvatar-root': {
+                                      backgroundColor: '#6d81a3',
+                                      width: '3rem',
+                                      height: '3rem',
+                                      fontSize: 'medium',
+                                      border: '1px solid #FFFFFF',
                                     },
-                                  }}>
+                                  }}
+                                >
                                   {row?.course.map((course) => (
                                     <>
-                                      <Tooltip key={course.course.course_id} title={course.course.course_name} onClick={() => handleLearnerCourse(row.learner_id, row.user_id, course)}>
-                                        {
-                                          course.course_status === "Completed" // Course Completed
-                                            ?
-                                            <Grid className="relative cursor-pointer">
-                                              <FaFolderOpen className="text-3xl -rotate-12" style={{ color: IconsData[(IconsData.findIndex((item) => item.name === course.course.course_type))]?.color || "#1d61b5" }} />
-                                              <Grid>
-                                                <img src="/assets/icons/guy_completed.gif" className="h-20 absolute top-2" />
-                                              </Grid>
-                                            </Grid> :
-                                            course.course_status === "Early Leaver" ? // Early Leaver
-                                              <Grid className="relative cursor-pointer">
-                                                <FaFolderOpen className="text-3xl -rotate-12" style={{ color: IconsData[(IconsData.findIndex((item) => item.name === course.course.course_type))]?.color || "#1d61b5" }} />
-                                                <Grid>
-                                                  <img src="/assets/icons/guy_archived.gif" className="h-20 absolute top-2" />
-                                                </Grid>
-                                              </Grid> :
-                                              course.course_status === "Training Suspended" ? // Training Suspended
-                                                <Grid className="relative cursor-pointer">
-                                                  <FaFolderOpen className="text-3xl -rotate-12" style={{ color: IconsData[(IconsData.findIndex((item) => item.name === course.course.course_type))]?.color || "#1d61b5" }} />
-                                                  <Grid>
-                                                    <img src="/assets/icons/guy_lock.gif" className="h-20 absolute top-2" />
-                                                  </Grid>
-                                                </Grid> :
-                                                <Grid className="cursor-pointer">
-                                                  <FaFolderOpen className="text-3xl -rotate-12" style={{ color: IconsData[(IconsData.findIndex((item) => item.name === course.course.course_type))]?.color || "#1d61b5" }} />
-                                                </Grid>
+                                      <Tooltip
+                                        key={course.course.course_id}
+                                        title={course.course.course_name}
+                                        onClick={() =>
+                                          handleLearnerCourse(row)
                                         }
+                                      >
+                                        {course.course_status ===
+                                        'Completed' ? ( // Course Completed
+                                          <Grid className='relative cursor-pointer'>
+                                            <FaFolderOpen
+                                              className='text-3xl -rotate-12'
+                                              style={{
+                                                color:
+                                                  IconsData[
+                                                    IconsData.findIndex(
+                                                      (item) =>
+                                                        item.name ===
+                                                        course.course
+                                                          .course_type
+                                                    )
+                                                  ]?.color || '#1d61b5',
+                                              }}
+                                            />
+                                            <Grid>
+                                              <img
+                                                src='/assets/icons/guy_completed.gif'
+                                                className='h-20 absolute top-2'
+                                              />
+                                            </Grid>
+                                          </Grid>
+                                        ) : course.course_status ===
+                                          'Early Leaver' ? ( // Early Leaver
+                                          <Grid className='relative cursor-pointer'>
+                                            <FaFolderOpen
+                                              className='text-3xl -rotate-12'
+                                              style={{
+                                                color:
+                                                  IconsData[
+                                                    IconsData.findIndex(
+                                                      (item) =>
+                                                        item.name ===
+                                                        course.course
+                                                          .course_type
+                                                    )
+                                                  ]?.color || '#1d61b5',
+                                              }}
+                                            />
+                                            <Grid>
+                                              <img
+                                                src='/assets/icons/guy_archived.gif'
+                                                className='h-20 absolute top-2'
+                                              />
+                                            </Grid>
+                                          </Grid>
+                                        ) : course.course_status ===
+                                          'Training Suspended' ? ( // Training Suspended
+                                          <Grid className='relative cursor-pointer'>
+                                            <FaFolderOpen
+                                              className='text-3xl -rotate-12'
+                                              style={{
+                                                color:
+                                                  IconsData[
+                                                    IconsData.findIndex(
+                                                      (item) =>
+                                                        item.name ===
+                                                        course.course
+                                                          .course_type
+                                                    )
+                                                  ]?.color || '#1d61b5',
+                                              }}
+                                            />
+                                            <Grid>
+                                              <img
+                                                src='/assets/icons/guy_lock.gif'
+                                                className='h-20 absolute top-2'
+                                              />
+                                            </Grid>
+                                          </Grid>
+                                        ) : (
+                                          <Grid className='cursor-pointer'>
+                                            <FaFolderOpen
+                                              className='text-3xl -rotate-12'
+                                              style={{
+                                                color:
+                                                  IconsData[
+                                                    IconsData.findIndex(
+                                                      (item) =>
+                                                        item.name ===
+                                                        course.course
+                                                          .course_type
+                                                    )
+                                                  ]?.color || '#1d61b5',
+                                              }}
+                                            />
+                                          </Grid>
+                                        )}
                                       </Tooltip>
                                     </>
                                   ))}
-                                </AvatarGroup >
+                                </AvatarGroup>
                               ) : (
                                 <strong>-</strong>
                               )
-                            ) : column.id === "comment" ? (
-                              <div className="flex items-center gap-2">
-                                <Typography 
-                                  variant="body2" 
-                                  sx={{ 
-                                    maxWidth: 150, 
-                                    overflow: 'hidden', 
+                            ) : column.id === 'comment' ? (
+                              <div className='flex items-center gap-2'>
+                                <Typography
+                                  variant='body2'
+                                  sx={{
+                                    maxWidth: 150,
+                                    overflow: 'hidden',
                                     textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
+                                    whiteSpace: 'nowrap',
                                   }}
                                 >
                                   {row.comment || 'No comment'}
                                 </Typography>
                                 {canEditComments && (
                                   <IconButton
-                                    size="small"
+                                    size='small'
                                     onClick={() => handleCommentDialog(row)}
-                                    sx={{ 
-                                      color: "#5B718F",
-                                      padding: '2px'
+                                    sx={{
+                                      color: '#5B718F',
+                                      padding: '2px',
                                     }}
                                   >
-                                    <EditIcon fontSize="small" />
+                                    <EditIcon fontSize='small' />
                                   </IconButton>
                                 )}
                               </div>
-                            ) : column.id === "status" ? (
-                              row.deleted_at ? "Archived" : "Active"
+                            ) : column.id === 'status' ? (
+                              row.deleted_at ? (
+                                'Archived'
+                              ) : (
+                                'Active'
+                              )
                             ) : (
-                              value || "Active"
+                              value || 'Active'
                             )}
                           </div>
                         </TableCell>
-                      );
+                      )
                     })}
                   </TableRow>
-                );
+                )
               })}
             </TableBody>
           </Table>
@@ -386,316 +485,371 @@ export default function LearnerManagementTable(props) {
           handleChangePage={handleChangePage}
           items={meta_data?.items}
         />
-      </div >
+      </div>
       <AlertDialog
         open={Boolean(archiveId)}
-        close={() => archiveItem("")}
-        title="Archive Learner?"
-        content="Archiving this learner will make their data inactive but retain all associated data and relationships. Proceed with archiving?"
+        close={() => archiveItem('')}
+        title='Archive Learner?'
+        content='Archiving this learner will make their data inactive but retain all associated data and relationships. Proceed with archiving?'
         actionButton={
           dataUpdatingLoadding ? (
             <LoadingButton />
           ) : (
-            <DangerButton onClick={archiveConfromation} name="Archive learner" />
+            <DangerButton
+              onClick={archiveConfromation}
+              name='Archive learner'
+            />
           )
         }
         cancelButton={
           <SecondaryButtonOutlined
-            className="px-24"
-            onClick={() => archiveItem("")}
-            name="Cancel"
+            className='px-24'
+            onClick={() => archiveItem('')}
+            name='Cancel'
           />
         }
       />
       <AlertDialog
         open={Boolean(unArchiveId)}
-        close={() => UnarchiveItem("")}
-        title="Unarchive Learner?"
-        content="Unarchiving this learner will reactivate their data and restore all associated data and relationships. Proceed with unarchiving?"
+        close={() => UnarchiveItem('')}
+        title='Unarchive Learner?'
+        content='Unarchiving this learner will reactivate their data and restore all associated data and relationships. Proceed with unarchiving?'
         actionButton={
           dataUpdatingLoadding ? (
             <LoadingButton />
           ) : (
-            <DangerButton onClick={UnarchiveConfromation} name="Unarchive learner" />
+            <DangerButton
+              onClick={UnarchiveConfromation}
+              name='Unarchive learner'
+            />
           )
         }
         cancelButton={
           <SecondaryButtonOutlined
-            className="px-24"
-            onClick={() => UnarchiveItem("")}
-            name="Cancel"
+            className='px-24'
+            onClick={() => UnarchiveItem('')}
+            name='Cancel'
           />
         }
       />
       <Menu
-        id="long-menu"
+        id='long-menu'
         MenuListProps={{
-          "aria-labelledby": "long-button",
+          'aria-labelledby': 'long-button',
         }}
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
       >
-        {deletedAt === null && <MenuItem
-          onClick={() => {
-            editIcon();
-            handleClose();
-          }}
-        >
-          Edit
-        </MenuItem>}
+        {deletedAt === null && (
+          <MenuItem
+            onClick={() => {
+              editIcon()
+              handleClose()
+            }}
+          >
+            Edit
+          </MenuItem>
+        )}
         <MenuItem
           onClick={() => {
-            handleClose();
+            handleClose()
             if (deletedAt === null) {
-              archiveItem(openMenuDialog);
+              archiveItem(openMenuDialog)
             } else {
-              UnarchiveItem(openMenuDialog);
-
+              UnarchiveItem(openMenuDialog)
             }
           }}
         >
-          {deletedAt === null ? "Archive" : "Unarchive"}
+          {deletedAt === null ? 'Archive' : 'Unarchive'}
         </MenuItem>
 
-        {deletedAt === null && <MenuItem
-          onClick={() => {
-            handleClose();
-            setCourseDialog(true);
-          }}
-        >
-          Course Allocation
-        </MenuItem>}
-      </Menu >
+        {deletedAt === null && (
+          <MenuItem
+            onClick={() => {
+              handleClose()
+              setCourseDialog(true)
+            }}
+          >
+            Course Allocation
+          </MenuItem>
+        )}
+      </Menu>
 
       <Dialog
         open={courseDialog}
         onClose={clsoeCourseDialog}
         sx={{
-          ".MuiDialog-paper": {
-            borderRadius: "4px",
-            padding: "1rem",
-            width: "440px",
+          '.MuiDialog-paper': {
+            borderRadius: '4px',
+            padding: '1rem',
+            width: '440px',
           },
         }}
       >
-        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
-            <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              Select Course <span style={{ color: "red" }}>*</span>
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Typography
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+              className={Style.name}
+            >
+              Select Course <span style={{ color: 'red' }}>*</span>
             </Typography>
             <Controller
-              name="course_id"
+              name='course_id'
               control={control}
               render={({ field }) => (
                 <Autocomplete
                   {...field}
-                  value={field.value ? data?.find(option => option.course_id === field.value) || null : null}
+                  value={
+                    field.value
+                      ? data?.find(
+                          (option) => option.course_id === field.value
+                        ) || null
+                      : null
+                  }
                   disableClearable
                   fullWidth
-                  size="small"
+                  size='small'
                   options={data || []}
-                  getOptionLabel={(option: any) => option?.course_name || ""}
+                  getOptionLabel={(option: any) => option?.course_name || ''}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="Select Course"
+                      placeholder='Select Course'
                       error={!!errors.course_id}
                       helperText={errors.course_id?.message}
                     />
                   )}
                   onChange={(e, value: any) =>
-                    handleUpdateData("course_id", value?.course_id || "")
+                    handleUpdateData('course_id', value?.course_id || '')
                   }
                   sx={{
-                    ".MuiAutocomplete-clearIndicator": {
-                      color: "#5B718F",
+                    '.MuiAutocomplete-clearIndicator': {
+                      color: '#5B718F',
                     },
                   }}
                   PaperComponent={({ children }) => (
-                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                    <Paper style={{ borderRadius: '4px' }}>{children}</Paper>
                   )}
                 />
               )}
             />
           </div>
         </Box>
-        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
-            <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              Trainer <span style={{ color: "red" }}>*</span>
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Typography
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+              className={Style.name}
+            >
+              Trainer <span style={{ color: 'red' }}>*</span>
             </Typography>
             <Controller
-              name="trainer_id"
+              name='trainer_id'
               control={control}
               render={({ field }) => (
                 <Autocomplete
                   {...field}
-                  value={field.value ? trainer?.find(option => option.user_id === field.value) || null : null}
+                  value={
+                    field.value
+                      ? trainer?.find(
+                          (option) => option.user_id === field.value
+                        ) || null
+                      : null
+                  }
                   disableClearable
                   fullWidth
-                  size="small"
+                  size='small'
                   options={trainer || []}
-                  getOptionLabel={(option: any) => option?.user_name || ""}
+                  getOptionLabel={(option: any) => option?.user_name || ''}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="Select Trainer"
+                      placeholder='Select Trainer'
                       error={!!errors.trainer_id}
                       helperText={errors.trainer_id?.message}
                     />
                   )}
                   onChange={(e, value: any) =>
-                    handleUpdateData("trainer_id", value?.user_id || "")
+                    handleUpdateData('trainer_id', value?.user_id || '')
                   }
                   sx={{
-                    ".MuiAutocomplete-clearIndicator": {
-                      color: "#5B718F",
+                    '.MuiAutocomplete-clearIndicator': {
+                      color: '#5B718F',
                     },
                   }}
                   PaperComponent={({ children }) => (
-                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                    <Paper style={{ borderRadius: '4px' }}>{children}</Paper>
                   )}
                 />
               )}
             />
           </div>
         </Box>
-        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
-            <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              IQA <span style={{ color: "red" }}>*</span>
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Typography
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+              className={Style.name}
+            >
+              IQA <span style={{ color: 'red' }}>*</span>
             </Typography>
             <Controller
-              name="IQA_id"
+              name='IQA_id'
               control={control}
               render={({ field }) => (
                 <Autocomplete
                   {...field}
-                  value={field.value ? IQA?.find(option => option.user_id === field.value) || null : null}
+                  value={
+                    field.value
+                      ? IQA?.find((option) => option.user_id === field.value) ||
+                        null
+                      : null
+                  }
                   disableClearable
                   fullWidth
-                  size="small"
+                  size='small'
                   options={IQA || []}
-                  getOptionLabel={(option: any) => option?.user_name || ""}
+                  getOptionLabel={(option: any) => option?.user_name || ''}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="Select IQA"
+                      placeholder='Select IQA'
                       error={!!errors.IQA_id}
                       helperText={errors.IQA_id?.message}
                     />
                   )}
                   onChange={(e, value: any) =>
-                    handleUpdateData("IQA_id", value?.user_id || "")
+                    handleUpdateData('IQA_id', value?.user_id || '')
                   }
                   sx={{
-                    ".MuiAutocomplete-clearIndicator": {
-                      color: "#5B718F",
+                    '.MuiAutocomplete-clearIndicator': {
+                      color: '#5B718F',
                     },
                   }}
                   PaperComponent={({ children }) => (
-                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                    <Paper style={{ borderRadius: '4px' }}>{children}</Paper>
                   )}
                 />
               )}
             />
           </div>
         </Box>
-        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
-            <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              LIQA <span style={{ color: "red" }}>*</span>
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Typography
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+              className={Style.name}
+            >
+              LIQA <span style={{ color: 'red' }}>*</span>
             </Typography>
             <Controller
-              name="LIQA_id"
+              name='LIQA_id'
               control={control}
               render={({ field }) => (
                 <Autocomplete
                   {...field}
-                  value={field.value ? LIQA?.find(option => option.user_id === field.value) || null : null}
+                  value={
+                    field.value
+                      ? LIQA?.find(
+                          (option) => option.user_id === field.value
+                        ) || null
+                      : null
+                  }
                   disableClearable
                   fullWidth
-                  size="small"
+                  size='small'
                   options={LIQA || []}
-                  getOptionLabel={(option: any) => option?.user_name || ""}
+                  getOptionLabel={(option: any) => option?.user_name || ''}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="Select LIQA"
+                      placeholder='Select LIQA'
                       error={!!errors.LIQA_id}
                       helperText={errors.LIQA_id?.message}
                     />
                   )}
                   onChange={(e, value: any) =>
-                    handleUpdateData("LIQA_id", value?.user_id || "")
+                    handleUpdateData('LIQA_id', value?.user_id || '')
                   }
                   sx={{
-                    ".MuiAutocomplete-clearIndicator": {
-                      color: "#5B718F",
+                    '.MuiAutocomplete-clearIndicator': {
+                      color: '#5B718F',
                     },
                   }}
                   PaperComponent={({ children }) => (
-                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                    <Paper style={{ borderRadius: '4px' }}>{children}</Paper>
                   )}
                 />
               )}
             />
           </div>
         </Box>
-        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
-            <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              EQA <span style={{ color: "red" }}>*</span>
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Typography
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+              className={Style.name}
+            >
+              EQA <span style={{ color: 'red' }}>*</span>
             </Typography>
             <Controller
-              name="EQA_id"
+              name='EQA_id'
               control={control}
               render={({ field }) => (
                 <Autocomplete
                   {...field}
-                  value={field.value ? EQA?.find(option => option.user_id === field.value) || null : null}
+                  value={
+                    field.value
+                      ? EQA?.find((option) => option.user_id === field.value) ||
+                        null
+                      : null
+                  }
                   disableClearable
                   fullWidth
-                  size="small"
+                  size='small'
                   options={EQA || []}
-                  getOptionLabel={(option: any) => option?.user_name || ""}
+                  getOptionLabel={(option: any) => option?.user_name || ''}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      placeholder="Select EQA"
+                      placeholder='Select EQA'
                       error={!!errors.EQA_id}
                       helperText={errors.EQA_id?.message}
                     />
                   )}
                   onChange={(e, value: any) =>
-                    handleUpdateData("EQA_id", value?.user_id || "")
+                    handleUpdateData('EQA_id', value?.user_id || '')
                   }
                   sx={{
-                    ".MuiAutocomplete-clearIndicator": {
-                      color: "#5B718F",
+                    '.MuiAutocomplete-clearIndicator': {
+                      color: '#5B718F',
                     },
                   }}
                   PaperComponent={({ children }) => (
-                    <Paper style={{ borderRadius: "4px" }}>{children}</Paper>
+                    <Paper style={{ borderRadius: '4px' }}>{children}</Paper>
                   )}
                 />
               )}
             />
           </div>
         </Box>
-        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
-            <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              Start Date <span style={{ color: "red" }}>*</span>
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Typography
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+              className={Style.name}
+            >
+              Start Date <span style={{ color: 'red' }}>*</span>
             </Typography>
             <Controller
-              name="start_date"
+              name='start_date'
               control={control}
               render={({ field }) => (
                 <TextField
                   {...field}
-                  size="small"
+                  size='small'
                   type='date'
                   fullWidth
                   error={!!errors.start_date}
@@ -705,18 +859,21 @@ export default function LearnerManagementTable(props) {
             />
           </div>
         </Box>
-        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
-            <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }} className={Style.name}>
-              End Date <span style={{ color: "red" }}>*</span>
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Typography
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+              className={Style.name}
+            >
+              End Date <span style={{ color: 'red' }}>*</span>
             </Typography>
             <Controller
-              name="end_date"
+              name='end_date'
               control={control}
               render={({ field }) => (
                 <TextField
                   {...field}
-                  size="small"
+                  size='small'
                   type='date'
                   fullWidth
                   error={!!errors.end_date}
@@ -726,20 +883,68 @@ export default function LearnerManagementTable(props) {
             />
           </div>
         </Box>
-        <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-          <div className="w-full">
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Typography
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+              className={Style.name}
+            >
+              Predicted Grade <span style={{ color: 'red' }}>*</span>
+            </Typography>
             <Controller
-              name="is_main_course"
+              name='predicted_grade'
               control={control}
               render={({ field }) => (
-                <div className="flex items-center space-x-2">
+                <TextField
+                  {...field}
+                  size='small'
+                  fullWidth
+                  placeholder='Enter predicted grade'
+                  error={!!errors.predicted_grade}
+                  helperText={errors.predicted_grade?.message}
+                />
+              )}
+            />
+          </div>
+        </Box>
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Typography
+              sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
+              className={Style.name}
+            >
+              Final Grade <span style={{ color: 'red' }}>*</span>
+            </Typography>
+            <Controller
+              name='final_grade'
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  size='small'
+                  fullWidth
+                  placeholder='Enter final grade'
+                  error={!!errors.final_grade}
+                  helperText={errors.final_grade?.message}
+                />
+              )}
+            />
+          </div>
+        </Box>
+        <Box className='m-4 flex flex-col justify-between gap-12 sm:flex-row'>
+          <div className='w-full'>
+            <Controller
+              name='is_main_course'
+              control={control}
+              render={({ field }) => (
+                <div className='flex items-center space-x-2'>
                   <Checkbox
                     {...field}
                     checked={field.value || false}
                     onChange={(e) => field.onChange(e.target.checked)}
-                    color="primary"
+                    color='primary'
                   />
-                  <Typography sx={{ fontSize: "0.9vw" }} className={Style.name}>
+                  <Typography sx={{ fontSize: '0.9vw' }} className={Style.name}>
                     Main Aim Course
                   </Typography>
                 </div>
@@ -747,19 +952,19 @@ export default function LearnerManagementTable(props) {
             />
           </div>
         </Box>
-        <div className="flex justify-end mt-4">
+        <div className='flex justify-end mt-4'>
           {loading ? (
-            <LoadingButton style={{ width: "10rem" }} />
+            <LoadingButton style={{ width: '10rem' }} />
           ) : (
             <>
               <SecondaryButtonOutlined
-                name="Cancel"
-                style={{ width: "10rem", marginRight: "2rem" }}
+                name='Cancel'
+                style={{ width: '10rem', marginRight: '2rem' }}
                 onClick={clsoeCourseDialog}
               />
               <SecondaryButton
-                name="Allocate"
-                style={{ width: "10rem" }}
+                name='Allocate'
+                style={{ width: '10rem' }}
                 onClick={handleSubmit(courseAllocation)}
               />
             </>
@@ -767,5 +972,5 @@ export default function LearnerManagementTable(props) {
         </div>
       </Dialog>
     </>
-  );
+  )
 }
