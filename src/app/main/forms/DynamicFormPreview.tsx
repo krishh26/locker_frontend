@@ -73,6 +73,7 @@ interface Props {
   savedFormData?: {
     [key: string]: any
   }
+  isLocked?: boolean
 }
 
 const widthToGrid = (width?: string) => {
@@ -191,6 +192,7 @@ const DynamicFormPreview: React.FC<Props> = ({
   formName,
   description,
   savedFormData,
+  isLocked,
 }) => {
   const param = useParams()
   const navigate = useNavigate()
@@ -234,6 +236,7 @@ const DynamicFormPreview: React.FC<Props> = ({
     singleFrom = null,
     modeTemaplate = '',
   } = useSelector(selectFormData)
+    console.log("🚀 ~ DynamicFormPreview ~ formDataDetails:", formDataDetails)
 
   const {
     handleSubmit,
@@ -381,6 +384,7 @@ const DynamicFormPreview: React.FC<Props> = ({
 
         formData.append('form_id', formId)
         formData.append('user_id', currentUser.user_id)
+        formData.append('submit', 'true')
 
         if (user.role !== UserRole.Admin) {
           // First, submit the form data
@@ -562,7 +566,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 }
                                 error={error}
                                 helperText={helperText}
-                                disabled={isSavedViewedPath}
+                                disabled={isSavedViewedPath || isLocked}
                               />
                             )
 
@@ -710,7 +714,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 InputLabelProps={{ shrink: true }}
                                 error={error}
                                 helperText={helperText}
-                                disabled={isSavedViewedPath}
+                                disabled={isSavedViewedPath || isLocked}
                                 value={formatDateForInput(controllerField.value)}
                                 onChange={(e) => {
                                   // Convert YYYY-MM-DD back to ISO string when user changes the date
@@ -732,7 +736,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   control={control}
                                   label={field.label}
                                   error={errors[field.id]?.message as string}
-                                  disabled={isSavedViewedPath}
+                                  disabled={isSavedViewedPath || isLocked}
                                   value={controllerField.value}
                                 />
                               </Box>
@@ -748,7 +752,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   onChange={controllerField.onChange}
                                   error={!!fieldState.error}
                                   helperText={fieldState.error?.message}
-                                  disabled={isSavedViewedPath || !currentUser?.roles?.includes(field.signatureRole)}
+                                  disabled={isSavedViewedPath || !currentUser?.roles?.includes(field.signatureRole) || isLocked}
                                 />
                               </Box>
                             )

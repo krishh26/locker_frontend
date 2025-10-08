@@ -25,7 +25,7 @@ const AddViewForm = () => {
   const [formFields, setFormFields] = useState<SimpleFormField[]>([])
   const [formData, setFormData] = useState<any>({})
   const [savedFormData, setSavedFormData] = useState<any>({})
-
+  const [isLocked, setIsLocked] = useState(false)
   const dispatch: any = useDispatch()
 
   const currentUser =
@@ -112,6 +112,8 @@ const AddViewForm = () => {
       const { form_name, type, form_data, description } =
         savedFormDetails.data.form
 
+        const { is_locked } = savedFormDetails.data
+
       setFormData({
         form_name,
         type,
@@ -119,6 +121,7 @@ const AddViewForm = () => {
       })
 
       setFormFields(form_data)
+      setIsLocked(is_locked)
       dispatch(slice.setFormDataDetails(savedFormDetails.data.form_data))
     }
   }, [
@@ -164,6 +167,7 @@ const AddViewForm = () => {
         formName={formData.form_name}
         description={formData.description}
         savedFormData={savedFormData}
+        isLocked={isLocked}
       />
     </Box>
   )
