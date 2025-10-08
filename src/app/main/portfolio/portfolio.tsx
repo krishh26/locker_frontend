@@ -39,7 +39,13 @@ import { selectstoreDataSlice } from 'app/store/reloadData'
 import { sendMail, updateUserAPI } from 'app/store/userManagement'
 import { selectUser } from 'app/store/userSlice'
 import { useGetSafeguardingContactsQuery } from 'app/store/api/safeguarding-api'
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import {
@@ -531,9 +537,11 @@ const Portfolio: React.FC = () => {
       totalTotalDuration += progressData.totalDuration
     })
 
-    const completionPercentage = totalUnitsAll > 0 
-      ? ((totalCompleted / totalUnitsAll) * 100) + ((totalInProgress / totalUnitsAll) * 50)
-      : 0
+    const completionPercentage =
+      totalUnitsAll > 0
+        ? (totalCompleted / totalUnitsAll) * 100 +
+          (totalInProgress / totalUnitsAll) * 50
+        : 0
 
     return {
       yetToComplete: totalNotStarted,
@@ -601,7 +609,14 @@ const Portfolio: React.FC = () => {
       {learner && (
         <StyledLearnerCard elevation={4}>
           <StyledLearnerHeader>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, width: '100%' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 3,
+                width: '100%',
+              }}
+            >
               <Avatar
                 sx={{
                   width: 80,
@@ -725,54 +740,58 @@ const Portfolio: React.FC = () => {
                     </Typography>
                   </Box>
 
-                  {/* Next Visit Date Chip */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Chip
-                      label='Next Visit: 02-03-2023'
-                      color='primary'
-                      variant='filled'
-                      size='medium'
-                      sx={{
-                        fontWeight: 700,
-                        backgroundColor: alpha(
-                          theme.palette.primary.contrastText,
-                          0.15
-                        ),
-                        border: `2px solid ${alpha(
-                          theme.palette.primary.contrastText,
-                          0.3
-                        )}`,
-                        color: theme.palette.primary.contrastText,
-                        height: '32px',
-                        borderRadius: '16px',
-                        boxShadow: `0 2px 8px ${alpha(
-                          theme.palette.primary.contrastText,
-                          0.2
-                        )}`,
-                        transition: 'all 0.3s ease-in-out',
-                        '&:hover': {
+                  {learner?.nextvisitdate && (
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                    >
+                      <Chip
+                        label={`Next Visit: ${learner?.nextvisitdate}`}
+                        color='primary'
+                        variant='filled'
+                        size='medium'
+                        sx={{
+                          fontWeight: 700,
                           backgroundColor: alpha(
                             theme.palette.primary.contrastText,
-                            0.25
+                            0.15
                           ),
-                          transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha(
+                          border: `2px solid ${alpha(
                             theme.palette.primary.contrastText,
                             0.3
                           )}`,
-                        },
-                        '& .MuiChip-label': {
-                          fontSize: '1rem',
-                          fontWeight: 700,
-                          letterSpacing: '0.5px',
-                        },
-                        '& .MuiChip-icon': {
                           color: theme.palette.primary.contrastText,
-                          fontSize: '1rem',
-                        },
-                      }}
-                    />
-                  </Box>
+                          height: '32px',
+                          borderRadius: '16px',
+                          boxShadow: `0 2px 8px ${alpha(
+                            theme.palette.primary.contrastText,
+                            0.2
+                          )}`,
+                          transition: 'all 0.3s ease-in-out',
+                          '&:hover': {
+                            backgroundColor: alpha(
+                              theme.palette.primary.contrastText,
+                              0.25
+                            ),
+                            transform: 'translateY(-1px)',
+                            boxShadow: `0 4px 12px ${alpha(
+                              theme.palette.primary.contrastText,
+                              0.3
+                            )}`,
+                          },
+                          '& .MuiChip-label': {
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.5px',
+                          },
+                          '& .MuiChip-icon': {
+                            color: theme.palette.primary.contrastText,
+                            fontSize: '1rem',
+                          },
+                        }}
+                      />
+                    </Box>
+                  )}
+                  {/* Next Visit Date Chip */}
                 </Box>
               </Box>
 
@@ -789,11 +808,24 @@ const Portfolio: React.FC = () => {
                   sx={{
                     p: 2,
                     borderRadius: 2,
-                    backgroundColor: alpha(theme.palette.primary.contrastText, 0.1),
-                    border: `2px solid ${alpha(theme.palette.primary.contrastText, 0.3)}`,
+                    backgroundColor: alpha(
+                      theme.palette.primary.contrastText,
+                      0.1
+                    ),
+                    border: `2px solid ${alpha(
+                      theme.palette.primary.contrastText,
+                      0.3
+                    )}`,
                   }}
                 >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1,
+                    }}
+                  >
                     <Typography
                       variant='subtitle2'
                       sx={{
@@ -805,7 +837,9 @@ const Portfolio: React.FC = () => {
                       Overall Progress
                     </Typography>
                     <Chip
-                      label={`${overallProgressData.completionPercentage.toFixed(0)}%`}
+                      label={`${overallProgressData.completionPercentage.toFixed(
+                        0
+                      )}%`}
                       size='small'
                       sx={{
                         backgroundColor: theme.palette.primary.contrastText,
@@ -818,11 +852,17 @@ const Portfolio: React.FC = () => {
 
                   <LinearProgress
                     variant='determinate'
-                    value={Math.min(overallProgressData.completionPercentage, 100)}
+                    value={Math.min(
+                      overallProgressData.completionPercentage,
+                      100
+                    )}
                     sx={{
                       height: 12,
                       borderRadius: 6,
-                      backgroundColor: alpha(theme.palette.primary.contrastText, 0.2),
+                      backgroundColor: alpha(
+                        theme.palette.primary.contrastText,
+                        0.2
+                      ),
                       mb: 1.5,
                       '& .MuiLinearProgress-bar': {
                         borderRadius: 6,
@@ -831,7 +871,13 @@ const Portfolio: React.FC = () => {
                     }}
                   />
 
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 1,
+                    }}
+                  >
                     <Box sx={{ flex: 1 }}>
                       <Typography
                         variant='caption'
@@ -907,7 +953,10 @@ const Portfolio: React.FC = () => {
                     sx={{
                       mt: 1.5,
                       pt: 1.5,
-                      borderTop: `1px solid ${alpha(theme.palette.primary.contrastText, 0.3)}`,
+                      borderTop: `1px solid ${alpha(
+                        theme.palette.primary.contrastText,
+                        0.3
+                      )}`,
                     }}
                   >
                     <Typography
@@ -917,7 +966,9 @@ const Portfolio: React.FC = () => {
                         fontSize: '1rem',
                       }}
                     >
-                      Total: {overallProgressData.totalUnits} units across {learner?.course?.length || 0} course{learner?.course?.length !== 1 ? 's' : ''}
+                      Total: {overallProgressData.totalUnits} units across{' '}
+                      {learner?.course?.length || 0} course
+                      {learner?.course?.length !== 1 ? 's' : ''}
                     </Typography>
                   </Box>
                 </Box>
@@ -940,39 +991,41 @@ const Portfolio: React.FC = () => {
 
                 {/* Overall Progress Chart */}
                 {learner?.course && learner.course.length > 0 && (
-                    <>
-                      {learner.course.length > 1 && (
-                        <>
-                          <StyledProgressSection>
-                            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                              {learner.course.map((value, index) => (
-                                <Link
-                                  key={index}
-                                  to='/portfolio/courseData'
-                                  style={{
-                                    color: 'inherit',
-                                    textDecoration: 'none',
-                                  }}
-                                  onClick={(e) => {
-                                    handleClickSingleData(value)
-                                    handleClickData(e, value)
-                                  }}
-                                >
-                                  <DoughnutChart
-                                    value={convertToMatrixData(value)}
-                                    variant='matrix'
-                                    size={180}
-                                    showLabels={true}
-                                    animated={true}
-                                    title={value.course.course_name}
-                                  />
-                                </Link>
-                              ))}
-                            </Box>
-                          </StyledProgressSection>
-                        </>
-                      )}
-                    </>
+                  <>
+                    {learner.course.length > 1 && (
+                      <>
+                        <StyledProgressSection>
+                          <Box
+                            sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}
+                          >
+                            {learner.course.map((value, index) => (
+                              <Link
+                                key={index}
+                                to='/portfolio/courseData'
+                                style={{
+                                  color: 'inherit',
+                                  textDecoration: 'none',
+                                }}
+                                onClick={(e) => {
+                                  handleClickSingleData(value)
+                                  handleClickData(e, value)
+                                }}
+                              >
+                                <DoughnutChart
+                                  value={convertToMatrixData(value)}
+                                  variant='matrix'
+                                  size={180}
+                                  showLabels={true}
+                                  animated={true}
+                                  title={value.course.course_name}
+                                />
+                              </Link>
+                            ))}
+                          </Box>
+                        </StyledProgressSection>
+                      </>
+                    )}
+                  </>
                 )}
               </Grid>
             </Grid>
@@ -1200,14 +1253,18 @@ const Portfolio: React.FC = () => {
           setIsAcknowledgementOpen(false)
           // Update learner isShowMessage to false
           if (learner?.learner_id) {
-            await dispatch(updateLearnerAPI(learner.learner_id, { isShowMessage: false }))
+            await dispatch(
+              updateLearnerAPI(learner.learner_id, { isShowMessage: false })
+            )
           }
         }}
         onAccept={async () => {
           setIsAcknowledgementOpen(false)
           // Update learner isShowMessage to false
           if (learner?.learner_id) {
-            await dispatch(updateLearnerAPI(learner.learner_id, { isShowMessage: false }))
+            await dispatch(
+              updateLearnerAPI(learner.learner_id, { isShowMessage: false })
+            )
           }
         }}
         name={learner?.first_name + ' ' + learner?.last_name}

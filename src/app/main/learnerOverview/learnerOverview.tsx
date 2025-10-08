@@ -208,7 +208,7 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
                 >
                   <AccessTimeIcon sx={{ fontSize: 16, opacity: 0.8 }} />
                   <Typography variant='body2' sx={{ opacity: 0.9 }}>
-                    Next Visit: {learner?.next_session_date_type}
+                    Next Visit: {learner?.nextvisitdate}
                   </Typography>
                 </Box>
 
