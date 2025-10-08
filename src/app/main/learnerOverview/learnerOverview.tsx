@@ -411,7 +411,30 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
               })()}
             </Box>
           </Box>
-
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <AssessmentIcon sx={{ 
+                fontSize: 24, 
+                color: theme.palette.primary.main,
+                mr: 1
+              }} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Portfolio Modules
+              </Typography>
+            </Box>
+            <Grid container spacing={2}>
+              {portfolioCard?.map((value, index) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={value.id}>
+                  <LearnerPortfolioCard 
+                    data={value} 
+                    index={index} 
+                    learner={learner} 
+                    handleClickData={handleClickData} 
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
           {/* Progress Section */}
           {/* {learner?.course && learner.course.length > 0 && (() => {
             let totalCompleted = 0
