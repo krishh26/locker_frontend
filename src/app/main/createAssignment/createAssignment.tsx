@@ -917,7 +917,6 @@ const CreateAssignment = (props) => {
           >
             {isDownloading ? 'Downloading...' : 'Download Assignment Files'}
           </Button>
-          {(currentUser.role === UserRole.Learner) && (
             <Button
               variant='contained'
               color='primary'
@@ -938,7 +937,6 @@ const CreateAssignment = (props) => {
             >
               Upload Files
             </Button>
-          )}
         </Box>
       </Box>
       <Card 
