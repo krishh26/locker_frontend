@@ -55,15 +55,13 @@ const Forms = (props) => {
     setValue(newValue);
   };
   
-  const user =  JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-  useSelector(selectGlobalUser)?.currentUser
+  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
 
   useEffect(() => {
-    if(user &&user?.role === UserRole.Trainer){
+    if(user?.role === UserRole.Trainer){
       setValue(2)
     }
   }, [user])
-
 
   return (
     <>

@@ -34,6 +34,19 @@ export const formAPI = createApi({
       },
       keepUnusedDataFor: 0,
     }),
+    getAllSubmittedForms: builder.query({
+      query: (params = {}) => {
+        const { page = 1, page_size = 10, search_keyword = '' } = params
+        let url = `form/list/user?meta=true&page=${page}&limit=${page_size}`
+        
+        if (search_keyword) {
+          url = `${url}&keyword=${search_keyword}`
+        }
+        
+        return { url }
+      },
+      keepUnusedDataFor: 0,
+    }),
     unlockForm: builder.mutation({
       query: (params) => ({
         url: `form/${params.formId}/users/${params.userId}/unlock`,
@@ -59,5 +72,6 @@ export const {
   useGetSavedFormDetailsQuery, 
   useGetAllFormsQuery,
   useUnlockFormMutation,
-  useLockFormMutation
+  useLockFormMutation,
+  useGetAllSubmittedFormsQuery,
 } = formAPI
