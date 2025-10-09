@@ -34,6 +34,30 @@ export const formAPI = createApi({
       },
       keepUnusedDataFor: 0,
     }),
+    unlockForm: builder.mutation({
+      query: (params) => ({
+        url: `form/${params.formId}/users/${params.userId}/unlock`,
+        method: 'POST',
+        body: { 
+          reason: params.reason
+        },
+      }),
+    }),
+    lockForm: builder.mutation({
+      query: (params) => ({
+        url: `form/${params.formId}/users/${params.userId}/lock`,
+        method: 'POST',
+        body: { 
+          reason: params.reason
+        },
+      }),
+    }),
   }),
 })
-export const { useGetFormDetailsQuery, useGetSavedFormDetailsQuery, useGetAllFormsQuery } = formAPI
+export const { 
+  useGetFormDetailsQuery, 
+  useGetSavedFormDetailsQuery, 
+  useGetAllFormsQuery,
+  useUnlockFormMutation,
+  useLockFormMutation
+} = formAPI

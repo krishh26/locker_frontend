@@ -21,10 +21,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import LockIcon from '@mui/icons-material/Lock'
 import { createUserFormDataAPI, selectFormData } from 'app/store/formData'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { selectGlobalUser } from 'app/store/globalUser'
-import { selectUser } from 'app/store/userSlice'
 import html2pdf from 'html2pdf.js'
 import React, { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
@@ -43,7 +43,9 @@ import SignatureInput from './SignatureInput'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
 
 // Utility function to format dates for HTML date input
-const formatDateForInput = (dateValue: string | Date | null | undefined): string => {
+const formatDateForInput = (
+  dateValue: string | Date | null | undefined
+): string => {
   if (!dateValue) return ''
   try {
     const date = new Date(dateValue)
@@ -70,9 +72,6 @@ interface Props {
   fields: SimpleFormField[]
   formName: string
   description?: string
-  savedFormData?: {
-    [key: string]: any
-  }
   isLocked?: boolean
 }
 
@@ -191,7 +190,6 @@ const DynamicFormPreview: React.FC<Props> = ({
   fields,
   formName,
   description,
-  savedFormData,
   isLocked,
 }) => {
   const param = useParams()
@@ -200,17 +198,15 @@ const DynamicFormPreview: React.FC<Props> = ({
   const formId: string | boolean = param?.id ?? false
   const userId: string | boolean = param?.userId ?? false
   const isSubmitPath = location.pathname === `/forms/${formId}/submit`
+
+  const currentUser =
+    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
+    useSelector(selectGlobalUser)?.currentUser
+
   const isSavedViewedPath =
     location.pathname === `/forms/view-saved-form/${formId}/user/${userId}`
 
   const formRef = useRef()
-
-  const user =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectUser)?.data
-  const currentUser =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectGlobalUser)?.currentUser
 
   const leaner = useSelector(selectLearnerManagement)?.learner
 
@@ -236,7 +232,6 @@ const DynamicFormPreview: React.FC<Props> = ({
     singleFrom = null,
     modeTemaplate = '',
   } = useSelector(selectFormData)
-    console.log("🚀 ~ DynamicFormPreview ~ formDataDetails:", formDataDetails)
 
   const {
     handleSubmit,
@@ -274,7 +269,7 @@ const DynamicFormPreview: React.FC<Props> = ({
       // Apply preset values (for learner submitting)
       fields.forEach((field) => {
         let defaultValue: any = ''
-        
+
         if (currentUser.roles.includes(UserRole.Learner) && field.presetField) {
           const presetValue = presetMap[field.presetField]
           if (presetValue !== undefined) {
@@ -292,7 +287,7 @@ const DynamicFormPreview: React.FC<Props> = ({
         } else {
           defaultValue = field.type === 'checkbox' ? [] : ''
         }
-        
+
         defaultValues[field.id] = defaultValue
       })
 
@@ -357,7 +352,7 @@ const DynamicFormPreview: React.FC<Props> = ({
   }, [reset, formDataDetails, isSavedViewedPath, fields])
 
   const onSubmit = async (data: any) => {
-    if (isSubmitPath && formId) {
+    if (currentUser.role !== UserRole.Admin && formId) {
       setIsSubmitting(true)
       setSubmitStatus({ type: null, message: '' })
 
@@ -384,33 +379,34 @@ const DynamicFormPreview: React.FC<Props> = ({
 
         formData.append('form_id', formId)
         formData.append('user_id', currentUser.user_id)
-        formData.append('submit', 'true')
+        if (currentUser.role === UserRole.Learner) {
+          formData.append('submit', 'true')
+        }
 
-        if (user.role !== UserRole.Admin) {
-          // First, submit the form data
-          await dispatch(createUserFormDataAPI(formData))
+        // First, submit the form data
+        await dispatch(createUserFormDataAPI(formData))
 
-          try {
-            // Try to generate PDF from HTML first (better visual representation)
-            const pdfBlob = await exportPDF(formRef.current)
+        try {
+          // Try to generate PDF from HTML first (better visual representation)
+          const pdfBlob = await exportPDF(formRef.current)
 
-            await sendFormSubmissionEmail(pdfBlob, formId.toString())
+          await sendFormSubmissionEmail(pdfBlob, formId.toString())
 
-            setSubmitStatus({
-              type: 'success',
-              message:
-                'Form submitted successfully and notification sent to admin!',
-            })
-          } catch (pdfError) {
-            console.error('PDF generation or email sending failed:', pdfError)
-            setSubmitStatus({
-              type: 'success',
-              message:
-                'Form submitted successfully, but PDF generation failed.',
-            })
-          }
+          setSubmitStatus({
+            type: 'success',
+            message:
+              'Form submitted successfully and notification sent to admin!',
+          })
+        } catch (pdfError) {
+          console.error('PDF generation or email sending failed:', pdfError)
+          setSubmitStatus({
+            type: 'success',
+            message: 'Form submitted successfully, but PDF generation failed.',
+          })
+        }
 
-          // Navigate after a short delay to show the success message
+        // Navigate after a short delay to show the success message
+        if (currentUser.role === UserRole.Learner) {
           setTimeout(() => {
             navigate('/forms')
           }, 2000)
@@ -489,7 +485,7 @@ const DynamicFormPreview: React.FC<Props> = ({
         formData.append('form_id', formId)
         formData.append('user_id', currentUser.user_id)
 
-        if (user.role !== UserRole.Admin) {
+        if (currentUser.role !== UserRole.Admin) {
           // First, submit the form data
           await dispatch(createUserFormDataAPI(formData))
           setTimeout(() => {
@@ -536,6 +532,30 @@ const DynamicFormPreview: React.FC<Props> = ({
             </Typography>
           )}
 
+          {isLocked && (
+            <Alert
+              severity='warning'
+              icon={<LockIcon />}
+              sx={{
+                mb: 3,
+                backgroundColor: '#fff4e5',
+                border: '1px solid #ff9800',
+                '& .MuiAlert-icon': {
+                  color: '#ed6c02',
+                },
+              }}
+            >
+              <Typography variant='body1' sx={{ fontWeight: 500, mb: 0.5 }}>
+                Form Locked
+              </Typography>
+              <Typography variant='body2'>
+                This form is currently locked and cannot be edited. If you need
+                to make changes, please contact your trainer or administrator
+                for assistance.
+              </Typography>
+            </Alert>
+          )}
+
           {fields.length === 0 ? (
             <Alert severity='info'>No fields added to the form.</Alert>
           ) : (
@@ -566,7 +586,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 }
                                 error={error}
                                 helperText={helperText}
-                                disabled={isSavedViewedPath || isLocked}
+                                disabled={isLocked}
                               />
                             )
 
@@ -582,7 +602,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 rows={4}
                                 error={error}
                                 helperText={helperText}
-                                disabled={isSavedViewedPath}
+                                disabled={isLocked}
                               />
                             )
 
@@ -592,7 +612,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 fullWidth
                                 required={field.required}
                                 error={error}
-                                disabled={isSavedViewedPath}
+                                disabled={isLocked}
                               >
                                 <InputLabel>{field.label}</InputLabel>
                                 <Select
@@ -620,7 +640,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 component='fieldset'
                                 required={field.required}
                                 error={error}
-                                disabled={isSavedViewedPath}
+                                disabled={isLocked}
                               >
                                 <FormLabel>{field.label}</FormLabel>
                                 <RadioGroup
@@ -652,7 +672,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 component='fieldset'
                                 required={field.required}
                                 error={error}
-                                disabled={isSavedViewedPath}
+                                disabled={isLocked}
                               >
                                 <FormLabel component='legend'>
                                   {field.label}
@@ -714,12 +734,16 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 InputLabelProps={{ shrink: true }}
                                 error={error}
                                 helperText={helperText}
-                                disabled={isSavedViewedPath || isLocked}
-                                value={formatDateForInput(controllerField.value)}
+                                disabled={isLocked}
+                                value={formatDateForInput(
+                                  controllerField.value
+                                )}
                                 onChange={(e) => {
                                   // Convert YYYY-MM-DD back to ISO string when user changes the date
                                   if (e.target.value) {
-                                    const date = new Date(e.target.value + 'T00:00:00.000Z')
+                                    const date = new Date(
+                                      e.target.value + 'T00:00:00.000Z'
+                                    )
                                     controllerField.onChange(date.toISOString())
                                   } else {
                                     controllerField.onChange('')
@@ -736,7 +760,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   control={control}
                                   label={field.label}
                                   error={errors[field.id]?.message as string}
-                                  disabled={isSavedViewedPath || isLocked}
+                                  disabled={isLocked}
                                   value={controllerField.value}
                                 />
                               </Box>
@@ -752,7 +776,10 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   onChange={controllerField.onChange}
                                   error={!!fieldState.error}
                                   helperText={fieldState.error?.message}
-                                  disabled={isSavedViewedPath || !currentUser?.roles?.includes(field.signatureRole) || isLocked}
+                                  disabled={
+                                    currentUser?.role !== field.signatureRole ||
+                                    isLocked
+                                  }
                                 />
                               </Box>
                             )
@@ -767,7 +794,7 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 required={field.required}
                                 error={error}
                                 helperText={helperText}
-                                disabled={isSavedViewedPath}
+                                disabled={isLocked}
                               />
                             )
                         }
@@ -788,25 +815,27 @@ const DynamicFormPreview: React.FC<Props> = ({
                 <Button
                   type='button'
                   variant='outlined'
-                  disabled={isSavedViewedPath}
+                  disabled={isLocked}
                   onClick={() => onClear()}
                 >
                   Clear Form
                 </Button>
 
-                <Button
-                  type='button'
-                  variant='outlined'
-                  disabled={isSavedViewedPath || isDraftLoading}
-                  onClick={() => onSaveAsDraft()}
-                >
-                  {isDraftLoading ? 'Saving...' : 'Save as draft'}
-                </Button>
+                {currentUser.role === UserRole.Learner && (
+                  <Button
+                    type='button'
+                    variant='outlined'
+                    disabled={isDraftLoading || isLocked}
+                    onClick={() => onSaveAsDraft()}
+                  >
+                    {isDraftLoading ? 'Saving...' : 'Save as draft'}
+                  </Button>
+                )}
 
                 <Button
                   type='submit'
                   variant='contained'
-                  disabled={isSubmitting || isSavedViewedPath}
+                  disabled={isSubmitting || isLocked}
                   startIcon={
                     isSubmitting ? (
                       <CircularProgress size={20} color='inherit' />
