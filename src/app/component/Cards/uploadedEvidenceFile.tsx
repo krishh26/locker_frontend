@@ -63,7 +63,7 @@ const UploadedEvidenceFile = (props) => {
 
   useEffect(() => {
     if (singleData?.course_id)
-      dispatch(fetchCourseById(singleData?.course_id));
+      dispatch(fetchCourseById(singleData?.course_id?.course_id));
   }, [dispatch, singleData?.course_id]);
 
   const handleSubmit = async () => {
