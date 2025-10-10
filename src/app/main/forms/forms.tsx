@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Grid, Tab, Tabs, Typography } from "@mui/material";
 import { Box } from "@mui/system";
 import { useDispatch } from "react-redux";
@@ -10,6 +10,8 @@ import { slice } from "app/store/formData";
 import SubmittedForms from "./submittedForms";
 import FormBuilder from "./formBuilder";
 import Templates from "./tamplates";
+import { selectGlobalUser } from "app/store/globalUser";
+import { UserRole } from "src/enum";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -52,9 +54,14 @@ const Forms = (props) => {
     dispatch(slice.storeFormData({ data: {}, mode: "" }))
     setValue(newValue);
   };
-
+  
   const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
 
+  useEffect(() => {
+    if(user?.role === UserRole.Trainer){
+      setValue(2)
+    }
+  }, [user])
 
   return (
     <>

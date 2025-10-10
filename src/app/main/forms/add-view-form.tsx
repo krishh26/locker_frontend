@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { SimpleFormField } from 'src/app/component/FormBuilder'
 import DynamicFormPreview from './DynamicFormPreview'
+import { UserRole } from 'src/enum'
 
 const AddViewForm = () => {
   const param = useParams()
@@ -20,26 +21,15 @@ const AddViewForm = () => {
   const userId: string | boolean = param?.userId ?? false
   const isSavedViewedPath =
     location.pathname === `/forms/view-saved-form/${formId}/user/${userId}`
-  const isViewedPath = location.pathname === `/forms/view-form/${formId}`
 
   const [formFields, setFormFields] = useState<SimpleFormField[]>([])
   const [formData, setFormData] = useState<any>({})
-  const [savedFormData, setSavedFormData] = useState<any>({})
   const [isLocked, setIsLocked] = useState(false)
   const dispatch: any = useDispatch()
 
   const currentUser =
     JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
     useSelector(selectGlobalUser)?.currentUser
-  const {
-    data,
-    formDataDetails,
-    dataUpdatingLoadding,
-    singleData,
-    mode,
-    singleFrom = null,
-    modeTemaplate = '',
-  } = useSelector(selectFormData)
 
   const {
     data: formDetails,
@@ -64,7 +54,7 @@ const AddViewForm = () => {
   } = useGetSavedFormDetailsQuery(
     {
       formId,
-      userId: currentUser?.user_id || userId,
+      userId: userId ? userId : currentUser?.user_id,
     },
     {
       refetchOnMountOrArgChange: false,
@@ -112,7 +102,7 @@ const AddViewForm = () => {
       const { form_name, type, form_data, description } =
         savedFormDetails.data.form
 
-        const { is_locked } = savedFormDetails.data
+      const { is_locked } = savedFormDetails.data
 
       setFormData({
         form_name,
@@ -121,7 +111,10 @@ const AddViewForm = () => {
       })
 
       setFormFields(form_data)
-      setIsLocked(is_locked)
+
+      const isLocked = currentUser.role === UserRole.Learner && is_locked
+
+      setIsLocked(isLocked)
       dispatch(slice.setFormDataDetails(savedFormDetails.data.form_data))
     }
   }, [
@@ -166,7 +159,6 @@ const AddViewForm = () => {
         fields={formFields}
         formName={formData.form_name}
         description={formData.description}
-        savedFormData={savedFormData}
         isLocked={isLocked}
       />
     </Box>
