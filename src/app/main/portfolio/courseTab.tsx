@@ -25,12 +25,11 @@ import {
 } from 'app/store/courseManagement'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { slice as globalSlice, selectGlobalUser } from 'app/store/globalUser'
-import { selectUser } from 'app/store/userSlice'
 import {
   getLearnerDetails,
   selectLearnerManagement,
 } from 'app/store/learnerManagement'
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -39,8 +38,9 @@ import {
   SecondaryButtonOutlined,
 } from 'src/app/component/Buttons'
 import DataNotFound from 'src/app/component/Pages/dataNotFound'
-import * as yup from 'yup'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { UserRole } from 'src/enum'
+import * as yup from 'yup'
 
 // Course status enum
 enum CourseStatus {
@@ -87,9 +87,6 @@ const CourseTab = () => {
   const { LIQA, IQA, trainer, EQA, learner } = useSelector(
     selectLearnerManagement
   )
-  const learnerUser =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectGlobalUser)?.selectedUser
 
   const [courseDialog, setCourseDialog] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -123,7 +120,7 @@ const CourseTab = () => {
   })
 
   const handleLearnerRefetch = async () => {
-    const data = await dispatch(getLearnerDetails(learnerUser?.learner_id))
+    const data = await dispatch(getLearnerDetails())
     if (data) {
       dispatch(globalSlice.setSelectedUser(data))
     }
@@ -177,19 +174,7 @@ const CourseTab = () => {
   }
 
   const { selectedUser, dataFetchLoading } = useSelector(selectGlobalUser)
-  const userData = useSelector(selectUser)
-
-  // Get current user role
-  const user = useMemo(() => {
-    try {
-      return (
-        JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
-        userData?.data
-      )
-    } catch {
-      return userData?.data
-    }
-  }, [userData])
+  const currentUser = useCurrentUser()
 
   const handleCreateCourse = () => {
     setIsEditMode(false)
@@ -272,7 +257,7 @@ const CourseTab = () => {
               Manage and track learner course progress
             </Typography>
           </div>
-          {!user?.roles.includes(UserRole.Learner) && (
+          {!currentUser?.roles.includes(UserRole.Learner) && (
             <SecondaryButton
               className='bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200'
               name='Add New Course'
@@ -310,7 +295,7 @@ const CourseTab = () => {
                     <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
                       IQA
                     </TableCell>
-                    {!user?.roles.includes(UserRole.Learner) && (
+                    {!currentUser?.roles.includes(UserRole.Learner) && (
                       <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
                         Actions
                       </TableCell>
@@ -367,7 +352,7 @@ const CourseTab = () => {
                           ? `${row?.IQA_id?.first_name} ${row?.IQA_id?.last_name}`
                           : 'N/A'}
                       </TableCell>
-                      {!user?.roles.includes(UserRole.Learner) && (
+                      {!currentUser?.roles.includes(UserRole.Learner) && (
                         <TableCell>
                           <div className='flex gap-2'>
                             <Tooltip title='Edit Course'>
@@ -399,7 +384,7 @@ const CourseTab = () => {
               >
                 Start by adding a new course to track learner progress
               </Typography>
-              {!user?.roles.includes(UserRole.Learner) && (
+              {!currentUser?.roles.includes(UserRole.Learner) && (
                 <SecondaryButton
                   className='mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200'
                   name='Add Your First Course'

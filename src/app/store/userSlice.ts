@@ -2,6 +2,7 @@ import history from '@history';
 import { createSlice } from '@reduxjs/toolkit';
 import { authRoles } from '../auth';
 import { slice } from './globalUser';
+import { setAuthUser, clearAuthUser } from './authSlice';
 
 const initialState = {
   data: {
@@ -31,7 +32,9 @@ export const setUser = (user) => async (dispatch) => {
     ...user
   }
 
-  dispatch(userSlice.actions.setUserDetails(userData))
+  // Update BOTH old and new slices for backwards compatibility
+  dispatch(userSlice.actions.setUserDetails(userData)) // Old slice
+  dispatch(setAuthUser(userData)) // New slice ✅
 
   const data = window.location.href.split("/");
   if (data[data?.length - 1] === "sign-in" || data[data?.length - 1] === "forgot" || data[data?.length - 1] === "reset") {
@@ -44,9 +47,10 @@ export const setUser = (user) => async (dispatch) => {
 export const logoutUser = (redirection) => async (dispatch) => {
   if (redirection) {
     history.push('/')
-    dispatch(slice.userLoggedOut())
-    dispatch(userSlice.actions.userLoggedOut())
-    window.location.reload() // Add this line to reload after redirect
+    dispatch(slice.userLoggedOut()) // Clear globalUser
+    dispatch(userSlice.actions.userLoggedOut()) // Clear old userSlice
+    dispatch(clearAuthUser()) // Clear new authSlice ✅
+    window.location.reload() // Reload after redirect
   }
 }
 

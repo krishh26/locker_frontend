@@ -156,9 +156,6 @@ export const createSessionAPI = (data) => async (dispatch, getStore) => {
         dispatch(slice.setUpdatingLoader());
         const response = await axios.post(`${URL_BASE_LINK}/session/create`, data)
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
-        // if (response.data.status) {
-        //     dispatch(getSessionAPI(getStore().user.data.id, ""))
-        // }
         dispatch(slice.setUpdatingLoader());
         return true;
     } catch (err) {
@@ -176,9 +173,6 @@ export const updateSessionAPI = (id, data) => async (dispatch, getStore) => {
         const { ...payload } = data
         const response = await axios.patch(`${URL_BASE_LINK}/session/update/${id}`, payload)
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
-        // if (response.data.status) {
-        //     dispatch(getSessionAPI(getStore().user.data.id, ""))
-        // }
         dispatch(slice.setUpdatingLoader());
         return true;
     } catch (err) {
@@ -195,9 +189,6 @@ export const deleteSessionHandler = (id) => async (dispatch, getStore) => {
         const response = await axios.delete(`${URL_BASE_LINK}/session/delete/${id}`)
         console.log(response);
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
-        // if (response.data.status) {
-        //     dispatch(getSessionAPI(getStore().user.data.id, ""))
-        // }
         dispatch(slice.setUpdatingLoader());
         return true;
     } catch (err) {

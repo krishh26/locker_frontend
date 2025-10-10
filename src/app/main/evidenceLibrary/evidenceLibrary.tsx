@@ -1,87 +1,68 @@
-import { FC, useEffect, useMemo, useState } from 'react'
+import ArchiveIcon from '@mui/icons-material/Archive'
+import CheckBoxIcon from '@mui/icons-material/CheckBox'
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import DeleteIcon from '@mui/icons-material/Delete'
+import DescriptionIcon from '@mui/icons-material/Description'
+import DownloadIcon from '@mui/icons-material/Download'
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
+import SchoolIcon from '@mui/icons-material/School'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import {
-  Typography,
-  Paper,
-  Container,
-  Button,
-  Dialog,
-  TablePagination,
-  Card,
-  TableRow,
-  TableCell,
-  TableContainer,
-  Table,
-  TableHead,
-  TableBody,
-  Avatar,
-  AvatarGroup,
-  IconButton,
-  Menu,
-  MenuItem,
-  Chip,
-  Box,
-  Tooltip,
-  Link as MuiLink,
-  useTheme,
   alpha,
-  DialogTitle,
-  DialogContent,
+  Avatar,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  Chip,
+  Container,
+  Dialog,
   DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  IconButton,
   List,
   ListItem,
   ListItemButton,
-  ListItemText,
   ListItemIcon,
-  Checkbox,
-  Divider,
-  FormControlLabel,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Link as MuiLink,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tooltip,
+  Typography,
+  useTheme
 } from '@mui/material'
 import {
-  createColumnHelper,
-  getCoreRowModel,
-  getFacetedMinMaxValues,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  createColumnHelper
 } from '@tanstack/react-table'
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
-import FileCopyIcon from '@mui/icons-material/FileCopy'
-import DescriptionIcon from '@mui/icons-material/Description'
-import VisibilityIcon from '@mui/icons-material/Visibility'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
-import CloudUploadIcon from '@mui/icons-material/CloudUpload'
-import DownloadIcon from '@mui/icons-material/Download'
-import ArchiveIcon from '@mui/icons-material/Archive'
-import SchoolIcon from '@mui/icons-material/School'
-import CheckBoxIcon from '@mui/icons-material/CheckBox'
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
-import { useSelector } from 'react-redux'
+import { FC, useEffect, useState } from 'react'
 
-import ReactUploadFile from 'src/app/component/react-upload-files'
-import EvidenceUploadWithCreation from 'src/app/component/react-upload-files/EvidenceUploadWithCreation'
-import { fuzzyFilter } from 'src/utils/string'
-import TablePaginationComponent from 'src/app/component/TablePagination'
-import ReactTable from 'src/app/component/react-table'
+import FuseLoading from '@fuse/core/FuseLoading'
 import {
   useDeleteEvidenceMutation,
   useGetEvidenceListQuery,
 } from 'app/store/api/evidence-api'
-import { selectUser } from 'app/store/userSlice'
-import FuseLoading from '@fuse/core/FuseLoading'
-import { Link, useNavigate } from 'react-router-dom'
-import DataNotFound from 'src/app/component/Pages/dataNotFound'
+import { showMessage } from 'app/store/fuse/messageSlice'
+import { useDispatch } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import {
   DangerButton,
   LoadingButton,
   SecondaryButtonOutlined,
 } from 'src/app/component/Buttons'
 import AlertDialog from 'src/app/component/Dialogs/AlertDialog'
-import { useDispatch } from 'react-redux'
-import { showMessage } from 'app/store/fuse/messageSlice'
+import DataNotFound from 'src/app/component/Pages/dataNotFound'
+import EvidenceUploadWithCreation from 'src/app/component/react-upload-files/EvidenceUploadWithCreation'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import ReuploadEvidenceLibrary from './reupload-evidenceLibrary'
 
 interface EvidenceData {
@@ -171,13 +152,11 @@ const EvidenceLibrary: FC = () => {
 
   const isOpenAction = Boolean(anchorEl)
 
-  const user = sessionStorage.getItem('learnerToken')
-    ? { data: JSON.parse(sessionStorage.getItem('learnerToken'))?.user }
-    : useSelector(selectUser)
+  const user = useCurrentUser()
 
   const { data, isLoading, isError, error, refetch } = useGetEvidenceListQuery(
     {
-      user_id: user.data.user_id,
+      user_id: user.user_id,
     },
     {
       refetchOnMountOrArgChange: true,

@@ -1,38 +1,35 @@
+import AssessmentIcon from '@mui/icons-material/Assessment'
+import BarChartIcon from '@mui/icons-material/BarChart'
+import DownloadIcon from '@mui/icons-material/Download'
+import ListIcon from '@mui/icons-material/List'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import {
+  Box,
   Card,
   CardContent,
-  FormControl,
-  Grid,
-  MenuItem,
-  Select,
-  Typography,
-  Box,
-  useTheme,
   Chip,
   Divider,
   Fade,
-  Skeleton,
-  Tooltip,
+  FormControl,
+  MenuItem,
   Paper,
-  Avatar
+  Select,
+  Tooltip,
+  Typography,
+  useTheme
 } from '@mui/material'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
-import { forwardRef, useRef, useState } from 'react'
-import { useSelector } from 'react-redux'
-import { SecondaryButton } from 'src/app/component/Buttons'
-import { Line } from 'react-chartjs-2'
+import { selectSkillsScan } from 'app/store/skillsScan'
 import 'chart.js/auto'
 import html2canvas from 'html2canvas'
 import html2pdf from 'html2pdf.js'
-import { selectGlobalUser } from 'app/store/globalUser'
-import { selectSkillsScan } from 'app/store/skillsScan'
+import { forwardRef, useRef, useState } from 'react'
+import { Line } from 'react-chartjs-2'
+import { useSelector } from 'react-redux'
+import { SecondaryButton } from 'src/app/component/Buttons'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import LearnerProgressChart from './LearnerProgressChart'
-import VisibilityIcon from '@mui/icons-material/Visibility'
-import AssessmentIcon from '@mui/icons-material/Assessment'
-import DownloadIcon from '@mui/icons-material/Download'
-import TrendingUpIcon from '@mui/icons-material/TrendingUp'
-import ListIcon from '@mui/icons-material/List'
-import BarChartIcon from '@mui/icons-material/BarChart'
 
 interface LineChartProps {
   data: { rating: any; name: any }[]
@@ -99,9 +96,7 @@ const LineChart = forwardRef<any, LineChartProps>(({ data }, ref) => {
 
 const ViewResults = () => {
   const theme = useTheme()
-  const selectedUser =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectGlobalUser)?.selectedUser
+  const selectedUser = useCurrentUser()
   const { courseData } = useSelector(selectLearnerManagement)
   const { selectedCourse } = useSelector(selectSkillsScan)
   const chartRef = useRef<any>(null)

@@ -1,20 +1,19 @@
-import React, { useEffect } from "react";
+import { Avatar, Typography } from "@mui/material";
+import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
-import { Avatar, Pagination, Typography } from "@mui/material";
-import { Box, Stack } from "@mui/system";
-import { useDispatch } from "react-redux";
-import { getEQAUserData, selectUserManagement } from "app/store/userManagement";
-import { useSelector } from "react-redux";
-import { selectUser } from "app/store/userSlice";
-import { getRandomColor } from "src/utils/randomColor";
-import CustomPagination from "src/app/component/Pagination/CustomPagination";
+import { Box } from "@mui/system";
 import { selectGlobalUser } from "app/store/globalUser";
+import { getEQAUserData, selectUserManagement } from "app/store/userManagement";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import CustomPagination from "src/app/component/Pagination/CustomPagination";
+import { useCurrentUser } from "src/app/utils/userHelpers";
+import { getRandomColor } from "src/utils/randomColor";
 
 function createData(
   avatarUrl: string,
@@ -93,7 +92,7 @@ const rows = [
 
 const TableEQA1 = (props) => {
 
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
 
   const { learnerData, learner_meta_data } = useSelector(selectUserManagement);
   const dispatch: any = useDispatch();

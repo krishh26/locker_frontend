@@ -7,17 +7,16 @@ import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import { selectUser } from 'app/store/userSlice';
 import { useAuth } from 'src/app/auth/AuthContext'
 import jwtService from 'src/app/auth/services/jwtService';
-import { changeUserRoleHandler, selectUserManagement } from 'app/store/userManagement';
+import { changeUserRoleHandler, selectAdminUserManagement } from 'app/store/adminUserManagement';
 import { style } from './Style';
 import { getRandomColor } from 'src/utils/randomColor';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
 
 function UserMenu(props) {
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
-
-  const userAvarat = useSelector(selectUserManagement)
+  const user = useCurrentUser();
+  const userAvarat = useSelector(selectAdminUserManagement)
   const { isAuthenticated } = useAuth();
   const { logout } = jwtService;
   const [userMenu, setUserMenu] = useState(null);
@@ -64,7 +63,7 @@ function UserMenu(props) {
       >
         <div className="flex-col mx-4 items-end sm:!flex" style={{ display: "none" }}>
           <Typography component="span" className="font-semibold flex">
-            {user?.displayName}
+            {user?.first_name + ' ' + user?.last_name}
           </Typography>
           <Typography className="text-11 font-medium capitalize" color="text.white">
             {user?.role?.toString()}
@@ -75,7 +74,7 @@ function UserMenu(props) {
         {(user?.avatar?.url || userAvarat?.avatar) ? (
           <Avatar className="md:mx-4" alt="user photo" src={userAvarat?.avatar || user?.avatar?.url} />
         ) : (
-          <Avatar className="md:mx-4" sx={{ backgroundColor: getRandomColor(user?.displayName?.toLowerCase().charAt(0)) }}>{user?.displayNames?.toUpperCase().charAt(0)}</Avatar>
+          <Avatar className="md:mx-4" sx={{ backgroundColor: getRandomColor(user?.first_name?.toLowerCase().charAt(0)) }}>{user?.first_name?.toUpperCase().charAt(0)}</Avatar>
         )}
       </Button>
 

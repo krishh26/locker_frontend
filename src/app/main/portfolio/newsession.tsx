@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux';
 import { createSessionAPI, getLearnerAPI, getSessionAPI, getTrainerAPI, selectSession, slice, updateSessionAPI } from 'app/store/session';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
 
 
 const NewSession = (props) => {
@@ -85,7 +86,7 @@ const NewSession = (props) => {
         return formattedDate;
     };
 
-    const sessionDataFromStorage = JSON.parse(sessionStorage.getItem('learnerToken'))?.user;
+    const sessionDataFromStorage = useCurrentUser();
     const selectedLearnerId = sessionDataFromStorage?.learner_id || null;
 
     useEffect(() => {

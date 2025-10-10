@@ -1,4 +1,6 @@
+import FuseSvgIcon from '@fuse/core/FuseSvgIcon'
 import {
+  alpha,
   Autocomplete,
   Avatar,
   Box,
@@ -9,7 +11,6 @@ import {
   Slide,
   TextField,
   Typography,
-  alpha,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
@@ -17,23 +18,21 @@ import { styled } from '@mui/material/styles'
 import {
   fetchCourseAPI,
   selectCourseManagement,
-  slice,
-  updateUserCourse,
+  updateUserCourse
 } from 'app/store/courseManagement'
+import { showMessage } from 'app/store/fuse/messageSlice'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { PortfolioCard } from 'src/app/component/Cards'
 import { portfolioCard } from 'src/app/contanst'
-import FuseSvgIcon from '@fuse/core/FuseSvgIcon'
 import {
   getAllPortfolioCounts,
   PortfolioCountData,
 } from 'src/app/utils/portfolioCountUtils'
-import { selectUser } from 'app/store/userSlice'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { UserRole } from 'src/enum'
-import { showMessage } from 'app/store/fuse/messageSlice'
 
 // Type-safe wrapper for FuseSvgIcon
 const Icon = (props: { size?: number; color?: string; children: string }) => {
@@ -274,9 +273,7 @@ const CourseData = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
 
-  const user = sessionStorage.getItem('learnerToken')
-    ? { data: JSON.parse(sessionStorage.getItem('learnerToken'))?.user }
-    : useSelector(selectUser)
+  const user = useCurrentUser()
 
   // State for count data
   const [countData, setCountData] = useState<PortfolioCountData>({
@@ -331,7 +328,7 @@ const CourseData = () => {
       if (singleData && singleData.course) {
         try {
           // Get learner ID from session storage or props
-          const learnerId = user?.data?.user_id
+          const learnerId = user?.user_id
 
           if (learnerId) {
             const counts = await getAllPortfolioCounts(
@@ -426,7 +423,7 @@ const CourseData = () => {
   return (
     <StyledContainer>
       {/* Header Section */}
-      {user?.data?.role === UserRole.Learner && (
+      {user?.role === UserRole.Learner && (
         <>
           <StyledHeader>
             <Box
@@ -514,7 +511,7 @@ const CourseData = () => {
                       data={value}
                       index={index}
                       countData={countData}
-                      learner={user?.data}
+                      learner={user}
                     />
                   </Box>
                 </Slide>
@@ -544,7 +541,7 @@ const CourseData = () => {
               Course Information
             </Typography>
 
-            {user?.data?.role !== UserRole.Learner && (
+            {user?.role !== UserRole.Learner && (
               <Autocomplete
                 className='w-200'
                 size='small'

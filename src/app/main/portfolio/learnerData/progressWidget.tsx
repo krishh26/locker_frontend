@@ -1,13 +1,13 @@
+import FuseLoading from "@fuse/core/FuseLoading";
+import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
 import { Box, Card, LinearProgress, Stack, Typography } from '@mui/material';
 import { getLearnerDetailsReturn, selectLearnerManagement } from 'app/store/learnerManagement';
-import React, { useEffect, useState } from 'react'
-import { useDispatch } from 'react-redux';
+import { format } from 'date-fns';
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { SecondaryButtonOutlined } from 'src/app/component/Buttons';
-import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
-import { useSelector } from 'react-redux';
-import FuseLoading from "@fuse/core/FuseLoading";
-import { format } from 'date-fns';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
 
 
 function calculateCompletionPercentage(startDate, endDate) {
@@ -57,7 +57,7 @@ const ProgressWidget = () => {
 
   useEffect(() => {
     async function fetchLearner() {
-      const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user;
+      const user = useCurrentUser();
       if (user) {
         setLearnerDetails(user)
         const data = await dispatch(getLearnerDetailsReturn(user?.learner_id))
@@ -111,7 +111,7 @@ const ProgressWidget = () => {
       ) : (
         <div className='p-10'>
           <div className='flex justify-between items-center p-10 border-b-1 !border-grey-400'>
-            <Typography className='capitalize text-lg font-semibold'>Welcome,  {learnerDetails?.displayName}</Typography>
+            <Typography className='capitalize text-lg font-semibold'>Welcome,  {learnerDetails?.first_name + ' ' + learnerDetails?.last_name}</Typography>
             <button onClick={handleBack} className='mb-10 text-[#5b718f]'>
               <KeyboardBackspaceIcon /> Back
             </button>

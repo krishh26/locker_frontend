@@ -2,8 +2,10 @@
 import { combineReducers } from '@reduxjs/toolkit'
 import fuse from './fuse'
 import i18n from './i18nSlice'
-import user from './userSlice'
-import userManagement from './userManagement'
+import auth from './authSlice'
+import user from './userSlice' // DEPRECATED: Use 'auth' instead
+import adminUserManagement from './adminUserManagement'
+import userManagement from './userManagement' // DEPRECATED: Use 'adminUserManagement' instead
 import learnerManagement from './learnerManagement'
 import courseManagement from './courseManagement'
 import resourceManagement from './resourcesManagement'
@@ -42,8 +44,12 @@ const createReducer = (asyncReducers) => (state, action) => {
   const combinedReducer = combineReducers({
     fuse,
     i18n,
-    user,
-    userManagement,
+    // New slices (use these!)
+    auth,
+    adminUserManagement,
+    // Legacy slices (backwards compatibility - will be removed)
+    user, // DEPRECATED: Use 'auth' instead
+    userManagement, // DEPRECATED: Use 'adminUserManagement' instead
     learnerManagement,
     courseManagement,
     cpdPlanning,
@@ -81,7 +87,8 @@ const createReducer = (asyncReducers) => (state, action) => {
     ...asyncReducers,
   })
 
-  if (action.type === 'user/userLoggedOut') {
+  // Handle logout actions from both old and new slices
+  if (action.type === 'user/userLoggedOut' || action.type === 'auth/clearAuthUser') {
     // state = undefined;
   }
 

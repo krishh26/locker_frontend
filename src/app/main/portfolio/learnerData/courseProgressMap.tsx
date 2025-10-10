@@ -1,12 +1,12 @@
-import { Autocomplete, Box, Button, Card, Grid, LinearProgress, Paper, Stack, TextField, Typography } from '@mui/material';
+import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
+import { Autocomplete, Box, Card, LinearProgress, Paper, Stack, TextField, Typography } from '@mui/material';
 import { selectGlobalUser } from 'app/store/globalUser';
 import { getLearnerDetailsReturn } from 'app/store/learnerManagement';
-import React, { useEffect, useState } from 'react'
-import { useSelector } from 'react-redux';
-import { useDispatch } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { SecondaryButtonOutlined } from 'src/app/component/Buttons';
-import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
 
 
 function LinearProgressWithLabel(props) {
@@ -40,7 +40,8 @@ const CourseProgressMap = () => {
 
   useEffect(() => {
     async function fetchLearner() {
-      const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user;
+      const user = useCurrentUser();
+      console.log("🚀 ~ fetchLearner ~ user:", user)
       if (user) {
         setLearnerDetails(user)
         const data = await dispatch(getLearnerDetailsReturn(user?.learner_id))
@@ -84,7 +85,7 @@ const CourseProgressMap = () => {
   return (
     <div>
       <div className='flex justify-between items-center p-10 border-b-1 !border-grey-400'>
-        <Typography className='capitalize text-lg font-semibold'>Welcome,  {learnerDetails?.displayName}</Typography>
+        <Typography className='capitalize text-lg font-semibold'>Welcome,  {learnerDetails?.first_name + ' ' + learnerDetails?.last_name}</Typography>
         <button onClick={handleBack} className='mb-10 text-[#5b718f]'>
           <KeyboardBackspaceIcon /> Back
         </button>
@@ -92,7 +93,7 @@ const CourseProgressMap = () => {
 
       <div className='m-14'>
         <Typography className='font-semibold'>Progress Map:</Typography>
-        <Typography className='font-semibold'>{learnerDetails?.displayName} - TQUK Level 5 Diploma for Operations and Departmental Managers (RQF) - 60335932</Typography>
+        <Typography className='font-semibold'>{learnerDetails?.first_name + ' ' + learnerDetails?.last_name} - TQUK Level 5 Diploma for Operations and Departmental Managers (RQF) - 60335932</Typography>
         <Typography className='font-semibold'>Trainer Name : Michelle Parris</Typography>
         <Typography className='font-semibold'>05/10/2024</Typography>
       </div>

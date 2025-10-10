@@ -1,24 +1,15 @@
-import React, { useEffect, useState } from "react";
-import Breadcrumb from "src/app/component/Breadcrumbs";
-import { DangerButton, LoadingButton, SecondaryButton, SecondaryButtonOutlined } from "src/app/component/Buttons";
-import DataNotFound from "src/app/component/Pages/dataNotFound";
-import { AdminRedirect, AssignmentRedirect, roles } from "src/app/contanst";
-import Style from "./style.module.css";
-import { useSelector } from "react-redux";
+import FuseLoading from "@fuse/core/FuseLoading";
+import FileCopyIcon from '@mui/icons-material/FileCopy';
+import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import {
-  Autocomplete,
   Avatar,
   AvatarGroup,
   Card,
   Dialog,
-  Drawer,
   IconButton,
-  InputAdornment,
   Menu,
   MenuItem,
-  Pagination,
-  Paper,
-  Stack,
   Table,
   TableBody,
   TableCell,
@@ -26,24 +17,22 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography,
+  Typography
 } from "@mui/material";
-import { useDispatch } from "react-redux";
-import FuseLoading from "@fuse/core/FuseLoading";
-import Close from "@mui/icons-material/Close";
-import SearchIcon from "@mui/icons-material/Search";
+import { deleteAssignmentHandler, getAssignmentByCourseAPI, selectAssignment, slice } from "app/store/assignment";
+import { fetchCourseById, selectCourseManagement } from "app/store/courseManagement";
+import { selectstoreDataSlice } from "app/store/reloadData";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import FileCopyIcon from '@mui/icons-material/FileCopy';
-import AlertDialog from "src/app/component/Dialogs/AlertDialog";
+import { DangerButton, LoadingButton, SecondaryButton, SecondaryButtonOutlined } from "src/app/component/Buttons";
 import UploadedEvidenceFile from "src/app/component/Cards/uploadedEvidenceFile";
-import { deleteAssignmentHandler, getAssignmentAPI, getAssignmentByCourseAPI, selectAssignment, slice } from "app/store/assignment";
-import { selectUser } from "app/store/userSlice";
 import Uploading from "src/app/component/Cards/uploading";
 import UploadWorkDialog from "src/app/component/Cards/uploadWorkDialog";
-import { selectstoreDataSlice } from "app/store/reloadData";
-import { fetchCourseById, selectCourseManagement } from "app/store/courseManagement";
-import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
+import AlertDialog from "src/app/component/Dialogs/AlertDialog";
+import DataNotFound from "src/app/component/Pages/dataNotFound";
+import { useCurrentUser } from "src/app/utils/userHelpers";
+import Style from "./style.module.css";
 
 interface Column {
   id:
@@ -77,7 +66,7 @@ const AssignmentData = () => {
   const navigate = useNavigate();
 
   const { user_id } = useSelector(selectstoreDataSlice);
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser()
   const { singleData } = useSelector(selectCourseManagement)
   const assingmentSingleData = useSelector(selectAssignment)?.singleData
   const { singleAssignmentData } = useSelector(selectAssignment)
@@ -270,7 +259,7 @@ const AssignmentData = () => {
                                         {/* ))} */}
                                       </AvatarGroup>
                                     </div>
-                                  ) : column.id === "status" && user?.data?.role === "Trainer" ?
+                                  ) : column.id === "status" && user?.role === "Trainer" ?
                                     <TextField value={value} />
                                     : value}
                             </TableCell>

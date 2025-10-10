@@ -1,22 +1,20 @@
-import { Avatar, Box, Grid, IconButton, InputAdornment, TextField, Tooltip, Typography } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
-import EmojiPicker from 'emoji-picker-react';
-import { LoadingButton, SecondaryButton } from "src/app/component/Buttons";
-import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
-import SendIcon from '@mui/icons-material/Send';
-import { useDispatch } from "react-redux";
-import { useSelector } from "react-redux";
-import { getChatListAPI, getMessageAPI, selectForumData, sendMessageAPI, slice } from "app/store/forum";
-import { getRandomColor } from "src/utils/randomColor";
-import { selectUser } from "app/store/userSlice";
-import DataNotFound from "src/app/component/Pages/dataNotFound";
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import FileCopyIcon from '@mui/icons-material/FileCopy';
-import { Link } from "react-router-dom";
-import ClearIcon from '@mui/icons-material/Clear';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
-import { selectGlobalUser } from "app/store/globalUser";
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import ClearIcon from '@mui/icons-material/Clear';
+import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
+import FileCopyIcon from '@mui/icons-material/FileCopy';
+import SendIcon from '@mui/icons-material/Send';
+import { Avatar, Box, Grid, IconButton, InputAdornment, TextField, Tooltip, Typography } from "@mui/material";
+import { getChatListAPI, getMessageAPI, selectForumData, sendMessageAPI, slice } from "app/store/forum";
+import EmojiPicker from 'emoji-picker-react';
+import { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import { LoadingButton, SecondaryButton } from "src/app/component/Buttons";
+import DataNotFound from "src/app/component/Pages/dataNotFound";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 import { UserRole } from "src/enum";
+import { getRandomColor } from "src/utils/randomColor";
 
 const timeAgo = (timestamp) => {
   if (!timestamp) return '';
@@ -48,9 +46,7 @@ const Forum = () => {
 
   const chatEndRef = useRef(null);
   const forumData = useSelector(selectForumData);
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
-  const currentUser = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectGlobalUser)?.currentUser;
-
+  const user = useCurrentUser();
 
   const dispatch: any = useDispatch();
 
@@ -95,7 +91,7 @@ const Forum = () => {
       }
       const formData = new FormData();
       formData.append('course_id', sendMessage.course_id);
-      formData.append('sender_id', currentUser.user_id);
+      formData.append('sender_id', user.user_id);
       formData.append('message', sendMessage.message);
       formData.append('file', sendMessage.file);
 
@@ -149,7 +145,7 @@ const Forum = () => {
   }, [forumData]);
 
   useEffect(() => {
-    dispatch(getChatListAPI(currentUser.role !== UserRole.Admin && currentUser.user_id));
+    dispatch(getChatListAPI(user.role !== UserRole.Admin && user.user_id));
   }, [dispatch]);
 
   const filteredCourseData = forumData.courseData.filter(row =>

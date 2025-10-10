@@ -1,35 +1,28 @@
-import { 
-  Box, 
-  Grid, 
-  Tab, 
-  Tabs, 
-  Typography, 
-  Card, 
-  CardContent, 
-  useTheme, 
-  Chip, 
-  Fade,
-  Stepper,
-  Step,
-  StepLabel,
-  StepConnector,
-  Avatar,
-  Divider
-} from '@mui/material'
-import React, { useEffect, useState } from 'react'
-import TNAUnits from './tnaUnits'
-import TNAQuestionaire from './tnaQuestionaire'
-import ViewResults from './viewResults'
-import { useDispatch } from 'react-redux'
-import { getLearnerDetails } from 'app/store/learnerManagement'
-import { useSelector } from 'react-redux'
-import { selectGlobalUser } from 'app/store/globalUser'
-import { selectSkillsScan } from 'app/store/skillsScan'
 import AssessmentIcon from '@mui/icons-material/Assessment'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import PersonIcon from '@mui/icons-material/Person'
 import QuizIcon from '@mui/icons-material/Quiz'
 import VisibilityIcon from '@mui/icons-material/Visibility'
-import PersonIcon from '@mui/icons-material/Person'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import {
+  Avatar,
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Fade,
+  Tab,
+  Tabs,
+  Typography,
+  useTheme
+} from '@mui/material'
+import { getLearnerDetails } from 'app/store/learnerManagement'
+import { selectSkillsScan } from 'app/store/skillsScan'
+import React, { useEffect, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
+import TNAQuestionaire from './tnaQuestionaire'
+import TNAUnits from './tnaUnits'
+import ViewResults from './viewResults'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -79,9 +72,7 @@ const SkillsScan = () => {
   const [value, setValue] = useState(0)
   const dispatch: any = useDispatch()
   const theme = useTheme()
-  const selectedUser =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectGlobalUser)?.selectedUser
+  const selectedUser = useCurrentUser()
   const { selectedCourse } = useSelector(selectSkillsScan)
   
   const handleTabChange = (event, newValue) => {
@@ -89,9 +80,8 @@ const SkillsScan = () => {
   }
 
   useEffect(() => {
-    if (selectedUser?.learner_id)
-      dispatch(getLearnerDetails(selectedUser.learner_id))
-  }, [selectedUser])
+      dispatch(getLearnerDetails())
+  }, [])
 
   const steps = [
     { 

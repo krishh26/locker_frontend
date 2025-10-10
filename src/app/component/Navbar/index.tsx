@@ -7,13 +7,11 @@ import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import instance from "src/app/auth/services/jwtService/jwtService";
 import { SecondaryButton } from "../Buttons";
-import { useSelector } from "react-redux";
-import { selectUser } from "app/store/userSlice";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 
 const Index = () => {
   const navigate = useNavigate();
-
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
 
   const [open, setOpen] = useState(false);
 

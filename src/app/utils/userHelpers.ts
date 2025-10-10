@@ -1,97 +1,58 @@
-import { UserRole } from 'src/enum';
-import jsonData from 'src/url.json';
+/**
+ * User Helper Utilities
+ * 
+ * Unified way to access user data across the application
+ * Use these helpers instead of accessing sessionStorage or Redux directly
+ */
 
-const URL_BASE_LINK = jsonData.API_LOCAL_URL;
-
-export interface User {
-  user_id: string;
-  id: string;
-  name: string;
-  displayName?: string;
-  email: string;
-  role: UserRole;
-  roles?: UserRole[];
-}
+import { useSelector } from 'react-redux';
+import { selectAuthUser } from 'app/store/authSlice';
+import { selectUser } from 'app/store/userSlice'; // Legacy fallback
 
 /**
- * Get admin and trainer user IDs for email notifications
- * This function should be customized based on your application's user management system
+ * Get current user data
+ * 
+ * Priority:
+ * 1. Learner tab user (admin viewing as learner) - from sessionStorage
+ * 2. Authenticated user (from authSlice)
+ * 3. Legacy user (from userSlice) - backwards compatibility
  */
-export const getAdminTrainerUserIds = async (authToken: string): Promise<string[]> => {
-  try {
-    // Option 1: If you have an API endpoint to get admin/trainer users
-    const response = await fetch(`${URL_BASE_LINK}/users/admin-trainers`, {
-      headers: {
-        'Authorization': authToken,
-      },
-    });
+export const useCurrentUser = () => {
+  // Check for learner tab (when admin is viewing as learner)
+  const learnerTabUser = sessionStorage.getItem('learnerToken')
+    ? JSON.parse(sessionStorage.getItem('learnerToken'))?.user
+    : null;
 
-    if (response.ok) {
-      const users = await response.json();
-      return users.map((user: User) => user.user_id || user.id);
-    }
-  } catch (error) {
-    console.warn('Could not fetch admin/trainer users from API:', error);
-  }
+  // Get authenticated user from new authSlice
+  const authUser = useSelector(selectAuthUser);
+  
+  // Fallback to legacy userSlice for backwards compatibility
+  const legacyUser = useSelector(selectUser)?.data;
 
-  // Option 2: Fallback - return default admin user IDs
-  // You should replace these with actual admin/trainer user IDs from your system
-  return ['7']; // Default admin user ID as shown in the API example
+  // Priority: learner tab > auth user > legacy user
+  return learnerTabUser || authUser || legacyUser || {};
 };
 
 /**
- * Get user IDs based on form assignment
- * This function can be used to get specific trainers assigned to a form
+ * Check if user has a specific role
  */
-export const getFormAssignedUserIds = async (
-  formId: string, 
-  authToken: string
-): Promise<string[]> => {
-  try {
-    const response = await fetch(`${URL_BASE_LINK}/forms/${formId}/assigned-users`, {
-      headers: {
-        'Authorization': authToken,
-      },
-    });
-
-    if (response.ok) {
-      const assignedUsers = await response.json();
-      return assignedUsers.map((user: User) => user.user_id || user.id);
-    }
-  } catch (error) {
-    console.warn('Could not fetch form assigned users:', error);
-  }
-
-  // Fallback to general admin/trainer users
-  return getAdminTrainerUserIds(authToken);
+export const useUserRole = () => {
+  const user = useCurrentUser();
+  return user?.role || null;
 };
 
 /**
- * Format user information for PDF generation
+ * Check if current user has any of the specified roles
  */
-export const formatUserForPDF = (user: any) => {
-  return {
-    name: user.displayName || user.name || 'Unknown User',
-    email: user.email || 'No email provided',
-    phone: user.mobile || user.phone || undefined,
-  };
+export const useHasRole = (...roles: string[]) => {
+  const userRole = useUserRole();
+  return roles.includes(userRole);
 };
 
 /**
- * Get authentication token from storage
+ * Get user ID
  */
-export const getAuthToken = (): string | null => {
-  // Try learner token first
-  const learnerToken = sessionStorage.getItem('learnerToken');
-  if (learnerToken) {
-    try {
-      const parsed = JSON.parse(learnerToken);
-      return parsed.accessToken;
-    } catch (error) {
-      console.warn('Could not parse learner token:', error);
-    }
-  }
-
-  // Fallback to regular JWT token
-  return localStorage.getItem('accessToken');
+export const useUserId = () => {
+  const user = useCurrentUser();
+  return user?.user_id || user?.learner_id || null;
 };

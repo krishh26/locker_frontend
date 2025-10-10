@@ -1,15 +1,4 @@
-import { FormBuilder as FormBuilderIo, Form } from "react-formio";
-import "formiojs/dist/formio.full.css";
-import "./style.css";
 import { Grid, MenuItem, Select, TextField, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
-import {
-  LoadingButton,
-  SecondaryButton,
-  SecondaryButtonOutlined,
-} from "src/app/component/Buttons";
-import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
 import {
   createFormDataAPI,
   createTemplateData,
@@ -20,17 +9,24 @@ import {
   updateFormDataAPI,
   updateTemplate,
 } from "app/store/formData";
-import { useSelector } from "react-redux";
 import "formiojs/dist/formio.full.css";
+import { useEffect, useState } from "react";
+import { Form, FormBuilder as FormBuilderIo } from "react-formio";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import {
+  LoadingButton,
+  SecondaryButton,
+  SecondaryButtonOutlined,
+} from "src/app/component/Buttons";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 import { UserRole } from "src/enum";
-import { selectUser } from "app/store/userSlice";
-import { selectGlobalUser } from "app/store/globalUser";
+import "./style.css";
 
 const AddForms = (props) => {
   const { data, formDataDetails, dataUpdatingLoadding, singleData, mode, singleFrom = null, modeTemaplate = '' } = useSelector(selectFormData);
 
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
-  const currentUser = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectGlobalUser)?.currentUser;
+  const user = useCurrentUser();
 
   const navigate = useNavigate();
   const dispatch: any = useDispatch();
@@ -106,7 +102,7 @@ const AddForms = (props) => {
 
   useEffect(() => {
     if (user.role !== UserRole.Admin) {
-      const userId = currentUser.role !== UserRole.Admin ? currentUser.user_id : undefined;
+      const userId = user.role !== UserRole.Admin ? user.user_id : undefined;
       dispatch(getUserFormDataAPI(singleData.id, userId));
     }
   }, [dispatch]);
@@ -115,7 +111,7 @@ const AddForms = (props) => {
     try {
       if (user.role !== UserRole.Admin) {
         await dispatch(
-          createUserFormDataAPI({ form_id: singleData.id, form_data: data, user_id: currentUser.user_id })
+          createUserFormDataAPI({ form_id: singleData.id, form_data: data, user_id: user.user_id })
         );
       }
     } catch (err) {

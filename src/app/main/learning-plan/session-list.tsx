@@ -1,4 +1,11 @@
 'use client'
+import { yupResolver } from '@hookform/resolvers/yup'
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import FileIcon from '@mui/icons-material/FilePresent'
+import AddFile from '@mui/icons-material/NoteAdd'
+import NotStartedIcon from '@mui/icons-material/StopCircle'
 import {
   Accordion,
   AccordionDetails,
@@ -8,41 +15,33 @@ import {
   Card,
   CardContent,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   FormControl,
+  FormControlLabel,
+  FormHelperText,
+  FormLabel,
   Grid,
   IconButton,
   InputLabel,
   LinearProgress,
   MenuItem,
+  Radio,
+  RadioGroup,
   Select,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
-  TextField,
-  RadioGroup,
-  Radio,
-  FormControlLabel,
-  FormLabel,
-  Stack,
-  FormHelperText,
-  DialogActions,
 } from '@mui/material'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
-import AddFile from '@mui/icons-material/NoteAdd'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import FileIcon from '@mui/icons-material/FilePresent'
-import NotStartedIcon from '@mui/icons-material/StopCircle'
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers'
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
-import * as yup from 'yup'
-import { yupResolver } from '@hookform/resolvers/yup'
 import {
   useAddActionPlanerMutation,
   useDeleteActionPlanerMutation,
@@ -51,22 +50,23 @@ import {
   useUpdateSessionMutation,
   useUploadActionFileMutation,
 } from 'app/store/api/learner-plan-api'
+import { getFormDataAPI } from 'app/store/formData'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import {
   getLearnerDetails,
   selectLearnerManagement,
 } from 'app/store/learnerManagement'
-import { selectUser } from 'app/store/userSlice'
 import { addDays, addMinutes, format } from 'date-fns'
 import { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { Link, redirect, useNavigate, useParams } from 'react-router-dom'
-import { Controller, useForm } from 'react-hook-form'
-import { UserRole } from 'src/enum'
 import { FileUploader } from 'react-drag-drop-files'
-import ManageSessionFilesDialog from './manage-session-files-dialog'
-import { getFormDataAPI } from 'app/store/formData'
+import { Controller, useForm } from 'react-hook-form'
+import { useDispatch, useSelector } from 'react-redux'
+import { redirect, useNavigate, useParams } from 'react-router-dom'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
+import { UserRole } from 'src/enum'
+import * as yup from 'yup'
 import FileCategorySummary from './FileCategorySummary'
+import ManageSessionFilesDialog from './manage-session-files-dialog'
 
 const schema = yup.object().shape({
   actionName: yup.string().required('Action name is required'),
@@ -152,9 +152,7 @@ const SessionList = () => {
   const dispatch: any = useDispatch()
 
   const { learner, trainer } = useSelector(selectLearnerManagement)
-  const user =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectUser)?.data
+  const user = useCurrentUser()
 
   const {
     handleSubmit,

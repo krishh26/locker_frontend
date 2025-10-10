@@ -1,3 +1,5 @@
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import ModeEditOutlineOutlinedIcon from "@mui/icons-material/ModeEditOutlineOutlined";
 import {
   Avatar,
   Box,
@@ -10,20 +12,18 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { changePassword, selectUserManagement, uploadAvatar } from "app/store/userManagement";
 import { selectUser } from "app/store/userSlice";
 import React, { useRef, useState } from "react";
-import { useSelector } from "react-redux";
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import { useDispatch, useSelector } from "react-redux";
 import {
   SecondaryButton,
   SecondaryButtonOutlined,
 } from "src/app/component/Buttons";
-import ModeEditOutlineOutlinedIcon from "@mui/icons-material/ModeEditOutlineOutlined";
-import { changePassword, selectUserManagement, uploadAvatar } from "app/store/userManagement";
-import { useDispatch } from "react-redux";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 import { getRandomColor } from "src/utils/randomColor";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
-import 'react-phone-number-input/style.css';
-import PhoneInput from 'react-phone-number-input';
 
 const CustomInputField = ({ label, name, placeholder, value }) => {
   return (
@@ -47,8 +47,8 @@ const MyProfile: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("personalDetails");
 
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
-  const isLearnerTabOpen = !(!JSON.parse(sessionStorage.getItem('learnerToken'))?.user?.user_id || JSON.parse(sessionStorage.getItem('learnerToken'))?.user.user_id === useSelector(selectUser)?.data?.user_id)
+  const user = useCurrentUser()
+  const isLearnerTabOpen = !(!user?.user_id || user.user_id === useSelector(selectUser)?.user_id)
 
   const { dataUpdatingLoadding } = useSelector(selectUserManagement);
   const fileInputRef: any = useRef();
@@ -167,9 +167,9 @@ const MyProfile: React.FC = () => {
             ) : (
               <>
                 <Avatar
-                  sx={{ width: "120px", height: "120px", bgcolor: getRandomColor(user?.displayName?.toLowerCase().charAt(0)) }}
+                  sx={{ width: "120px", height: "120px", bgcolor: getRandomColor(user?.first_name?.toLowerCase().charAt(0)) }}
                   src={user?.avatar?.url}
-                  alt={user?.displayName}
+                  alt={user?.first_name}
                 />
                 {!isLearnerTabOpen && <IconButton
                   onClick={handleButtonClick}
@@ -199,7 +199,7 @@ const MyProfile: React.FC = () => {
             )}
           </div>
           <Typography sx={{ fontWeight: "bold", textTransform: "capitalize" }}>
-            {user?.displayName}
+            {user?.first_name + ' ' + user?.last_name}
           </Typography>
           <Typography>{user?.email}</Typography>
         </Paper>

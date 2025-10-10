@@ -2,6 +2,7 @@ import { AddIcCallOutlined } from '@mui/icons-material'
 import { Autocomplete, Box, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material'
 import { createContractWorkAPI, deleteContractWorkHandler, getContractWork, selectContractWork, updateContractWorkAPI } from 'app/store/contractedWork'
 import { selectGlobalUser } from 'app/store/globalUser'
+import { selectAuthUser } from 'app/store/authSlice'
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -21,6 +22,7 @@ const ContractedWorkHours = () => {
     const dispatch: any = useDispatch();
 
     const globalUser = useSelector(selectGlobalUser)
+    const authUser = useSelector(selectAuthUser)
 
     const { data } = useSelector(selectContractWork)
 
@@ -34,7 +36,7 @@ const ContractedWorkHours = () => {
 
     const [hoursData, setHoursData] = useState({
         learner_id: globalUser?.selectedUser?.learner_id,
-        last_editer: globalUser?.currentUser?.user_id,
+        last_editer: authUser?.user_id,
         company: "",
         contract_start: "",
         contract_end: "",
@@ -69,7 +71,7 @@ const ContractedWorkHours = () => {
         setEditRowId(row?.id);
         setHoursData({
             learner_id: row?.learner_id,
-            last_editer: globalUser?.currentUser?.user_id,
+            last_editer: authUser?.user_id,
             company: row?.company,
             contract_start: formatDate(row?.contract_start),
             contract_end: formatDate(row?.contract_end),
@@ -85,7 +87,7 @@ const ContractedWorkHours = () => {
         setEditRowId(null);
         setHoursData({
             learner_id: globalUser?.selectedUser?.learner_id,
-            last_editer: globalUser?.currentUser?.user_id,
+            last_editer: authUser?.user_id,
             company: "",
             contract_start: "",
             contract_end: "",

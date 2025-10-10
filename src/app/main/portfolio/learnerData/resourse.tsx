@@ -1,25 +1,30 @@
-import { useEffect, useState, useRef } from 'react';
-import {
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Button, Typography, IconButton, TextField, InputAdornment,
-  Switch, FormControlLabel
-} from '@mui/material';
 import { OpenInNew, Search } from '@mui/icons-material';
 import CloseIcon from '@mui/icons-material/Close';
 import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
-import { useSelector, useDispatch } from 'react-redux';
+import {
+  FormControlLabel,
+  IconButton,
+  InputAdornment,
+  Paper,
+  Switch,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  TextField,
+  Typography
+} from '@mui/material';
+import { useEffect, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 import { selectCourseManagement } from 'app/store/courseManagement';
-import { fetchResourceByCourseAPI, resourceAccess, selectResourceManagement } from 'app/store/resourcesManagement';
-import { selectUser } from 'app/store/userSlice';
 import { selectstoreDataSlice } from 'app/store/reloadData';
+import { fetchResourceByCourseAPI, resourceAccess, selectResourceManagement } from 'app/store/resourcesManagement';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
 
 const ResourceData = () => {
   const dispatch: any = useDispatch();
   const navigate = useNavigate();
 
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
   const { singleData } = useSelector(selectCourseManagement);
   const resource = useSelector(selectResourceManagement);
   const { user_id } = useSelector(selectstoreDataSlice);

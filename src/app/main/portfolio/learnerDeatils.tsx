@@ -38,7 +38,6 @@ const LearnerDetails = () => {
   
   const { learner_id } = useSelector(selectGlobalUser).selectedUser
   const { employer, learner } = useSelector(selectLearnerManagement)
-  const globalUser = useSelector(selectGlobalUser)
 
   // Initialize form with learner data
   const form = useLearnerDetailsForm({

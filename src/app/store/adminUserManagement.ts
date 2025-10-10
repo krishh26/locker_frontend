@@ -1,15 +1,30 @@
+/**
+ * adminUserManagement.ts
+ * 
+ * Manages ADMIN OPERATIONS for user management
+ * - User CRUD operations (create, read, update, delete)
+ * - Password management (OTP, reset, change)
+ * - Avatar uploads
+ * - Role changes
+ * 
+ * Usage:
+ * - Import: import { selectAdminUserManagement, fetchUserAPI, createUserAPI } from 'app/store/adminUserManagement'
+ * - For admin user lists, operations, etc.
+ */
+
 import { createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
 import jsonData from 'src/url.json';
+import { showMessage } from './fuse/messageSlice';
+import { userTableMetaData } from '../contanst/metaData';
 import JwtService from '../auth/services/jwtService';
 import instance from '../auth/services/jwtService/jwtService';
-import { userTableMetaData } from '../contanst/metaData';
-import { useCurrentUser } from '../utils/userHelpers';
-import { showMessage } from './fuse/messageSlice';
-import { slice as globalSlice } from './globalUser';
+import { slice as globalSlice } from './globalUser'
+import { useUserRole } from '../utils/userHelpers';
 
 const initialState = {
-    data: [],
+    // User list data (for admin table)
+    users: [],
     avarat: "",
     dataFetchLoading: false,
     dataUpdatingLoadding: false,
@@ -19,6 +34,8 @@ const initialState = {
         page_size: userTableMetaData.page_size,
         pages: 1
     },
+    
+    // EQA specific data
     learner_meta_data: {
         page: 1,
         items: 0,
@@ -35,20 +52,19 @@ const initialState = {
     trainerData: [],
 };
 
-const userManagementSlice = createSlice({
-    name: 'userManagement',
+const adminUserManagementSlice = createSlice({
+    name: 'adminUserManagement',
     initialState,
     reducers: {
         updateUser(state, action) {
             if (Array.isArray(action.payload.data)) {
-                state.data = action.payload.data;
+                state.users = action.payload.data;
                 state.meta_data = action.payload.meta_data
             } else {
-
                 const items = state.meta_data.items + 1;
                 state.meta_data.items = items;
                 if (state.meta_data.page * state.meta_data.page_size >= items) {
-                    state.data = [...state.data, action.payload]
+                    state.users = [...state.users, action.payload]
                 }
                 state.meta_data.pages = Math.ceil(items / userTableMetaData.page_size)
             }
@@ -61,7 +77,7 @@ const userManagementSlice = createSlice({
         },
         updateUserById(state, action) {
             const { user_id, ...rest } = action.payload;
-            state.data = state.data.map((value) => {
+            state.users = state.users.map((value) => {
                 if (value.user_id === user_id) {
                     return { ...value, ...rest };
                 }
@@ -86,13 +102,17 @@ const userManagementSlice = createSlice({
     }
 });
 
-export const slice = userManagementSlice.actions;
-export const selectUserManagement = ({ userManagement }) => userManagement;
+export const slice = adminUserManagementSlice.actions;
+export const selectAdminUserManagement = ({ adminUserManagement }: any) => adminUserManagement;
 
 const URL_BASE_LINK = jsonData.API_LOCAL_URL;
 
+// ============================================
+// PASSWORD & OTP OPERATIONS
+// ============================================
+
 // Send OTP API
-export const sendOTPMailHandler = (data) => async (dispatch) => {
+export const sendOTPMailHandler = (data: string) => async (dispatch: any) => {
     try {
         sessionStorage.setItem("email", data);
         const payload = {
@@ -103,14 +123,14 @@ export const sendOTPMailHandler = (data) => async (dispatch) => {
         dispatch(showMessage({ message: "OTP sent successfully", variant: "success" }));
 
         return true;
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }));
         return false;
     }
 }
 
-//verify otp
-export const verifyOTPMailHandler = (data, navigate) => async (dispatch) => {
+// Verify OTP
+export const verifyOTPMailHandler = (data: string, navigate: any) => async (dispatch: any) => {
     try {
         const payload = {
             email: sessionStorage.getItem("email"),
@@ -123,16 +143,14 @@ export const verifyOTPMailHandler = (data, navigate) => async (dispatch) => {
 
         return true;
 
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }));
         return false;
     }
 };
 
-
-// reset password
-export const resetPasswordHandler = (data) => async (dispatch) => {
-
+// Reset password
+export const resetPasswordHandler = (data: any) => async (dispatch: any) => {
     try {
         const payload = {
             email: sessionStorage.getItem("email"),
@@ -157,44 +175,57 @@ export const resetPasswordHandler = (data) => async (dispatch) => {
         sessionStorage.removeItem("email");
         return "/sign-in";
 
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         return false;
-
     }
 }
 
-// update password
-export const updatePasswordHandler = (data) => async (dispatch) => {
-
+// Update password
+export const updatePasswordHandler = (data: any) => async (dispatch: any) => {
     try {
         const response = await axios.post(`${URL_BASE_LINK}/user/updatepassword`, data);
         dispatch(showMessage({ message: response.data.message, variant: "success" }));
 
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         return false;
-
     }
 }
 
-// reset password mail
-export const resetPasswordMail = (data) => async (dispatch) => {
-
+// Reset password mail
+export const resetPasswordMail = (data: any) => async (dispatch: any) => {
     try {
         const response = await axios.post(`${URL_BASE_LINK}/user/password-mail`, data);
         dispatch(showMessage({ message: response.data.message, variant: "success" }));
 
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         return false;
-
     }
 }
 
+// Change Password
+export const changePassword = (data: any) => async (dispatch: any) => {
+    try {
+        dispatch(slice.setUpdatingLoader(true));
+        const response = await axios.post(`${URL_BASE_LINK}/user/password/change`, data)
+        dispatch(showMessage({ message: response.data.message, variant: "success" }))
+        dispatch(slice.setUpdatingLoader(false));
+        return true;
+    } catch (err: any) {
+        dispatch(showMessage({ message: err.response?.data.message, variant: "error" }))
+        dispatch(slice.setUpdatingLoader(false));
+        return false;
+    };
+}
 
-// create user
-export const createUserAPI = (data) => async (dispatch) => {
+// ============================================
+// USER CRUD OPERATIONS
+// ============================================
+
+// Create user
+export const createUserAPI = (data: any) => async (dispatch: any) => {
     try {
         dispatch(slice.setUpdatingLoader(true));
         const response = await axios.post(`${URL_BASE_LINK}/user/create`, data)
@@ -202,32 +233,30 @@ export const createUserAPI = (data) => async (dispatch) => {
         dispatch(slice.updateUser(response.data.data));
         dispatch(slice.setUpdatingLoader(false));
         return true;
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         dispatch(slice.setUpdatingLoader(false));
         return false;
     }
 }
 
-
-// send mail
-export const sendMail = (data) => async (dispatch) => {
+// Send mail
+export const sendMail = (data: any) => async (dispatch: any) => {
     try {
         dispatch(slice.setUpdatingLoader(true));
         const response = await axios.post(`${URL_BASE_LINK}/user/mail`, data)
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         dispatch(slice.setUpdatingLoader(false));
         return true;
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         dispatch(slice.setUpdatingLoader(false));
         return false;
     }
 }
 
-// get user
-export const fetchUserAPI = (data = { page: 1, page_size: 10 }, search_keyword = "", search_role = "") => async (dispatch) => {
-
+// Get user list
+export const fetchUserAPI = (data: any = { page: 1, page_size: 10 }, search_keyword = "", search_role = "") => async (dispatch: any) => {
     try {
         dispatch(slice.setLoader(true));
         const { page = 1, page_size = 10 } = data;
@@ -243,24 +272,20 @@ export const fetchUserAPI = (data = { page: 1, page_size: 10 }, search_keyword =
         }
 
         const response = await axios.get(url);
-        // dispatch(showMessage({ message: response.data.message, variant: "success" }))
         dispatch(slice.updateUser(response.data));
         dispatch(slice.setLoader(false));
         return true;
 
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         dispatch(slice.setLoader(false));
         return false
     };
-
 }
 
-// update user
-export const updateUserAPI = (id, data) => async (dispatch) => {
-
+// Update user
+export const updateUserAPI = (id: string, data: any) => async (dispatch: any) => {
     try {
-
         dispatch(slice.setUpdatingLoader(true));
         const { password, confirmPassword, ...payload } = data
         const response = await axios.patch(`${URL_BASE_LINK}/user/update/${id}`, payload)
@@ -269,18 +294,15 @@ export const updateUserAPI = (id, data) => async (dispatch) => {
         dispatch(slice.setUpdatingLoader(false));
         return true;
 
-    } catch (err) {
-
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         dispatch(slice.setUpdatingLoader(false));
         return false;
     };
 }
 
-
 // Delete user
-export const deleteUserHandler = (id, meta_data, search_keyword = "", search_role = "") => async (dispatch) => {
-
+export const deleteUserHandler = (id: string, meta_data: any, search_keyword = "", search_role = "") => async (dispatch: any) => {
     try {
         let { page, page_size, items } = meta_data;
         dispatch(slice.setUpdatingLoader(true));
@@ -293,19 +315,25 @@ export const deleteUserHandler = (id, meta_data, search_keyword = "", search_rol
         dispatch(fetchUserAPI({ page, page_size }, search_keyword, search_role));
         return true;
 
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         dispatch(slice.setUpdatingLoader(false));
         return false;
     };
 }
 
+// ============================================
+// AVATAR OPERATIONS
+// ============================================
+
 // Upload user avatar
-export const uploadAvatar = (file) => async (dispatch, getStore) => {
+export const uploadAvatar = (file: File) => async (dispatch: any, getStore: any) => {
     try {
         const formData = new FormData();
         formData.append('avatar', file);
-        formData.append('role', getStore().user?.data?.role)
+        // Get role from new auth slice, fallback to old user slice for backwards compatibility
+        const role = getStore().user?.data?.role;
+        formData.append('role', role)
         dispatch(slice.setUpdatingLoader(true));
         const response = await axios.post(`${URL_BASE_LINK}/user/avatar`, formData);
         await JwtService.setSession(response.data.data)
@@ -319,7 +347,7 @@ export const uploadAvatar = (file) => async (dispatch, getStore) => {
 }
 
 // Upload learner avatar by admin
-export const uploadLearnerAvatar = (file) => async (dispatch, getStore) => {
+export const uploadLearnerAvatar = (file: File) => async (dispatch: any, getStore: any) => {
     try {
         const formData = new FormData();
         formData.append('avatar', file);
@@ -332,8 +360,12 @@ export const uploadLearnerAvatar = (file) => async (dispatch, getStore) => {
     }
 }
 
-// chnage user role
-export const changeUserRoleHandler = (role) => async (dispatch) => {
+// ============================================
+// ROLE & EQA OPERATIONS
+// ============================================
+
+// Change user role
+export const changeUserRoleHandler = (role: string) => async (dispatch: any) => {
     try {
         dispatch(slice.setUpdatingLoader(true));
         const response = await axios.post(`${URL_BASE_LINK}/user/changerole/`, { role })
@@ -345,33 +377,15 @@ export const changeUserRoleHandler = (role) => async (dispatch) => {
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         dispatch(slice.setUpdatingLoader(false));
         return true;
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         dispatch(slice.setUpdatingLoader(false));
         return false;
     };
 }
 
-
-// Change Password
-export const changePassword = (data) => async (dispatch) => {
-    try {
-        dispatch(slice.setUpdatingLoader(true));
-        const response = await axios.post(`${URL_BASE_LINK}/user/password/change`, data)
-        dispatch(showMessage({ message: response.data.message, variant: "success" }))
-        dispatch(slice.setUpdatingLoader(false));
-        return true;
-    } catch (err) {
-        dispatch(showMessage({ message: err.response?.data.message, variant: "error" }))
-        dispatch(slice.setUpdatingLoader(false));
-        return false;
-    };
-}
-
-
-// get user
-export const getEQAUserData = (data = { page: 1, page_size: 5 }, user, user_id) => async (dispatch) => {
-
+// Get EQA user data
+export const getEQAUserData = (data: any = { page: 1, page_size: 5 }, user: string, user_id: string) => async (dispatch: any) => {
     try {
         dispatch(slice.setLoader(true));
         const { page = 1, page_size = 5 } = data;
@@ -379,7 +393,6 @@ export const getEQAUserData = (data = { page: 1, page_size: 5 }, user, user_id) 
         let url = `${URL_BASE_LINK}/user/list/eqa?meta=true&page=${page}&limit=${page_size}&user=${user}&EQA_id=${user_id}`;
 
         const response = await axios.get(url);
-        // dispatch(showMessage({ message: response.data.message, variant: "success" }))
         if (user === "trainer_id") {
             dispatch(slice.setEQATrainerData(response.data.data));
             dispatch(slice.setTrainerMetadata(response.data.meta_data))
@@ -391,11 +404,12 @@ export const getEQAUserData = (data = { page: 1, page_size: 5 }, user, user_id) 
         dispatch(slice.setLoader(false));
         return true;
 
-    } catch (err) {
+    } catch (err: any) {
         dispatch(showMessage({ message: err.response.data.message, variant: "error" }))
         dispatch(slice.setLoader(false));
         return false
     };
-
 }
-export default userManagementSlice.reducer;
+
+export default adminUserManagementSlice.reducer;
+

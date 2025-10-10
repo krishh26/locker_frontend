@@ -40,7 +40,6 @@ import {
   useUpdateEvidenceIdMutation,
   useUploadExternalEvidenceFileMutation,
 } from 'app/store/api/evidence-api'
-import { selectUser } from 'app/store/userSlice'
 import { assessmentMethod, fileTypes } from 'src/utils/constants'
 
 import { useGetLearnerPlanListQuery } from 'app/store/api/learner-plan-api'
@@ -50,6 +49,7 @@ import {
 } from 'app/store/courseManagement'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { useDispatch } from 'react-redux'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { formatSessionTime } from 'src/utils/string'
 import { FormValues } from './lib/types'
 import { getValidationSchema } from './schema'
@@ -65,11 +65,9 @@ const CreateViewEvidenceLibrary = () => {
   const dispatch: any = useDispatch()
   const { id } = useParams()
 
-  const user = sessionStorage.getItem('learnerToken')
-    ? { data: JSON.parse(sessionStorage.getItem('learnerToken'))?.user }
-    : useSelector(selectUser)
+  const user = useCurrentUser()
 
-  const { roles, learner_id } = user.data
+  const { roles, learner_id } = user
 
   const isTrainer = roles.includes('Trainer')
 

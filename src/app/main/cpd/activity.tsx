@@ -52,6 +52,7 @@ import FuseLoading from "@fuse/core/FuseLoading";
 import Style from "./style.module.css";
 import CustomPagination from "src/app/component/Pagination/CustomPagination";
 import { selectGlobalUser } from "app/store/globalUser";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 
 interface Column {
   id:
@@ -513,7 +514,7 @@ const Activity = (props) => {
   const rowsPerPage = pagination.page_size;
 
   const dispatch: any = useDispatch();
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
 
   const cpdPlanningData = useSelector(selectCpdPlanning);
 

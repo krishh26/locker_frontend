@@ -3,6 +3,7 @@ import axios from 'axios';
 import jsonData from 'src/url.json';
 import { showMessage } from './fuse/messageSlice';
 import { userTableMetaData } from '../contanst/metaData';
+import { useCurrentUser } from '../utils/userHelpers';
 
 // Define types for CPD entries
 export interface CpdEntry {
@@ -183,7 +184,7 @@ export const deleteActivityHandler = (id) => async (dispatch, getStore) => {
         console.log(response);
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         if (response.data.status) {
-            dispatch(getCpdPlanningAPI(getStore().user.data.user_id, "activities"))
+            dispatch(getCpdPlanningAPI(getStore().user?.data?.user_id, "activities"))
         }
         dispatch(slice.setUpdatingLoader());
         return true;
@@ -222,7 +223,7 @@ export const updateEvaluationAPI = (id, data) => async (dispatch, getStore) => {
         const response = await axios.patch(`${URL_BASE_LINK}/cpd/evaluation/update/${id}`, payload)
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         if (response.data.status) {
-            dispatch(getCpdPlanningAPI(getStore().user.data.user_id, "evaluations"))
+            dispatch(getCpdPlanningAPI(getStore().user?.data?.user_id, "evaluations"))
         }
         dispatch(slice.setUpdatingLoader());
         return true;
@@ -241,7 +242,7 @@ export const deleteEvaluationHandler = (id) => async (dispatch, getStore) => {
         console.log(response);
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         if (response.data.status) {
-            dispatch(getCpdPlanningAPI(getStore().user.data.user_id, "evaluations"))
+            dispatch(getCpdPlanningAPI(getStore().user?.data?.user_id, "evaluations"))
         }
         dispatch(slice.setUpdatingLoader());
         return true;
@@ -260,7 +261,7 @@ export const createReflectionAPI = (data) => async (dispatch, getStore) => {
         console.log(response);
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         if (response.data.status) {
-            dispatch(getCpdPlanningAPI(getStore().user.data.user_id, "reflections"))
+            dispatch(getCpdPlanningAPI(getStore().user?.data?.user_id, "reflections"))
         }
         dispatch(slice.setUpdatingLoader());
         return true;
@@ -280,7 +281,7 @@ export const updateReflectionsAPI = (id, data) => async (dispatch, getStore) => 
         const response = await axios.patch(`${URL_BASE_LINK}/cpd/reflection/update/${id}`, payload)
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         if (response.data.status) {
-            dispatch(getCpdPlanningAPI(getStore().user.data.user_id, "reflections"))
+            dispatch(getCpdPlanningAPI(getStore().user?.data?.user_id, "reflections"))
         }
         dispatch(slice.setUpdatingLoader());
         return true;
@@ -299,7 +300,7 @@ export const deleteReflectionHandler = (id) => async (dispatch, getStore) => {
         console.log(response);
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         if (response.data.status) {
-            dispatch(getCpdPlanningAPI(getStore().user.data.user_id, "reflections"))
+            dispatch(getCpdPlanningAPI(getStore().user?.data?.user_id, "reflections"))
         }
         dispatch(slice.setUpdatingLoader());
         return true;

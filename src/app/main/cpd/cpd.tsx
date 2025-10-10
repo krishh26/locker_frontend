@@ -30,14 +30,13 @@ import {
 } from "app/store/cpdLearner";
 import reducer from "app/store/cpdLearner";
 
-import { selectUser } from "app/store/userSlice";
 import { selectLearnerManagement } from "app/store/learnerManagement";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 
 const Cpd = () => {
   const dispatch: any = useDispatch();
   const { data, dataFetchLoading } = useSelector(selectCpdLearner);
-  const user = JSON.parse(sessionStorage.getItem("learnerToken") || "null")?.user 
-    || useSelector(selectUser)?.data || {};
+  const user = useCurrentUser();
   const { learner } = useSelector(selectLearnerManagement);
   
   const theme = useTheme();
@@ -210,7 +209,7 @@ const Cpd = () => {
                 {[
                   { 
                     label: "Name", 
-                    value: capitalize(user.displayName || ""), 
+                    value: capitalize(user.first_name + " " + user.last_name || ""), 
                     icon: <PersonIcon sx={{ fontSize: 16 }} />,
                     color: theme.palette.primary.main
                   },

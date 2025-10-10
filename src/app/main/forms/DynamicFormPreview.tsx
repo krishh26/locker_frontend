@@ -1,4 +1,5 @@
 import { yupResolver } from '@hookform/resolvers/yup'
+import LockIcon from '@mui/icons-material/Lock'
 import {
   Alert,
   Box,
@@ -21,26 +22,23 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import LockIcon from '@mui/icons-material/Lock'
 import { createUserFormDataAPI, selectFormData } from 'app/store/formData'
 import { showMessage } from 'app/store/fuse/messageSlice'
-import { selectGlobalUser } from 'app/store/globalUser'
+import { selectLearnerManagement } from 'app/store/learnerManagement'
 import html2pdf from 'html2pdf.js'
 import React, { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
-  FormSubmissionData,
-  sendFormSubmissionEmail,
+  sendFormSubmissionEmail
 } from 'src/app/utils/pdfGenerator'
-import { formatUserForPDF } from 'src/app/utils/userHelpers'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { UserRole } from 'src/enum'
 import * as yup from 'yup'
 import FileUploadField from './FileUploadField'
 import PDFFormRenderer from './PDFFormRenderer'
 import SignatureInput from './SignatureInput'
-import { selectLearnerManagement } from 'app/store/learnerManagement'
 
 // Utility function to format dates for HTML date input
 const formatDateForInput = (
@@ -198,10 +196,7 @@ const DynamicFormPreview: React.FC<Props> = ({
   const formId: string | boolean = param?.id ?? false
   const userId: string | boolean = param?.userId ?? false
   const isSubmitPath = location.pathname === `/forms/${formId}/submit`
-
-  const currentUser =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectGlobalUser)?.currentUser
+  const currentUser = useCurrentUser()
 
   const isSavedViewedPath =
     location.pathname === `/forms/view-saved-form/${formId}/user/${userId}`
@@ -253,7 +248,7 @@ const DynamicFormPreview: React.FC<Props> = ({
   useEffect(() => {
     if (isSubmitPath) {
       const presetMap = {
-        learnerFullName: currentUser.displayName,
+        learnerFullName: currentUser.first_name + ' ' + currentUser.last_name,
         LearnerEmail: currentUser.email,
         LearnerPhoneNumber: currentUser.mobile,
       }

@@ -54,6 +54,7 @@ import { FaFolderOpen } from 'react-icons/fa'
 import { IconsData } from 'src/utils/randomColor'
 import FuseLoading from '@fuse/core/FuseLoading'
 import LearnerCsvUpload from './learner-csv-upload'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 
 const Index = () => {
   const { data, dataFetchLoading, dataUpdatingLoadding, meta_data } =
@@ -65,16 +66,7 @@ const Index = () => {
   const currentUserData = useSelector(selectUser)?.data
 
   // Get current user role
-  const currentUser = React.useMemo(() => {
-    try {
-      return (
-        JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
-        currentUserData
-      )
-    } catch {
-      return currentUserData
-    }
-  }, [currentUserData])
+  const currentUser = useCurrentUser()
 
   // Check if user is admin or trainer
   const canEditComments = currentUser?.role === 'Admin' || currentUser?.role === 'Trainer'

@@ -1,46 +1,46 @@
-import React, { useEffect, useState, useMemo } from 'react'
-import { FormProvider } from 'react-hook-form'
-import { useNavigate } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
 import {
+  Box,
   Dialog,
   DialogActions,
   DialogContent,
   Grid,
   Paper,
-  Typography,
-  Box,
-  Tabs,
   Tab,
+  Tabs,
+  Typography,
 } from '@mui/material'
+import { selectGlobalUser } from 'app/store/globalUser'
 import {
   getLearnerDetails,
   selectLearnerManagement,
   updateLearnerAPI,
 } from 'app/store/learnerManagement'
-import { selectGlobalUser } from 'app/store/globalUser'
-import { selectUser } from 'app/store/userSlice'
+import React, { useEffect, useState } from 'react'
+import { FormProvider } from 'react-hook-form'
+import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { LoadingButton, SecondaryButton, SecondaryButtonOutlined } from 'src/app/component/Buttons'
 import UpdatePassword from './updatePassword'
 
 // Import components
-import ActionButtons from './components/ActionButtons'
-import StudentIdSection from './components/StudentIdSection'
 import AboutYouSection from './components/AboutYouSection'
+import ActionButtons from './components/ActionButtons'
+import AdditionalInfoSection from './components/AdditionalInfoSection'
 import AddressSection from './components/AddressSection'
 import EmployerSection from './components/EmployerSection'
-import FundingBodySection from './components/FundingBodySection'
 import FundingBandsSection from './components/FundingBandsSection'
-import AdditionalInfoSection from './components/AdditionalInfoSection'
+import FundingBodySection from './components/FundingBodySection'
+import StudentIdSection from './components/StudentIdSection'
 
 // Import hooks
-import { useLearnerDetailsForm, LearnerDetailsFormData } from './hooks/useLearnerDetailsForm'
-import { usePasswordDialog } from './hooks/usePasswordDialog'
-import { slice as globalSlice } from "app/store/globalUser";
-import { useFundingBands } from './hooks/useFundingBands'
+import { slice as globalSlice } from "app/store/globalUser"
 import { UserRole } from 'src/enum'
+import { useFundingBands } from './hooks/useFundingBands'
+import { LearnerDetailsFormData, useLearnerDetailsForm } from './hooks/useLearnerDetailsForm'
+import { usePasswordDialog } from './hooks/usePasswordDialog'
 
 // Import CourseManagement component
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import CourseTab from './courseTab'
 
 const ProfileInformation = () => {
@@ -49,19 +49,9 @@ const ProfileInformation = () => {
   
   const { learner_id } = useSelector(selectGlobalUser).selectedUser
   const { employer, learner } = useSelector(selectLearnerManagement)
-  const userData = useSelector(selectUser)
 
   // Get current user role
-  const user = useMemo(() => {
-    try {
-      return (
-        JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
-        userData?.data
-      )
-    } catch {
-      return userData?.data
-    }
-  }, [userData])
+  const user = useCurrentUser()
 
   useEffect(() => {
    if(learner){
@@ -151,7 +141,7 @@ const ProfileInformation = () => {
 
   // Load learner details on component mount
   useEffect(() => {
-    dispatch(getLearnerDetails(learner_id))
+    dispatch(getLearnerDetails())
   }, [learner_id, dispatch])
 
   // Update form when learner data changes

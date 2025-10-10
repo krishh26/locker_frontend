@@ -1,57 +1,51 @@
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import AssessmentIcon from '@mui/icons-material/Assessment'
+import ClearIcon from '@mui/icons-material/Clear'
+import CommentIcon from '@mui/icons-material/Comment'
+import EditIcon from '@mui/icons-material/Edit'
+import PersonIcon from '@mui/icons-material/Person'
+import SearchIcon from '@mui/icons-material/Search'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import {
+  alpha,
   Avatar,
-  Tooltip,
+  Box,
+  Button,
   Card,
   CardContent,
-  Typography,
-  Box,
-  useTheme,
   Chip,
-  Divider,
-  Fade,
-  Grid,
-  Paper,
-  LinearProgress,
-  alpha,
-  TextField,
-  InputAdornment,
-  Pagination,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   CircularProgress,
-  IconButton,
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
-  Button,
+  DialogContent,
+  DialogTitle,
+  Fade,
+  FormControl,
+  Grid,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  LinearProgress,
+  MenuItem,
+  Pagination,
+  Select,
+  TextField,
+  Typography,
+  useTheme
 } from '@mui/material'
 import {
+  slice as courseSlice,
   fetchAllLearnerByUserAPI,
   selectCourseManagement,
 } from 'app/store/courseManagement'
 import { updateLearnerAPI } from 'app/store/learnerManagement'
-import { selectUser } from 'app/store/userSlice'
-import React, { useEffect, useState, useMemo } from 'react'
-import { useDispatch } from 'react-redux'
-import { useSelector } from 'react-redux'
-import { Link } from 'react-router-dom'
-import { selectstoreDataSlice, slice } from 'app/store/reloadData'
-import { slice as courseSlice } from 'app/store/courseManagement'
-import { portfolioCard } from 'src/app/contanst'
+import { slice } from 'app/store/reloadData'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import LearnerPortfolioCard from 'src/app/component/Cards/LearnerPortfolioCard'
+import { portfolioCard } from 'src/app/contanst'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { getRandomColor } from 'src/utils/randomColor'
-import PersonIcon from '@mui/icons-material/Person'
-import SchoolIcon from '@mui/icons-material/School'
-import TrendingUpIcon from '@mui/icons-material/TrendingUp'
-import AssessmentIcon from '@mui/icons-material/Assessment'
-import AccessTimeIcon from '@mui/icons-material/AccessTime'
-import CommentIcon from '@mui/icons-material/Comment'
-import SearchIcon from '@mui/icons-material/Search'
-import ClearIcon from '@mui/icons-material/Clear'
-import EditIcon from '@mui/icons-material/Edit'
 
 const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentUpdate }) => {
   const theme = useTheme()
@@ -749,9 +743,7 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
 
 const LearnerOverview = () => {
   const theme = useTheme()
-  const user =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectUser)?.data
+  const user = useCurrentUser()
   const { learnerOverView } = useSelector(selectCourseManagement)
   const dispatch: any = useDispatch()
 

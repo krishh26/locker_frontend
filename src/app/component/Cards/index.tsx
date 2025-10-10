@@ -1,22 +1,14 @@
-import { Dialog, Tooltip, Typography } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
-import Style from "./style.module.css";
 import { useThemeMediaQuery } from "@fuse/hooks";
-import FuseSvgIcon from "@fuse/core/FuseSvgIcon";
-import clsx from "clsx";
+import { Dialog, Tooltip, Typography } from "@mui/material";
+import { styled, useTheme } from "@mui/material/styles";
+import { slice as globalSlice } from "app/store/globalUser";
 import { useState } from "react";
-import UserDetails from "src/app/main/admin/userManagement/usetDetails";
-import UploadWorkDialog from "./uploadWorkDialog";
-import UploadedEvidenceFile from "./uploadedEvidenceFile";
-import Uploading from "src/app/component/Cards/uploading";
-import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { slice as globalSlice } from "app/store/globalUser"
-import { useSelector } from "react-redux";
-import { selectstoreDataSlice } from "app/store/reloadData";
-import { selectUser } from "app/store/userSlice";
-import { useThemeColors, themeHelpers } from "../../utils/themeUtils";
-import { styled } from "@mui/material/styles";
+import { useNavigate } from "react-router-dom";
+import { useUserRole } from "src/app/utils/userHelpers";
+import { themeHelpers, useThemeColors } from "../../utils/themeUtils";
+import Style from "./style.module.css";
+import UploadWorkDialog from "./uploadWorkDialog";
 
 // Theme-aware styled components
 interface ThemedCardProps {
@@ -225,7 +217,7 @@ export const PortfolioCard = ({ data, learner = undefined, handleClickData = (id
   const [open, setOpen] = useState(false);
   const dispatch: any = useDispatch();
   const navigate = useNavigate();
-  const { role } = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const role = useUserRole();
   const colors = useThemeColors();
 
   const { id = 0, name = "No title", color = colors.primary.main } = data;

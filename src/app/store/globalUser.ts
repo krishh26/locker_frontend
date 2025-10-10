@@ -1,12 +1,20 @@
+/**
+ * globalUser.ts
+ * 
+ * Manages GLOBAL APP STATE (not authentication)
+ * - selectedUser: User selected by admin for viewing/editing
+ * - pagination: Global pagination settings
+ * - learnerTab: Learner tab state
+ * 
+ * NOTE: For authenticated user, use authSlice instead!
+ */
+
 import { createSlice } from '@reduxjs/toolkit';
 import jsonData from 'src/url.json';
 import axios from 'axios';
 
-// Initial state with empty user object
-// User data will be loaded from sessionStorage via our custom persistence implementation
-
 const initialState = {
-    currentUser: {},
+    // User selected by admin for viewing/editing (NOT the authenticated user!)
     selectedUser: {},
     selected: false,
     dataFetchLoading: false,
@@ -30,15 +38,11 @@ const globalUserSlice = createSlice({
         setUpdatingLoader(state) {
             state.dataUpdatingLoadding = !state.dataUpdatingLoadding
         },
-        setCurrentUser(state, action) {
-            state.currentUser = action.payload
-        },
         setSelectedUser(state, action) {
             state.selectedUser = action.payload
             state.selected = true
         },
         userLoggedOut(state) {
-            state.currentUser = {}
             state.selectedUser = {}
             state.selected = false
         },
