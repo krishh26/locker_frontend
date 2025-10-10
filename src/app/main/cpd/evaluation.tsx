@@ -1,11 +1,6 @@
-import React, { useEffect, useState } from "react";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TablePagination from "@mui/material/TablePagination";
-import TableRow from "@mui/material/TableRow";
+import FuseLoading from "@fuse/core/FuseLoading";
+import FileCopyIcon from "@mui/icons-material/FileCopy";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import {
   Avatar,
   AvatarGroup,
@@ -19,15 +14,16 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Pagination,
   Select,
   TextField,
-  Typography,
+  Typography
 } from "@mui/material";
-import { Stack } from "@mui/system";
-import { useDispatch } from "react-redux";
-import { useSelector } from "react-redux";
-import { selectUser } from "app/store/userSlice";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
 import {
   createEvaluationAPI,
   deleteEvaluationHandler,
@@ -37,24 +33,23 @@ import {
   updateEvaluationAPI,
   uploadImages,
 } from "app/store/cpdPlanning";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import Cpd from "./cpd";
-import AlertDialog from "src/app/component/Dialogs/AlertDialog";
+import { showMessage } from "app/store/fuse/messageSlice";
+import { selectGlobalUser } from "app/store/globalUser";
+import React, { useEffect, useState } from "react";
+import { FileUploader } from "react-drag-drop-files";
+import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import {
   DangerButton,
   LoadingButton,
   SecondaryButton,
   SecondaryButtonOutlined,
 } from "src/app/component/Buttons";
-import { Link } from "react-router-dom";
-import FileCopyIcon from "@mui/icons-material/FileCopy";
-import { FileUploader } from "react-drag-drop-files";
-import { showMessage } from "app/store/fuse/messageSlice";
-import FuseLoading from "@fuse/core/FuseLoading";
+import AlertDialog from "src/app/component/Dialogs/AlertDialog";
 import DataNotFound from "src/app/component/Pages/dataNotFound";
-import Style from "./style.module.css";
 import CustomPagination from "src/app/component/Pagination/CustomPagination";
-import { selectGlobalUser } from "app/store/globalUser";
+import { useCurrentUser } from "src/app/utils/userHelpers";
+import Style from "./style.module.css";
 
 interface Column {
   id:
@@ -411,7 +406,7 @@ const Evaluation = (props) => {
   const [open, setOpen] = useState(false);
 
   const dispatch: any = useDispatch();
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
 
   const cpdPlanningData = useSelector(selectCpdPlanning);
 

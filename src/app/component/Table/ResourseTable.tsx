@@ -1,36 +1,34 @@
-import React, { useState } from "react";
+import DownloadIcon from '@mui/icons-material/Download';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import {
+  Dialog,
+  IconButton,
+} from "@mui/material";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import {
-  Dialog,
-  IconButton,
-} from "@mui/material";
-import Style from "./style.module.css";
-import { useDispatch } from "react-redux";
-import AlertDialog from "../Dialogs/AlertDialog";
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import EditIcon from '@mui/icons-material/Edit';
-import DownloadIcon from '@mui/icons-material/Download';
-import {
-  DangerButton,
-  LoadingButton,
-  SecondaryButtonOutlined,
-} from "../Buttons";
-import CourseBuilderComponent from "src/app/component/Courses";
+import { slice } from "app/store/courseManagement";
+import { DownloadFile } from "app/store/globalUser";
 import {
   deleteResourceHandler,
   resourceAccess,
   selectResourceManagement,
 } from "app/store/resourcesManagement";
-import { useSelector } from "react-redux";
-import { slice } from "app/store/courseManagement";
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { DownloadFile } from "app/store/globalUser";
-import { selectUser } from "app/store/userSlice";
+import CourseBuilderComponent from "src/app/component/Courses";
+import { useCurrentUser } from "src/app/utils/userHelpers";
+import {
+  DangerButton,
+  LoadingButton,
+  SecondaryButtonOutlined,
+} from "../Buttons";
+import AlertDialog from "../Dialogs/AlertDialog";
+import Style from "./style.module.css";
 
 export default function ResouresTable(props) {
   const { columns, rows, search_keyword = "", search_role = "" } = props;
@@ -43,7 +41,7 @@ export default function ResouresTable(props) {
   );
 
   const [open, setOpen] = useState(false);
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
 
 
   const dispatch: any = useDispatch();

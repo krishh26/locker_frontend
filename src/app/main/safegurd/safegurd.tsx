@@ -1,43 +1,33 @@
-import React, { useState, useEffect } from 'react'
+import EditIcon from '@mui/icons-material/Edit'
+import EmailIcon from '@mui/icons-material/Email'
+import InfoIcon from '@mui/icons-material/Info'
+import PhoneIcon from '@mui/icons-material/Phone'
+import SaveIcon from '@mui/icons-material/Save'
+import SecurityIcon from '@mui/icons-material/Security'
 import {
+  Alert,
+  alpha,
   Box,
-  Paper,
-  Typography,
-  TextField,
-  Grid,
   Button,
   Card,
   CardContent,
-  Alert,
-  Snackbar,
-  CircularProgress,
   Chip,
-  Divider,
-  useTheme,
-  alpha,
+  CircularProgress,
+  Grid,
+  Snackbar,
+  TextField,
+  Typography,
+  useTheme
 } from '@mui/material'
-import SaveIcon from '@mui/icons-material/Save'
-import EditIcon from '@mui/icons-material/Edit'
-import PhoneIcon from '@mui/icons-material/Phone'
-import EmailIcon from '@mui/icons-material/Email'
-import InfoIcon from '@mui/icons-material/Info'
-import SecurityIcon from '@mui/icons-material/Security'
-import { useDispatch } from 'react-redux'
-import { useSelector } from 'react-redux'
-import { selectUser } from 'app/store/userSlice'
 import {
+  SafeguardingContact,
   useGetSafeguardingContactsQuery,
   useSaveSafeguardingContactMutation,
-  SafeguardingContact,
 } from 'app/store/api/safeguarding-api'
+import React, { useEffect, useState } from 'react'
 
 const Safeguarding = () => {
   const theme = useTheme()
-  const dispatch = useDispatch()
-  const user =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectUser)?.data
-
   // API hooks
   const {
     data: contactsData,

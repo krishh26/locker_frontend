@@ -1,16 +1,16 @@
-import FuseLoading from '@fuse/core/FuseLoading'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import AssessmentIcon from '@mui/icons-material/Assessment'
+import SchoolIcon from '@mui/icons-material/School'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import {
   Autocomplete,
-  Checkbox,
-  FormControl,
-  FormControlLabel,
-  FormLabel,
-  Grid,
-  Pagination,
-  Radio,
-  RadioGroup,
-  Select,
-  Stack,
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  Fade,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -18,31 +18,19 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
-  Card,
-  CardContent,
-  Box,
-  useTheme,
-  Chip,
-  Divider,
-  Fade,
-  Skeleton,
-  Tooltip
+  useTheme
 } from '@mui/material'
-import { SecondaryButton } from 'src/app/component/Buttons'
-import { useSelector } from 'react-redux'
 import {
   getLearnerCourseDetails,
   selectLearnerManagement,
   slice,
 } from 'app/store/learnerManagement'
-import { useDispatch } from 'react-redux'
-import { selectGlobalUser } from 'app/store/globalUser'
 import { selectSkillsScan, skillsScanAction } from 'app/store/skillsScan'
-import SchoolIcon from '@mui/icons-material/School'
-import AssessmentIcon from '@mui/icons-material/Assessment'
-import TrendingUpIcon from '@mui/icons-material/TrendingUp'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import { useDispatch, useSelector } from 'react-redux'
+import { SecondaryButton } from 'src/app/component/Buttons'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 
 const getQuarterlyProgress = (start, end) => {
   const result = [];
@@ -79,9 +67,7 @@ const TNAUnits = (props) => {
 
   const { selectedCourse } = useSelector(selectSkillsScan)
 
-  const selectedUser =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectGlobalUser)?.selectedUser
+  const selectedUser = useCurrentUser()
 
   const dispatch: any = useDispatch()
 

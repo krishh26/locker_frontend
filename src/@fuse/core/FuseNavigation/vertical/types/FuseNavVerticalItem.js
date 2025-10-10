@@ -7,10 +7,9 @@ import PropTypes from 'prop-types';
 import { useMemo } from 'react';
 import FuseNavBadge from '../../FuseNavBadge';
 import FuseSvgIcon from '../../../FuseSvgIcon';
-import { useSelector } from 'react-redux';
 import { useDispatch } from 'react-redux';
 import { slice } from 'app/store/reloadData';
-import { selectUser } from 'app/store/userSlice';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
 
 const Root = styled(ListItem)(({ theme, ...props }) => ({
   minHeight: 44,
@@ -49,8 +48,7 @@ const Root = styled(ListItem)(({ theme, ...props }) => ({
 
 function FuseNavVerticalItem(props) {
   const { item, nestedLevel, onItemClick } = props;
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
-
+  const user = useCurrentUser();
   const dispach = useDispatch();
 
   const itempadding = nestedLevel > 0 ? 38 + nestedLevel * 16 : 16;

@@ -1,23 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { Tabs, Tab, Avatar, Typography, Card, Container, LinearProgress, Box, Stack, Grid, Button, Dialog, DialogTitle, DialogContent, TextField, DialogActions } from '@mui/material';
-import { useDispatch } from 'react-redux';
-import { getLearnerDetailsReturn, selectLearnerManagement } from 'app/store/learnerManagement';
-import { FaFolderOpen } from 'react-icons/fa';
-import { getLightRandomColor, getRandomColor } from 'src/utils/randomColor';
-import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
-import { slice as courseSlice, selectCourseManagement } from "app/store/courseManagement";
-import { Link, useNavigate } from 'react-router-dom';
-import Calendar from './calendar';
-import { SecondaryButton, SecondaryButtonOutlined } from 'src/app/component/Buttons';
-import { useSelector } from 'react-redux';
-import { selectUser } from 'app/store/userSlice';
-import { sendMail } from 'app/store/userManagement';
-import NewSession from './newsession';
-import { UserRole } from 'src/enum';
-import { selectGlobalUser } from 'app/store/globalUser';
-import { selectstoreDataSlice } from 'app/store/reloadData';
-import { getAssignmentByCourseAPI, selectAssignment } from 'app/store/assignment';
 import FuseLoading from "@fuse/core/FuseLoading";
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import { Avatar, Box, Card, Container, Dialog, DialogActions, DialogContent, DialogTitle, Grid, LinearProgress, Stack, TextField, Typography } from '@mui/material';
+import { getAssignmentByCourseAPI, selectAssignment } from 'app/store/assignment';
+import { slice as courseSlice } from "app/store/courseManagement";
+import { getLearnerDetailsReturn, selectLearnerManagement } from 'app/store/learnerManagement';
+import { selectstoreDataSlice } from 'app/store/reloadData';
+import { sendMail } from 'app/store/userManagement';
+import { useEffect, useState } from 'react';
+import { FaFolderOpen } from 'react-icons/fa';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link, useNavigate } from 'react-router-dom';
+import { SecondaryButton, SecondaryButtonOutlined } from 'src/app/component/Buttons';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
+import { UserRole } from 'src/enum';
+import { getLightRandomColor, getRandomColor } from 'src/utils/randomColor';
+import Calendar from './calendar';
+import NewSession from './newsession';
 
 
 function calculateCompletionPercentage(startDate, endDate) {
@@ -66,8 +64,7 @@ function LinearProgressWithLabel(props) {
 
 function LearnerPortfolio() {
 
-    const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
-    const { currentUser } = useSelector(selectGlobalUser);
+    const user = useCurrentUser()
     const { learner, dataFetchLoading } = useSelector(
         selectLearnerManagement
     );
@@ -142,7 +139,7 @@ function LearnerPortfolio() {
         email: learner.email,
         subject: '',
         message: '',
-        adminName: user?.displayName
+        adminName: user?.first_name + " " + user?.last_name || user?.user_name
     });
 
     const handleChangeEmail = (e) => {
@@ -162,7 +159,7 @@ function LearnerPortfolio() {
             email: learner.email,
             subject: '',
             message: '',
-            adminName: user?.displayName
+            adminName: user?.first_name + " " + user?.last_name
         })
     };
 
@@ -183,7 +180,7 @@ function LearnerPortfolio() {
 
     useEffect(() => {
         async function fetchLearner() {
-            const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user;
+            const user = useCurrentUser()
             if (user) {
                 setLearnerDetails(user)
                 const data = await dispatch(getLearnerDetailsReturn(user?.learner_id))
@@ -236,7 +233,7 @@ function LearnerPortfolio() {
                 ))}
             </div>
             <div>
-                {currentUser?.role !== UserRole.Learner && <SecondaryButtonOutlined name="Close Portfolio" onClick={handleClosePortfolio} />}
+                {user?.role !== UserRole.Learner && <SecondaryButtonOutlined name="Close Portfolio" onClick={handleClosePortfolio} />}
             </div>
         </div>
 
@@ -245,7 +242,7 @@ function LearnerPortfolio() {
     const WelcomeSection = ({ children }) => (
         <div className='flex w-full'>
             <div className="flex flex-col gap-5 p-12 bg-white shadow-md w-2/5">
-                <Typography variant="h5" className='capitalize mb-24'>Welcome<br /> {learnerDetails?.displayName}</Typography>
+                <Typography variant="h5" className='capitalize mb-24'>Welcome<br /> {learnerDetails?.first_name + " " + learnerDetails?.last_name}</Typography>
                 <div className='flex justify-between' style={{ height: 120 }}>
                     {/* <img src={learnerDetails?.avatar?.url} alt="" className='w-full h-full' style={{ width: 120 }} /> */}
                     <Avatar
@@ -285,7 +282,7 @@ function LearnerPortfolio() {
     const CourseSection = ({ children }) => (
         <div className='flex w-full'>
             <div className="flex flex-col gap-5 p-12 bg-white shadow-md w-2/5">
-                <Typography variant="h5" className='capitalize mb-24'>Welcome<br /> {learnerDetails?.displayName}</Typography>
+                <Typography variant="h5" className='capitalize mb-24'>Welcome<br /> {learnerDetails?.first_name + " " + learnerDetails?.last_name}</Typography>
                 <div style={{ height: 120 }}>
                     <img src={learnerDetails?.avatar?.url} alt="" className='w-full h-full' style={{ width: 120 }} />
                 </div>

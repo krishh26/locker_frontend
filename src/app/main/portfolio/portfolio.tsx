@@ -1,9 +1,9 @@
 import FuseLoading from '@fuse/core/FuseLoading'
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
-import TrendingUpIcon from '@mui/icons-material/TrendingUp'
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import FavoriteIcon from '@mui/icons-material/Favorite'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import {
   alpha,
   Avatar,
@@ -14,21 +14,19 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   Fade,
   Grid,
   LinearProgress,
   Paper,
   Slide,
   Tab,
-  Tabs,
   TextField,
-  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
+import { useGetSafeguardingContactsQuery } from 'app/store/api/safeguarding-api'
 import { slice as courseSlice, slice } from 'app/store/courseManagement'
 import {
   getLearnerDetails,
@@ -36,18 +34,11 @@ import {
   updateLearnerAPI,
 } from 'app/store/learnerManagement'
 import { selectstoreDataSlice } from 'app/store/reloadData'
-import { sendMail, updateUserAPI } from 'app/store/userManagement'
-import { selectUser } from 'app/store/userSlice'
-import { useGetSafeguardingContactsQuery } from 'app/store/api/safeguarding-api'
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { sendMail } from 'app/store/userManagement'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
+import AcknowledgementPopup from 'src/app/component/AcknowledgementPopup'
 import {
   SecondaryButton,
   SecondaryButtonOutlined,
@@ -55,10 +46,9 @@ import {
 import { PortfolioCard } from 'src/app/component/Cards'
 import DoughnutChart from 'src/app/component/Chart/doughnut'
 import { portfolioCard } from 'src/app/contanst'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { getRandomColor } from 'src/utils/randomColor'
 import Calendar from './calendar'
-import { useAcknowledgementPopup } from 'src/app/hooks/useAcknowledgementPopup'
-import AcknowledgementPopup from 'src/app/component/AcknowledgementPopup'
 
 // TypeScript Interfaces
 interface EmailData {
@@ -330,7 +320,7 @@ const Portfolio: React.FC = () => {
   )
   const data = useSelector(selectstoreDataSlice)
   const { singleData } = useSelector(selectLearnerManagement)
-  const userData = useSelector(selectUser)
+  console.log("🚀 ~ Portfolio ~ singleData:", singleData)
 
   // Safeguarding API
   const {
@@ -349,16 +339,7 @@ const Portfolio: React.FC = () => {
   }, [learner, dataFetchLoading])
 
   // Get current user role
-  const user = useMemo(() => {
-    try {
-      return (
-        JSON.parse(sessionStorage.getItem('learnerToken') || '{}')?.user ||
-        userData?.data
-      )
-    } catch {
-      return userData?.data
-    }
-  }, [userData])
+  const user = useCurrentUser()
 
   // Memoized filtered cards
   const { overviewCards, courseCards } = useMemo(
@@ -438,13 +419,6 @@ const Portfolio: React.FC = () => {
     []
   )
 
-  // Effects
-  useEffect(() => {
-    if (data?.learner_id) {
-      dispatch(getLearnerDetails(data.learner_id) as any)
-    }
-  }, [data?.learner_id, dispatch])
-
   useEffect(() => {
     if (singleData?.learner_id) {
       dispatch(getLearnerDetails(singleData.learner_id) as any)
@@ -457,10 +431,10 @@ const Portfolio: React.FC = () => {
     if (learner?.email) {
       setEmailData((prev) => ({ ...prev, email: learner.email }))
     }
-    if (user?.displayName) {
-      setEmailData((prev) => ({ ...prev, adminName: user.displayName }))
+    if (user?.first_name && user?.last_name) {
+      setEmailData((prev) => ({ ...prev, adminName: user.first_name + ' ' + user.last_name }))
     }
-  }, [learner?.email, user?.displayName])
+  }, [learner?.email, user?.first_name, user?.last_name])
 
   // Loading state
   if (dataFetchLoading) {
@@ -632,7 +606,7 @@ const Portfolio: React.FC = () => {
                 alt={
                   data?.learner_id
                     ? learner?.first_name?.toUpperCase()?.charAt(0)
-                    : user?.displayName
+                    : user?.first_name?.toUpperCase()?.charAt(0)
                 }
               />
               <Box sx={{ flex: 1, minWidth: 0 }}>

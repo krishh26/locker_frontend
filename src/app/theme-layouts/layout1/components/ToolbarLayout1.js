@@ -1,26 +1,26 @@
-import { ThemeProvider } from '@mui/material/styles';
+import { Typography } from '@mui/material';
 import AppBar from '@mui/material/AppBar';
 import Hidden from '@mui/material/Hidden';
+import { ThemeProvider } from '@mui/material/styles';
 import Toolbar from '@mui/material/Toolbar';
+import { selectFuseNavbar } from 'app/store/fuse/navbarSlice';
+import { selectFuseCurrentLayoutConfig, selectToolbarTheme } from 'app/store/fuse/settingsSlice';
 import clsx from 'clsx';
 import { memo } from 'react';
 import { useSelector } from 'react-redux';
-import { selectFuseCurrentLayoutConfig, selectToolbarTheme } from 'app/store/fuse/settingsSlice';
-import { selectFuseNavbar } from 'app/store/fuse/navbarSlice';
-import { Typography } from '@mui/material';
-import { selectGlobalUser } from 'app/store/globalUser';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
 import { RoleShortForm } from 'src/utils/randomColor';
 import AdjustFontSize from '../../shared-components/AdjustFontSize';
-import Notification from './notification';
+import GoogleTranslateElement from '../../shared-components/GoogleTranslateElement';
 import NavbarToggleButton from '../../shared-components/NavbarToggleButton';
 import UserMenu from '../../shared-components/UserMenu';
-import GoogleTranslateElement from '../../shared-components/GoogleTranslateElement';
+import Notification from './notification';
 
 function ToolbarLayout1(props) {
   const config = useSelector(selectFuseCurrentLayoutConfig);
   const navbar = useSelector(selectFuseNavbar);
   const toolbarTheme = useSelector(selectToolbarTheme);
-  const { currentUser } = useSelector(selectGlobalUser);
+  const currentUser  = useCurrentUser();
 
   return (
     <ThemeProvider theme={toolbarTheme}>

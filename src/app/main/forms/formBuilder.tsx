@@ -37,7 +37,6 @@ import { TextField, Typography } from "@mui/material";
 import { Box } from "@mui/system";
 import { useDispatch } from "react-redux";
 import { useSelector } from "react-redux";
-import { selectUser } from "app/store/userSlice";
 import AlertDialog from "src/app/component/Dialogs/AlertDialog";
 import FuseLoading from "@fuse/core/FuseLoading";
 import DataNotFound from "src/app/component/Pages/dataNotFound";
@@ -48,10 +47,10 @@ import { UserRole } from "src/enum";
 import Close from "@mui/icons-material/Close";
 import { selectGlobalUser } from "app/store/globalUser";
 import CustomPagination from "src/app/component/Pagination/CustomPagination";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 
 const FormBuilder = (props) => {
-    const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
-    const currentUser = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectGlobalUser)?.currentUser;
+    const user = useCurrentUser();
 
     const { singleData, users, meta_data, dataUpdatingLoadding, dataFetchLoading } = useSelector(selectFormData);
 
@@ -69,7 +68,7 @@ const FormBuilder = (props) => {
 
 
     const fetchFormData = (a = searchKeyword, page = 1) => {
-        const userId = currentUser.role !== UserRole.Admin ? currentUser.user_id : undefined;
+        const userId = user.role !== UserRole.Admin ? user.user_id : undefined;
 
         dispatch(getFormDataAPI({ page, page_size: pagination?.page_size }, a, userId));
     }
@@ -171,7 +170,7 @@ const FormBuilder = (props) => {
     };
 
     const searchAPIHandler = () => {
-        const userId = currentUser.role !== UserRole.Admin ? currentUser.user_id : undefined;
+        const userId = user.role !== UserRole.Admin ? user.user_id : undefined;
 
         dispatch(
             getFormDataAPI({ page: 1, page_size: pagination?.page_size }, searchKeyword, userId)

@@ -1,3 +1,6 @@
+import FuseLoading from "@fuse/core/FuseLoading";
+import AddIcon from "@mui/icons-material/Add";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import {
   Dialog,
   DialogActions,
@@ -12,18 +15,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField, Typography,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import { useEffect, useState } from "react";
-import {
-  DangerButton,
-  LoadingButton,
-  SecondaryButton,
-  SecondaryButtonOutlined,
-} from "src/app/component/Buttons";
-import { TextField, Typography } from "@mui/material";
 import { Box } from "@mui/system";
+import { selectGlobalUser } from "app/store/globalUser";
 import {
   createSupportDataAPI,
   deleteSupportHandler,
@@ -32,20 +27,24 @@ import {
   slice,
   updateSupportDataAPI,
 } from "app/store/supportData";
-import { useDispatch } from "react-redux";
-import { useSelector } from "react-redux";
-import { selectUser } from "app/store/userSlice";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  DangerButton,
+  LoadingButton,
+  SecondaryButton,
+  SecondaryButtonOutlined,
+} from "src/app/component/Buttons";
 import AlertDialog from "src/app/component/Dialogs/AlertDialog";
-import FuseLoading from "@fuse/core/FuseLoading";
 import DataNotFound from "src/app/component/Pages/dataNotFound";
-import Style from "./style.module.css";
-import { selectGlobalUser } from "app/store/globalUser";
 import CustomPagination from "src/app/component/Pagination/CustomPagination";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 import { UserRole } from "src/enum";
+import Style from "./style.module.css";
 
 const AddRequest = (props) => {
   const { supportData = {}, handleChange = () => { } } = props;
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser()
 
   return (
     <>
@@ -120,7 +119,7 @@ const AddRequest = (props) => {
 };
 
 const Support = (props) => {
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser()
 
   const { singleData, dataUpdatingLoadding, dataFetchLoading, meta_data } = useSelector(selectSupportData);
 

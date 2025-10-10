@@ -23,6 +23,7 @@ import {
 import { selectUser } from 'app/store/userSlice';
 import PaletteSelector from './palette-generator/PaletteSelector';
 import SectionPreview from './palette-generator/SectionPreview';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
 
 const Root = styled('div')(({ theme }) => ({
   '& .FuseSettings-formControl': {
@@ -58,7 +59,7 @@ const Root = styled('div')(({ theme }) => ({
 
 function FuseSettings(props) {
   const dispatch = useDispatch();
-  const user = sessionStorage.getItem('learnerToken') ? { data: JSON.parse(sessionStorage.getItem('learnerToken'))?.user } : useSelector(selectUser);
+  const user = useCurrentUser();
   const themes = useSelector(selectFuseThemesSettings);
   const settings = useSelector(selectFuseCurrentSettings);
   const { reset, watch, control } = useForm({

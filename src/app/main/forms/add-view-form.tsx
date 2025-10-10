@@ -3,15 +3,15 @@ import {
   useGetFormDetailsQuery,
   useGetSavedFormDetailsQuery,
 } from 'app/store/api/form-api'
-import { selectFormData, slice } from 'app/store/formData'
+import { slice } from 'app/store/formData'
 import { showMessage } from 'app/store/fuse/messageSlice'
-import { selectGlobalUser } from 'app/store/globalUser'
 import { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { SimpleFormField } from 'src/app/component/FormBuilder'
-import DynamicFormPreview from './DynamicFormPreview'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { UserRole } from 'src/enum'
+import DynamicFormPreview from './DynamicFormPreview'
 
 const AddViewForm = () => {
   const param = useParams()
@@ -26,10 +26,7 @@ const AddViewForm = () => {
   const [formData, setFormData] = useState<any>({})
   const [isLocked, setIsLocked] = useState(false)
   const dispatch: any = useDispatch()
-
-  const currentUser =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectGlobalUser)?.currentUser
+  const currentUser = useCurrentUser()
 
   const {
     data: formDetails,

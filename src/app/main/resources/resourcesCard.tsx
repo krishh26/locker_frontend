@@ -1,32 +1,32 @@
+import Close from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
 import {
   Dialog,
-  Typography,
-  TextField,
-  InputAdornment,
-  IconButton,
   FormControlLabel,
+  IconButton,
+  InputAdornment,
   Switch,
+  TextField,
+  Typography,
 } from "@mui/material";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import SearchIcon from "@mui/icons-material/Search";
-import Close from "@mui/icons-material/Close";
 
-import { SecondaryButton } from "src/app/component/Buttons";
-import DataNotFound from "src/app/component/Pages/dataNotFound";
-import ResourceUploadDialog from "src/app/component/Dialogs/resourceUploadDialog";
-import { fetchResourceAPI, selectResourceManagement } from "app/store/resourcesManagement";
 import FuseLoading from "@fuse/core/FuseLoading";
+import { useDebounce } from "@fuse/hooks";
+import { fetchResourceAPI, selectResourceManagement } from "app/store/resourcesManagement";
+import { SecondaryButton } from "src/app/component/Buttons";
+import ResourceUploadDialog from "src/app/component/Dialogs/resourceUploadDialog";
+import DataNotFound from "src/app/component/Pages/dataNotFound";
 import ResouresTable from "src/app/component/Table/ResourseTable";
 import { resourceManagementTableColumn } from "src/app/contanst";
-import { selectUser } from "app/store/userSlice";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 import { UserRole } from "src/enum";
-import { useDebounce } from "@fuse/hooks";
 
 const ResourcesCard = () => {
   const dispatch: any = useDispatch();
   const { data, dataFetchLoading } = useSelector(selectResourceManagement);
-  const user = JSON.parse(sessionStorage.getItem("learnerToken"))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
 
   const [open, setOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");

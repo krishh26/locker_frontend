@@ -1,9 +1,8 @@
 import { styled } from '@mui/material/styles';
 import Avatar from '@mui/material/Avatar';
 import Typography from '@mui/material/Typography';
-import { useSelector } from 'react-redux';
-import { selectUser } from 'app/store/userSlice';
 import { getRandomColor } from 'src/utils/randomColor';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
 
 const Root = styled('div')(({ theme }) => ({
   '& .username, & .email': {
@@ -27,29 +26,29 @@ const Root = styled('div')(({ theme }) => ({
 }));
 
 function UserNavbarHeader(props) {
-  const user = sessionStorage.getItem('learnerToken') ? JSON.parse(sessionStorage.getItem('learnerToken'))?.user : useSelector(selectUser);
+  const user = useCurrentUser();
 
   return (
     <Root className="user relative flex flex-col items-center justify-center p-16 pb-14 shadow-0">
       <div className="flex items-center justify-center mb-24">
         <Avatar
           sx={{
-            backgroundColor: getRandomColor(user?.data?.displayName?.toLowerCase().charAt(0)),
+            backgroundColor: getRandomColor(user?.first_name?.toLowerCase().charAt(0)),
             color: 'text.secondary',
 
           }}
           className="avatar text-32 font-bold w-96 h-96"
-          src={user?.data?.avatar?.url}
-          alt={user?.data?.displayName}
+          src={user?.avatar?.url}
+          alt={user?.first_name}
         >
-          {user?.data?.displayName.charAt(0)}
+          {user?.first_name?.charAt(0)}
         </Avatar>
       </div>
       <Typography className="username text-14 whitespace-nowrap font-medium">
-        {user?.data?.displayName}
+        {user?.first_name + ' ' + user?.last_name}
       </Typography>
       <Typography className="email text-13 whitespace-nowrap font-medium" color="text.secondary">
-        {user?.data?.email}
+        {user?.email}
       </Typography>
     </Root>
   );

@@ -4,28 +4,24 @@ import {
   Button,
   Card,
   Checkbox,
-  FormControl,
   FormControlLabel,
   FormGroup,
   Grid,
-  InputLabel,
   MenuItem,
   Select,
   Skeleton,
   TextField,
-  Typography,
+  Typography
 } from '@mui/material'
 import {
   useCreateNewSessionMutation,
   useFileUploadSessionMutation,
-  useGetCourseListQuery,
   useGetLernerListQuery,
-  useGetOptionsListQuery,
+  useGetOptionsListQuery
 } from 'app/store/api/learner-plan-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { getLearnerAPI, getTrainerAPI, selectSession } from 'app/store/session'
-import { useEffect, useState } from 'react'
-import { FileUploader } from 'react-drag-drop-files'
+import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
@@ -223,10 +219,6 @@ const AddEditSession = (props) => {
     reset()
   }
 
-  const sessionDataFromStorage = JSON.parse(
-    sessionStorage.getItem('learnerToken')
-  )?.user
-  const selectedLearnerId = sessionDataFromStorage?.learner_id || null
 
   return (
     <Grid>

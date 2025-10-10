@@ -1,7 +1,8 @@
 /* eslint-disable class-methods-use-this */
 /* eslint-disable no-async-promise-executor */
 import FuseUtils from '@fuse/utils/FuseUtils';
-import { slice } from 'app/store/globalUser';
+// NOTE: No longer using globalUser.currentUser - that was redundant
+// The authenticated user is now managed in authSlice via setUser in AuthContext
 import axios from 'axios';
 import jwtDecode from 'jwt-decode';
 import jsonData from 'src/url.json';
@@ -75,6 +76,8 @@ class JwtService extends FuseUtils.EventEmitter {
                     if (response?.data?.status) {
                         const data = response?.data?.data;
                         const decoded = jwtDecode(data?.accessToken);
+                        
+                        // Set learner token for learner users (needed for admin viewing feature)
                         if (decoded?.role === 'Learner') {
                             sessionStorage.setItem('learnerToken', JSON.stringify({ ...data, user: { ...data.user, displayName: data.user.first_name + " " + data.user.last_name } }));
                         }
@@ -83,7 +86,6 @@ class JwtService extends FuseUtils.EventEmitter {
                         // No need to manually store in localStorage
 
                         connectToSocket(decoded?.user_id, dispatch);
-                        dispatch(slice.setCurrentUser(data.user));
                         if (data.password_changed) {
                             this.setSession(data.accessToken);
                             this.emit('onLogin', decoded);
@@ -110,6 +112,8 @@ class JwtService extends FuseUtils.EventEmitter {
     signInWithToken = (dispatch) => {
         return new Promise(async (resolve) => {
             const decoded = jwtDecode(this.getAccessToken());
+            
+            // Set learner token for learner users (needed for admin viewing feature)
             if (decoded.role === 'Learner') {
                 sessionStorage.setItem('learnerToken', JSON.stringify({ accessToken: this.getAccessToken(), user: { ...decoded, displayName: decoded?.first_name + " " + decoded?.last_name } }));
             }

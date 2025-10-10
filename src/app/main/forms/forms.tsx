@@ -1,17 +1,15 @@
-import React, { useEffect, useState } from "react";
 import { Grid, Tab, Tabs, Typography } from "@mui/material";
 import { Box } from "@mui/system";
-import { useDispatch } from "react-redux";
-import { useSelector } from "react-redux";
-import { selectUser } from "app/store/userSlice";
-import "formiojs/dist/formio.full.css";
-import './style.css'
 import { slice } from "app/store/formData";
-import SubmittedForms from "./submittedForms";
-import FormBuilder from "./formBuilder";
-import Templates from "./tamplates";
-import { selectGlobalUser } from "app/store/globalUser";
+import "formiojs/dist/formio.full.css";
+import React, { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 import { UserRole } from "src/enum";
+import FormBuilder from "./formBuilder";
+import './style.css';
+import SubmittedForms from "./submittedForms";
+import Templates from "./tamplates";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -49,13 +47,14 @@ function a11yProps(index: number) {
 const Forms = (props) => {
   const [value, setValue] = useState(0);
   const dispatch = useDispatch();
+  
+  // ✅ Unified way to get user (handles both regular and learner tab mode)
+  const user = useCurrentUser();
 
   const handleTabChange = (event, newValue) => {
     dispatch(slice.storeFormData({ data: {}, mode: "" }))
     setValue(newValue);
   };
-  
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
 
   useEffect(() => {
     if(user?.role === UserRole.Trainer){

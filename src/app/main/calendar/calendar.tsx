@@ -37,7 +37,6 @@ import {
   slice,
   updateSessionAPI,
 } from 'app/store/session';
-import { selectUser } from 'app/store/userSlice';
 import moment from 'moment';
 import { useEffect, useState } from 'react';
 import {
@@ -55,8 +54,9 @@ import {
 import AlertDialog from 'src/app/component/Dialogs/AlertDialog';
 import DataNotFound from 'src/app/component/Pages/dataNotFound';
 import CustomPagination from 'src/app/component/Pagination/CustomPagination';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
+import { downloadCSV, exportSessionsToCSV, generateFilename } from '../../../utils/csvExport';
 import { themeHelpers, useThemeColors } from '../../utils/themeUtils';
-import { exportSessionsToCSV, downloadCSV, generateFilename } from '../../../utils/csvExport';
 import NewSession from '../portfolio/newsession';
 import './calendar.css';
 import SortByVisitDateDropdown from './SortByVisitDateDropdown';
@@ -157,9 +157,7 @@ const ThemedCalendar = () => {
   const colors = useThemeColors()
 
   const session = useSelector(selectSession)
-  const user =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectUser)?.data
+  const user = useCurrentUser()
   const { trainer } = useSelector(selectLearnerManagement)
   const { pagination } = useSelector(selectGlobalUser)
 

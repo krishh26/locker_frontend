@@ -28,7 +28,7 @@ import {
 } from '@mui/material'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { selectGlobalUser } from 'app/store/globalUser'
-import { selectUser } from 'app/store/userSlice'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import 'formiojs/dist/formio.full.css'
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -43,9 +43,7 @@ import {
 import './style.css'
 
 const SubmittedForms = () => {
-  const user =
-    JSON.parse(sessionStorage.getItem('learnerToken'))?.user ||
-    useSelector(selectUser)?.data
+  const user = useCurrentUser()
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [page, setPage] = useState(1)

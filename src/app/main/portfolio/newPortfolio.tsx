@@ -1,18 +1,17 @@
-import * as React from 'react';
-import PropTypes from 'prop-types';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import Box from '@mui/material/Box';
-import LearnerDetails from './learnerDeatils';
-import { Button } from '@mui/material';
 import styled from '@emotion/styled';
-import { useSelector } from 'react-redux';
-import { slice as globalSlice, selectGlobalUser, tokenGetFetch } from "app/store/globalUser";
-import { useDispatch } from 'react-redux';
-import ContractedWorkHours from './contractedWork';
-import { selectUser } from 'app/store/userSlice';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Button } from '@mui/material';
+import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import { slice as globalSlice, selectGlobalUser, tokenGetFetch } from "app/store/globalUser";
+import PropTypes from 'prop-types';
+import * as React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useCurrentUser } from 'src/app/utils/userHelpers';
+import ContractedWorkHours from './contractedWork';
 import CourseTab from './courseTab';
+import LearnerDetails from './learnerDeatils';
 import LearnerPortfolio from './learnerPortfolio';
 
 const CustomTab = styled(Tab)(({ theme }) => ({
@@ -71,7 +70,7 @@ export default function NewPortfolio() {
     const [value, setValue] = React.useState(0);
     const { learnerTab, selectedUser } = useSelector(selectGlobalUser);
     const dispatch: any = useDispatch();
-    const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+    const user = useCurrentUser()
 
     const role = user?.role;
 

@@ -3,6 +3,7 @@ import axios from 'axios';
 import jsonData from 'src/url.json';
 import { showMessage } from './fuse/messageSlice';
 import { userTableMetaData } from '../contanst/metaData';
+import { useCurrentUser } from '../utils/userHelpers';
 
 const initialState = {
     data: [],
@@ -74,8 +75,7 @@ export const createAssignmentAPI = (data) => async (dispatch, getStore) => {
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         dispatch(slice.setSingleData(response.data.data));
         if (response.data.status) {
-            // dispatch(getAssignmentAPI(getStore().user.data.user_id))
-            const userId = getStore().storeData?.user_id || getStore().user?.data?.user_id;
+            const userId = getStore().user?.data?.user_id;
             const courseId = getStore().courseManagement?.singleData?.course?.course_id;
             dispatch(getAssignmentByCourseAPI(courseId, userId))
         }
@@ -97,8 +97,7 @@ export const updateAssignmentAPI = (id, data) => async (dispatch, getStore) => {
         const response = await axios.patch(`${URL_BASE_LINK}/assignment/update/${id}`, payload)
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         if (response.data.status) {
-            // dispatch(getAssignmentAPI(getStore().user.data.user_id))
-            const userId = getStore().storeData?.user_id || getStore().user?.data?.user_id;
+            const userId = getStore()?.user?.data?.user_id;
             const courseId = getStore().courseManagement?.singleData?.course?.course_id;
             dispatch(getAssignmentByCourseAPI(courseId, userId))
         }
@@ -119,8 +118,7 @@ export const deleteAssignmentHandler = (id) => async (dispatch, getStore) => {
         console.log(response);
         dispatch(showMessage({ message: response.data.message, variant: "success" }))
         if (response.data.status) {
-            // dispatch(getAssignmentAPI(getStore().user.data.user_id))
-            const userId = getStore().storeData?.user_id || getStore().user?.data?.user_id;
+            const userId = getStore()?.user?.data?.user_id;
             const courseId = getStore().courseManagement?.singleData?.course?.course_id;
             dispatch(getAssignmentByCourseAPI(courseId, userId))
         }

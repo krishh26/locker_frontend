@@ -31,7 +31,7 @@ import {
   slice,
   updateCpdPlanningAPI,
 } from "app/store/cpdPlanning";
-import { selectUser } from "app/store/userSlice";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import {
   DangerButton,
@@ -326,7 +326,7 @@ const Planning = (props) => {
   const [open, setOpen] = useState(false);
 
   const dispatch: any = useDispatch();
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
 
   const cpdPlanningData = useSelector(selectCpdPlanning);
 

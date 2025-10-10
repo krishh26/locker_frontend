@@ -1,67 +1,59 @@
-import React, { useEffect, useState } from "react";
-import { DangerButton, LoadingButton, SecondaryButton, SecondaryButtonOutlined } from "src/app/component/Buttons";
-import DataNotFound from "src/app/component/Pages/dataNotFound";
-import Style from "./style.module.css";
-import { useSelector } from "react-redux";
+import FuseLoading from "@fuse/core/FuseLoading";
+import ArchiveIcon from '@mui/icons-material/Archive';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
+import DescriptionIcon from '@mui/icons-material/Description';
+import DownloadIcon from '@mui/icons-material/Download';
+import EditIcon from '@mui/icons-material/Edit';
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import SchoolIcon from '@mui/icons-material/School';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import {
+  alpha,
   Avatar,
-  AvatarGroup,
+  Box,
+  Button,
   Card,
+  Checkbox,
+  Chip,
+  Container,
   Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
   IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
   Menu,
   MenuItem,
+  Link as MuiLink,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Typography,
-  Container,
-  Button,
-  Box,
   Tooltip,
-  Link as MuiLink,
-  useTheme,
-  alpha,
-  Chip,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  ListItemIcon,
-  Checkbox,
-  Divider,
-  FormControlLabel,
+  Typography,
+  useTheme
 } from "@mui/material";
-import { useDispatch } from "react-redux";
-import FuseLoading from "@fuse/core/FuseLoading";
-import { Link, useNavigate } from "react-router-dom";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import FileCopyIcon from '@mui/icons-material/FileCopy';
-import DescriptionIcon from '@mui/icons-material/Description';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import DownloadIcon from '@mui/icons-material/Download';
-import ArchiveIcon from '@mui/icons-material/Archive';
-import SchoolIcon from '@mui/icons-material/School';
-import CheckBoxIcon from '@mui/icons-material/CheckBox';
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import AlertDialog from "src/app/component/Dialogs/AlertDialog";
-import UploadedEvidenceFile from "src/app/component/Cards/uploadedEvidenceFile";
 import { deleteAssignmentHandler, getAssignmentAPI, selectAssignment, slice } from "app/store/assignment";
-import { selectUser } from "app/store/userSlice";
+import { showMessage } from "app/store/fuse/messageSlice";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { DangerButton, LoadingButton, SecondaryButtonOutlined } from "src/app/component/Buttons";
+import UploadedEvidenceFile from "src/app/component/Cards/uploadedEvidenceFile";
 import Uploading from "src/app/component/Cards/uploading";
 import UploadWorkDialog from "src/app/component/Cards/uploadWorkDialog";
-import { UserRole } from "src/enum";
-import { selectGlobalUser } from "app/store/globalUser";
-import { showMessage } from "app/store/fuse/messageSlice";
+import AlertDialog from "src/app/component/Dialogs/AlertDialog";
+import DataNotFound from "src/app/component/Pages/dataNotFound";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 
 
 interface AssignmentData {
@@ -125,8 +117,7 @@ const CreateAssignment = (props) => {
   const theme = useTheme()
   const { data, dataFetchLoading, dataUpdatingLoadding, singleData } = useSelector(selectAssignment);
 
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
-  const { currentUser } = useSelector(selectGlobalUser);
+  const user = useCurrentUser();
 
   const dispatch: any = useDispatch();
 

@@ -1,9 +1,9 @@
 import { createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
 import jsonData from 'src/url.json';
-import { showMessage } from './fuse/messageSlice';
 import { userTableMetaData } from '../contanst/metaData';
-import LearnerDetails from '../main/portfolio/learnerDeatils';
+import { useCurrentUser } from '../utils/userHelpers';
+import { showMessage } from './fuse/messageSlice';
 
 const initialState = {
     data: [],
@@ -181,7 +181,7 @@ export const getRoleAPI = (role) => async (dispatch) => {
 export const getLearnerDetails = (learner_id = "") => async (dispatch, getStore) => {
     try {
         dispatch(slice.setUpdatingLoader(true));
-        const id = learner_id || getStore()?.user?.data?.id
+        const id = learner_id || getStore()?.user?.data?.learner_id
         const response = await axios.get(`${URL_BASE_LINK}/learner/get/${id}`,)
         dispatch(slice.learnerDetails(response.data.data));
         return response.data.data;

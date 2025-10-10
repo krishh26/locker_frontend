@@ -2,14 +2,13 @@ import React from "react";
 import { Card } from "src/app/component/Cards";
 import { HomePageData } from "src/app/contanst";
 import Style from "./style.module.css";
-import { useSelector } from "react-redux";
-import { selectUser } from "app/store/userSlice";
 import TableEQA1 from "./tableEQA1";
 import TableEQA2 from "./tableEQA2";
 import Portfolio from "../portfolio/portfolio";
+import { useCurrentUser } from "src/app/utils/userHelpers";
 
 const Home = () => {
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
 
   const role = user?.role;
   if (role === "EQA") {

@@ -1,20 +1,8 @@
-import { Box, maxWidth } from "@mui/system";
-import React, { useEffect, useState } from "react";
-import {
-  LoadingButton,
-  SecondaryButton,
-  SecondaryButtonOutlined,
-} from "../Buttons";
 import {
   Checkbox,
   FormControlLabel,
   FormGroup,
   Grid,
-  ListItemText,
-  MenuItem,
-  OutlinedInput,
-  Paper,
-  Select,
   Table,
   TableBody,
   TableCell,
@@ -23,16 +11,20 @@ import {
   TableRow,
   TextField,
   Tooltip,
-  Typography,
+  Typography
 } from "@mui/material";
-import axios from "axios";
-import { roles } from "src/app/contanst";
-import { useSelector } from "react-redux";
-import { selectUser } from "app/store/userSlice";
-import { useNavigate } from "react-router-dom";
-import { createAssignmentAPI, selectAssignment, updateAssignmentAPI } from "app/store/assignment";
-import { useDispatch } from "react-redux";
+import { Box } from "@mui/system";
+import { selectAssignment, updateAssignmentAPI } from "app/store/assignment";
 import { fetchCourseById, selectCourseManagement } from "app/store/courseManagement";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { useCurrentUser } from "src/app/utils/userHelpers";
+import {
+  LoadingButton,
+  SecondaryButton,
+  SecondaryButtonOutlined,
+} from "../Buttons";
 import styles from './style.module.css';
 
 const assessmentMethod = [
@@ -100,7 +92,7 @@ const UploadedEvidenceFile = (props) => {
     handleChange({ target: { name: 'units', value: updatedData } });
   };
 
-  const user = JSON.parse(sessionStorage.getItem('learnerToken'))?.user || useSelector(selectUser)?.data;
+  const user = useCurrentUser();
 
   const formatDate = (date) => {
     if (!date) return "";
