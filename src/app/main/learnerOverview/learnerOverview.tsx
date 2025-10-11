@@ -1,7 +1,8 @@
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
-import AssessmentIcon from '@mui/icons-material/Assessment'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import ClearIcon from '@mui/icons-material/Clear'
 import CommentIcon from '@mui/icons-material/Comment'
+import DashboardIcon from '@mui/icons-material/Dashboard'
 import EditIcon from '@mui/icons-material/Edit'
 import PersonIcon from '@mui/icons-material/Person'
 import SearchIcon from '@mui/icons-material/Search'
@@ -42,13 +43,13 @@ import { updateLearnerAPI } from 'app/store/learnerManagement'
 import { slice } from 'app/store/reloadData'
 import React, { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import LearnerPortfolioCard from 'src/app/component/Cards/LearnerPortfolioCard'
-import { portfolioCard } from 'src/app/contanst'
+import { useNavigate } from 'react-router-dom'
 import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { getRandomColor } from 'src/utils/randomColor'
 
 const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentUpdate }) => {
   const theme = useTheme()
+  const navigate = useNavigate()
   const [isEditingComment, setIsEditingComment] = useState(false)
   const [editedComment, setEditedComment] = useState('')
   const [isSavingComment, setIsSavingComment] = useState(false)
@@ -156,7 +157,7 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
               sx={{
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: 3,
+                gap: 1,
                 position: 'relative',
                 zIndex: 2,
                 width: '100%',
@@ -164,13 +165,11 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
             >
               <Avatar
                 sx={{
-                  width: 80,
-                  height: 80,
+                  width: 30,
+                  height: 30,
                   bgcolor: getRandomColor(
                     learner?.first_name?.toLowerCase().charAt(0)
                   ),
-                  border: `3px solid ${theme.palette.primary.contrastText}`,
-                  boxShadow: theme.shadows[4],
                   flexShrink: 0,
                 }}
                 src={
@@ -182,7 +181,7 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
               />
               <Box sx={{ color: 'black', flex: 1, minWidth: 0 }}>
                 <Typography
-                  variant='h4'
+                  variant='h6'
                   sx={{
                     fontWeight: 700,
                   }}
@@ -405,292 +404,24 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
               })()}
             </Box>
           </Box>
-          <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <AssessmentIcon sx={{ 
-                fontSize: 24, 
-                color: theme.palette.primary.main,
-                mr: 1
-              }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Portfolio Modules
-              </Typography>
-            </Box>
-            <Grid container spacing={2}>
-              {portfolioCard?.map((value, index) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={value.id}>
-                  <LearnerPortfolioCard 
-                    data={value} 
-                    index={index} 
-                    learner={learner} 
-                    handleClickData={handleClickData} 
-                  />
-                </Grid>
-              ))}
-            </Grid>
+          
+          {/* View Dashboard Button */}
+          <Box sx={{ 
+            p: 3, 
+            pt: 0,
+            display: 'flex',
+            justifyContent: 'flex-end'
+          }}>
+            <Button
+              variant='contained'
+              size='large'
+              onClick={() => navigate(`/learner-dashboard/${learner?.learner_id}`)}
+              startIcon={<DashboardIcon />}
+              endIcon={<ArrowForwardIcon />}
+            >
+              View Portfolio
+            </Button>
           </Box>
-          {/* Progress Section */}
-          {/* {learner?.course && learner.course.length > 0 && (() => {
-            let totalCompleted = 0
-            let totalInProgress = 0
-            let totalNotStarted = 0
-            let totalUnitsAll = 0
-            let minDaysPending = Infinity
-
-            learner.course.forEach((course) => {
-              const progressData = convertToMatrixData(course)
-              totalCompleted += progressData.fullyCompleted
-              totalInProgress += progressData.workInProgress
-              totalNotStarted += progressData.yetToComplete
-              totalUnitsAll += progressData.totalUnits
-              if (progressData.dayPending > 0 && progressData.dayPending < minDaysPending) {
-                minDaysPending = progressData.dayPending
-              }
-            })
-
-            const completedPercentage = totalUnitsAll > 0 ? ((totalCompleted / totalUnitsAll) * 100).toFixed(1) : '0.0'
-            const inProgressPercentage = totalUnitsAll > 0 ? ((totalInProgress / totalUnitsAll) * 100).toFixed(1) : '0.0'
-            const notStartedPercentage = totalUnitsAll > 0 ? ((totalNotStarted / totalUnitsAll) * 100).toFixed(1) : '0.0'
-            const overallProgress = parseFloat(completedPercentage) + (parseFloat(inProgressPercentage) * 0.5)
-
-            return (
-              <Box sx={{ p: 3, borderTop: `1px solid ${theme.palette.divider}` }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                  <TrendingUpIcon sx={{ color: theme.palette.primary.main }} />
-                  <Typography variant='h6' sx={{ fontWeight: 600 }}>
-                    Overall Progress
-                  </Typography>
-                  <Chip
-                    label={`${learner.course.length} Course${learner.course.length > 1 ? 's' : ''}`}
-                    size='small'
-                    sx={{
-                      ml: 1,
-                      backgroundColor: theme.palette.primary.light,
-                      color: theme.palette.primary.dark,
-                      fontWeight: 600,
-                    }}
-                  />
-                </Box>
-
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 3,
-                    border: `2px solid ${theme.palette.divider}`,
-                    borderRadius: 2,
-                    background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
-                  }}
-                >
-                  <Box sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                      <Typography variant='h6' sx={{ fontWeight: 600 }}>
-                        Total Progress
-                      </Typography>
-                      <Chip
-                        label={`${overallProgress.toFixed(0)}% Complete`}
-                        sx={{
-                          backgroundColor: theme.palette.success.main,
-                          color: 'white',
-                          fontWeight: 700,
-                          fontSize: '0.95rem',
-                          height: 32,
-                        }}
-                      />
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant='body2' sx={{ fontWeight: 500, color: theme.palette.text.secondary }}>
-                        Across all courses
-                      </Typography>
-                      <Typography variant='body1' sx={{ fontWeight: 600 }}>
-                        {totalCompleted + totalInProgress} / {totalUnitsAll} Units
-                      </Typography>
-                    </Box>
-                    <LinearProgress
-                      variant='determinate'
-                      value={overallProgress}
-                      sx={{
-                        height: 14,
-                        borderRadius: 7,
-                        backgroundColor: theme.palette.grey[200],
-                        '& .MuiLinearProgress-bar': {
-                          borderRadius: 7,
-                          background: `linear-gradient(90deg, ${theme.palette.success.light} 0%, ${theme.palette.success.main} 100%)`,
-                        },
-                      }}
-                    />
-                  </Box>
-
-                  <Divider sx={{ my: 3 }} />
-
-                  <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2, color: theme.palette.text.secondary }}>
-                    Progress Breakdown
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={4}>
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: 2,
-                          backgroundColor: alpha(theme.palette.success.light, 0.3),
-                          border: `1px solid ${theme.palette.success.light}`,
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                          <Typography variant='body2' sx={{ fontWeight: 600, color: theme.palette.success.dark }}>
-                            ✓ Completed
-                          </Typography>
-                          <Typography variant='h6' sx={{ fontWeight: 700, color: theme.palette.success.dark }}>
-                            {totalCompleted}
-                          </Typography>
-                        </Box>
-                        <LinearProgress
-                          variant='determinate'
-                          value={parseFloat(completedPercentage)}
-                          sx={{
-                            height: 8,
-                            borderRadius: 4,
-                            backgroundColor: 'rgba(255,255,255,0.5)',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                              backgroundColor: theme.palette.success.main,
-                            },
-                          }}
-                        />
-                        <Typography variant='caption' sx={{ mt: 0.5, display: 'block', color: theme.palette.success.dark, fontWeight: 600 }}>
-                          {completedPercentage}% of total
-                        </Typography>
-                      </Box>
-                    </Grid>
-
-                    <Grid item xs={12} sm={4}>
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: 2,
-                          backgroundColor: alpha(theme.palette.warning.light, 0.3),
-                          border: `1px solid ${theme.palette.warning.light}`,
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                          <Typography variant='body2' sx={{ fontWeight: 600, color: theme.palette.warning.dark }}>
-                            ⟳ In Progress
-                          </Typography>
-                          <Typography variant='h6' sx={{ fontWeight: 700, color: theme.palette.warning.dark }}>
-                            {totalInProgress}
-                          </Typography>
-                        </Box>
-                        <LinearProgress
-                          variant='determinate'
-                          value={parseFloat(inProgressPercentage)}
-                          sx={{
-                            height: 8,
-                            borderRadius: 4,
-                            backgroundColor: 'rgba(255,255,255,0.5)',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                              backgroundColor: theme.palette.warning.main,
-                            },
-                          }}
-                        />
-                        <Typography variant='caption' sx={{ mt: 0.5, display: 'block', color: theme.palette.warning.dark, fontWeight: 600 }}>
-                          {inProgressPercentage}% of total
-                        </Typography>
-                      </Box>
-                    </Grid>
-
-                    <Grid item xs={12} sm={4}>
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: 2,
-                          backgroundColor: alpha(theme.palette.error.light, 0.3),
-                          border: `1px solid ${theme.palette.error.light}`,
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                          <Typography variant='body2' sx={{ fontWeight: 600, color: theme.palette.error.dark }}>
-                            ○ Not Started
-                          </Typography>
-                          <Typography variant='h6' sx={{ fontWeight: 700, color: theme.palette.error.dark }}>
-                            {totalNotStarted}
-                          </Typography>
-                        </Box>
-                        <LinearProgress
-                          variant='determinate'
-                          value={parseFloat(notStartedPercentage)}
-                          sx={{
-                            height: 8,
-                            borderRadius: 4,
-                            backgroundColor: 'rgba(255,255,255,0.5)',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                              backgroundColor: theme.palette.error.main,
-                            },
-                          }}
-                        />
-                        <Typography variant='caption' sx={{ mt: 0.5, display: 'block', color: theme.palette.error.dark, fontWeight: 600 }}>
-                          {notStartedPercentage}% of total
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-
-                  {minDaysPending !== Infinity && minDaysPending > 0 && (
-                    <Box sx={{ mt: 3, p: 2, borderRadius: 2, backgroundColor: alpha(theme.palette.info.light, 0.2), border: `1px solid ${theme.palette.info.light}` }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <AccessTimeIcon sx={{ fontSize: 20, color: theme.palette.info.main }} />
-                        <Typography variant='body2' sx={{ color: theme.palette.info.dark, fontWeight: 600 }}>
-                          Next deadline in {minDaysPending} days
-                        </Typography>
-                      </Box>
-                    </Box>
-                  )}
-
-                  <Box sx={{ mt: 3, pt: 3, borderTop: `1px solid ${theme.palette.divider}` }}>
-                    <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 2, color: theme.palette.text.secondary }}>
-                      Enrolled Courses ({learner.course.length})
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {learner.course.map((course, index) => (
-                        <Link
-                          key={index}
-                          to='/portfolio/courseData'
-                          style={{
-                            color: 'inherit',
-                            textDecoration: 'none',
-                          }}
-                          onClick={(e) => {
-                            handleClickSingleData(course)
-                            handleClickData(learner?.learner_id, learner?.user_id)
-                          }}
-                        >
-                          <Chip
-                            icon={<SchoolIcon />}
-                            label={course?.course?.course_name || 'Course'}
-                            variant='outlined'
-                            sx={{
-                              borderColor: theme.palette.primary.main,
-                              color: theme.palette.primary.main,
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                backgroundColor: theme.palette.primary.main,
-                                color: 'white',
-                                '& .MuiChip-icon': {
-                                  color: 'white',
-                                },
-                              },
-                            }}
-                          />
-                        </Link>
-                      ))}
-                    </Box>
-                  </Box>
-                </Paper>
-              </Box>
-            )
-          })()} */}
         </CardContent>
         </Card>
       </Fade>

@@ -69,9 +69,6 @@ export const ThemeCardExample = () => {
               key={item.id}
               data={item}
               index={index}
-              handleClickData={(id, user_id) => {
-                console.log('Clicked:', id, user_id);
-              }}
             />
           ))}
         </div>

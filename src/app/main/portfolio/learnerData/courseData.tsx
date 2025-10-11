@@ -18,9 +18,10 @@ import { styled } from '@mui/material/styles'
 import {
   fetchCourseAPI,
   selectCourseManagement,
-  updateUserCourse
+  updateUserCourse,
 } from 'app/store/courseManagement'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import { selectLearnerManagement } from 'app/store/learnerManagement'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -274,7 +275,7 @@ const CourseData = () => {
   const navigate = useNavigate()
 
   const user = useCurrentUser()
-
+  const { learner } = useSelector(selectLearnerManagement)
   // State for count data
   const [countData, setCountData] = useState<PortfolioCountData>({
     evidenceTotal: 0,
@@ -328,7 +329,7 @@ const CourseData = () => {
       if (singleData && singleData.course) {
         try {
           // Get learner ID from session storage or props
-          const learnerId = user?.user_id
+          const learnerId = learner?.learner_id || user?.user_id
 
           if (learnerId) {
             const counts = await getAllPortfolioCounts(
@@ -344,7 +345,7 @@ const CourseData = () => {
     }
 
     fetchCountData()
-  }, [singleData])
+  }, [singleData, learner])
 
   // Loading state
   if (dataFetchLoading) {
@@ -423,34 +424,35 @@ const CourseData = () => {
   return (
     <StyledContainer>
       {/* Header Section */}
-      {user?.role === UserRole.Learner && (
-        <>
-          <StyledHeader>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 2,
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography
-                  variant='h4'
-                  component='h1'
-                  sx={{
-                    fontWeight: 700,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    m: 0,
-                  }}
-                >
-                  Course Details
-                </Typography>
-              </Box>
 
+      <>
+        <StyledHeader>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography
+                variant='h4'
+                component='h1'
+                sx={{
+                  fontWeight: 700,
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  m: 0,
+                }}
+              >
+                Course Details
+              </Typography>
+            </Box>
+
+            {user?.role === UserRole.Learner && (
               <Box>
                 <button
                   onClick={handleBackToCourses}
@@ -495,31 +497,31 @@ const CourseData = () => {
                   Back to Courses
                 </button>
               </Box>
-            </Box>
-          </StyledHeader>
-          <Fade in={true} timeout={500}>
-            <StyledCardsContainer>
-              {courseCards.map((value, index) => (
-                <Slide
-                  key={value.id}
-                  direction='up'
-                  in={true}
-                  timeout={300 + index * 100}
-                >
-                  <Box>
-                    <PortfolioCard
-                      data={value}
-                      index={index}
-                      countData={countData}
-                      learner={user}
-                    />
-                  </Box>
-                </Slide>
-              ))}
-            </StyledCardsContainer>
-          </Fade>
-        </>
-      )}
+            )}
+          </Box>
+        </StyledHeader>
+        <Fade in={true} timeout={500}>
+          <StyledCardsContainer>
+            {courseCards.map((value, index) => (
+              <Slide
+                key={value.id}
+                direction='up'
+                in={true}
+                timeout={300 + index * 100}
+              >
+                <Box>
+                  <PortfolioCard
+                    data={value}
+                    index={index}
+                    countData={countData}
+                    learner={learner || user}
+                  />
+                </Box>
+              </Slide>
+            ))}
+          </StyledCardsContainer>
+        </Fade>
+      </>
       <Fade in={true} timeout={500}>
         <StyledSection>
           {/* Course Information Cards */}

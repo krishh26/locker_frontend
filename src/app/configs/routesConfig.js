@@ -41,6 +41,7 @@ import TimelogDataExportConfig from '../main/timelogDataExport/timelogDataExport
 import LearnersWaitingToBeSampledConfig from '../main/learnersWaitingToBeSampled/learnersWaitingToBeSampledConfig'
 import AwaitingSignatureConfig from '../main/awaitingSignature/awaitingSignatureConfig'
 import GatewayReportConfig from '../main/gatewayReport/gatewayReportConfig'
+import learnerDashboardConfig from '../main/learner-dashboard/learnerDashboardConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -81,7 +82,8 @@ const routeConfigs = [
   TimelogDataExportConfig,
   LearnersWaitingToBeSampledConfig,
   AwaitingSignatureConfig,
-  GatewayReportConfig
+  GatewayReportConfig,
+  learnerDashboardConfig
 ]
 
 const routes = [

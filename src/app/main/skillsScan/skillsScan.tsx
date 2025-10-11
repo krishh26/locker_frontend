@@ -15,7 +15,7 @@ import {
   Typography,
   useTheme
 } from '@mui/material'
-import { getLearnerDetails } from 'app/store/learnerManagement'
+import { getLearnerDetails, selectLearnerManagement } from 'app/store/learnerManagement'
 import { selectSkillsScan } from 'app/store/skillsScan'
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -74,13 +74,14 @@ const SkillsScan = () => {
   const theme = useTheme()
   const selectedUser = useCurrentUser()
   const { selectedCourse } = useSelector(selectSkillsScan)
+  const { learner } = useSelector(selectLearnerManagement)
   
   const handleTabChange = (event, newValue) => {
     setValue(newValue)
   }
 
   useEffect(() => {
-      dispatch(getLearnerDetails())
+      dispatch(getLearnerDetails(learner?.learner_id || ''))
   }, [])
 
   const steps = [

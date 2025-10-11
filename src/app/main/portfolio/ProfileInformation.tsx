@@ -47,7 +47,7 @@ const ProfileInformation = () => {
   const navigate = useNavigate()
   const dispatch: any = useDispatch()
   
-  const { learner_id } = useSelector(selectGlobalUser).selectedUser
+  const { learner_id } = useSelector(selectGlobalUser).selectedUser || useSelector(selectLearnerManagement).learner
   const { employer, learner } = useSelector(selectLearnerManagement)
 
   // Get current user role
@@ -141,7 +141,7 @@ const ProfileInformation = () => {
 
   // Load learner details on component mount
   useEffect(() => {
-    dispatch(getLearnerDetails())
+    dispatch(getLearnerDetails(learner_id || ''))
   }, [learner_id, dispatch])
 
   // Update form when learner data changes

@@ -25,6 +25,7 @@ import { useDispatch } from 'react-redux'
 
 const ProgressMap = () => {
   const { learner } = useSelector(selectLearnerManagement)
+  console.log("🚀 ~ ProgressMap ~ learner:", learner)
 
   const [selectedCourse, setSelectedCourse] = useState(
     learner?.course && learner.course?.length > 0 ? learner.course[0] : {}
@@ -56,7 +57,7 @@ const ProgressMap = () => {
   }, [learner?.course])
 
   useEffect(() => {
-    dispatch(getLearnerDetails())
+    dispatch(getLearnerDetails(learner?.learner_id || ''))
   }, [])
 
   useEffect(() => {

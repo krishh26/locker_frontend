@@ -13,6 +13,7 @@ import ContractedWorkHours from './contractedWork';
 import CourseTab from './courseTab';
 import LearnerDetails from './learnerDeatils';
 import LearnerPortfolio from './learnerPortfolio';
+import { useNavigate } from 'react-router-dom';
 
 const CustomTab = styled(Tab)(({ theme }) => ({
     textTransform: 'none', // Disable uppercase
@@ -71,7 +72,7 @@ export default function NewPortfolio() {
     const { learnerTab, selectedUser } = useSelector(selectGlobalUser);
     const dispatch: any = useDispatch();
     const user = useCurrentUser()
-
+    const navigate = useNavigate()
     const role = user?.role;
 
     const handleChange = (event, newValue) => {
@@ -79,20 +80,22 @@ export default function NewPortfolio() {
     };
 
     const handleLearnerTab = async () => {
-        if (learnerTab.tab && !learnerTab.tab.closed) {
-            learnerTab.tab.close();
-        }
+        // if (learnerTab.tab && !learnerTab.tab.closed) {
+        //     learnerTab.tab.close();
+        // }
 
-        const data = await dispatch(tokenGetFetch(selectedUser.email))
-        const newTab = window.open('/home', '_blank');
-        newTab.sessionStorage.setItem('learnerToken', JSON.stringify({ ...data, user: { ...data.user, displayName: data.user.first_name + " " + data.user.last_name } }));
-        newTab.onload = async () => {
-            if (data) {
-                newTab.focus();
-            }
-        };
+        // const data = await dispatch(tokenGetFetch(selectedUser.email))
+        // const newTab = window.open('/home', '_blank');
+        // newTab.sessionStorage.setItem('learnerToken', JSON.stringify({ ...data, user: { ...data.user, displayName: data.user.first_name + " " + data.user.last_name } }));
+        // newTab.onload = async () => {
+        //     if (data) {
+        //         newTab.focus();
+        //     }
+        // };
 
-        dispatch(globalSlice.setLearnerTab({ ...learnerTab, tab: newTab }));
+        // dispatch(globalSlice.setLearnerTab({ ...learnerTab, tab: newTab }));
+
+        navigate(`/learner-dashboard/${selectedUser.learner_id}`)
 
     }
 
@@ -106,7 +109,6 @@ export default function NewPortfolio() {
     }
 
     return (<>
-        {/* <Portfolio /> */}
         <div className='p-10 overflow-y-auto'>
             <div className='flex justify-between items-center'>
                 <h1>{selectedUser.first_name + " " + selectedUser.last_name}</h1>

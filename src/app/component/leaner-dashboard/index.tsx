@@ -5,50 +5,45 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import {
-  alpha,
-  Avatar,
-  Box,
-  Card,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Fade,
-  Grid,
-  LinearProgress,
-  Paper,
-  Slide,
-  Tab,
-  TextField,
-  Typography,
-  useMediaQuery,
-  useTheme,
+    alpha,
+    Avatar,
+    Box,
+    Card,
+    Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Fade,
+    Grid,
+    LinearProgress,
+    Paper,
+    Slide,
+    Tab,
+    TextField,
+    Typography,
+    useTheme
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { useGetSafeguardingContactsQuery } from 'app/store/api/safeguarding-api'
 import { slice as courseSlice, slice } from 'app/store/courseManagement'
 import {
-  getLearnerDetails,
-  selectLearnerManagement,
-  updateLearnerAPI,
+    selectLearnerManagement
 } from 'app/store/learnerManagement'
-import { selectstoreDataSlice } from 'app/store/reloadData'
 import { sendMail } from 'app/store/userManagement'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link, useNavigate } from 'react-router-dom'
-import AcknowledgementPopup from 'src/app/component/AcknowledgementPopup'
+import { Link } from 'react-router-dom'
 import {
-  SecondaryButton,
-  SecondaryButtonOutlined,
+    SecondaryButton,
+    SecondaryButtonOutlined,
 } from 'src/app/component/Buttons'
 import { PortfolioCard } from 'src/app/component/Cards'
 import DoughnutChart from 'src/app/component/Chart/doughnut'
 import { portfolioCard } from 'src/app/contanst'
 import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { getRandomColor } from 'src/utils/randomColor'
-import Calendar from './calendar'
+import Calendar from '../../main/portfolio/calendar'
 
 // TypeScript Interfaces
 interface EmailData {
@@ -71,6 +66,8 @@ interface Learner {
   email: string
   avatar?: string
   user_name: string
+  isShowMessage?: boolean
+  nextvisitdate?: string
   course?: Array<{
     trainer_id?: {
       first_name: string
@@ -84,7 +81,20 @@ interface Learner {
     course?: {
       course_name: string
     }
+    start_date?: string
+    end_date?: string
+    unitsNotStarted?: number
+    unitsFullyCompleted?: number
+    unitsPartiallyCompleted?: number
+    totalUnits?: number
   }>
+}
+
+interface LearnerDashboardProps {
+  learnerId: string
+  showActions?: boolean
+  showSafeguarding?: boolean
+  skipFetch?: boolean // Skip fetching if already fetched by parent
 }
 
 // Styled Components
@@ -286,12 +296,14 @@ const StyledBlueIcon = styled(Box)(({ theme }) => ({
   right: theme.spacing(2),
 }))
 
-const Portfolio: React.FC = () => {
+const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
+  learnerId,
+  showActions = true,
+  showSafeguarding = true,
+  skipFetch = false,
+}) => {
   // State management
   const [open, setOpen] = useState<boolean>(false)
-  const [isAcknowledgementOpen, setIsAcknowledgementOpen] =
-    useState<boolean>(false)
-  const [activeTab, setActiveTab] = useState<number>(0)
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
   const [emailData, setEmailData] = useState<EmailData>({
     email: '',
@@ -301,16 +313,11 @@ const Portfolio: React.FC = () => {
   })
 
   // Hooks
-  const navigate = useNavigate()
   const dispatch: any = useDispatch()
   const theme = useTheme()
 
   // Selectors
-  const { learner, dataFetchLoading } = useSelector(
-    selectLearnerManagement
-  )
-  const data = useSelector(selectstoreDataSlice)
-  const { singleData } = useSelector(selectLearnerManagement)
+  const { learner, dataFetchLoading } = useSelector(selectLearnerManagement)
 
   // Safeguarding API
   const {
@@ -318,15 +325,6 @@ const Portfolio: React.FC = () => {
     isLoading: isLoadingSafeguarding,
     error: safeguardingError,
   } = useGetSafeguardingContactsQuery()
-
-  useEffect(() => {
-    // Only show acknowledgement after data has finished loading to avoid flickering
-    if (!dataFetchLoading && learner && learner.isShowMessage) {
-      setIsAcknowledgementOpen(true)
-    } else {
-      setIsAcknowledgementOpen(false)
-    }
-  }, [learner, dataFetchLoading])
 
   // Get current user role
   const user = useCurrentUser()
@@ -353,12 +351,6 @@ const Portfolio: React.FC = () => {
     setOpen(true)
   }, [])
 
-  const handleOpenProfile = useCallback(() => {
-    const learnerId = learner?.learner_id
-    if (learnerId) {
-      navigate(`/portfolio/profile-information?learner_id=${learnerId}`)
-    }
-  }, [learner?.learner_id, navigate])
 
   const handleClickData = useCallback(
     (event: React.MouseEvent, row: any) => {
@@ -402,29 +394,12 @@ const Portfolio: React.FC = () => {
     }
   }, [dispatch, emailData, handleCloseEmail])
 
-  const handleTabChange = useCallback(
-    (event: React.SyntheticEvent, newValue: number) => {
-      setActiveTab(newValue)
-    },
-    []
-  )
-
-  useEffect(() => {
-    if (singleData?.learner_id) {
-      dispatch(getLearnerDetails(singleData.learner_id) as any)
-    } else if (user?.learner_id) {
-      dispatch(getLearnerDetails(user.learner_id) as any)
-    }
-  }, [singleData?.learner_id, user?.learner_id, dispatch])
 
   useEffect(() => {
     if (learner?.email) {
       setEmailData((prev) => ({ ...prev, email: learner.email }))
     }
-    if (user?.first_name && user?.last_name) {
-      setEmailData((prev) => ({ ...prev, adminName: user.first_name + ' ' + user.last_name }))
-    }
-  }, [learner?.email, user?.first_name, user?.last_name])
+  }, [learner?.email])
 
   // Loading state
   if (dataFetchLoading) {
@@ -529,28 +504,10 @@ const Portfolio: React.FC = () => {
           gutterBottom
           sx={{ fontWeight: 700, color: 'text.primary' }}
         >
-          Dashboard
+         {learner?.first_name + ' ' + learner?.last_name} - Dashboard
         </Typography>
-        <Typography variant='subtitle1' color='text.secondary'>
-          Manage your learning journey and track progress
-        </Typography>
+   
       </Box>
-
-      {/* Tab Navigation */}
-      {/* <StyledTabsContainer elevation={2}>
-        <Tabs
-          value={activeTab}
-          onChange={handleTabChange}
-          aria-label='portfolio sections'
-          variant='fullWidth'
-        >
-          <StyledTab
-            icon={<TrendingUpIcon />}
-            label='Overview'
-            iconPosition='start'
-          />
-        </Tabs>
-      </StyledTabsContainer> */}
 
       {/* Tab Content with Animation */}
       <Fade in={true} timeout={500}>
@@ -563,12 +520,13 @@ const Portfolio: React.FC = () => {
               timeout={300 + index * 100}
             >
               <Box>
-                <PortfolioCard data={value} index={index} learner={learner || user} />
+                <PortfolioCard data={value} index={index} learner={learner} />
               </Box>
             </Slide>
           ))}
         </StyledCardsContainer>
       </Fade>
+      
       {/* Learner Information Section */}
       {learner && (
         <StyledLearnerCard elevation={4}>
@@ -592,12 +550,8 @@ const Portfolio: React.FC = () => {
                   boxShadow: theme.shadows[2],
                   flexShrink: 0,
                 }}
-                src={data?.learner_id ? learner?.avatar : user?.avatar?.url}
-                alt={
-                  data?.learner_id
-                    ? learner?.first_name?.toUpperCase()?.charAt(0)
-                    : user?.first_name?.toUpperCase()?.charAt(0)
-                }
+                src={learner?.avatar}
+                alt={learner?.first_name?.toUpperCase()?.charAt(0)}
               />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
@@ -755,7 +709,6 @@ const Portfolio: React.FC = () => {
                       />
                     </Box>
                   )}
-                  {/* Next Visit Date Chip */}
                 </Box>
               </Box>
 
@@ -998,17 +951,19 @@ const Portfolio: React.FC = () => {
       )}
 
       {/* Action Buttons */}
-      <StyledActionButtons>
-        {user?.role !== 'Learner' && (
-          <SecondaryButton
-            onClick={handleOpenEmail}
-            startIcon={<EmailOutlinedIcon />}
-            name='Email Learner'
-          />
-        )}
-        <SecondaryButtonOutlined name='Awaiting Signature' />
-        <SecondaryButton name='Calendar' onClick={handleOpen} />
-      </StyledActionButtons>
+      {showActions && (
+        <StyledActionButtons>
+          {user?.role !== 'Learner' && (
+            <SecondaryButton
+              onClick={handleOpenEmail}
+              startIcon={<EmailOutlinedIcon />}
+              name='Email Learner'
+            />
+          )}
+          <SecondaryButtonOutlined name='Awaiting Signature' />
+          <SecondaryButton name='Calendar' onClick={handleOpen} />
+        </StyledActionButtons>
+      )}
 
       {/* Calendar Dialog */}
       <Dialog
@@ -1103,138 +1058,119 @@ const Portfolio: React.FC = () => {
       </StyledEmailDialog>
 
       {/* Safeguarding Contact Section */}
-      <StyledSafeguardingCard elevation={2}>
-        <StyledSafeguardingHeader>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <StyledRedIcon>
-              <MenuBookIcon sx={{ color: 'white', fontSize: 30 }} />
-            </StyledRedIcon>
-            <Box>
-              <Typography
-                variant='h6'
-                component='h3'
-                sx={{ fontWeight: 700, color: 'text.primary' }}
-              >
-                Safeguarding Contact
-              </Typography>
+      {showSafeguarding && (
+        <StyledSafeguardingCard elevation={2}>
+          <StyledSafeguardingHeader>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <StyledRedIcon>
+                <MenuBookIcon sx={{ color: 'white', fontSize: 30 }} />
+              </StyledRedIcon>
+              <Box>
+                <Typography
+                  variant='h6'
+                  component='h3'
+                  sx={{ fontWeight: 700, color: 'text.primary' }}
+                >
+                  Safeguarding Contact
+                </Typography>
+              </Box>
+              <InfoOutlinedIcon
+                sx={{
+                  ml: 1,
+                  color: 'text.secondary',
+                  fontSize: 20,
+                }}
+              />
             </Box>
-            <InfoOutlinedIcon
-              sx={{
-                ml: 1,
-                color: 'text.secondary',
-                fontSize: 20,
-              }}
-            />
-          </Box>
-          <StyledBlueIcon>
-            <FavoriteIcon sx={{ color: 'white', fontSize: 20 }} />
-          </StyledBlueIcon>
-        </StyledSafeguardingHeader>
+            <StyledBlueIcon>
+              <FavoriteIcon sx={{ color: 'white', fontSize: 20 }} />
+            </StyledBlueIcon>
+          </StyledSafeguardingHeader>
 
-        <StyledSafeguardingContent>
-          {isLoadingSafeguarding ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <Typography variant='body2' color='text.secondary'>
-                Loading contact information...
-              </Typography>
-            </Box>
-          ) : safeguardingError ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <Typography variant='body2' color='error'>
-                Unable to load contact information
-              </Typography>
-            </Box>
-          ) : safeguardingData?.data && safeguardingData.data.length > 0 ? (
-            <>
-              {safeguardingData.data[0].telNumber && (
-                <StyledContactItem>
-                  <StyledContactLabel>Tel:</StyledContactLabel>
-                  <StyledContactValue>
-                    {safeguardingData.data[0].telNumber}
-                  </StyledContactValue>
-                </StyledContactItem>
-              )}
-
-              {safeguardingData.data[0].mobileNumber && (
-                <StyledContactItem>
-                  <StyledContactLabel>Mobile:</StyledContactLabel>
-                  <StyledContactValue>
-                    {safeguardingData.data[0].mobileNumber}
-                  </StyledContactValue>
-                </StyledContactItem>
-              )}
-
-              {safeguardingData.data[0].emailAddress && (
-                <StyledContactItem>
-                  <StyledContactLabel>Email:</StyledContactLabel>
-                  <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+          <StyledSafeguardingContent>
+            {isLoadingSafeguarding ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <Typography variant='body2' color='text.secondary'>
+                  Loading contact information...
+                </Typography>
+              </Box>
+            ) : safeguardingError ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <Typography variant='body2' color='error'>
+                  Unable to load contact information
+                </Typography>
+              </Box>
+            ) : safeguardingData?.data && safeguardingData.data.length > 0 ? (
+              <>
+                {safeguardingData.data[0].telNumber && (
+                  <StyledContactItem>
+                    <StyledContactLabel>Tel:</StyledContactLabel>
                     <StyledContactValue>
-                      <a
-                        href={`mailto:${safeguardingData.data[0].emailAddress}`}
-                        style={{
-                          color: 'inherit',
-                          textDecoration: 'none',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease-in-out',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color =
-                            theme.palette.primary.main
-                          e.currentTarget.style.textDecoration = 'underline'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = 'inherit'
-                          e.currentTarget.style.textDecoration = 'none'
-                        }}
-                      >
-                        {safeguardingData.data[0].emailAddress}
-                      </a>
+                      {safeguardingData.data[0].telNumber}
                     </StyledContactValue>
-                    <EmailOutlinedIcon
-                      sx={{
-                        ml: 1,
-                        color: theme.palette.primary.main,
-                        fontSize: 18,
-                      }}
-                    />
-                  </Box>
-                </StyledContactItem>
-              )}
-            </>
-          ) : (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <Typography variant='body2' color='text.secondary'>
-                No contact information available
-              </Typography>
-            </Box>
-          )}
-        </StyledSafeguardingContent>
-      </StyledSafeguardingCard>
-      {/* Acknowledgement Popup */}
-      <AcknowledgementPopup
-        open={isAcknowledgementOpen}
-        onClose={async () => {
-          setIsAcknowledgementOpen(false)
-          // Update learner isShowMessage to false
-          if (learner?.learner_id) {
-            await dispatch(
-              updateLearnerAPI(learner.learner_id, { isShowMessage: false })
-            )
-          }
-        }}
-        onAccept={async () => {
-          setIsAcknowledgementOpen(false)
-          // Update learner isShowMessage to false
-          if (learner?.learner_id) {
-            await dispatch(
-              updateLearnerAPI(learner.learner_id, { isShowMessage: false })
-            )
-          }
-        }}
-        name={learner?.first_name + ' ' + learner?.last_name}
-      />
+                  </StyledContactItem>
+                )}
+
+                {safeguardingData.data[0].mobileNumber && (
+                  <StyledContactItem>
+                    <StyledContactLabel>Mobile:</StyledContactLabel>
+                    <StyledContactValue>
+                      {safeguardingData.data[0].mobileNumber}
+                    </StyledContactValue>
+                  </StyledContactItem>
+                )}
+
+                {safeguardingData.data[0].emailAddress && (
+                  <StyledContactItem>
+                    <StyledContactLabel>Email:</StyledContactLabel>
+                    <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                      <StyledContactValue>
+                        <a
+                          href={`mailto:${safeguardingData.data[0].emailAddress}`}
+                          style={{
+                            color: 'inherit',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease-in-out',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color =
+                              theme.palette.primary.main
+                            e.currentTarget.style.textDecoration = 'underline'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'inherit'
+                            e.currentTarget.style.textDecoration = 'none'
+                          }}
+                        >
+                          {safeguardingData.data[0].emailAddress}
+                        </a>
+                      </StyledContactValue>
+                      <EmailOutlinedIcon
+                        sx={{
+                          ml: 1,
+                          color: theme.palette.primary.main,
+                          fontSize: 18,
+                        }}
+                      />
+                    </Box>
+                  </StyledContactItem>
+                )}
+              </>
+            ) : (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <Typography variant='body2' color='text.secondary'>
+                  No contact information available
+                </Typography>
+              </Box>
+            )}
+          </StyledSafeguardingContent>
+        </StyledSafeguardingCard>
+      )}
+
     </StyledContainer>
   )
 }
 
-export default Portfolio
+export default LearnerDashboard
+
