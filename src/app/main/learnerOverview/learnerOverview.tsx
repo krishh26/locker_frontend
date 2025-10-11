@@ -122,122 +122,152 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
         <Card
           elevation={0}
           sx={{
-            mb: 4,
-            borderRadius: 3,
+            mb: 2,
+            borderRadius: 2,
             background: theme.palette.background.paper,
             border: `1px solid ${theme.palette.divider}`,
             overflow: 'hidden',
             transition: 'all 0.3s ease',
             '&:hover': {
-              boxShadow: theme.shadows[8],
-              transform: 'translateY(-2px)',
+              boxShadow: theme.shadows[4],
+              transform: 'translateY(-1px)',
             },
           }}
         >
-        {/* Header Section */}
-        <CardContent sx={{ p: 0 }} className='!pb-0'>
-          <Box
-            sx={{
-              p: 3,
-              color: 'black',
-              position: 'relative',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backdropFilter: 'blur(10px)',
-                zIndex: 1,
-              },
-            }}
-          >
+          <CardContent sx={{ p: 0 }}>
+            {/* Wireframe-style horizontal layout */}
             <Box
               sx={{
                 display: 'flex',
-                alignItems: 'flex-start',
-                gap: 1,
-                position: 'relative',
-                zIndex: 2,
-                width: '100%',
+                flexDirection: { xs: 'column', md: 'row' },
+                alignItems: { xs: 'stretch', md: 'center' },
+                minHeight: { xs: 'auto', md: 80 },
+                p: 2,
+                gap: 2,
               }}
             >
-              <Avatar
+              {/* Section 1: Learner Info (Left - Wide) */}
+              <Box
                 sx={{
-                  width: 30,
-                  height: 30,
-                  bgcolor: getRandomColor(
-                    learner?.first_name?.toLowerCase().charAt(0)
-                  ),
-                  flexShrink: 0,
+                  flex: { xs: 'none', md: '2' },
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  minHeight: { xs: 'auto', md: 60 },
+                  p: 2,
+                  borderRadius: 2,
+                  backgroundColor: alpha(theme.palette.background.default, 0.5),
+                  border: `1px solid ${theme.palette.divider}`,
                 }}
-                src={
-                  learner?.learner_id
-                    ? learner?.avatar
-                    : learner.data?.avatar?.url
-                }
-                alt={learner?.first_name?.toUpperCase()?.charAt(0)}
-              />
-              <Box sx={{ color: 'black', flex: 1, minWidth: 0 }}>
-                <Typography
-                  variant='h6'
+              >
+                {/* Avatar */}
+                <Avatar
                   sx={{
-                    fontWeight: 700,
+                    width: { xs: 60, md: 50 },
+                    height: { xs: 60, md: 50 },
+                    bgcolor: getRandomColor(
+                      learner?.first_name?.toLowerCase().charAt(0)
+                    ),
+                    flexShrink: 0,
+                    fontSize: { xs: '1.8rem', md: '1.5rem' },
                   }}
-                >
-                  {learner?.first_name} {learner?.last_name}
-                </Typography>
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}
-                >
-                  <PersonIcon sx={{ fontSize: 16, opacity: 0.8 }} />
-                  <Typography variant='body2' sx={{ opacity: 0.9 }}>
-                    Learner ID: {learner?.learner_id}
-                  </Typography>
-                </Box>
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}
-                >
-                  <AccessTimeIcon sx={{ fontSize: 16, opacity: 0.8 }} />
-                  <Typography variant='body2' sx={{ opacity: 0.9 }}>
-                    Next Visit: {learner?.nextvisitdate}
-                  </Typography>
-                </Box>
+                  src={
+                    learner?.learner_id
+                      ? learner?.avatar
+                      : learner.data?.avatar?.url
+                  }
+                  alt={learner?.first_name?.toUpperCase()?.charAt(0)}
+                />
 
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}
-                >
-                  <CommentIcon sx={{ fontSize: 16, opacity: 0.8 }} />
+                {/* Learner Details */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography
-                    variant='body2'
+                    variant='h6'
                     sx={{
-                      opacity: 0.9,
-                      maxWidth: 300,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      fontWeight: 700,
+                      fontSize: { xs: '1.4rem', md: '1.5rem' },
+                      mb: 0.5,
+                      color: theme.palette.text.primary,
                     }}
                   >
-                    Comment: {learner?.comment || 'No comment'}
+                    {learner?.first_name} {learner?.last_name}
                   </Typography>
-                  <IconButton
-                    size='small'
-                    onClick={handleOpenCommentDialog}
+
+                  {/* Inline Info */}
+                  <Box
                     sx={{
-                      color: theme.palette.primary.main,
-                      padding: '4px',
-                      '&:hover': {
-                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                      },
+                      display: 'flex',
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      gap: { xs: 1, sm: 3 },
+                      flexWrap: 'wrap',
                     }}
                   >
-                    <EditIcon fontSize='small' />
-                  </IconButton>
+                    {/* Learner ID */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <PersonIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
+                      <Typography
+                        variant='body2'
+                        sx={{
+                          fontWeight: 600,
+                          color: theme.palette.text.primary,
+                          fontSize: { xs: '1rem', md: '1.1rem' },
+                        }}
+                      >
+                        ID: {learner?.learner_id}
+                      </Typography>
+                    </Box>
+
+                    {/* Next Visit */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <AccessTimeIcon sx={{ fontSize: 18, color: theme.palette.warning.main }} />
+                      <Typography
+                        variant='body2'
+                        sx={{
+                          fontWeight: 600,
+                          color: theme.palette.text.primary,
+                          fontSize: { xs: '1rem', md: '1.1rem' },
+                        }}
+                      >
+                        Next: {learner?.nextvisitdate}
+                      </Typography>
+                    </Box>
+
+                    {/* Comment */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <CommentIcon sx={{ fontSize: 18, color: theme.palette.info.main }} />
+                      <Typography
+                        variant='body2'
+                        sx={{
+                          fontWeight: 600,
+                          color: theme.palette.text.primary,
+                          fontSize: { xs: '1rem', md: '1.1rem' },
+                          maxWidth: { xs: '100%', sm: 200 },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {learner?.comment || 'No comment'}
+                      </Typography>
+                      <IconButton
+                        size='small'
+                        onClick={handleOpenCommentDialog}
+                        sx={{
+                          color: theme.palette.info.main,
+                          padding: '2px',
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.info.main, 0.1),
+                          },
+                        }}
+                      >
+                        <EditIcon fontSize='small' />
+                      </IconButton>
+                    </Box>
+                  </Box>
                 </Box>
               </Box>
 
-              {/* Overall Progress Box on Right Side */}
+              {/* Section 2: Overall Progress (Middle - Medium) */}
               {learner?.course && learner.course.length > 0 && (() => {
                 // Calculate combined progress
                 let totalCompleted = 0
@@ -260,27 +290,24 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
                 return (
                   <Box
                     sx={{
-                      minWidth: 280,
-                      maxWidth: 320,
-                      flexShrink: 0,
-                      display: { xs: 'none', md: 'block' },
+                      flex: { xs: 'none', md: '1.5' },
+                      minHeight: { xs: 'auto', md: 60 },
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
                     }}
                   >
-                    <Box
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                        border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Typography
                           variant='subtitle2'
                           sx={{
                             fontWeight: 700,
                             color: theme.palette.primary.main,
-                            fontSize: '1.4rem',
+                            fontSize: { xs: '1.1rem', md: '1.2rem' },
                           }}
                         >
                           Overall Progress
@@ -292,137 +319,106 @@ const Protfolio = ({ learner, handleClickData, handleClickSingleData, onCommentU
                             backgroundColor: theme.palette.primary.main,
                             color: 'white',
                             fontWeight: 700,
-                            fontSize: '1.2rem',
+                            fontSize: { xs: '0.9rem', md: '1rem' },
                           }}
                         />
-                      </Box>
+                    </Box>
 
-                      <LinearProgress
-                        variant='determinate'
-                        value={Math.min(completionPercentage, 100)}
-                        sx={{
-                          height: 12,
-                          borderRadius: 6,
-                          backgroundColor: alpha(theme.palette.primary.main, 0.2),
-                          mb: 1.5,
-                          '& .MuiLinearProgress-bar': {
-                            borderRadius: 6,
-                            background: `linear-gradient(90deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
-                          },
-                        }}
-                      />
+                    <LinearProgress
+                      variant='determinate'
+                      value={Math.min(completionPercentage, 100)}
+                      sx={{
+                        height: { xs: 10, md: 8 },
+                        borderRadius: { xs: 5, md: 4 },
+                        backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                        mb: 1,
+                        '& .MuiLinearProgress-bar': {
+                          borderRadius: { xs: 5, md: 4 },
+                          background: `linear-gradient(90deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
+                        },
+                      }}
+                    />
 
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography
-                            variant='caption'
-                            sx={{
-                              color: theme.palette.success.main,
-                              fontSize: '1rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            ✓ Done
-                          </Typography>
-                          <Typography
-                            variant='body2'
-                            sx={{
-                              color: theme.palette.text.primary,
-                              fontWeight: 700,
-                              fontSize: '1.5rem',
-                            }}
-                          >
-                            {totalCompleted}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography
-                            variant='caption'
-                            sx={{
-                              color: theme.palette.warning.main,
-                              fontSize: '1rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            ⟳ Active
-                          </Typography>
-                          <Typography
-                            variant='body2'
-                            sx={{
-                              color: theme.palette.text.primary,
-                              fontWeight: 700,
-                              fontSize: '1.5rem',
-                            }}
-                          >
-                            {totalInProgress}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography
-                            variant='caption'
-                            sx={{
-                              color: theme.palette.error.main,
-                              fontSize: '1rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            ○ Todo
-                          </Typography>
-                          <Typography
-                            variant='body2'
-                            sx={{
-                              color: theme.palette.text.primary,
-                              fontWeight: 700,
-                              fontSize: '1.5rem',
-                            }}
-                          >
-                            {totalNotStarted}
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          mt: 1.5,
-                          pt: 1.5,
-                          borderTop: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                        }}
-                      >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                      <Box sx={{ textAlign: 'center', flex: 1 }}>
                         <Typography
                           variant='caption'
                           sx={{
-                            color: theme.palette.text.secondary,
-                            fontSize: '1.4rem',
+                            color: theme.palette.success.main,
+                            fontSize: { xs: '0.9rem', md: '0.9rem' },
+                            fontWeight: 600,
+                            display: 'block',
                           }}
                         >
-                          {totalUnitsAll} total units • {learner.course.length} course{learner.course.length !== 1 ? 's' : ''}
+                          ✓ {totalCompleted}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'center', flex: 1 }}>
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            color: theme.palette.warning.main,
+                            fontSize: { xs: '0.9rem', md: '0.9rem' },
+                            fontWeight: 600,
+                            display: 'block',
+                          }}
+                        >
+                          ⟳ {totalInProgress}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'center', flex: 1 }}>
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            color: theme.palette.error.main,
+                            fontSize: { xs: '0.9rem', md: '0.9rem' },
+                            fontWeight: 600,
+                            display: 'block',
+                          }}
+                        >
+                          ○ {totalNotStarted}
                         </Typography>
                       </Box>
                     </Box>
                   </Box>
                 )
               })()}
+
+              {/* Section 3: View Portfolio Button (Right - Narrow) */}
+              <Box
+                sx={{
+                  flex: { xs: 'none', md: '0.8' },
+                  minHeight: { xs: 'auto', md: 60 },
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Button
+                  variant='contained'
+                  size='large'
+                  onClick={() => navigate(`/learner-dashboard/${learner?.learner_id}`)}
+                  startIcon={<DashboardIcon />}
+                  endIcon={<ArrowForwardIcon />}
+                  sx={{
+                    width: '100%',
+                    py: { xs: 2, md: 1.5 },
+                    fontSize: { xs: '1.1rem', md: '1.1rem' },
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`,
+                    '&:hover': {
+                      boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`,
+                      transform: 'translateY(-1px)',
+                    },
+                  }}
+                >
+                  View Portfolio
+                </Button>
+              </Box>
             </Box>
-          </Box>
-          
-          {/* View Dashboard Button */}
-          <Box sx={{ 
-            p: 3, 
-            pt: 0,
-            display: 'flex',
-            justifyContent: 'flex-end'
-          }}>
-            <Button
-              variant='contained'
-              size='large'
-              onClick={() => navigate(`/learner-dashboard/${learner?.learner_id}`)}
-              startIcon={<DashboardIcon />}
-              endIcon={<ArrowForwardIcon />}
-            >
-              View Portfolio
-            </Button>
-          </Box>
-        </CardContent>
+          </CardContent>
         </Card>
       </Fade>
 
