@@ -25,7 +25,7 @@ const LearnerWellbeingConfig = {
       },
     },
   },
-  auth: [authRoles.Learner],
+  auth: [authRoles.Learner, authRoles.Trainer, authRoles.Admin],
   routes: [
     {
       path: "/learner-wellbeing",

@@ -187,10 +187,9 @@ export const getLearnerDetails = (learner_id = "") => async (dispatch, getStore)
         return response.data.data;
     } catch (err) {
         dispatch(showMessage({ message: err.response?.data?.message, variant: "error" }))
+        dispatch(slice.learnerDetails(false));
         return false;
-    } finally {
-        dispatch(slice.setUpdatingLoader(false));
-    }
+    } 
 }
 
 export const getLearnerDetailsReturn = (id = "") => async (dispatch) => {

@@ -217,23 +217,24 @@ export default function LearnerManagementTable(props) {
   }
 
   const handleLearnerCourse = async (row) => {
-    const data = await dispatch(tokenGetFetch(row.email))
-    const newTab = window.open('/home', '_blank')
-    newTab.sessionStorage.setItem(
-      'learnerToken',
-      JSON.stringify({
-        ...data,
-        user: {
-          ...data.user,
-          displayName: data.user.first_name + ' ' + data.user.last_name,
-        },
-      })
-    )
-    newTab.onload = async () => {
-      if (data) {
-        newTab.focus()
-      }
-    }
+    navigate(`/learner-dashboard/${row.learner_id}`)
+    // const data = await dispatch(tokenGetFetch(row.email))
+    // const newTab = window.open('/home', '_blank')
+    // newTab.sessionStorage.setItem(
+    //   'learnerToken',
+    //   JSON.stringify({
+    //     ...data,
+    //     user: {
+    //       ...data.user,
+    //       displayName: data.user.first_name + ' ' + data.user.last_name,
+    //     },
+    //   })
+    // )
+    // newTab.onload = async () => {
+    //   if (data) {
+    //     newTab.focus()
+    //   }
+    // }
   }
 
   return (

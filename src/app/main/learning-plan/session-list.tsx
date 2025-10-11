@@ -211,17 +211,22 @@ const SessionList = () => {
     }
   }, [learner_id])
 
-  const { data, isLoading, isError, error, refetch: getLearnerPlanList } =
-    useGetLearnerPlanListQuery(
-      {
-        learners: learner_id,
-        type: typeFilter,
-        Attended: statusFilter,
-      },
-      {
-        skip: !user && !learner_id,
-      }
-    )
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch: getLearnerPlanList,
+  } = useGetLearnerPlanListQuery(
+    {
+      learners: learner_id,
+      type: typeFilter,
+      Attended: statusFilter,
+    },
+    {
+      skip: !user && !learner_id,
+    }
+  )
 
   const [updateSession] = useUpdateSessionMutation()
   const [addActionPlaner] = useAddActionPlanerMutation()
@@ -346,7 +351,7 @@ const SessionList = () => {
       learner_plan_id: isOpenAction,
       action_name: data.actionName,
       action_description: data.actionDescription,
-      target_date: format(data.targetDate, 'dd-MM-yyyy'),
+      target_date: data.targetDate,
       job_type: data.onOffJob,
       unit: data.unit,
       who: data.who,
@@ -426,7 +431,7 @@ const SessionList = () => {
       learner_feedback: data.learner_feedback,
       action_description: data.actionDescription,
       target_date: data.targetDate
-        ? format(new Date(data.targetDate), 'dd-MM-yyyy')
+        ? data.targetDate
         : '',
       job_type: data.onOffJob,
       time_spent: data.time_spent,
@@ -486,6 +491,7 @@ const SessionList = () => {
           {learner.first_name} {learner.last_name} - All Courses
         </Typography>
         <div>
+          {(user.role === UserRole.Admin || user.role === UserRole.Trainer) && (
             <Button
               variant='contained'
               color='primary'
@@ -493,6 +499,7 @@ const SessionList = () => {
             >
               Add Session
             </Button>
+          )}
         </div>
       </div>
 
@@ -608,10 +615,7 @@ const SessionList = () => {
                           }
                           displayEmpty
                           fullWidth
-                          disabled={
-                            !user.roles.includes('Trainer') ||
-                            !user.roles.includes('Admin')
-                          }
+                          disabled={user.role === UserRole.Learner}
                           onChange={(e) =>
                             handleUpdateSubmit({
                               Attended:
@@ -647,10 +651,7 @@ const SessionList = () => {
                                 : 'default'
                             }
                             onClick={() => {
-                              if (
-                                user.learner_id !== session.learner?.learner_id
-                              )
-                                return
+                              if (user.role == UserRole.Admin || user.role == UserRole.Trainer) return
                               handleUpdateSubmit({
                                 feedback: 'Good',
                                 id: session.sessionNo,
@@ -671,7 +672,7 @@ const SessionList = () => {
                             }
                             onClick={() => {
                               if (
-                                user.learner_id !== session.learner?.learner_id
+                                user.role == UserRole.Admin || user.role == UserRole.Trainer
                               )
                                 return
                               handleUpdateSubmit({
@@ -692,7 +693,7 @@ const SessionList = () => {
                             }
                             onClick={() => {
                               if (
-                                user.learner_id !== session.learner?.learner_id
+                                user.role == UserRole.Admin || user.role == UserRole.Trainer
                               )
                                 return
                               handleUpdateSubmit({
@@ -855,8 +856,7 @@ const SessionList = () => {
                               >
                                 <AddFile />
                               </IconButton>
-                              {(user.roles.includes(UserRole.Admin) ||
-                                user.roles.includes(UserRole.Trainer)) && (
+                              {user.role == UserRole.Admin || user.role == UserRole.Trainer && (
                                 <IconButton
                                   onClick={() =>
                                     handleOpenDeleteSession(action.action_id)
@@ -1121,8 +1121,7 @@ const SessionList = () => {
                       fullWidth
                       multiline
                       disabled={
-                        !user.roles.includes(UserRole.Trainer) ||
-                        !user.roles.includes(UserRole.Admin)
+                        user.role == UserRole.Learner
                       }
                       minRows={2}
                     />
@@ -1139,7 +1138,7 @@ const SessionList = () => {
                       fullWidth
                       multiline
                       minRows={2}
-                      disabled={!user.roles.includes(UserRole.Learner)}
+                      disabled={user.role !== UserRole.Learner}
                     />
                   )}
                 />
@@ -1150,7 +1149,7 @@ const SessionList = () => {
                   render={({ field }) => (
                     <FormControl
                       fullWidth
-                      disabled={!user.roles.includes(UserRole.Learner)}
+                      disabled={user.role !== UserRole.Learner}
                     >
                       <InputLabel>Learner Status</InputLabel>
                       <Select {...field} label='Learner Status'>
@@ -1228,8 +1227,7 @@ const SessionList = () => {
                       fullWidth
                       error={!!editErrors.status}
                       disabled={
-                        !user.roles.includes(UserRole.Trainer) ||
-                        !user.roles.includes(UserRole.Admin)
+                        user.role !== UserRole.Trainer && user.role !== UserRole.Admin
                       }
                     >
                       <InputLabel>Status</InputLabel>
