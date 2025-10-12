@@ -11,6 +11,17 @@ export type FormValues = {
   declaration: boolean
   assessment_method: string[]
   units: Unit[]
+  signatures: SignatureData[]
+}
+
+export interface SignatureData {
+  role: string
+  name: string
+  signed: boolean
+  es?: string
+  date?: string
+  signature_required: boolean
+  signature?: File | null
 }
 
 export interface SubUnit {

@@ -52,7 +52,7 @@ import {
   useGetEvidenceListQuery,
 } from 'app/store/api/evidence-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import {
   DangerButton,
@@ -64,6 +64,7 @@ import DataNotFound from 'src/app/component/Pages/dataNotFound'
 import EvidenceUploadWithCreation from 'src/app/component/react-upload-files/EvidenceUploadWithCreation'
 import { useCurrentUser } from 'src/app/utils/userHelpers'
 import ReuploadEvidenceLibrary from './reupload-evidenceLibrary'
+import { selectLearnerManagement } from 'app/store/learnerManagement'
 
 interface EvidenceData {
   assignment_id: number
@@ -154,9 +155,13 @@ const EvidenceLibrary: FC = () => {
 
   const user = useCurrentUser()
 
+  const { learner } = useSelector(
+    selectLearnerManagement
+  ) 
+
   const { data, isLoading, isError, error, refetch } = useGetEvidenceListQuery(
     {
-      user_id: user.user_id,
+      user_id: learner.user_id,
     },
     {
       refetchOnMountOrArgChange: true,

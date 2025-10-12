@@ -46,5 +46,18 @@ export const getValidationSchema = (isTrainer: boolean) => {
         })
       )
       .min(1, 'Select at least one unit with at least one sub unit'),
+    signatures: Yup.array()
+      .of(
+        Yup.object().shape({
+          role: Yup.string().required(),
+          name: Yup.string(),
+          signed: Yup.boolean(),
+          es: Yup.string(),
+          date: Yup.string(),
+          signature_required: Yup.boolean(),
+          signature: Yup.mixed(),
+        })
+      )
+      .optional(),
   })
 }
