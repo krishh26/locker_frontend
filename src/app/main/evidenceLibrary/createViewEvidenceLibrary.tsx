@@ -53,6 +53,7 @@ import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { formatSessionTime } from 'src/utils/string'
 import { FormValues } from './lib/types'
 import { getValidationSchema } from './schema'
+import SignatureTable from './components/SignatureTable'
 
 const CreateViewEvidenceLibrary = () => {
   const navigate = useNavigate()
@@ -95,6 +96,12 @@ const CreateViewEvidenceLibrary = () => {
       declaration: false,
       assessment_method: [],
       units: [],
+      signatures: [
+        { role: 'Trainer', name: '', signed: false, es: '', date: '', signature_required: false, signature: null },
+        { role: 'Learner', name: '', signed: false, es: '', date: '', signature_required: false, signature: null },
+        { role: 'Employer', name: '', signed: false, es: '', date: '', signature_required: false, signature: null },
+        { role: 'IQA', name: '', signed: false, es: '', date: '', signature_required: false, signature: null },
+      ],
     },
   })
 
@@ -926,6 +933,13 @@ const CreateViewEvidenceLibrary = () => {
                 )}
               </Box>
             ))}
+          </Grid>
+          <Grid item xs={12}>
+            <SignatureTable 
+              control={control} 
+              errors={errors} 
+              disabled={isEditMode}
+            />
           </Grid>
           <Grid item xs={12}>
             <Controller

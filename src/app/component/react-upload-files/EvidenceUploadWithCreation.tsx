@@ -32,7 +32,12 @@ import {
   CloudUpload as UploadIcon,
   Description as DocumentIcon,
   TableChart as ExcelIcon,
-  Slideshow as PowerPointIcon
+  Slideshow as PowerPointIcon,
+  FileUpload as FileUploadIcon,
+  CreateNewFolder as CreateIcon,
+  CheckCircleOutline as CheckIcon,
+  InfoOutlined as InfoIcon,
+  Close as CloseIcon
 } from '@mui/icons-material'
 import { FileUploader } from 'react-drag-drop-files'
 import { Controller, useForm } from 'react-hook-form'
@@ -43,6 +48,7 @@ import { useUploadEvidenceFileMutation } from 'app/store/api/evidence-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
 import { useDispatch } from 'react-redux'
+import { useTheme } from '@mui/material/styles'
 
 // Import the new realistic editors
 import WordEditor from '../Documents/WordEditor'
@@ -111,9 +117,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
       hidden={value !== index}
       id={`evidence-tabpanel-${index}`}
       aria-labelledby={`evidence-tab-${index}`}
+      style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
       {...other}
     >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      {value === index && children}
     </div>
   );
 };
@@ -121,6 +128,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
 const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handleClose }) => {
   const navigate = useNavigate()
   const dispatch: any = useDispatch()
+  const theme = useTheme()
   const [uploadEvidenceFile, { isLoading }] = useUploadEvidenceFileMutation()
   const [mainTab, setMainTab] = useState(0) // 0 = Upload File, 1 = Create Document
   const [docTab, setDocTab] = useState(0) // 0 = Word, 1 = Excel, 2 = PowerPoint
@@ -603,115 +611,255 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 800 }}>
-      <Typography variant="h5" component="h2" gutterBottom>
-        Add Evidence
-      </Typography>
-      
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <Box sx={{ 
+        p: 3, 
+        borderBottom: 1, 
+        borderColor: 'divider',
+        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+        color: theme.palette.primary.contrastText,
+        position: 'relative'
+      }}>
+        <IconButton
+          onClick={handleClose}
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            color: theme.palette.primary.contrastText,
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            }
+          }}
+          size="small"
+        >
+          <CloseIcon />
+        </IconButton>
+        <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
+          📁 Add Evidence
+        </Typography>
+        <Typography variant="body2" sx={{ opacity: 0.9 }}>
+          Upload files or create new documents as evidence
+        </Typography>
+      </Box>
+
+      {/* Main Tabs */}
       <Tabs 
         value={mainTab} 
         onChange={(e, newValue) => setMainTab(newValue)} 
-        sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
+        variant="fullWidth"
+        sx={{ 
+          borderBottom: 1, 
+          borderColor: 'divider',
+          '& .MuiTab-root': {
+            minHeight: 64,
+            fontSize: '1rem',
+            fontWeight: 500,
+            textTransform: 'none'
+          }
+        }}
       >
-        <Tab label="Upload File" />
-        <Tab label="Create Document" />
+        <Tab 
+          icon={<FileUploadIcon sx={{ fontSize: 24 }} />} 
+          label="Upload File" 
+          iconPosition="start"
+        />
+        <Tab 
+          icon={<CreateIcon sx={{ fontSize: 24 }} />} 
+          label="Create Document" 
+          iconPosition="start"
+        />
       </Tabs>
 
       {/* Upload File Tab */}
       <TabPanel value={mainTab} index={0}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Select Course
-              </Typography>
-              <Controller
-                name="courseId"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    fullWidth
-                    displayEmpty
-                    error={!!errors.courseId}
-                  >
-                    <MenuItem value="">
-                      <em>Select a course</em>
-                    </MenuItem>
-                    {data.map((course) => (
-                      <MenuItem key={course.course_id} value={course.course_id}>
-                        {course.course_name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
-              />
-              {errors.courseId && (
-                <FormHelperText error>{errors.courseId.message}</FormHelperText>
-              )}
-            </Grid>
+        <Box sx={{ p: 4, flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <form onSubmit={handleSubmit(onSubmit)} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Grid container spacing={3} sx={{ flex: 1 }}>
+              {/* Course Selection Card */}
+              <Grid item xs={12} md={6}>
+                <Card sx={{ 
+                  p: 3, 
+                  height: '100%',
+                  border: '2px solid',
+                  borderColor: errors.courseId ? theme.palette.error.main : theme.palette.primary.light,
+                  transition: 'all 0.3s',
+                  '&:hover': {
+                    boxShadow: 4,
+                    borderColor: theme.palette.primary.main
+                  }
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      📚 Select Course
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Choose the course this evidence belongs to
+                  </Typography>
+                  <Controller
+                    name="courseId"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth error={!!errors.courseId}>
+                        <Select
+                          {...field}
+                          displayEmpty
+                          sx={{ 
+                            '& .MuiSelect-select': {
+                              py: 1.5
+                            }
+                          }}
+                        >
+                          <MenuItem value="" disabled>
+                            <em>Select a course...</em>
+                          </MenuItem>
+                          {data.map((course) => (
+                            <MenuItem key={course.course_id} value={course.course_id}>
+                              {course.course_name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        {errors.courseId && (
+                          <FormHelperText>{errors.courseId.message}</FormHelperText>
+                        )}
+                      </FormControl>
+                    )}
+                  />
+                </Card>
+              </Grid>
 
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Upload Evidence File
-              </Typography>
-              <Controller
-                name="file"
-                control={control}
-                render={({ field }) => (
-                  <FileUploader
-                    handleChange={(file: File) => {
-                      field.onChange(file)
-                      setValue('file', file)
-                    }}
+              {/* File Upload Card */}
+              <Grid item xs={12} md={6}>
+                <Card sx={{ 
+                  p: 3, 
+                  height: '100%',
+                  border: '2px solid',
+                  borderColor: errors.file ? theme.palette.error.main : theme.palette.primary.light,
+                  transition: 'all 0.3s',
+                  '&:hover': {
+                    boxShadow: 4,
+                    borderColor: theme.palette.primary.main
+                  }
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      📄 Upload File
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Drag and drop your evidence file or click to browse
+                  </Typography>
+                  
+                  <Controller
                     name="file"
-                    types={fileTypes}
-                    multiple={false}
-                    maxSize={10}
-                  >
-                    <div
-                      className={`relative border border-dashed border-gray-300 p-20 cursor-pointer rounded-md hover:shadow-md transition-all h-[200px] flex flex-col items-center justify-center ${
-                        errors.file ? 'border-red-500' : ''
-                      }`}
-                    >
-                      <div className='flex justify-center mb-4'>
-                        <img
-                          src='assets/images/svgImage/uploadimage.svg'
-                          alt='Upload'
-                          className='w-36 h-36 object-contain mx-auto'
-                        />
-                      </div>
-                      {field.value ? (
-                        <div className='text-center text-gray-700 font-medium'>
-                          <p>{field.value.name}</p>
-                        </div>
-                      ) : (
-                        <>
-                          <p className='text-center mb-2 text-gray-600'>
-                            Drag and drop your files here or{' '}
-                            <span className='text-blue-500 underline'>Browse</span>
-                          </p>
-                          <p className='text-center text-sm text-gray-500'>
-                            Supported formats: JPG, PNG, PDF, DOCX, XLSX, PPTX, etc.
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  </FileUploader>
-                )}
-              />
-              {errors.file && (
-                <FormHelperText error>{errors.file.message}</FormHelperText>
-              )}
+                    control={control}
+                    render={({ field }) => (
+                      <FileUploader
+                        handleChange={(file: File) => {
+                          field.onChange(file)
+                          setValue('file', file)
+                        }}
+                        name="file"
+                        types={fileTypes}
+                        multiple={false}
+                        maxSize={10}
+                      >
+                        <Box
+                          sx={{
+                            border: '3px dashed',
+                            borderColor: errors.file ? theme.palette.error.main : field.value ? theme.palette.success?.main || '#4caf50' : theme.palette.primary.light,
+                            borderRadius: 2,
+                            p: 3,
+                            cursor: 'pointer',
+                            bgcolor: field.value ? theme.palette.success?.light || '#e8f5e8' : theme.palette.background.paper,
+                            transition: 'all 0.3s',
+                            minHeight: 200,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            '&:hover': {
+                              borderColor: theme.palette.primary.main,
+                              bgcolor: theme.palette.action.hover,
+                              transform: 'scale(1.02)'
+                            }
+                          }}
+                        >
+                          {field.value ? (
+                            <>
+                              <CheckIcon sx={{ fontSize: 64, color: theme.palette.success?.main || '#4caf50', mb: 2 }} />
+                              <Typography variant="h6" sx={{ color: theme.palette.success?.main || '#4caf50', fontWeight: 600, mb: 1 }}>
+                                File Selected!
+                              </Typography>
+                              <Typography variant="body1" color="text.primary" sx={{ fontWeight: 500, mb: 0.5 }}>
+                                {field.value.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                ({(field.value.size / 1024 / 1024).toFixed(2)} MB)
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                                Click or drop to change file
+                              </Typography>
+                            </>
+                          ) : (
+                            <>
+                              <UploadIcon sx={{ fontSize: 64, color: theme.palette.action.active, mb: 2 }} />
+                              <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                                Drop your file here
+                              </Typography>
+                              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                                or <span style={{ color: theme.palette.primary.main, fontWeight: 600 }}>browse</span> to upload
+                              </Typography>
+                              <Box sx={{ 
+                                p: 2, 
+                                bgcolor: theme.palette.info?.light || theme.palette.action.hover, 
+                                borderRadius: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1
+                              }}>
+                                <InfoIcon sx={{ fontSize: 18, color: theme.palette.info?.main || theme.palette.primary.main }} />
+                                <Typography variant="caption" color="text.secondary">
+                                  Max 10MB • JPG, PNG, PDF, DOCX, XLSX, PPTX, TXT, ZIP, MP4
+                                </Typography>
+                              </Box>
+                            </>
+                          )}
+                        </Box>
+                      </FileUploader>
+                    )}
+                  />
+                  {errors.file && (
+                    <FormHelperText error sx={{ mt: 1 }}>
+                      {errors.file.message}
+                    </FormHelperText>
+                  )}
+                </Card>
+              </Grid>
             </Grid>
 
-            <Grid item xs={12}>
-              <Divider sx={{ my: 2 }} />
-              <div className="flex justify-end gap-2">
+            {/* Action Buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mt: 4,
+              pt: 3,
+              borderTop: 1,
+              borderColor: 'divider'
+            }}>
+              <Typography variant="body2" color="text.secondary">
+                * All fields are required
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
                 <Button
                   variant="outlined"
                   onClick={handleClose}
                   disabled={isLoading}
+                  size="large"
                 >
                   Cancel
                 </Button>
@@ -719,105 +867,180 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
                   type="submit"
                   variant="contained"
                   disabled={isLoading}
+                  size="large"
                   startIcon={isLoading ? <CircularProgress size={20} /> : <UploadIcon />}
+                  sx={{ 
+                    minWidth: 160,
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                    '&:hover': {
+                      background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.secondary.dark} 100%)`,
+                    }
+                  }}
                 >
                   {isLoading ? 'Uploading...' : 'Upload Evidence'}
                 </Button>
-              </div>
-            </Grid>
-          </Grid>
-        </form>
+              </Box>
+            </Box>
+          </form>
+        </Box>
       </TabPanel>
 
       {/* Create Document Tab */}
       <TabPanel value={mainTab} index={1}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Select Course for Evidence
-          </Typography>
-          <FormControl fullWidth>
-            <InputLabel id="course-select-label">Select a course</InputLabel>
-            <Select
-              labelId="course-select-label"
-              value={selectedCourse}
-              label="Select a course"
-              onChange={(e) => {
-                console.log('Course selected:', e.target.value);
-                setSelectedCourse(e.target.value);
+        <Box sx={{ p: 4, flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* Course Selection Card */}
+          <Card sx={{ 
+            p: 3, 
+            mb: 3,
+            border: '2px solid', 
+            transition: 'all 0.3s'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                {selectedCourse ? '✅' : '⚠️'} Select Course for Evidence
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Choose which course this document will be associated with
+            </Typography>
+            <FormControl fullWidth>
+              <Select
+                value={selectedCourse}
+                displayEmpty
+                onChange={(e) => {
+                  console.log('Course selected:', e.target.value);
+                  setSelectedCourse(e.target.value);
+                }}
+                sx={{
+                  '& .MuiSelect-select': {
+                    py: 1.5
+                  }
+                }}
+              >
+                <MenuItem value="" disabled>
+                  <em>Select a course...</em>
+                </MenuItem>
+                {data.map((course) => (
+                  <MenuItem key={course.course_id} value={course.course_id}>
+                    {course.course_name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Card>
+
+          {/* Document Type Selection */}
+          <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ 
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+              p: 2,
+              color: theme.palette.primary.contrastText
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                ✏️ Choose Document Type
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+                Select the type of document you want to create
+              </Typography>
+            </Box>
+            
+            <Tabs 
+              value={docTab} 
+              onChange={(e, newValue) => setDocTab(newValue)} 
+              variant="fullWidth"
+              sx={{ 
+                borderBottom: 1, 
+                borderColor: 'divider',
+                '& .MuiTab-root': {
+                  minHeight: 64,
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                  textTransform: 'none'
+                }
               }}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {data.map((course) => (
-                <MenuItem key={course.course_id} value={course.course_id}>
-                  {course.course_name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {!selectedCourse && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              Please select a course to enable document creation and upload.
-            </Typography>
-          )}
+              <Tab 
+                icon={<DocumentIcon sx={{ fontSize: 24 }} />} 
+                label="Word Document" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<ExcelIcon sx={{ fontSize: 24 }} />} 
+                label="Excel Spreadsheet" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<PowerPointIcon sx={{ fontSize: 24 }} />} 
+                label="PowerPoint" 
+                iconPosition="start"
+              />
+            </Tabs>
+
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {/* Word Document Creation */}
+              <TabPanel value={docTab} index={0}>
+                <Box sx={{ flex: 1 }}>
+                  <WordEditor
+                    documentTitle={documentTitle}
+                    setDocumentTitle={setDocumentTitle}
+                    wordContent={wordContent}
+                    setWordContent={setWordContent}
+                    onSaveUpload={handleWordCreate}
+                    loading={loading}
+                    disabled={!selectedCourse}
+                  />
+                </Box>
+              </TabPanel>
+
+              {/* Excel Spreadsheet Creation */}
+              <TabPanel value={docTab} index={1}>
+                <Box sx={{ flex: 1 }}>
+                  <ExcelEditor
+                    sheetName={sheetName}
+                    setSheetName={setSheetName}
+                    excelData={excelData}
+                    setExcelData={setExcelData}
+                    onSaveUpload={handleExcelCreate}
+                    loading={loading}
+                    disabled={!selectedCourse}
+                  />
+                </Box>
+              </TabPanel>
+
+              {/* PowerPoint Presentation Creation */}
+              <TabPanel value={docTab} index={2}>
+                <Box sx={{ flex: 1 }}>
+                  <PowerPointEditor
+                    presentationTitle={presentationTitle}
+                    setPresentationTitle={setPresentationTitle}
+                    slides={slides}
+                    setSlides={setSlides}
+                    onSaveUpload={handlePowerPointCreate}
+                    loading={loading}
+                    disabled={!selectedCourse}
+                  />
+                </Box>
+              </TabPanel>
+            </Box>
+
+            <Box sx={{ 
+              p: 3,
+              borderTop: 1,
+              borderColor: 'divider',
+              display: 'flex', 
+              justifyContent: 'flex-end' 
+            }}>
+              <Button 
+                variant="outlined" 
+                onClick={handleClose} 
+                disabled={loading}
+                size="large"
+              >
+                Cancel
+              </Button>
+            </Box>
+          </Card>
         </Box>
-
-        <Tabs 
-          value={docTab} 
-          onChange={(e, newValue) => setDocTab(newValue)} 
-          sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
-        >
-          <Tab icon={<DocumentIcon />} label="Word Document" />
-          <Tab icon={<ExcelIcon />} label="Excel Spreadsheet" />
-          <Tab icon={<PowerPointIcon />} label="PowerPoint" />
-        </Tabs>
-
-        {/* Word Document Creation */}
-        <TabPanel value={docTab} index={0}>
-          <WordEditor
-            documentTitle={documentTitle}
-            setDocumentTitle={setDocumentTitle}
-            wordContent={wordContent}
-            setWordContent={setWordContent}
-            onSaveUpload={handleWordCreate}
-            loading={loading}
-            disabled={!selectedCourse}
-          />
-        </TabPanel>
-
-        {/* Excel Spreadsheet Creation */}
-        <TabPanel value={docTab} index={1}>
-          <ExcelEditor
-            sheetName={sheetName}
-            setSheetName={setSheetName}
-            excelData={excelData}
-            setExcelData={setExcelData}
-            onSaveUpload={handleExcelCreate}
-            loading={loading}
-            disabled={!selectedCourse}
-          />
-        </TabPanel>
-
-        {/* PowerPoint Presentation Creation */}
-        <TabPanel value={docTab} index={2}>
-          <PowerPointEditor
-            presentationTitle={presentationTitle}
-            setPresentationTitle={setPresentationTitle}
-            slides={slides}
-            setSlides={setSlides}
-            onSaveUpload={handlePowerPointCreate}
-            loading={loading}
-            disabled={!selectedCourse}
-          />
-        </TabPanel>
-
-        <Divider sx={{ my: 2 }} />
-        <div className="flex justify-end">
-          <Button variant="outlined" onClick={handleClose} disabled={loading}>
-            Cancel
-          </Button>
-        </div>
       </TabPanel>
     </Box>
   )
