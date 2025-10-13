@@ -1031,6 +1031,7 @@ const CreateViewEvidenceLibrary = () => {
             <SignatureTable
               control={control}
               errors={errors}
+              watch={watch}
               disabled={isEditMode}
             />
           </Grid>

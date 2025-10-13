@@ -333,7 +333,7 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
   const { overviewCards, courseCards } = useMemo(
     () => ({
       overviewCards: portfolioCard.filter((card) =>
-        [4, 5, 9, 10].includes(card.id)
+        [4, 5, 9, 10 ,11].includes(card.id)
       ),
       courseCards: portfolioCard.filter((card) =>
         [1, 2, 3, 6, 7, 8].includes(card.id)

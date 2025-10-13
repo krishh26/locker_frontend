@@ -12,12 +12,13 @@ import {
   Paper,
   Typography,
 } from '@mui/material'
-import { Controller, Control, FieldErrors } from 'react-hook-form'
-import { FormValues, SignatureData } from '../lib/types'
+import { Controller, Control, FieldErrors, UseFormWatch } from 'react-hook-form'
+import { FormValues } from '../lib/types'
 
 interface SignatureTableProps {
   control: Control<FormValues>
   errors: FieldErrors<FormValues>
+  watch: UseFormWatch<FormValues>
   disabled?: boolean
 }
 
@@ -32,6 +33,7 @@ const SignatureTable: React.FC<SignatureTableProps> = ({
   control,
   errors,
   disabled = false,
+  watch
 }) => {
   return (
     <Box>
@@ -51,103 +53,106 @@ const SignatureTable: React.FC<SignatureTableProps> = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {signatureRoles.map((item, index) => (
-              <TableRow key={item.role}>
-                <TableCell>
-                  <Typography variant='body2'>{item.label}</Typography>
-                </TableCell>
-                <TableCell>
-                  <Controller
-                    name={`signatures.${index}.name`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        size='small'
-                        fullWidth
-                        disabled={true}
-                        placeholder='Enter name'
-                        sx={{
-                          '& .MuiInputBase-input.Mui-disabled': {
-                            WebkitTextFillColor: '#000000',
-                            color: '#000000',
-                          },
-                        }}
-                      />
-                    )}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Controller
-                    name={`signatures.${index}.signed`}
-                    control={control}
-                    render={({ field }) => (
-                      <Checkbox
-                        {...field}
-                        checked={field.value || false}
-                        disabled={true}
-                      />
-                    )}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Controller
-                    name={`signatures.${index}.es`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        size='small'
-                        fullWidth
-                        disabled={true}
-                        placeholder='ES'
-                        sx={{
-                          '& .MuiInputBase-input.Mui-disabled': {
-                            WebkitTextFillColor: '#000000',
-                            color: '#000000',
-                          },
-                        }}
-                      />
-                    )}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Controller
-                    name={`signatures.${index}.date`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type='date'
-                        size='small'
-                        fullWidth
-                        disabled={true}
-                        InputLabelProps={{ shrink: true }}
-                        sx={{
-                          '& .MuiInputBase-input.Mui-disabled': {
-                            WebkitTextFillColor: '#000000',
-                            color: '#000000',
-                          },
-                        }}
-                      />
-                    )}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Controller
-                    name={`signatures.${index}.signature_required`}
-                    control={control}
-                    render={({ field }) => (
-                      <Checkbox
-                        {...field}
-                        checked={field.value || false}
-                        disabled={disabled}
-                      />
-                    )}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
+            {signatureRoles.map((item, index) => {
+              const isSigned = watch(`signatures.${index}.signed`)
+              return(
+                <TableRow key={item.role}>
+                  <TableCell>
+                    <Typography variant='body2'>{item.label}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Controller
+                      name={`signatures.${index}.name`}
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          size='small'
+                          fullWidth
+                          disabled={true}
+                          placeholder='Enter name'
+                          sx={{
+                            '& .MuiInputBase-input.Mui-disabled': {
+                              WebkitTextFillColor: '#000000',
+                              color: '#000000',
+                            },
+                          }}
+                        />
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Controller
+                      name={`signatures.${index}.signed`}
+                      control={control}
+                      render={({ field }) => (
+                        <Checkbox
+                          {...field}
+                          checked={field.value || false}
+                          disabled={true}
+                        />
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Controller
+                      name={`signatures.${index}.es`}
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          size='small'
+                          fullWidth
+                          disabled={true}
+                          placeholder='ES'
+                          sx={{
+                            '& .MuiInputBase-input.Mui-disabled': {
+                              WebkitTextFillColor: '#000000',
+                              color: '#000000',
+                            },
+                          }}
+                        />
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Controller
+                      name={`signatures.${index}.date`}
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          type='date'
+                          size='small'
+                          fullWidth
+                          disabled={true}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiInputBase-input.Mui-disabled': {
+                              WebkitTextFillColor: '#000000',
+                              color: '#000000',
+                            },
+                          }}
+                        />
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Controller
+                      name={`signatures.${index}.signature_required`}
+                      control={control}
+                      render={({ field }) => (
+                        <Checkbox
+                          {...field}
+                          checked={field.value || false}
+                          disabled={disabled || isSigned}
+                        />
+                      )}
+                    />
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </TableContainer>

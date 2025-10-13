@@ -133,8 +133,6 @@ const SignatureModal: React.FC<SignatureModalProps> = ({
 
   // Check if the field should be disabled
   const isFieldDisabled = (roleKey: string, field: string) => {
-    console.log('🚀 ~ isFieldDisabled ~ field:', field)
-    console.log('🚀 ~ isFieldDisabled ~ roleKey:', roleKey)
     if (!canSignForRole(roleKey)) {
       return true
     }
@@ -477,6 +475,7 @@ const DocsToSign: React.FC = () => {
   }
 
   const documents = transformApiData(pendingSignatureData)
+  console.log("🚀 ~ DocsToSign ~ documents:", documents)
 
   return (
     <Grid>
@@ -667,39 +666,38 @@ const DocsToSign: React.FC = () => {
                           <Box
                             sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
                           >
-                            {getSignatureStatus(
-                              document.signatures,
-                              document.requestedSignatures
-                            ).length > 0 ? (
-                              getSignatureStatus(
-                                document.signatures,
-                                document.requestedSignatures
-                              ).map((role, index) => (
-                                <Chip
-                                  key={index}
-                                  label={role}
-                                  size='small'
-                                  color='success'
-                                  variant='filled'
-                                  sx={{
-                                    fontSize: '10px',
-                                    height: '20px',
-                                    fontWeight: 500,
-                                  }}
-                                />
-                              ))
-                            ) : (
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexWrap: 'wrap',
-                                  gap: 0.5,
-                                }}
-                              >
-                                {document.requestedSignatures?.map(
-                                  (reqSig: any, index: number) => (
+                            {document.requestedSignatures?.length > 0 ? (
+                              <>
+                                {/* Show success chips for signed roles */}
+                                {getSignatureStatus(
+                                  document.signatures,
+                                  document.requestedSignatures
+                                ).map((role, index) => (
+                                  <Chip
+                                    key={`signed-${index}`}
+                                    label={role}
+                                    size='small'
+                                    color='success'
+                                    variant='filled'
+                                    sx={{
+                                      fontSize: '10px',
+                                      height: '20px',
+                                      fontWeight: 500,
+                                    }}
+                                  />
+                                ))}
+                                {/* Show pending chips for unsigned roles */}
+                                {document.requestedSignatures
+                                  ?.filter((reqSig: any) => {
+                                    const signature =
+                                      document.signatures[
+                                        reqSig.role.toLowerCase()
+                                      ]
+                                    return !signature?.signed
+                                  })
+                                  .map((reqSig: any, index: number) => (
                                     <Chip
-                                      key={index}
+                                      key={`pending-${index}`}
                                       label={`${reqSig.role} (Pending)`}
                                       size='small'
                                       color='warning'
@@ -710,17 +708,16 @@ const DocsToSign: React.FC = () => {
                                         fontWeight: 500,
                                       }}
                                     />
-                                  )
-                                ) || (
-                                  <Typography
-                                    variant='body2'
-                                    color='text.secondary'
-                                    sx={{ fontStyle: 'italic' }}
-                                  >
-                                    No signatures requested
-                                  </Typography>
-                                )}
-                              </Box>
+                                  ))}
+                              </>
+                            ) : (
+                              <Typography
+                                variant='body2'
+                                color='text.secondary'
+                                sx={{ fontStyle: 'italic' }}
+                              >
+                                No signatures requested
+                              </Typography>
                             )}
                           </Box>
                         </TableCell>
