@@ -73,6 +73,32 @@ export const evidenceAPI = createApi({
         body: data,
       }),
     }),
+    requestSignature: builder.mutation({
+      query: ({ id, data }) => ({
+        url: `/assignment/${id}/request-signature`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    pendingSignatureList: builder.query({
+      query: ({ id }) => ({
+        url: `/user/${id}/pending-signatures`,
+        method: 'GET',
+      }),
+    }),
+    getSignatureList: builder.query({
+      query: ({ id }) => ({
+        url: `/assignment/${id}/signatures`,
+        method: 'GET',
+      }),
+    }),
+    saveSignature: builder.mutation({
+      query: ({ id, data }) => ({
+        url: `/assignment/${id}/sign`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
   }),
 })
 export const {
@@ -83,5 +109,9 @@ export const {
   useDeleteEvidenceMutation,
   useReuploadEvidenceDocumentMutation,
   useGetSessionListQuery,
-  useUploadExternalEvidenceFileMutation
+  useUploadExternalEvidenceFileMutation,
+  useRequestSignatureMutation,
+  usePendingSignatureListQuery,
+  useGetSignatureListQuery,
+  useSaveSignatureMutation,
 } = evidenceAPI

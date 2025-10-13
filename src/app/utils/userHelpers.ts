@@ -8,6 +8,7 @@
 import { useSelector } from 'react-redux';
 import { selectAuthUser } from 'app/store/authSlice';
 import { selectUser } from 'app/store/userSlice'; // Legacy fallback
+import { selectLearnerManagement } from 'app/store/learnerManagement';
 
 /**
  * Get current user data
@@ -55,4 +56,23 @@ export const useHasRole = (...roles: string[]) => {
 export const useUserId = () => {
   const user = useCurrentUser();
   return user?.user_id || user?.learner_id || null;
+};
+
+
+/**
+ * Get Learner User ID
+ */
+export const useLearnerUserId = () => {
+  const user = useCurrentUser();
+  const learner = useSelector(selectLearnerManagement)?.learner?.user_id
+  return learner || user?.user_id || null;
+};
+
+/**
+ * Get Learner Learner ID
+ */
+export const useLearnerId = () => {
+  const user = useCurrentUser();
+  const learner = useSelector(selectLearnerManagement)?.learner?.learner_id
+  return learner || user?.learner_id || null;
 };

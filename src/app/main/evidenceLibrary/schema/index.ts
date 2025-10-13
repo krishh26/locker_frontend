@@ -1,15 +1,11 @@
 import * as Yup from 'yup'
 
-export const getValidationSchema = (isTrainer: boolean) => {
+export const getValidationSchema = () => {
   return Yup.object().shape({
     title: Yup.string().required('Title is required'),
     description: Yup.string(),
-    trainer_feedback: isTrainer
-      ? Yup.string().required('Required')
-      : Yup.string(),
-    points_for_improvement: isTrainer
-      ? Yup.string().required('Required')
-      : Yup.string(),
+    trainer_feedback: Yup.string(),
+    points_for_improvement: Yup.string(),
     audio: Yup.mixed().required('File is required'),
     learner_comments: Yup.string(),
     evidence_time_log: Yup.boolean().required('Please select one option'),
@@ -49,13 +45,12 @@ export const getValidationSchema = (isTrainer: boolean) => {
     signatures: Yup.array()
       .of(
         Yup.object().shape({
-          role: Yup.string().required(),
+          role: Yup.string(),
           name: Yup.string(),
           signed: Yup.boolean(),
           es: Yup.string(),
           date: Yup.string(),
           signature_required: Yup.boolean(),
-          signature: Yup.mixed(),
         })
       )
       .optional(),

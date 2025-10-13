@@ -2,12 +2,13 @@ import { useThemeMediaQuery } from '@fuse/hooks'
 import { Dialog, Tooltip, Typography } from '@mui/material'
 import { styled, useTheme } from '@mui/material/styles'
 import { slice as globalSlice } from 'app/store/globalUser'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { themeHelpers, useThemeColors } from '../../utils/themeUtils'
 import Style from './style.module.css'
 import UploadWorkDialog from './uploadWorkDialog'
+import { PortfolioCountData } from 'src/app/utils/portfolioCountUtils'
 
 // Theme-aware styled components
 interface ThemedCardProps {
@@ -60,15 +61,15 @@ const ThemedCard = styled('div')<ThemedCardProps>(
 
 interface ThemedPortfolioCardProps {
   $background?: string
+  $isBouncing?: boolean
 }
 
 const ThemedPortfolioCard = styled('div')<ThemedPortfolioCardProps>(
-  ({ theme, $background }) => ({
+  ({ theme, $background, $isBouncing }) => ({
     borderRadius: '8px',
     position: 'relative',
     padding: '12px',
     width: '18%',
-    overflow: 'hidden',
     background: $background,
     cursor: 'pointer',
     transition: 'all 0.3s ease',
@@ -76,6 +77,45 @@ const ThemedPortfolioCard = styled('div')<ThemedPortfolioCardProps>(
     '&:hover': {
       transform: 'translateY(-4px)',
       boxShadow: themeHelpers.getShadow(theme, 4),
+    },
+
+    '@media (max-width: 768px)': {
+      width: '45%',
+    },
+
+    '@media (max-width: 480px)': {
+      width: '100%',
+    },
+  })
+)
+
+const BounceCard = styled('div')<ThemedPortfolioCardProps>(
+  ({ theme, $background, $isBouncing }) => ({
+    borderRadius: '8px',
+    position: 'relative',
+    padding: '12px',
+    width: '18%',
+    background: $background,
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    animation: $isBouncing ? 'bounce 2s infinite' : 'none',
+
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: themeHelpers.getShadow(theme, 4),
+      animation: 'none',
+    },
+
+    '@keyframes bounce': {
+      '0%, 20%, 50%, 80%, 100%': {
+        transform: 'translateY(0)',
+      },
+      '40%': {
+        transform: 'translateY(-8px)',
+      },
+      '60%': {
+        transform: 'translateY(-4px)',
+      },
     },
 
     '@media (max-width: 768px)': {
@@ -138,6 +178,25 @@ const CountBadge = styled('div')(({ theme }) => ({
   minWidth: '20px',
   textAlign: 'center',
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+}))
+
+const OutsideCountBadge = styled('div')(({ theme }) => ({
+  position: 'absolute',
+  top: '-8px',
+  right: '-8px',
+  backgroundColor: theme.palette.info.main,
+  color: theme.palette.info.contrastText,
+  borderRadius: '50%',
+  width: '24px',
+  height: '24px',
+  fontSize: '12px',
+  fontWeight: 700,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+  border: '2px solid ' + theme.palette.info.contrastText,
+  zIndex: 10,
 }))
 
 const CountContainer = styled('div')(({ theme }) => ({
@@ -213,6 +272,7 @@ export const PortfolioCard = ({
   countData = {},
 }) => {
   const [open, setOpen] = useState(false)
+  const [isBouncing, setIsBouncing] = useState(false)
   const dispatch: any = useDispatch()
   const navigate = useNavigate()
   const colors = useThemeColors()
@@ -256,12 +316,30 @@ export const PortfolioCard = ({
           total: countData.resourcesTotal || 0,
           label: 'Resources',
         }
+      case 11: // New Doc to Sign
+        return {
+          total: countData.newDocTotal || 0,
+          label: 'New Doc',
+        }
       default:
         return null
     }
   }
 
   const countInfo = getCountInfo(id, countData)
+
+  useEffect(() => {
+    if (id === 11 && countData && (countData as PortfolioCountData)?.newDocTotal > 0) {
+      setIsBouncing(true)
+      const timer = setTimeout(() => {
+        setIsBouncing(false)
+      }, 5000) // 0.5 second = 500ms
+
+      return () => clearTimeout(timer)
+    } else {
+      setIsBouncing(false)
+    }
+  }, [id ,countData])
 
   const handleClick = (row = '') => {
     if (learner) {
@@ -288,6 +366,8 @@ export const PortfolioCard = ({
       navigate('/timeLog')
     } else if (id === 10) {
       navigate('/learner-wellbeing')
+    } else if (id === 11) {
+      navigate('/docs-to-sign')
     }
   }
 
@@ -295,30 +375,39 @@ export const PortfolioCard = ({
     setOpen(false)
   }
 
+  const CardComponent = id === 11 && countData && (countData as PortfolioCountData)?.newDocTotal > 0 ? BounceCard : ThemedPortfolioCard
+
   return (
     <>
-      <ThemedPortfolioCard
+      <CardComponent
         $background={color}
+        $isBouncing={isBouncing}
         onClick={() => {
           handleClick()
         }}
         className='w-full'
         style={{ position: 'relative' }}
       >
-        {countInfo && (
+        {countInfo && id === 11 ? (
+          <Tooltip title={`${countInfo.total} documents waiting for your signature`} arrow>
+            <OutsideCountBadge>
+              {countInfo.total}
+            </OutsideCountBadge>
+          </Tooltip>
+        ) : countInfo ? (
           <CountBadge>
             {countInfo.progress
               ? `${Math.round(countInfo.progress)}%`
               : countInfo.total}
           </CountBadge>
-        )}
+        ) : null}
         <div>
           <ThemedIndex>{index + 1}</ThemedIndex>
           <div className={Style.emptyRing}></div>
           <div className={Style.filledRing}></div>
         </div>
         <ThemedTitle>{name}</ThemedTitle>
-      </ThemedPortfolioCard>
+      </CardComponent>
       <Dialog
         open={open}
         onClose={handleClose}

@@ -65,8 +65,14 @@ const SignatureTable: React.FC<SignatureTableProps> = ({
                         {...field}
                         size='small'
                         fullWidth
-                        disabled={disabled}
+                        disabled={true}
                         placeholder='Enter name'
+                        sx={{
+                          '& .MuiInputBase-input.Mui-disabled': {
+                            WebkitTextFillColor: '#000000',
+                            color: '#000000',
+                          },
+                        }}
                       />
                     )}
                   />
@@ -79,7 +85,7 @@ const SignatureTable: React.FC<SignatureTableProps> = ({
                       <Checkbox
                         {...field}
                         checked={field.value || false}
-                        disabled={disabled}
+                        disabled={true}
                       />
                     )}
                   />
@@ -93,8 +99,14 @@ const SignatureTable: React.FC<SignatureTableProps> = ({
                         {...field}
                         size='small'
                         fullWidth
-                        disabled={disabled}
+                        disabled={true}
                         placeholder='ES'
+                        sx={{
+                          '& .MuiInputBase-input.Mui-disabled': {
+                            WebkitTextFillColor: '#000000',
+                            color: '#000000',
+                          },
+                        }}
                       />
                     )}
                   />
@@ -109,8 +121,14 @@ const SignatureTable: React.FC<SignatureTableProps> = ({
                         type='date'
                         size='small'
                         fullWidth
-                        disabled={disabled}
+                        disabled={true}
                         InputLabelProps={{ shrink: true }}
+                        sx={{
+                          '& .MuiInputBase-input.Mui-disabled': {
+                            WebkitTextFillColor: '#000000',
+                            color: '#000000',
+                          },
+                        }}
                       />
                     )}
                   />

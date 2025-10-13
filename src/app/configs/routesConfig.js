@@ -42,6 +42,7 @@ import LearnersWaitingToBeSampledConfig from '../main/learnersWaitingToBeSampled
 import AwaitingSignatureConfig from '../main/awaitingSignature/awaitingSignatureConfig'
 import GatewayReportConfig from '../main/gatewayReport/gatewayReportConfig'
 import learnerDashboardConfig from '../main/learner-dashboard/learnerDashboardConfig'
+import DocsToSignConfig from '../main/docsToSign/docsToSignConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -83,7 +84,8 @@ const routeConfigs = [
   LearnersWaitingToBeSampledConfig,
   AwaitingSignatureConfig,
   GatewayReportConfig,
-  learnerDashboardConfig
+  learnerDashboardConfig,
+  DocsToSignConfig
 ]
 
 const routes = [

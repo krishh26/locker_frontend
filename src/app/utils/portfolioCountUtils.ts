@@ -9,15 +9,16 @@ import jsonData from "src/url.json";
 
 const URL_BASE_LINK = jsonData.API_LOCAL_URL;
 export interface PortfolioCountData {
-  evidenceTotal: number;
-  unitsTotal: number;
-  unitsCompleted: number;
-  progressPercentage: number;
-  gapsTotal: number;
-  availableUnits: number;
-  selectedUnits: number;
-  sessionsTotal: number;
-  resourcesTotal: number;
+  evidenceTotal?: number;
+  unitsTotal?: number;
+  unitsCompleted?: number;
+  progressPercentage?: number;
+  gapsTotal?: number;
+  availableUnits?: number;
+  selectedUnits?: number;
+  sessionsTotal?: number;
+  resourcesTotal?: number;
+  newDocTotal?: number;
 }
 
 /**
@@ -171,6 +172,7 @@ export const getAllPortfolioCounts = async (learnerId: string, courseData: any):
       selectedUnits: unitProgressCounts.total, // Units selected by learner
       sessionsTotal: sessionCounts.total,
       resourcesTotal: resourceCounts.total,
+      newDocTotal: 0,
     }
   } catch (error) {
     console.error('Error fetching portfolio counts:', error)
@@ -185,6 +187,7 @@ export const getAllPortfolioCounts = async (learnerId: string, courseData: any):
       selectedUnits: 0,
       sessionsTotal: 0,
       resourcesTotal: 0,
+      newDocTotal: 0,
     }
   }
 }
