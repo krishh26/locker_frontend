@@ -529,7 +529,7 @@ const TimeLog = (props) => {
                         align="left"
                         sx={{ borderBottom: "1px solid #ddd", width: "20rem" }}
                       >
-                        {(row?.trainer_id?.user_id === currentUser.user_id && currentUser.role === "Trainer") ?
+                        {(row?.trainer_id?.user_id === currentUser?.user_id && currentUser?.role === "Trainer") ?
                           <>
                             <Checkbox
                               checked={row?.verified}
