@@ -220,8 +220,6 @@ const CreateViewEvidenceLibrary = () => {
     }
   )
 
-  console.log('🚀 ~ CreateViewEvidenceLibrary ~ signatureList:', signatureList)
-
   const {
     data,
     error,

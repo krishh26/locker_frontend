@@ -14,7 +14,7 @@ export const awaitingSignatureAPI = createApi({
               `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`
           )
           .join('&')
-        const url = `awaiting-signature/list${queryString ? `?${queryString}` : ''}`
+        const url = `assignment/list-with-signatures${queryString ? `?${queryString}` : ''}`
         return { url }
       },
     }),

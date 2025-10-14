@@ -1,8 +1,6 @@
 import FuseLoading from '@fuse/core/FuseLoading'
-import Close from '@mui/icons-material/Close'
+import useDebounce from '@fuse/hooks/useDebounce'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
-import FilterListIcon from '@mui/icons-material/FilterList'
-import SearchIcon from '@mui/icons-material/Search'
 import {
   Box,
   Button,
@@ -10,8 +8,6 @@ import {
   Chip,
   FormControl,
   Grid,
-  IconButton,
-  InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
@@ -45,7 +41,6 @@ const URL_BASE_LINK = jsonData.API_LOCAL_URL
 const Index = () => {
   const { pagination } = useSelector(selectGlobalUser)
   const [currentPage, setCurrentPage] = useState(1)
-  const [searchKeyword, setSearchKeyword] = useState('')
   const [trainers, setTrainers] = useState<
     Array<{ id: string; name: string }>
   >([])
@@ -57,6 +52,13 @@ const Index = () => {
     course: '',
     learner: '',
   })
+  const [debouncedLearner, setDebouncedLearner] = useState('')
+
+  // Debounced function to update learner search
+  const debouncedUpdateLearner = useDebounce((value: string) => {
+    setDebouncedLearner(value)
+    setCurrentPage(1)
+  }, 500)
 
   // Fetch trainers
   const fetchTrainers = async () => {
@@ -66,7 +68,7 @@ const Index = () => {
       )
       const trainerList = response.data.data.map((user: any) => ({
         id: user.user_id.toString(),
-        name: user.user_name || `${user.first_name} ${user.last_name}`.trim(),
+        name:`${user.first_name} ${user.last_name}`.trim(),
       }))
       setTrainers(trainerList)
     } catch (error) {
@@ -105,39 +107,23 @@ const Index = () => {
   } = useGetAwaitingSignatureListQuery({
     page: currentPage,
     limit: pagination?.page_size || 10,
-    search: searchKeyword,
-    trainer_id: filters.trainer,
+    assessor_id: filters.trainer,
     course_id: filters.course,
-    learner_id: filters.learner,
+    learner_name: debouncedLearner,
+    meta: true,
   });
-
-  const handleSearch = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      setCurrentPage(1)
-      refetch()
-    }
-  }
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchKeyword(e.target.value)
-  }
-
-  const clearSearch = () => {
-    setSearchKeyword('')
-    setCurrentPage(1)
-    refetch()
-  }
 
   const handleFilterChange = (field: keyof FilterState, value: string) => {
     setFilters((prev) => ({
       ...prev,
       [field]: value,
     }))
-  }
-
-  const applyFilters = () => {
+    
+    // Trigger debounce for learner search
+    if (field === 'learner') {
+      debouncedUpdateLearner(value)
+    }
     setCurrentPage(1)
-    refetch()
   }
 
   const clearFilters = () => {
@@ -146,8 +132,8 @@ const Index = () => {
       course: '',
       learner: '',
     })
+    setDebouncedLearner('')
     setCurrentPage(1)
-    refetch()
   }
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -166,17 +152,17 @@ const Index = () => {
 
   const getSignatureStatus = (signature: any) => {
     if (!signature) return '-'
-    const received = signature.received_at
-      ? `R: ${formatDate(signature.received_at)}`
+    const requested = signature.requestedAt
+      ? `R: ${formatDate(signature.requestedAt)}`
       : ''
-    const signed = signature.signed_at
-      ? `S: ${formatDate(signature.signed_at)}`
+    const signed = signature.signedAt
+      ? `S: ${formatDate(signature.signedAt)}`
       : ''
-    return signed ? `${received} ${signed}` : received || '-'
+    return signed ? `${requested} ${signed}` : requested || '-'
   }
 
   const isSignaturePending = (signature: any) => {
-    return signature && signature.received_at && !signature.signed_at
+    return signature && signature.is_requested && !signature.isSigned
   }
 
   const exportToCSV = () => {
@@ -207,50 +193,50 @@ const Index = () => {
         `"${row.learner?.name || '-'}"`,
         `"${row.course?.name || '-'}"`,
         `"${row.course?.code || '-'}"`,
-        `"${row.employer_name || '-'}"`,
-        `"${row.trainer_name || '-'}"`,
+        `"${row.signatures?.Employer?.name || '-'}"`,
+        `"${row.signatures?.Trainer?.name || '-'}"`,
         `"${row.file_type || '-'}"`,
         `"${row.file_name || '-'}"`,
         `"${row.file_description || '-'}"`,
         `"${formatDate(row.uploaded_at)}"`,
         `"${
-          row.signatures?.Trainer?.received_at
-            ? formatDate(row.signatures.Trainer.received_at)
+          row.signatures?.Trainer?.requestedAt
+            ? formatDate(row.signatures.Trainer.requestedAt)
             : '-'
         }"`,
         `"${
-          row.signatures?.Trainer?.signed_at
-            ? formatDate(row.signatures.Trainer.signed_at)
+          row.signatures?.Trainer?.signedAt
+            ? formatDate(row.signatures.Trainer.signedAt)
             : '-'
         }"`,
         `"${
-          row.signatures?.Learner?.received_at
-            ? formatDate(row.signatures.Learner.received_at)
+          row.signatures?.Learner?.requestedAt
+            ? formatDate(row.signatures.Learner.requestedAt)
             : '-'
         }"`,
         `"${
-          row.signatures?.Learner?.signed_at
-            ? formatDate(row.signatures.Learner.signed_at)
+          row.signatures?.Learner?.signedAt
+            ? formatDate(row.signatures.Learner.signedAt)
             : '-'
         }"`,
         `"${
-          row.signatures?.Employer?.received_at
-            ? formatDate(row.signatures.Employer.received_at)
+          row.signatures?.Employer?.requestedAt
+            ? formatDate(row.signatures.Employer.requestedAt)
             : '-'
         }"`,
         `"${
-          row.signatures?.Employer?.signed_at
-            ? formatDate(row.signatures.Employer.signed_at)
+          row.signatures?.Employer?.signedAt
+            ? formatDate(row.signatures.Employer.signedAt)
             : '-'
         }"`,
         `"${
-          row.signatures?.IQA?.received_at
-            ? formatDate(row.signatures.IQA.received_at)
+          row.signatures?.IQA?.requestedAt
+            ? formatDate(row.signatures.IQA.requestedAt)
             : '-'
         }"`,
         `"${
-          row.signatures?.IQA?.signed_at
-            ? formatDate(row.signatures.IQA.signed_at)
+          row.signatures?.IQA?.signedAt
+            ? formatDate(row.signatures.IQA.signedAt)
             : '-'
         }"`,
       ].join(',')
@@ -271,11 +257,11 @@ const Index = () => {
   }
 
   const data = awaitingSignatureData?.data || []
-  const metaData = awaitingSignatureData?.meta_data || {
-    page: 1,
-    pages: 1,
-    items: 0,
-  }
+  const metaData = {
+    page: awaitingSignatureData?.page || 1,
+    pages: awaitingSignatureData?.pages || 1,
+    items: awaitingSignatureData?.total || 0,
+  } 
 
   return (
     <Grid>
@@ -345,7 +331,7 @@ const Index = () => {
                   <TextField
                     fullWidth
                     size='small'
-                    label='Filter by Learner'
+                    label='Search by Learner'
                     value={filters.learner}
                     onChange={(e) =>
                       handleFilterChange('learner', e.target.value)
@@ -355,24 +341,6 @@ const Index = () => {
                 </Grid>
               </Grid>
               <div className='flex items-end justify-end w-full gap-16 mt-16 flex-wrap'>
-                <Button
-                  variant='contained'
-                  onClick={applyFilters}
-                  startIcon={<FilterListIcon />}
-                  sx={{
-                    backgroundColor: '#e91e63',
-                    '&:hover': {
-                      backgroundColor: '#c2185b',
-                    },
-                    borderRadius: '8px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 3,
-                    py: 1.2,
-                  }}
-                >
-                  Filter
-                </Button>
                 <Button
                   variant='outlined'
                   onClick={clearFilters}
@@ -408,48 +376,6 @@ const Index = () => {
                 </Button>
               </div>
             </Paper>
-
-            {/* Search Section */}
-            <div className='mb-24'>
-              <TextField
-                label='Search'
-                fullWidth
-                size='small'
-                value={searchKeyword}
-                onChange={handleSearchChange}
-                onKeyDown={handleSearch}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position='end'>
-                      {searchKeyword ? (
-                        <Close
-                          onClick={clearSearch}
-                          sx={{
-                            color: '#5B718F',
-                            fontSize: 18,
-                            cursor: 'pointer',
-                          }}
-                        />
-                      ) : (
-                        <IconButton
-                          disableRipple
-                          sx={{ color: '#5B718F' }}
-                          onClick={() => refetch()}
-                          size='small'
-                        >
-                          <SearchIcon fontSize='small' />
-                        </IconButton>
-                      )}
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                  },
-                }}
-              />
-            </div>
 
             {/* Table Section */}
             <TableContainer
@@ -597,8 +523,8 @@ const Index = () => {
                           {row.learner?.name || '-'}
                         </TableCell>
                         <TableCell>{row.course?.name || '-'}</TableCell>
-                        <TableCell>{row.employer_name || '-'}</TableCell>
-                        <TableCell>{row.trainer_name || '-'}</TableCell>
+                        <TableCell>{row.signatures?.Employer?.name || '-'}</TableCell>
+                        <TableCell>{row.signatures?.Trainer?.name || '-'}</TableCell>
                         <TableCell>
                           <Chip
                             label={row.file_type}
@@ -722,7 +648,7 @@ const Index = () => {
                 }}
               >
                 <Typography variant='body2' color='text.secondary'>
-                  Total active tabs: <strong>{data.length}</strong>
+                  Total Signature: <strong>{data.length}</strong>
                 </Typography>
                 <Typography variant='body2' color='text.secondary'>
                   Files with pending signatures:{' '}
