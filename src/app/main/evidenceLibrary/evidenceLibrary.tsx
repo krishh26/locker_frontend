@@ -1,12 +1,14 @@
 import ArchiveIcon from '@mui/icons-material/Archive'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
+import ClearIcon from '@mui/icons-material/Clear'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import DeleteIcon from '@mui/icons-material/Delete'
 import DescriptionIcon from '@mui/icons-material/Description'
 import DownloadIcon from '@mui/icons-material/Download'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import SchoolIcon from '@mui/icons-material/School'
+import SearchIcon from '@mui/icons-material/Search'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import {
   alpha,
@@ -23,6 +25,7 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
+  InputAdornment,
   List,
   ListItem,
   ListItemButton,
@@ -36,14 +39,13 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
   useTheme
 } from '@mui/material'
-import {
-  createColumnHelper
-} from '@tanstack/react-table'
 import { FC, useEffect, useState } from 'react'
 
 import FuseLoading from '@fuse/core/FuseLoading'
@@ -52,7 +54,7 @@ import {
   useGetEvidenceListQuery,
 } from 'app/store/api/evidence-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import {
   DangerButton,
@@ -62,9 +64,8 @@ import {
 import AlertDialog from 'src/app/component/Dialogs/AlertDialog'
 import DataNotFound from 'src/app/component/Pages/dataNotFound'
 import EvidenceUploadWithCreation from 'src/app/component/react-upload-files/EvidenceUploadWithCreation'
-import { useCurrentUser } from 'src/app/utils/userHelpers'
+import { useLearnerUserId } from 'src/app/utils/userHelpers'
 import ReuploadEvidenceLibrary from './reupload-evidenceLibrary'
-import { selectLearnerManagement } from 'app/store/learnerManagement'
 
 interface EvidenceData {
   assignment_id: number
@@ -122,8 +123,6 @@ const columns: readonly Column[] = [
   { id: 'action', label: 'Actions', minWidth: 100 },
 ]
 
-const columnHelper = createColumnHelper<EvidenceData>()
-
 const EvidenceLibrary: FC = () => {
   const theme = useTheme()
   const [isOpenFileUpload, setIsOpenFileUpload] = useState<boolean>(false)
@@ -131,8 +130,7 @@ const EvidenceLibrary: FC = () => {
   const [isOpenDeleteBox, setIsOpenDeleteBox] = useState<boolean>(false)
   const [isOpenCourseSelection, setIsOpenCourseSelection] = useState<boolean>(false)
   const [isOpenFileSelection, setIsOpenFileSelection] = useState<boolean>(false)
-  const [rowSelection, setRowSelection] = useState({})
-  const [globalFilter, setGlobalFilter] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [evidenceData, setEvidenceData] = useState<EvidenceData[]>([])
   const [selectedRow, setSelectedRow] = useState<EvidenceData | null>(null)
   const [isDownloading, setIsDownloading] = useState<boolean>(false)
@@ -140,6 +138,8 @@ const EvidenceLibrary: FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set())
   const [selectAll, setSelectAll] = useState<boolean>(false)
   const [selectAllFiles, setSelectAllFiles] = useState<boolean>(false)
+  const [totalItems, setTotalItems] = useState<number>(0)
+  const [totalPages, setTotalPages] = useState<number>(0)
 
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -153,15 +153,15 @@ const EvidenceLibrary: FC = () => {
 
   const isOpenAction = Boolean(anchorEl)
 
-  const user = useCurrentUser()
-
-  const { learner } = useSelector(
-    selectLearnerManagement
-  ) 
+  const learnerUserId = useLearnerUserId()
 
   const { data, isLoading, isError, error, refetch } = useGetEvidenceListQuery(
     {
-      user_id: learner.user_id,
+      user_id: learnerUserId,
+      page: pagination.pageIndex + 1,
+      limit: pagination.pageSize,
+      meta: true,
+      search: searchQuery,
     },
     {
       refetchOnMountOrArgChange: true,
@@ -182,155 +182,12 @@ const EvidenceLibrary: FC = () => {
 
     if (data) {
       setEvidenceData(data.data)
+      if (data.meta_data) {
+        setTotalItems(data.meta_data.items || 0)
+        setTotalPages(data.meta_data.pages || 0)
+      }
     }
   }, [data, isError, error, isLoading])
-
-  // const columns = useMemo(
-  //   () => [
-  //     columnHelper.accessor('survey_number', {
-  //       header: 'Survey Number',
-  //       cell: ({ row }) => (
-  //         <div className='flex items-center gap-2'>
-  //           <Typography className='capitalize font-roboto' color='text.primary'>
-  //             {row.original.survey_number}
-  //           </Typography>
-  //         </div>
-  //       ),
-  //     }),
-  //     // columnHelper.accessor('participation_rate', {
-  //     //   header: 'Participation rate',
-  //     //   cell: ({ row }) => (
-  //     //     <div className='flex items-center gap-2'>
-  //     //       <Typography className='capitalize font-roboto' color='text.primary'>
-  //     //         {row.original.participation_rate}
-  //     //       </Typography>
-  //     //     </div>
-  //     //   ),
-  //     // }),
-  //     // columnHelper.accessor('status', {
-  //     //   header: 'Status',
-  //     //   cell: ({ row }) => (
-  //     //     <Typography className='capitalize font-roboto' color='text.primary'>
-  //     //       {row.original.status}
-  //     //     </Typography>
-  //     //   ),
-  //     // }),
-  //     // columnHelper.accessor('closing_date', {
-  //     //   header: 'Closing date',
-  //     //   cell: ({ row }) => (
-  //     //     <div className='flex items-center gap-2'>
-  //     //       <Typography className='capitalize font-roboto' color='text.primary'>
-  //     //         {format(new Date(row.original.closing_date), DATE_FORMAT)}
-  //     //       </Typography>
-  //     //       <AppReactDatepicker
-  //     //         id='basic-input'
-  //     //         dateFormat={DATE_FORMAT}
-  //     //         placeholderText='Click to select a date'
-  //     //         className='font-roboto'
-  //     //         customInput={
-  //     //           <IconButton
-  //     //             aria-label='capture screenshot'
-  //     //             color='secondary'
-  //     //             size='small'
-  //     //           >
-  //     //             <i className='tabler-calendar-event' />
-  //     //           </IconButton>
-  //     //         }
-  //     //       />
-  //     //     </div>
-  //     //   ),
-  //     // }),
-  //     // columnHelper.accessor('action', {
-  //     //   header: 'Actions',
-  //     //   cell: () => (
-  //     //     <div className='flex items-center gap-2'>
-  //     //       <Button
-  //     //         variant='contained'
-  //     //         color='info'
-  //     //         size='small'
-  //     //         className='font-roboto'
-  //     //       >
-  //     //         Distribution
-  //     //       </Button>
-  //     //       <Button
-  //     //         variant='contained'
-  //     //         color='primary'
-  //     //         size='small'
-  //     //         className='font-roboto'
-  //     //       >
-  //     //         Edit
-  //     //       </Button>
-  //     //       <Button
-  //     //         variant='contained'
-  //     //         color='error'
-  //     //         size='small'
-  //     //         onClick={() => setIsOpenDeleteBox(true)}
-  //     //         className='font-roboto'
-  //     //       >
-  //     //         Delete
-  //     //       </Button>
-  //     //     </div>
-  //     //   ),
-  //     //   enableSorting: false,
-  //     // }),
-  //     // columnHelper.accessor('raffle_status', {
-  //     //   header: 'Status',
-  //     //   cell: ({ row }) => (
-  //     //     <div className='flex items-center gap-3'>
-  //     //       <LightTooltip
-  //     //         title='Download the list of raffle participants'
-  //     //         arrow
-  //     //         className='font-roboto'
-  //     //       >
-  //     //         <IconButton
-  //     //           aria-label='capture screenshot'
-  //     //           color='secondary'
-  //     //           size='small'
-  //     //         >
-  //     //           <i className='tabler-download text-[22px] text-textSecondary' />
-  //     //         </IconButton>
-  //     //       </LightTooltip>
-  //     //     </div>
-  //     //   ),
-  //     // }),
-  //   ],
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  //   []
-  // )
-
-  // const table = useReactTable({
-  //   data: [],
-  //   columns,
-  //   manualPagination: true,
-  //   manualFiltering: true,
-  //   pageCount: data?.data?.totalPages || -1,
-  //   filterFns: {
-  //     fuzzy: fuzzyFilter,
-  //   },
-  //   state: {
-  //     rowSelection,
-  //     globalFilter,
-  //     pagination,
-  //   },
-  //   initialState: {
-  //     pagination: {
-  //       pageSize: 10,
-  //     },
-  //   },
-  //   enableRowSelection: true, //enable row selection for all rows
-  //   // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
-  //   globalFilterFn: fuzzyFilter,
-  //   onPaginationChange: setPagination,
-  //   onRowSelectionChange: setRowSelection,
-  //   getCoreRowModel: getCoreRowModel(),
-  //   onGlobalFilterChange: setGlobalFilter,
-  //   getFilteredRowModel: getFilteredRowModel(),
-  //   getSortedRowModel: getSortedRowModel(),
-  //   getPaginationRowModel: getPaginationRowModel(),
-  //   getFacetedRowModel: getFacetedRowModel(),
-  //   getFacetedUniqueValues: getFacetedUniqueValues(),
-  //   getFacetedMinMaxValues: getFacetedMinMaxValues(),
-  // })
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -1051,16 +908,26 @@ const EvidenceLibrary: FC = () => {
     }
   }
 
-  const handlePageChange = (event, newPage) => {
+  const handlePageChange = (event: unknown, newPage: number) => {
     setPagination((prev) => ({ ...prev, pageIndex: newPage }))
   }
 
-  const handlePageSizeChange = (event) => {
+  const handlePageSizeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setPagination((prev) => ({
       ...prev,
       pageSize: Number(event.target.value),
       pageIndex: 0,
     }))
+  }
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 })) // Reset to first page on search
+  }
+
+  const handleClearSearch = () => {
+    setSearchQuery('')
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
   }
 
   const handleDelete = async () => {
@@ -1150,22 +1017,68 @@ const EvidenceLibrary: FC = () => {
         </Box>
       </Box>
 
-      {/* <Card className='mt-5'>
-        <ReactTable table={table} />
-      </Card>
-      <TablePagination
-        component={() => (
-          <TablePaginationComponent
-            table={table}
-            count={data?.data?.total || 0}
-          />
+      {/* Search Bar */}
+      <Box sx={{ mb: 3 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Search by title"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: theme.palette.text.secondary }} />
+              </InputAdornment>
+            ),
+            endAdornment: searchQuery && (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  onClick={handleClearSearch}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.error.main, 0.1),
+                      color: theme.palette.error.main
+                    }
+                  }}
+                >
+                  <ClearIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.background.paper, 1),
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.02),
+              },
+              '&.Mui-focused': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.02),
+              },
+            },
+          }}
+        />
+        {searchQuery && (
+          <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {isLoading ? 'Searching...' : `Found ${totalItems} result${totalItems !== 1 ? 's' : ''}`}
+            </Typography>
+            {!isLoading && totalItems > 0 && (
+              <Chip 
+                label={`Page ${pagination.pageIndex + 1} of ${totalPages}`}
+                size="small"
+                variant="outlined"
+                color="primary"
+                sx={{ fontSize: '0.75rem', height: 22 }}
+              />
+            )}
+          </Box>
         )}
-        count={data?.data?.total || 0}
-        rowsPerPage={pagination.pageSize}
-        page={pagination.pageIndex}
-        onPageChange={handlePageChange}
-        onRowsPerPageChange={handlePageSizeChange}
-      /> */}
+      </Box>
+
       <Card 
         sx={{ 
           boxShadow: theme.shadows[1],
@@ -1372,18 +1285,87 @@ const EvidenceLibrary: FC = () => {
             >
               <DataNotFound width='25%' />
               <Typography variant='h5' sx={{ mt: 3, mb: 1, fontWeight: 500 }}>
-                No Evidence Found
+                {searchQuery ? 'No Results Found' : 'No Evidence Found'}
               </Typography>
               <Typography 
                 variant='body2' 
                 color='text.secondary'
                 sx={{ textAlign: 'center', maxWidth: 400 }}
               >
-                You haven't uploaded any evidence yet. Click "Add Evidence" to get started with your portfolio.
+                {searchQuery 
+                  ? `No evidence matches your search "${searchQuery}". Try adjusting your search terms or clear the search to see all evidence.`
+                  : "You haven't uploaded any evidence yet. Click \"Add Evidence\" to get started with your portfolio."
+                }
               </Typography>
+              {searchQuery && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={handleClearSearch}
+                  startIcon={<ClearIcon />}
+                  sx={{
+                    mt: 3,
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderWidth: 2,
+                    '&:hover': {
+                      borderWidth: 2,
+                    }
+                  }}
+                >
+                  Clear Search
+                </Button>
+              )}
             </Box>
           )}
         </TableContainer>
+        
+        {/* Pagination Controls */}
+        {evidenceData && evidenceData.length > 0 && (
+          <TablePagination
+            component="div"
+            count={totalItems}
+            page={pagination.pageIndex}
+            onPageChange={handlePageChange}
+            rowsPerPage={pagination.pageSize}
+            onRowsPerPageChange={handlePageSizeChange}
+            rowsPerPageOptions={[5, 10, 25, 50, 100]}
+            sx={{
+              borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              backgroundColor: alpha(theme.palette.grey[50], 0.3),
+              '& .MuiTablePagination-toolbar': {
+                px: 3,
+                py: 2,
+              },
+              '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                fontWeight: 500,
+                color: theme.palette.text.secondary,
+              },
+              '& .MuiTablePagination-select': {
+                borderRadius: 1,
+                px: 1,
+                '&:focus': {
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                }
+              },
+              '& .MuiTablePagination-actions': {
+                '& .MuiIconButton-root': {
+                  borderRadius: 1,
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  }
+                }
+              }
+            }}
+            labelRowsPerPage="Items per page:"
+            labelDisplayedRows={({ from, to, count }) => 
+              `${from}-${to} of ${count !== -1 ? count : `more than ${to}`}`
+            }
+          />
+        )}
       </Card>
       <Menu
         id='evidence-actions-menu'

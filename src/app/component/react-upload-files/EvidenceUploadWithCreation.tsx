@@ -55,6 +55,7 @@ import WordEditor from '../Documents/WordEditor'
 import ExcelEditor from '../Documents/ExcelEditor'
 import PowerPointEditor from '../Documents/PowerPointEditor'
 import { useNavigate } from 'react-router-dom'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -153,9 +154,9 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
       (item) => item?.course
     ) || []
 
-  // Debug course data
-  console.log('Available courses:', data);
 
+  const learner = useSelector(selectLearnerManagement)?.learner?.user_id
+  const user = useCurrentUser()
   const {
     control,
     handleSubmit,
@@ -173,6 +174,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
     const fromData = new FormData()
     fromData.append('file', values.file as File)
     fromData.append('course_id', values.courseId)
+    fromData.append('user_id', learner || user?.user_id)
 
     try {
       const response = await uploadEvidenceFile(fromData).unwrap()
@@ -617,8 +619,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
         p: 3, 
         borderBottom: 1, 
         borderColor: 'divider',
-        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-        color: theme.palette.primary.contrastText,
+        color: 'black',
         position: 'relative'
       }}>
         <IconButton
@@ -627,11 +628,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
             position: 'absolute',
             top: 16,
             right: 16,
-            color: theme.palette.primary.contrastText,
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            }
+            color: 'black',
           }}
           size="small"
         >
@@ -655,7 +652,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
           borderColor: 'divider',
           '& .MuiTab-root': {
             minHeight: 64,
-            fontSize: '1rem',
+            fontSize: '1.9rem',
             fontWeight: 500,
             textTransform: 'none'
           }
@@ -774,7 +771,6 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
                             borderRadius: 2,
                             p: 3,
                             cursor: 'pointer',
-                            bgcolor: field.value ? theme.palette.success?.light || '#e8f5e8' : theme.palette.background.paper,
                             transition: 'all 0.3s',
                             minHeight: 200,
                             display: 'flex',
@@ -815,7 +811,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
                               </Typography>
                               <Box sx={{ 
                                 p: 2, 
-                                bgcolor: theme.palette.info?.light || theme.palette.action.hover, 
+                                // bo: theme.palette.info?.light || theme.palette.action.hover, 
                                 borderRadius: 1,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -871,10 +867,6 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
                   startIcon={isLoading ? <CircularProgress size={20} /> : <UploadIcon />}
                   sx={{ 
                     minWidth: 160,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                    '&:hover': {
-                      background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.secondary.dark} 100%)`,
-                    }
                   }}
                 >
                   {isLoading ? 'Uploading...' : 'Upload Evidence'}

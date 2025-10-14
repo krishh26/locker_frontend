@@ -21,7 +21,6 @@ export interface SignatureData {
   es?: string
   date?: string
   signature_required: boolean
-  signature?: File | null
 }
 
 export interface SubUnit {

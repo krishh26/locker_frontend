@@ -36,9 +36,10 @@ import { useSelector } from 'react-redux'
 
 import {
   useGetEvidenceDetailsQuery,
-  useGetSessionListQuery,
   useUpdateEvidenceIdMutation,
   useUploadExternalEvidenceFileMutation,
+  useRequestSignatureMutation,
+  useGetSignatureListQuery,
 } from 'app/store/api/evidence-api'
 import { assessmentMethod, fileTypes } from 'src/utils/constants'
 
@@ -49,11 +50,15 @@ import {
 } from 'app/store/courseManagement'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { useDispatch } from 'react-redux'
-import { useCurrentUser } from 'src/app/utils/userHelpers'
+import {
+  useLearnerId,
+  useLearnerUserId,
+  useUserRole,
+} from 'src/app/utils/userHelpers'
 import { formatSessionTime } from 'src/utils/string'
+import SignatureTable from './components/SignatureTable'
 import { FormValues } from './lib/types'
 import { getValidationSchema } from './schema'
-import SignatureTable from './components/SignatureTable'
 
 const CreateViewEvidenceLibrary = () => {
   const navigate = useNavigate()
@@ -66,13 +71,10 @@ const CreateViewEvidenceLibrary = () => {
   const dispatch: any = useDispatch()
   const { id } = useParams()
 
-  const user = useCurrentUser()
-
-  const { roles, learner_id } = user
-
-  const isTrainer = roles.includes('Trainer')
-
   const singleCourse = useSelector(selectCourseManagement)
+  const learnerUserId = useLearnerUserId()
+  const learnerId = useLearnerId()
+  const userRole = useUserRole()
 
   const {
     control,
@@ -82,7 +84,7 @@ const CreateViewEvidenceLibrary = () => {
     trigger,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: yupResolver(getValidationSchema(isTrainer)),
+    resolver: yupResolver(getValidationSchema()),
     defaultValues: {
       title: '',
       description: '',
@@ -97,10 +99,38 @@ const CreateViewEvidenceLibrary = () => {
       assessment_method: [],
       units: [],
       signatures: [
-        { role: 'Trainer', name: '', signed: false, es: '', date: '', signature_required: false, signature: null },
-        { role: 'Learner', name: '', signed: false, es: '', date: '', signature_required: false, signature: null },
-        { role: 'Employer', name: '', signed: false, es: '', date: '', signature_required: false, signature: null },
-        { role: 'IQA', name: '', signed: false, es: '', date: '', signature_required: false, signature: null },
+        {
+          role: 'Trainer',
+          name: '',
+          signed: false,
+          es: '',
+          date: '',
+          signature_required: false,
+        },
+        {
+          role: 'Learner',
+          name: '',
+          signed: false,
+          es: '',
+          date: '',
+          signature_required: false,
+        },
+        {
+          role: 'Employer',
+          name: '',
+          signed: false,
+          es: '',
+          date: '',
+          signature_required: false,
+        },
+        {
+          role: 'IQA',
+          name: '',
+          signed: false,
+          es: '',
+          date: '',
+          signature_required: false,
+        },
       ],
     },
   })
@@ -177,27 +207,65 @@ const CreateViewEvidenceLibrary = () => {
     }
   )
 
-  const { data: sessionsData } = useGetSessionListQuery(
+  const {
+    data: signatureList,
+    isLoading: isLoadingSignatureList,
+    isError: isErrorSignatureList,
+    error: errorSignatureList,
+  } = useGetSignatureListQuery(
+    { id: id as string },
     {
-      meta: true,
-      page: 1,
-      limit: 100,
-      learners: learner_id,
-    },
-    {
-      skip: !learner_id,
+      skip: !id,
       refetchOnMountOrArgChange: true,
     }
   )
 
-  const { data, error, refetch } = useGetLearnerPlanListQuery(
+  console.log('🚀 ~ CreateViewEvidenceLibrary ~ signatureList:', signatureList)
+
+  const {
+    data,
+    error,
+    isLoading: isLoadingLearnerPlan,
+    refetch,
+  } = useGetLearnerPlanListQuery(
     {
-      learners: learner_id,
+      learners: learnerId,
     },
     {
-      skip: !learner_id,
+      skip: !learnerId,
     }
   )
+
+  // Populate signatures from API data
+  useEffect(() => {
+    if (signatureList && signatureList.data && signatureList.data.length > 0) {
+      const signatureRoles = ['Trainer', 'Learner', 'Employer', 'IQA']
+      const populatedSignatures = signatureRoles.map((role) => {
+        const apiSignature = signatureList.data.find((sig) => sig.role === role)
+        if (apiSignature) {
+          return {
+            role: apiSignature.role,
+            name: apiSignature.name || '',
+            signed: apiSignature.isSigned || false,
+            es: '', // ES field not in API response, keeping empty
+            date: apiSignature.signedAt
+              ? new Date(apiSignature.signedAt).toISOString().split('T')[0]
+              : '',
+            signature_required: apiSignature.isRequested || false,
+          }
+        }
+        return {
+          role,
+          name: '',
+          signed: false,
+          es: '',
+          date: '',
+          signature_required: false,
+        }
+      })
+      setValue('signatures', populatedSignatures)
+    }
+  }, [signatureList, setValue])
 
   useEffect(() => {
     if (isError && error) {
@@ -221,6 +289,8 @@ const CreateViewEvidenceLibrary = () => {
   const [updateEvidenceId, { isLoading: isUpdateLoading }] =
     useUpdateEvidenceIdMutation()
   const [uploadExternalEvidenceFile] = useUploadExternalEvidenceFileMutation()
+  const [requestSignature, { isLoading: isRequestingSignature }] =
+    useRequestSignatureMutation()
 
   useEffect(() => {
     if (!id) return navigate('/evidenceLibrary') // Redirect if no ID is provided
@@ -365,6 +435,7 @@ const CreateViewEvidenceLibrary = () => {
     const payload = {
       ...data,
       id,
+      user_id: learnerUserId,
     }
     try {
       if (data.audio && !data.audio?.url) {
@@ -375,6 +446,21 @@ const CreateViewEvidenceLibrary = () => {
           data: formData,
         }
         await uploadExternalEvidenceFile(externalPayload).unwrap()
+      }
+
+      // Request signature with required roles
+      const requiredRoles = data.signatures
+        .filter((sig) => sig.signature_required)
+        .map((sig) => sig.role)
+
+      if (requiredRoles.length > 0) {
+        await requestSignature({
+          id,
+          data: {
+            roles: requiredRoles,
+            user_id: learnerUserId,
+          },
+        }).unwrap()
       }
 
       await updateEvidenceId(payload).unwrap()
@@ -514,9 +600,9 @@ const CreateViewEvidenceLibrary = () => {
                   multiline
                   rows={4}
                   fullWidth
-                  disabled={!roles.includes('Trainer') || isEditMode}
+                  disabled={isEditMode || userRole !== 'Trainer'}
                   style={
-                    !roles.includes('Trainer') || isEditMode
+                    userRole !== 'Trainer' || isEditMode
                       ? { backgroundColor: 'whitesmoke' }
                       : {}
                   }
@@ -541,9 +627,9 @@ const CreateViewEvidenceLibrary = () => {
                   multiline
                   rows={4}
                   error={!!errors.points_for_improvement}
-                  disabled={!roles.includes('Trainer') || isEditMode}
+                  disabled={isEditMode || userRole !== 'Trainer'}
                   style={
-                    !roles.includes('Trainer') || isEditMode
+                    userRole !== 'Trainer' || isEditMode
                       ? { backgroundColor: 'whitesmoke' }
                       : {}
                   }
@@ -566,7 +652,7 @@ const CreateViewEvidenceLibrary = () => {
                   fullWidth
                   multiline
                   rows={4}
-                  disabled={isEditMode}
+                  disabled={isEditMode || userRole !== 'Learner'}
                   error={!!errors.learner_comments}
                   {...field}
                 />
@@ -681,7 +767,6 @@ const CreateViewEvidenceLibrary = () => {
                         color='text.secondary'
                         display='block'
                       >
-                        {/* {evidenceData.user.name} on{' '} */}
                         {new Date(
                           evidenceDetails.data.external_feedback.uploaded_at
                         ).toLocaleDateString()}
@@ -788,12 +873,20 @@ const CreateViewEvidenceLibrary = () => {
                     disabled={isEditMode}
                     {...field}
                   >
-                    {sessions?.length > 0 &&
+                    {isLoadingLearnerPlan ? (
+                      <MenuItem disabled>
+                        <CircularProgress size={20} sx={{ mr: 1 }} />
+                        Loading sessions...
+                      </MenuItem>
+                    ) : sessions?.length > 0 ? (
                       sessions.map((session) => (
                         <MenuItem key={session.id} value={session.id}>
                           {session.label}
                         </MenuItem>
-                      ))}
+                      ))
+                    ) : (
+                      <MenuItem disabled>No sessions available</MenuItem>
+                    )}
                   </Select>
                   {errors.session && (
                     <FormHelperText>{errors.session.message}</FormHelperText>
@@ -836,9 +929,9 @@ const CreateViewEvidenceLibrary = () => {
                       )}
                       onChange={(e) => handleCheckboxUnits(e, method)}
                       name='units'
-                      disabled={!roles.includes('Learner') || isEditMode}
+                      disabled={isEditMode}
                       style={
-                        !roles.includes('Learner')
+                        userRole !== 'Learner'
                           ? { backgroundColor: 'whitesmoke' }
                           : {}
                       }
@@ -888,7 +981,7 @@ const CreateViewEvidenceLibrary = () => {
                           </TableCell>
                           <TableCell>{row?.subTitle}</TableCell>
                           <TableCell>
-                            {roles.includes('Learner') ? (
+                            {userRole === 'Learner' ? (
                               row?.comment
                             ) : (
                               <TextField
@@ -917,7 +1010,7 @@ const CreateViewEvidenceLibrary = () => {
                           <TableCell align='center'>
                             <Checkbox
                               checked={row?.trainerMap || false}
-                              disabled={roles.includes('Learner') || isEditMode}
+                              disabled={userRole === 'Learner' || isEditMode}
                               onChange={() => trainerMapHandler(row)}
                             />
                           </TableCell>
@@ -935,9 +1028,10 @@ const CreateViewEvidenceLibrary = () => {
             ))}
           </Grid>
           <Grid item xs={12}>
-            <SignatureTable 
-              control={control} 
-              errors={errors} 
+            <SignatureTable
+              control={control}
+              errors={errors}
+              watch={watch}
               disabled={isEditMode}
             />
           </Grid>
@@ -987,9 +1081,9 @@ const CreateViewEvidenceLibrary = () => {
               color='primary'
               className='rounded-md'
               type='submit'
-              disabled={isUpdateLoading || isEditMode}
+              disabled={isUpdateLoading || isRequestingSignature || isEditMode}
             >
-              {isUpdateLoading ? (
+              {isUpdateLoading || isRequestingSignature ? (
                 <span className='flex items-center gap-5'>
                   <CircularProgress size={24} />
                   Updating...

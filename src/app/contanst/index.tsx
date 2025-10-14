@@ -401,6 +401,7 @@ export const portfolioCard = [
   { id: 8, name: 'Resources', color: '#A847F4' },
   { id: 9, name: 'Time Log', color: '#B7B000' },
   { id: 10, name: 'Supplementary Training', color: '#4564D0' },
+  { id: 11, name: 'New Doc to Sign', color: '#007E84' },
 ]
 
 export const fundingBodyData = [

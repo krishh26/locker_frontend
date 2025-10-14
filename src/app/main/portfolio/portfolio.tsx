@@ -46,9 +46,11 @@ import {
 import { PortfolioCard } from 'src/app/component/Cards'
 import DoughnutChart from 'src/app/component/Chart/doughnut'
 import { portfolioCard } from 'src/app/contanst'
-import { useCurrentUser } from 'src/app/utils/userHelpers'
+import { useCurrentUser, useLearnerUserId } from 'src/app/utils/userHelpers'
 import { getRandomColor } from 'src/utils/randomColor'
 import Calendar from './calendar'
+import { PortfolioCountData } from 'src/app/utils/portfolioCountUtils'
+import { usePendingSignatureListQuery } from 'app/store/api/evidence-api'
 
 // TypeScript Interfaces
 interface EmailData {
@@ -304,20 +306,30 @@ const Portfolio: React.FC = () => {
   const navigate = useNavigate()
   const dispatch: any = useDispatch()
   const theme = useTheme()
-
+  const learnerUserId = useLearnerUserId()
   // Selectors
   const { learner, dataFetchLoading } = useSelector(
     selectLearnerManagement
   )
   const data = useSelector(selectstoreDataSlice)
   const { singleData } = useSelector(selectLearnerManagement)
-
+  const [countData, setCountData] = useState<PortfolioCountData>({
+    newDocTotal: 0,
+  })
   // Safeguarding API
   const {
     data: safeguardingData,
     isLoading: isLoadingSafeguarding,
     error: safeguardingError,
   } = useGetSafeguardingContactsQuery()
+
+  const { data: pendingSignatureList, isLoading: isLoadingPendingSignatureList, isError: isErrorPendingSignatureList, error: errorPendingSignatureList } = usePendingSignatureListQuery({ id: learnerUserId })
+
+  useEffect(() => {
+    if (pendingSignatureList && pendingSignatureList.data) {
+      setCountData((prev) => ({ ...prev, newDocTotal: pendingSignatureList.data.length }))
+    }
+  }, [pendingSignatureList])
 
   useEffect(() => {
     // Only show acknowledgement after data has finished loading to avoid flickering
@@ -335,7 +347,7 @@ const Portfolio: React.FC = () => {
   const { overviewCards, courseCards } = useMemo(
     () => ({
       overviewCards: portfolioCard.filter((card) =>
-        [4, 5, 9, 10].includes(card.id)
+        [4, 5, 9, 10, 11].includes(card.id)
       ),
       courseCards: portfolioCard.filter((card) =>
         [1, 2, 3, 6, 7, 8].includes(card.id)
@@ -536,6 +548,44 @@ const Portfolio: React.FC = () => {
         </Typography>
       </Box>
 
+      {/* Signature Info Message */}
+      {/* {pendingSignatureList && pendingSignatureList.data && pendingSignatureList.data.length > 0 && (
+        <Fade in={true} timeout={500}>
+          <Box
+            sx={{
+              mb: 3,
+              p: 2,
+              borderRadius: 1,
+              backgroundColor: alpha(theme.palette.info.main, 0.08),
+              border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <InfoOutlinedIcon 
+                sx={{ 
+                  color: theme.palette.info.main, 
+                  fontSize: 20,
+                  flexShrink: 0 
+                }} 
+              />
+              <Typography variant='body1' color='text.primary' sx={{ flex: 1 }}>
+                You have <strong>{pendingSignatureList.data.length}</strong> document{pendingSignatureList.data.length !== 1 ? 's' : ''} awaiting your signature.
+              </Typography>
+              <Chip
+                label={`${pendingSignatureList.data.length} Pending`}
+                color='info'
+                variant='outlined'
+                size='small'
+                sx={{
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                }}
+              />
+            </Box>
+          </Box>
+        </Fade>
+      )} */}
+
       {/* Tab Navigation */}
       {/* <StyledTabsContainer elevation={2}>
         <Tabs
@@ -563,7 +613,7 @@ const Portfolio: React.FC = () => {
               timeout={300 + index * 100}
             >
               <Box>
-                <PortfolioCard data={value} index={index} learner={learner || user} />
+                <PortfolioCard data={value} index={index} learner={learner || user} countData={countData}/>
               </Box>
             </Slide>
           ))}
