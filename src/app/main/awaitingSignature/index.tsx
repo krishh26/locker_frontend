@@ -25,6 +25,7 @@ import {
   TextField,
   Typography
 } from '@mui/material'
+import { useGetAwaitingSignatureListQuery } from 'app/store/api/awaiting-signature-api'
 import { selectGlobalUser } from 'app/store/globalUser'
 import axios from 'axios'
 import React, { useEffect, useState } from 'react'
@@ -40,169 +41,6 @@ interface FilterState {
 }
 
 const URL_BASE_LINK = jsonData.API_LOCAL_URL
-
-// Sample static data for testing
-const SAMPLE_DATA = [
-  {
-    assignment_id: 1,
-    learner: {
-      id: 101,
-      name: 'John Smith',
-    },
-    course: {
-      id: 201,
-      name: 'Level 3 Business Administration',
-      code: 'BA-L3-001',
-    },
-    employer_name: 'ABC Corporation Ltd',
-    trainer_name: 'Sarah Johnson',
-    file_type: 'Evidence',
-    file_name: 'project_report_final.pdf',
-    file_description: 'Final project report for business analysis module',
-    uploaded_at: '2024-01-15T10:30:00Z',
-    signatures: {
-      Trainer: {
-        received_at: '2024-01-15T10:30:00Z',
-        signed_at: '2024-01-16T14:20:00Z',
-      },
-      Learner: {
-        received_at: '2024-01-15T10:30:00Z',
-        signed_at: null,
-      },
-      Employer: {
-        received_at: '2024-01-16T14:20:00Z',
-        signed_at: null,
-      },
-      IQA: null,
-    },
-  },
-  {
-    assignment_id: 2,
-    learner: {
-      id: 102,
-      name: 'Emma Davis',
-    },
-    course: {
-      id: 202,
-      name: 'Level 2 Customer Service',
-      code: 'CS-L2-005',
-    },
-    employer_name: 'Retail Solutions Inc',
-    trainer_name: 'Michael Brown',
-    file_type: 'Evidence',
-    file_name: 'customer_service_case_study.docx',
-    file_description: 'Case study on handling difficult customer situations',
-    uploaded_at: '2024-01-20T09:15:00Z',
-    signatures: {
-      Trainer: {
-        received_at: '2024-01-20T09:15:00Z',
-        signed_at: '2024-01-21T11:00:00Z',
-      },
-      Learner: {
-        received_at: '2024-01-20T09:15:00Z',
-        signed_at: '2024-01-22T10:30:00Z',
-      },
-      Employer: {
-        received_at: '2024-01-22T10:30:00Z',
-        signed_at: '2024-01-23T15:45:00Z',
-      },
-      IQA: {
-        received_at: '2024-01-23T15:45:00Z',
-        signed_at: null,
-      },
-    },
-  },
-  {
-    assignment_id: 3,
-    learner: {
-      id: 103,
-      name: 'James Wilson',
-    },
-    course: {
-      id: 203,
-      name: 'Level 4 Leadership & Management',
-      code: 'LM-L4-012',
-    },
-    employer_name: 'Tech Innovators Ltd',
-    trainer_name: 'Lisa Anderson',
-    file_type: 'Evidence',
-    file_name: 'leadership_portfolio.pdf',
-    file_description: 'Portfolio of leadership activities and reflections',
-    uploaded_at: '2024-01-18T14:45:00Z',
-    signatures: {
-      Trainer: {
-        received_at: '2024-01-18T14:45:00Z',
-        signed_at: null,
-      },
-      Learner: null,
-      Employer: null,
-      IQA: null,
-    },
-  },
-  {
-    assignment_id: 4,
-    learner: {
-      id: 104,
-      name: 'Olivia Martinez',
-    },
-    course: {
-      id: 204,
-      name: 'Level 3 Digital Marketing',
-      code: 'DM-L3-008',
-    },
-    employer_name: 'Creative Media Group',
-    trainer_name: 'David Thompson',
-    file_type: 'Evidence',
-    file_name: 'social_media_campaign_analysis.xlsx',
-    file_description: 'Analysis of social media campaign performance metrics',
-    uploaded_at: '2024-01-22T11:20:00Z',
-    signatures: {
-      Trainer: {
-        received_at: '2024-01-22T11:20:00Z',
-        signed_at: '2024-01-23T09:30:00Z',
-      },
-      Learner: {
-        received_at: '2024-01-22T11:20:00Z',
-        signed_at: null,
-      },
-      Employer: null,
-      IQA: null,
-    },
-  },
-  {
-    assignment_id: 5,
-    learner: {
-      id: 105,
-      name: 'Noah Taylor',
-    },
-    course: {
-      id: 205,
-      name: 'Level 2 IT Support',
-      code: 'IT-L2-015',
-    },
-    employer_name: 'Global IT Services',
-    trainer_name: 'Sarah Johnson',
-    file_type: 'Evidence',
-    file_name: 'troubleshooting_log.pdf',
-    file_description: 'Log of IT support tickets resolved over 3 months',
-    uploaded_at: '2024-01-25T08:00:00Z',
-    signatures: {
-      Trainer: {
-        received_at: '2024-01-25T08:00:00Z',
-        signed_at: '2024-01-25T16:15:00Z',
-      },
-      Learner: {
-        received_at: '2024-01-25T08:00:00Z',
-        signed_at: '2024-01-26T10:00:00Z',
-      },
-      Employer: {
-        received_at: '2024-01-26T10:00:00Z',
-        signed_at: null,
-      },
-      IQA: null,
-    },
-  },
-]
 
 const Index = () => {
   const { pagination } = useSelector(selectGlobalUser)
@@ -259,34 +97,19 @@ const Index = () => {
   }, [])
 
   // API queries - Currently using static data for testing
-  // const {
-  //   data: awaitingSignatureData,
-  //   isLoading,
-  //   error,
-  //   refetch,
-  // } = useGetAwaitingSignatureListQuery({
-  //   page: currentPage,
-  //   limit: pagination?.page_size || 10,
-  //   search: searchKeyword,
-  //   trainer_id: filters.trainer,
-  //   course_id: filters.course,
-  //   learner_id: filters.learner,
-  // });
-
-  // Using static sample data for testing
-  const isLoading = false
-  const awaitingSignatureData = {
-    data: SAMPLE_DATA,
-    meta_data: {
-      page: currentPage,
-      pages: 1,
-      items: SAMPLE_DATA.length,
-      page_size: 10,
-    },
-  }
-  const refetch = () => {
-    console.log('Refetch called - using static data')
-  }
+  const {
+    data: awaitingSignatureData,
+    isLoading,
+    error,
+    refetch,
+  } = useGetAwaitingSignatureListQuery({
+    page: currentPage,
+    limit: pagination?.page_size || 10,
+    search: searchKeyword,
+    trainer_id: filters.trainer,
+    course_id: filters.course,
+    learner_id: filters.learner,
+  });
 
   const handleSearch = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
