@@ -409,7 +409,7 @@ export const useCourseBuilder = (edit = 'create') => {
     const courseDataToSend = { ...state.courseData }
 
     if (!courseDataToSend.course_type) {
-      courseDataToSend.course_type = 'CORE'
+      courseDataToSend.course_type = 'RQF'
     }
 
     if (
