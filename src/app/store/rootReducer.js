@@ -39,6 +39,7 @@ import { acknowledgementApi } from './api/acknowledgementApi'
 import { defaultReviewWeeksApi } from './api/default-review-weeks-api'
 import { awaitingSignatureAPI } from './api/awaiting-signature-api'
 import { gatewayReportAPI } from './api/gateway-report-api'
+import { timelogExportAPI } from './api/timelog-export-api'
 
 const createReducer = (asyncReducers) => (state, action) => {
   const combinedReducer = combineReducers({
@@ -84,6 +85,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     [defaultReviewWeeksApi.reducerPath]: defaultReviewWeeksApi.reducer,
     [awaitingSignatureAPI.reducerPath]: awaitingSignatureAPI.reducer,
     [gatewayReportAPI.reducerPath]: gatewayReportAPI.reducer,
+    [timelogExportAPI.reducerPath]: timelogExportAPI.reducer,
     ...asyncReducers,
   })
 
@@ -109,6 +111,7 @@ export const concatMiddleware = [
   defaultReviewWeeksApi.middleware,
   awaitingSignatureAPI.middleware,
   gatewayReportAPI.middleware,
+  timelogExportAPI.middleware,
 ]
 
 export default createReducer
