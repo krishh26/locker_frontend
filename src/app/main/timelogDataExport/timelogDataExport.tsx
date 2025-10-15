@@ -22,12 +22,11 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectGlobalUser } from 'app/store/globalUser';
-import { selectTimeLog } from 'app/store/timeLog';
-import { getTimeLogAPI } from 'app/store/timeLog';
 import { showMessage } from 'app/store/fuse/messageSlice';
+import { useGetTimelogExportDataMutation } from 'app/store/api/timelog-export-api';
+import { downloadCSV, formatDateForExcel } from 'src/utils/csvExport';
 import axios from 'axios';
 import jsonData from 'src/url.json';
-import { exportTimelogToExcel } from './timelogExportUtils';
 import { useThemeColors, themeHelpers } from '../../utils/themeUtils';
 import { styled } from '@mui/material/styles';
 
@@ -128,6 +127,123 @@ const ExportButton = styled(ThemedButton)(({ theme }) => ({
   },
 }));
 
+// Timelog data interface
+interface TimelogExportData {
+  id: number;
+  activity_date: string;
+  activity_type: string;
+  unit: string;
+  type: string;
+  spend_time: string;
+  start_time: string;
+  end_time: string;
+  impact_on_learner: string;
+  evidence_link: string;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
+  trainer_id: {
+    user_id: number;
+    user_name: string;
+    email: string;
+  };
+  course_id: {
+    course_id: number;
+    course_name: string;
+    course_code: string;
+  };
+}
+
+// Helper function to escape CSV fields
+const escapeCSVField = (field: string): string => {
+  if (field === null || field === undefined) {
+    return '';
+  }
+  
+  const stringField = String(field);
+  
+  // If field contains comma, newline, or double quote, wrap in quotes and escape quotes
+  if (stringField.includes(',') || stringField.includes('\n') || stringField.includes('"')) {
+    return `"${stringField.replace(/"/g, '""')}"`;
+  }
+  
+  return stringField;
+};
+
+// Convert timelog data to CSV format
+const convertTimelogToCSV = (data: TimelogExportData[]): string => {
+  if (!data || data.length === 0) {
+    return '';
+  }
+
+  // Define CSV headers
+  const headers = [
+    'ID',
+    'Activity Date',
+    'Activity Type',
+    'Unit',
+    'Type',
+    'Spend Time',
+    'Start Time',
+    'End Time',
+    'Impact on Learner',
+    'Evidence Link',
+    'Verified',
+    'Trainer Name',
+    'Trainer Email',
+    'Course Name',
+    'Course Code',
+    'Created At',
+    'Updated At'
+  ];
+
+  // Convert data to CSV rows
+  const rows = data.map(item => [
+    item.id.toString(),
+    formatDateForExcel(item.activity_date),
+    escapeCSVField(item.activity_type),
+    escapeCSVField(item.unit),
+    escapeCSVField(item.type),
+    escapeCSVField(item.spend_time),
+    escapeCSVField(item.start_time),
+    escapeCSVField(item.end_time),
+    escapeCSVField(item.impact_on_learner),
+    escapeCSVField(item.evidence_link),
+    item.verified ? 'Yes' : 'No',
+    escapeCSVField(item.trainer_id?.user_name || ''),
+    escapeCSVField(item.trainer_id?.email || ''),
+    escapeCSVField(item.course_id?.course_name || ''),
+    escapeCSVField(item.course_id?.course_code || ''),
+    formatDateForExcel(item.created_at),
+    formatDateForExcel(item.updated_at)
+  ]);
+
+  // Combine headers and rows
+  const csvContent = [headers, ...rows]
+    .map(row => row.join(','))
+    .join('\n');
+
+  return csvContent;
+};
+
+// Main export function
+const exportTimelogDataToCSV = (data: TimelogExportData[], filename?: string): boolean => {
+  try {
+    const csvContent = convertTimelogToCSV(data);
+    
+    if (!csvContent) {
+      console.warn('No data to export');
+      return false;
+    }
+    
+    downloadCSV(csvContent, filename);
+    return true;
+  } catch (error) {
+    console.error('Error exporting CSV:', error);
+    return false;
+  }
+};
+
 interface FilterData {
   primaryAssessor: string;
   employer: string;
@@ -141,7 +257,6 @@ interface FilterData {
 const TimelogDataExport: React.FC = () => {
   const dispatch: any = useDispatch();
   const { currentUser } = useSelector(selectGlobalUser);
-  const timeLog = useSelector(selectTimeLog);
   const colors = useThemeColors();
 
   const [filters, setFilters] = useState<FilterData>({
@@ -154,7 +269,6 @@ const TimelogDataExport: React.FC = () => {
     showOnlyOffTheJob: false,
   });
 
-  const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(true);
@@ -172,6 +286,9 @@ const TimelogDataExport: React.FC = () => {
 
   // API base URL
   const URL_BASE_LINK = jsonData.API_LOCAL_URL;
+
+  // RTK Query mutation for fetching timelog export data
+  const [getTimelogExportData, { isLoading: isTimelogLoading, error: timelogError }] = useGetTimelogExportDataMutation();
 
   // Fetch primary assessors (Admin role)
   const fetchPrimaryAssessors = async () => {
@@ -238,6 +355,7 @@ const TimelogDataExport: React.FC = () => {
     loadData();
   }, []);
 
+
   const handleFilterChange = (field: keyof FilterData, value: any) => {
     setFilters(prev => ({
       ...prev,
@@ -270,36 +388,35 @@ const TimelogDataExport: React.FC = () => {
         return;
       }
 
-      // Fetch timelog data with filters
-      const filterParams = {
-        primaryAssessor: filters.primaryAssessor,
-        employer: filters.employer,
-        course: filters.course,
-        curriculumManager: filters.curriculumManager,
-        dateFrom: filters.dateFrom?.toISOString(),
-        dateTo: filters.dateTo?.toISOString(),
-        showOnlyOffTheJob: filters.showOnlyOffTheJob,
-      };
+      // Call the API mutation
+      const result = await getTimelogExportData({
+        trainer_id: filters.primaryAssessor || undefined,
+        course_id: filters.course || undefined,
+        date_from: filters.dateFrom?.toISOString().split('T')[0] || undefined,
+        date_to: filters.dateTo?.toISOString().split('T')[0] || undefined,
+        type: filters.showOnlyOffTheJob ? 'Off the job' : undefined,
+      });
 
-      // In real implementation, you would call an API endpoint that accepts these filters
-      // For now, we'll use the existing getTimeLogAPI with basic parameters
-      dispatch(getTimeLogAPI(
-        { page: 1, page_size: 1000 }, // Large page size to get all data
-        currentUser?.user_id,
-        filters.course,
-        filters.showOnlyOffTheJob ? 'Off the job' : 'All'
-      ));
-
-      // Export the data
-      const success = await exportTimelogToExcel(timeLog?.data || [], filterParams);
-      
-      if (success) {
-        dispatch(showMessage({
-          message: 'Timelog data exported successfully!',
-          variant: 'success'
-        }));
+      if ('data' in result && result.data && result.data.data && result.data.data.length > 0) {
+        // Export the data to CSV
+        const timelogData = result.data.data;
+        const success = exportTimelogDataToCSV(
+          timelogData, 
+          `timelog-export-${new Date().toISOString().split('T')[0]}.csv`
+        );
+        
+        if (success) {
+          dispatch(showMessage({
+            message: 'Timelog data exported successfully!',
+            variant: 'success'
+          }));
+        } else {
+          setError('Failed to export data. Please try again.');
+        }
+      } else if ('error' in result) {
+        setError('Failed to fetch data. Please try again.');
       } else {
-        setError('Failed to export data. Please try again.');
+        setError('No data found for the selected filters.');
       }
     } catch (err) {
       console.error('Export error:', err);
@@ -556,7 +673,7 @@ const TimelogDataExport: React.FC = () => {
             <ClearButton
               variant="contained"
               onClick={handleClearFilters}
-              disabled={exporting}
+              disabled={exporting || isTimelogLoading}
             >
               Clear
             </ClearButton>
@@ -564,10 +681,10 @@ const TimelogDataExport: React.FC = () => {
             <ExportButton
               variant="contained"
               onClick={handleExportToExcel}
-              disabled={exporting}
-              startIcon={exporting ? <CircularProgress size={20} color="inherit" /> : null}
+              disabled={exporting || isTimelogLoading}
+              startIcon={(exporting || isTimelogLoading) ? <CircularProgress size={20} color="inherit" /> : null}
             >
-              {exporting ? 'Exporting...' : 'Export to Excel'}
+              {(exporting || isTimelogLoading) ? 'Exporting...' : 'Export to Excel'}
             </ExportButton>
           </Box>
         </Grid>

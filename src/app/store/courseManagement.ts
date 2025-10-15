@@ -188,7 +188,7 @@ export const fetchCourseById = (course_id) => async (dispatch) => {
 
 export const fetchCourseAPI =
     (
-        data = { page: 1, page_size: 25 },
+        data = { page: 1, page_size: 500 },
         search_keyword = "",
         search_role = "",
         core_type = ""
@@ -196,7 +196,7 @@ export const fetchCourseAPI =
         async (dispatch) => {
             try {
                 dispatch(slice.setLoader(true));
-                const { page = 1, page_size = 25 } = data;
+                const { page = 1, page_size = 500 } = data;
 
                 let url = `${URL_BASE_LINK}/course/list?page=${page}&limit=${page_size}&meta=true`;
 
