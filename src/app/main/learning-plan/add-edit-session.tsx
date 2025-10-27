@@ -20,12 +20,14 @@ import {
   useGetOptionsListQuery
 } from 'app/store/api/learner-plan-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import { selectLearnerManagement } from 'app/store/learnerManagement'
 import { getLearnerAPI, getTrainerAPI, selectSession } from 'app/store/session'
 import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { LoadingButton } from 'src/app/component/Buttons'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
 import * as yup from 'yup'
 
 const repeatOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 20, 24]
@@ -92,6 +94,9 @@ const AddEditSession = (props) => {
   const navigate = useNavigate()
   const session = useSelector(selectSession)
 
+  const user = useCurrentUser()
+  const { learner } = useSelector(selectLearnerManagement)
+
   const {
     control,
     handleSubmit,
@@ -102,7 +107,7 @@ const AddEditSession = (props) => {
   } = useForm({
     defaultValues: {
       trainer_id: '',
-      learners: '',
+      learners: [],
       title: '',
       description: '',
       location: '',
@@ -132,6 +137,14 @@ const AddEditSession = (props) => {
   useEffect(() => {
     dispatch(getLearnerAPI())
   }, [dispatch])
+
+  // Prefill trainer_id if user is a Trainer
+  useEffect(() => {
+    if (user?.role === 'Trainer' && user?.user_id) {
+      setValue('trainer_id', user.user_id.toString())
+      setValue('learners', [learner.learner_id])
+    }
+  }, [user, setValue])
 
   const selectedTrainer = watch('trainer_id')
   const selectedLearner = watch('learners')
@@ -244,7 +257,7 @@ const AddEditSession = (props) => {
                     name='trainer_id'
                     control={control}
                     render={({ field }) => (
-                      <Select {...field} fullWidth size='small' displayEmpty>
+                      <Select {...field} fullWidth size='small' displayEmpty disabled={user?.role === 'Trainer'}>
                         <MenuItem value='' disabled>
                           Select Trainer
                         </MenuItem>

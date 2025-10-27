@@ -102,7 +102,7 @@ export const getGapAnalysisCounts = async (learnerId: string, courseId: string):
  */
 export const getSessionCounts = async (learnerId: string, courseId: string): Promise<{total: number}> => {
   try {
-     const url = `${URL_BASE_LINK}/learner-plan/list?user_id=${learnerId}`
+     const url = `${URL_BASE_LINK}/learner-plan/list?learners=${learnerId}`
 
      const response = await axios.get(url);
     

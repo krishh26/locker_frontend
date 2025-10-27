@@ -16,14 +16,10 @@ const LearnerDashboardPage: React.FC = () => {
   const dispatch: any = useDispatch()
   
   const [validationError, setValidationError] = useState<string | null>(null)
-  console.log("🚀 ~ LearnerDashboardPage ~ validationError:", validationError)
   const { learner, dataFetchLoading } = useSelector(selectLearnerManagement)
-  console.log("🚀 ~ LearnerDashboardPage ~ learner:", learner)
-  console.log("🚀 ~ LearnerDashboardPage ~ dataFetchLoading:", dataFetchLoading)
   
   // Get learner ID from either URL params or query string
   const learnerId = id || searchParams.get('learner_id') || searchParams.get('id')
-  console.log("🚀 ~ LearnerDashboardPage ~ learnerId:", learnerId)
 
   const handleBack = () => {
     navigate(-1) // Go back to previous page
