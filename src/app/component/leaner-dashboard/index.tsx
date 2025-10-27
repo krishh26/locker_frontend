@@ -5,38 +5,36 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import {
-    alpha,
-    Avatar,
-    Box,
-    Card,
-    Chip,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Fade,
-    Grid,
-    LinearProgress,
-    Paper,
-    Slide,
-    Tab,
-    TextField,
-    Typography,
-    useTheme
+  alpha,
+  Avatar,
+  Box,
+  Card,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Fade,
+  Grid,
+  LinearProgress,
+  Paper,
+  Slide,
+  Tab,
+  TextField,
+  Typography,
+  useTheme,
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { useGetSafeguardingContactsQuery } from 'app/store/api/safeguarding-api'
 import { slice as courseSlice, slice } from 'app/store/courseManagement'
-import {
-    selectLearnerManagement
-} from 'app/store/learnerManagement'
+import { selectLearnerManagement } from 'app/store/learnerManagement'
 import { sendMail } from 'app/store/userManagement'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import {
-    SecondaryButton,
-    SecondaryButtonOutlined,
+  SecondaryButton,
+  SecondaryButtonOutlined,
 } from 'src/app/component/Buttons'
 import { PortfolioCard } from 'src/app/component/Cards'
 import DoughnutChart from 'src/app/component/Chart/doughnut'
@@ -333,7 +331,7 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
   const { overviewCards, courseCards } = useMemo(
     () => ({
       overviewCards: portfolioCard.filter((card) =>
-        [4, 5, 9, 10 ,11].includes(card.id)
+        [4, 5, 9, 10, 11].includes(card.id)
       ),
       courseCards: portfolioCard.filter((card) =>
         [1, 2, 3, 6, 7, 8].includes(card.id)
@@ -350,7 +348,6 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
   const handleOpen = useCallback(() => {
     setOpen(true)
   }, [])
-
 
   const handleClickData = useCallback(
     (event: React.MouseEvent, row: any) => {
@@ -393,7 +390,6 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
       handleCloseEmail()
     }
   }, [dispatch, emailData, handleCloseEmail])
-
 
   useEffect(() => {
     if (learner?.email) {
@@ -504,9 +500,8 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
           gutterBottom
           sx={{ fontWeight: 700, color: 'text.primary' }}
         >
-         {learner?.first_name + ' ' + learner?.last_name} - Dashboard
+          {learner?.first_name + ' ' + learner?.last_name} - Dashboard
         </Typography>
-   
       </Box>
 
       {/* Tab Content with Animation */}
@@ -526,7 +521,7 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
           ))}
         </StyledCardsContainer>
       </Fade>
-      
+
       {/* Learner Information Section */}
       {learner && (
         <StyledLearnerCard elevation={4}>
@@ -658,57 +653,53 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
                     </Typography>
                   </Box>
 
-                  {learner?.nextvisitdate && (
-                    <Box
-                      sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-                    >
-                      <Chip
-                        label={`Next Visit: ${learner?.nextvisitdate}`}
-                        color='primary'
-                        variant='filled'
-                        size='medium'
-                        sx={{
-                          fontWeight: 700,
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Chip
+                      label={`Next Visit: ${learner?.nextvisitdate || 'N/A'}`}
+                      color='primary'
+                      variant='filled'
+                      size='medium'
+                      sx={{
+                        fontWeight: 700,
+                        backgroundColor: alpha(
+                          theme.palette.primary.contrastText,
+                          0.15
+                        ),
+                        border: `2px solid ${alpha(
+                          theme.palette.primary.contrastText,
+                          0.3
+                        )}`,
+                        color: theme.palette.primary.contrastText,
+                        height: '32px',
+                        borderRadius: '16px',
+                        boxShadow: `0 2px 8px ${alpha(
+                          theme.palette.primary.contrastText,
+                          0.2
+                        )}`,
+                        transition: 'all 0.3s ease-in-out',
+                        '&:hover': {
                           backgroundColor: alpha(
                             theme.palette.primary.contrastText,
-                            0.15
+                            0.25
                           ),
-                          border: `2px solid ${alpha(
+                          transform: 'translateY(-1px)',
+                          boxShadow: `0 4px 12px ${alpha(
                             theme.palette.primary.contrastText,
                             0.3
                           )}`,
+                        },
+                        '& .MuiChip-label': {
+                          fontSize: '1rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.5px',
+                        },
+                        '& .MuiChip-icon': {
                           color: theme.palette.primary.contrastText,
-                          height: '32px',
-                          borderRadius: '16px',
-                          boxShadow: `0 2px 8px ${alpha(
-                            theme.palette.primary.contrastText,
-                            0.2
-                          )}`,
-                          transition: 'all 0.3s ease-in-out',
-                          '&:hover': {
-                            backgroundColor: alpha(
-                              theme.palette.primary.contrastText,
-                              0.25
-                            ),
-                            transform: 'translateY(-1px)',
-                            boxShadow: `0 4px 12px ${alpha(
-                              theme.palette.primary.contrastText,
-                              0.3
-                            )}`,
-                          },
-                          '& .MuiChip-label': {
-                            fontSize: '1rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.5px',
-                          },
-                          '& .MuiChip-icon': {
-                            color: theme.palette.primary.contrastText,
-                            fontSize: '1rem',
-                          },
-                        }}
-                      />
-                    </Box>
-                  )}
+                          fontSize: '1rem',
+                        },
+                      }}
+                    />
+                  </Box>
                 </Box>
               </Box>
 
@@ -1123,7 +1114,9 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
                 {safeguardingData.data[0].emailAddress && (
                   <StyledContactItem>
                     <StyledContactLabel>Email:</StyledContactLabel>
-                    <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', flex: 1 }}
+                    >
                       <StyledContactValue>
                         <a
                           href={`mailto:${safeguardingData.data[0].emailAddress}`}
@@ -1167,10 +1160,8 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
           </StyledSafeguardingContent>
         </StyledSafeguardingCard>
       )}
-
     </StyledContainer>
   )
 }
 
 export default LearnerDashboard
-
