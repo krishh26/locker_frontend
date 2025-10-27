@@ -248,7 +248,6 @@ const Index = () => {
     dispatch(getRoleAPI('EQA'))
     dispatch(getRoleAPI('Employer'))
     dispatch(getRoleAPI('LIQA'))
-    dispatch(getEmployerAPI())
   }, [])
 
   const top100Films = [

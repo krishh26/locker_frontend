@@ -289,7 +289,7 @@ export const userManagementTableColumn = [
 ]
 
 export const learnerManagementTableColumn = [
-  { id: 'first_name', label: 'Name', minWidth: 170, align: 'left' },
+  { id: 'first_name', label: 'Learner Name', minWidth: 170, align: 'left' },
   { id: 'user_name', label: 'Username', minWidth: 170, align: 'left' },
   { id: 'email', label: 'Email', minWidth: 170, align: 'left' },
   { id: 'mobile', label: 'Mobile', minWidth: 170, align: 'left' },

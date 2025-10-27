@@ -38,7 +38,7 @@ import {
   SecondaryButtonOutlined,
 } from 'src/app/component/Buttons'
 import DataNotFound from 'src/app/component/Pages/dataNotFound'
-import { useCurrentUser } from 'src/app/utils/userHelpers'
+import { useCurrentUser, useLearnerId } from 'src/app/utils/userHelpers'
 import { UserRole } from 'src/enum'
 import * as yup from 'yup'
 
@@ -88,6 +88,8 @@ const CourseTab = () => {
     selectLearnerManagement
   )
 
+  const learnerId = useLearnerId()
+
   const [courseDialog, setCourseDialog] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState(null)
@@ -107,7 +109,7 @@ const CourseTab = () => {
       course_id: '',
       trainer_id: '',
       IQA_id: '',
-      learner_id: learner?.learner_id,
+      learner_id: learnerId,
       EQA_id: '',
       LIQA_id: '',
       start_date: '',
@@ -120,7 +122,7 @@ const CourseTab = () => {
   })
 
   const handleLearnerRefetch = async () => {
-    const data = await dispatch(getLearnerDetails())
+    const data = await dispatch(getLearnerDetails(learnerId))
     if (data) {
       dispatch(globalSlice.setSelectedUser(data))
     }
@@ -168,12 +170,13 @@ const CourseTab = () => {
     setValue('course_status', course?.course_status || '')
     setValue('predicted_grade', course?.predicted_grade || '')
     setValue('final_grade', course?.final_grade || '')
-    setValue('is_main_course', course?.is_main_course || false)
+    setValue('is_main_course', course?.is_main_course)
 
     setCourseDialog(true)
   }
 
   const { selectedUser, dataFetchLoading } = useSelector(selectGlobalUser)
+  const isMainCourse = selectedUser?.course?.some((course) => course?.is_main_course)
   const currentUser = useCurrentUser()
 
   const handleCreateCourse = () => {
@@ -295,6 +298,9 @@ const CourseTab = () => {
                     <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
                       IQA
                     </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
+                      Main Aim Course
+                    </TableCell>
                     {!currentUser?.roles.includes(UserRole.Learner) && (
                       <TableCell sx={{ fontWeight: 600, color: '#374151' }}>
                         Actions
@@ -351,6 +357,9 @@ const CourseTab = () => {
                         {row?.IQA_id?.first_name && row?.IQA_id?.last_name
                           ? `${row?.IQA_id?.first_name} ${row?.IQA_id?.last_name}`
                           : 'N/A'}
+                      </TableCell>
+                      <TableCell sx={{ color: '#6b7280' , textAlign: 'center'}}>
+                        {row?.is_main_course ? 'Yes' : 'No'}
                       </TableCell>
                       {!currentUser?.roles.includes(UserRole.Learner) && (
                         <TableCell>
@@ -729,6 +738,7 @@ const CourseTab = () => {
                       checked={field.value || false}
                       onChange={(e) => field.onChange(e.target.checked)}
                       color='primary'
+                      disabled={isEditMode && selectedCourse?.is_main_course === false && isMainCourse}
                     />
                     <Typography className='text-sm font-medium text-gray-700'>
                       Main Aim Course

@@ -754,12 +754,11 @@ const Portfolio: React.FC = () => {
                     </Typography>
                   </Box>
 
-                  {learner?.nextvisitdate && (
                     <Box
                       sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
                     >
                       <Chip
-                        label={`Next Visit: ${learner?.nextvisitdate}`}
+                        label={`Next Visit: ${learner?.nextvisitdate || 'N/A'}`}
                         color='primary'
                         variant='filled'
                         size='medium'
@@ -804,7 +803,6 @@ const Portfolio: React.FC = () => {
                         }}
                       />
                     </Box>
-                  )}
                   {/* Next Visit Date Chip */}
                 </Box>
               </Box>

@@ -32,7 +32,7 @@ import {
   getAllPortfolioCounts,
   PortfolioCountData,
 } from 'src/app/utils/portfolioCountUtils'
-import { useCurrentUser } from 'src/app/utils/userHelpers'
+import { useCurrentUser, useLearnerId, useLearnerUserId } from 'src/app/utils/userHelpers'
 import { UserRole } from 'src/enum'
 
 // Type-safe wrapper for FuseSvgIcon
@@ -275,6 +275,8 @@ const CourseData = () => {
   const navigate = useNavigate()
 
   const user = useCurrentUser()
+  const learnerId = useLearnerId()
+
   const { learner } = useSelector(selectLearnerManagement)
   // State for count data
   const [countData, setCountData] = useState<PortfolioCountData>({
@@ -328,9 +330,6 @@ const CourseData = () => {
     const fetchCountData = async () => {
       if (singleData && singleData.course) {
         try {
-          // Get learner ID from session storage or props
-          const learnerId = learner?.learner_id || user?.user_id
-
           if (learnerId) {
             const counts = await getAllPortfolioCounts(
               learnerId,
