@@ -26,6 +26,7 @@ import timeLog from './timeLog'
 import broadcast from './broadcast'
 import contractWork from './contractedWork'
 import learnersWaitingToBeSampled from './learnersWaitingToBeSampled'
+import progressExclusion from './progressExclusion'
 
 import { evidenceAPI } from './api/evidence-api'
 import { learnerPlanAPI } from './api/learner-plan-api'
@@ -71,6 +72,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     broadcast,
     contractWork,
     learnersWaitingToBeSampled,
+    progressExclusion,
 
     // Add the API reducer
     [evidenceAPI.reducerPath]: evidenceAPI.reducer,

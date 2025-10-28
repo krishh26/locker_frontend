@@ -217,6 +217,7 @@ const AddEditSession = (props) => {
       )
 
       reset()
+      navigate(`/session-list/${learner.learner_id}`)
     } catch (error) {
       console.error('Error:', error)
       dispatch(

@@ -337,5 +337,13 @@ const navigationConfig = [
     url: '/gateway-report',
     visible: [UserRole.Admin],
   },
+  {
+    id: 'dashboards.progressExclusion',
+    title: 'Exclude From Overall Progress',
+    type: 'item',
+    icon: 'heroicons-outline:filter',
+    url: '/progress-exclusion',
+    visible: [UserRole.Admin],
+  },
 ]
 export default navigationConfig
