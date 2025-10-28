@@ -43,6 +43,7 @@ import AwaitingSignatureConfig from '../main/awaitingSignature/awaitingSignature
 import GatewayReportConfig from '../main/gatewayReport/gatewayReportConfig'
 import learnerDashboardConfig from '../main/learner-dashboard/learnerDashboardConfig'
 import DocsToSignConfig from '../main/docsToSign/docsToSignConfig'
+import ProgressExclusionConfig from '../main/progressExclusion/progressExclusionConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -85,7 +86,8 @@ const routeConfigs = [
   AwaitingSignatureConfig,
   GatewayReportConfig,
   learnerDashboardConfig,
-  DocsToSignConfig
+  DocsToSignConfig,
+  ProgressExclusionConfig
 ]
 
 const routes = [
