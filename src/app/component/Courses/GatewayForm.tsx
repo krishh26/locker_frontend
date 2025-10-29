@@ -31,7 +31,7 @@ interface GatewayFormProps {
   courseDispatch?: any
 }
 
-interface ChecklistItem {
+interface QuestionItem {
   id: string
   question: string
   evidenceRequired: boolean
@@ -52,9 +52,9 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
   edit,
   courseDispatch,
 }) => {
-  // Initialize checklist from courseData or with empty array
-  const [checklist, setChecklist] = useState<ChecklistItem[]>(
-    courseData.checklist || []
+  // Initialize questions from courseData or with empty array
+  const [questions, setQuestions] = useState<QuestionItem[]>(
+    courseData.questions || []
   )
 
   // State for available and assigned courses
@@ -82,8 +82,12 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
         }))
 
         // If we have assigned_standards in courseData, separate them
-        const assignedIds =
-          courseData.assigned_standards?.map((s) => s.id.toString()) || []
+        // Support both formats: array of IDs [1, 2] or array of objects [{id: 1, name: '...'}]
+        const assignedIds = courseData.assigned_standards
+          ? courseData.assigned_standards.map((s: any) =>
+              typeof s === 'object' && s !== null ? s.id.toString() : s.toString()
+            )
+          : []
 
         const assigned = standardItems.filter((item) =>
           assignedIds.includes(item.id)
@@ -115,36 +119,49 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
 
   // Update courseData when assigned courses change
   useEffect(() => {
-    // Skip the initial render to prevent circular updates
-    const assignedStandards = assignedCourses.map((course) => ({
-      id: course.id,
-      name: course.name,
-    }))
+    // Extract only IDs from assigned courses
+    const assignedStandardIds = assignedCourses.map((course) => {
+      // Convert to number if possible, otherwise keep as string
+      const idNum = Number(course.id)
+      return isNaN(idNum) ? course.id : idNum
+    })
 
     // Compare with current assigned_standards to avoid unnecessary updates
-    const currentAssignedIds =
-      courseData.assigned_standards?.map((s) => s.id) || []
-    const newAssignedIds = assignedStandards.map((s) => s.id)
+    // Support both formats: array of IDs [1, 2] or array of objects [{id: 1, name: '...'}]
+    const currentAssignedIds = courseData.assigned_standards
+      ? courseData.assigned_standards.map((s: any) => {
+          if (typeof s === 'object' && s !== null) {
+            const idNum = Number(s.id)
+            return isNaN(idNum) ? s.id : idNum
+          }
+          const idNum = Number(s)
+          return isNaN(idNum) ? s : idNum
+        })
+      : []
 
     // Only update if the assigned standards have actually changed
-    if (
-      JSON.stringify(currentAssignedIds.sort()) !==
-      JSON.stringify(newAssignedIds.sort())
-    ) {
-      // Update the course data directly with the assigned standards
+    const currentSorted = [...currentAssignedIds].sort((a, b) =>
+      a.toString().localeCompare(b.toString())
+    )
+    const newSorted = [...assignedStandardIds].sort((a, b) =>
+      a.toString().localeCompare(b.toString())
+    )
+
+    if (JSON.stringify(currentSorted) !== JSON.stringify(newSorted)) {
+      // Update the course data with only the IDs array
       courseDispatch({
         type: 'UPDATE_COURSE_FIELD',
         field: 'assigned_standards',
-        value: assignedStandards,
+        value: assignedStandardIds,
       })
     }
-    // Include courseData.assigned_standards in the dependency array to properly compare changes
+    // Include courseData.assigned_standards in the dependency array
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignedCourses, courseDispatch])
 
-  // Function to add a new checklist item
-  const addChecklistItem = () => {
-    const newItem: ChecklistItem = {
+  // Function to add a new question item
+  const addQuestionItem = () => {
+    const newItem: QuestionItem = {
       id: `item_${Date.now()}`,
       question: '',
       evidenceRequired: false,
@@ -152,50 +169,50 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
       dropdownOptions: '',
     }
 
-    const updatedChecklist = [...checklist, newItem]
-    setChecklist(updatedChecklist)
+    const updatedQuestions = [...questions, newItem]
+    setQuestions(updatedQuestions)
 
-    // Update the courseData with the new checklist
+    // Update the courseData with the new questions
     courseDispatch({
       type: 'UPDATE_COURSE_FIELD',
-      field: 'checklist',
-      value: updatedChecklist,
+      field: 'questions',
+      value: updatedQuestions,
     })
   }
 
-  // Function to remove a checklist item
-  const removeChecklistItem = (id: string) => {
-    const updatedChecklist = checklist.filter((item) => item.id !== id)
-    setChecklist(updatedChecklist)
+  // Function to remove a question item
+  const removeQuestionItem = (id: string) => {
+    const updatedQuestions = questions.filter((item) => item.id !== id)
+    setQuestions(updatedQuestions)
 
-    // Update the courseData with the updated checklist
+    // Update the courseData with the updated questions
     courseDispatch({
       type: 'UPDATE_COURSE_FIELD',
-      field: 'checklist',
-      value: updatedChecklist,
+      field: 'questions',
+      value: updatedQuestions,
     })
   }
 
-  // Function to update a checklist item
-  const updateChecklistItem = (
+  // Function to update a question item
+  const updateQuestionItem = (
     id: string,
-    field: keyof ChecklistItem,
+    field: keyof QuestionItem,
     value: any
   ) => {
-    const updatedChecklist = checklist.map((item) => {
+    const updatedQuestions = questions.map((item) => {
       if (item.id === id) {
         return { ...item, [field]: value }
       }
       return item
     })
 
-    setChecklist(updatedChecklist)
+    setQuestions(updatedQuestions)
 
-    // Update the courseData with the updated checklist
+    // Update the courseData with the updated questions
     courseDispatch({
       type: 'UPDATE_COURSE_FIELD',
-      field: 'checklist',
-      value: updatedChecklist,
+      field: 'questions',
+      value: updatedQuestions,
     })
   }
 
@@ -293,7 +310,7 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
           {edit !== 'view' && (
             <IconButton
               color='primary'
-              onClick={addChecklistItem}
+              onClick={addQuestionItem}
               className='bg-blue-100 hover:bg-blue-200'
             >
               <AddIcon />
@@ -313,7 +330,7 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {checklist.map((item) => (
+              {questions.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
                     <TextField
@@ -321,7 +338,7 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
                       size='small'
                       value={item.question}
                       onChange={(e) =>
-                        updateChecklistItem(item.id, 'question', e.target.value)
+                        updateQuestionItem(item.id, 'question', e.target.value)
                       }
                       disabled={edit === 'view'}
                     />
@@ -331,7 +348,7 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
                       size='small'
                       value={item.evidenceRequired ? 'Yes' : 'No'}
                       onChange={(_, newValue) =>
-                        updateChecklistItem(
+                        updateQuestionItem(
                           item.id,
                           'evidenceRequired',
                           newValue === 'Yes'
@@ -347,7 +364,7 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
                       size='small'
                       value={item.isDropdown ? 'Yes' : 'No'}
                       onChange={(_, newValue) =>
-                        updateChecklistItem(
+                        updateQuestionItem(
                           item.id,
                           'isDropdown',
                           newValue === 'Yes'
@@ -364,7 +381,7 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
                       size='small'
                       value={item.dropdownOptions}
                       onChange={(e) =>
-                        updateChecklistItem(
+                        updateQuestionItem(
                           item.id,
                           'dropdownOptions',
                           e.target.value
@@ -378,7 +395,7 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
                     <TableCell>
                       <IconButton
                         color='error'
-                        onClick={() => removeChecklistItem(item.id)}
+                        onClick={() => removeQuestionItem(item.id)}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -386,10 +403,10 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
                   )}
                 </TableRow>
               ))}
-              {checklist.length === 0 && (
+              {questions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={edit !== 'view' ? 5 : 4} align='center'>
-                    No checklist items. Click the + button to add one.
+                    No questions. Click the + button to add one.
                   </TableCell>
                 </TableRow>
               )}

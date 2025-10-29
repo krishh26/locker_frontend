@@ -300,14 +300,21 @@ const CourseData = () => {
     singleData?.course_status || ''
   )
 
+
+  const isGateway = useMemo(() => {
+    return course?.course_core_type === 'Gateway'
+  }, [course])
+
   // Memoized filtered cards
   const { courseCards } = useMemo(
     () => ({
       courseCards: portfolioCard.filter((card) =>
-        [1, 2, 3, 6, 7, 8].includes(card.id)
+        isGateway
+          ? [7, 8].includes(card.id)
+          : [1, 2, 3, 6, 7, 8].includes(card.id)
       ),
     }),
-    []
+    [isGateway]
   )
 
   const handleBackToCourses = useCallback(() => {

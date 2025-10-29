@@ -1,22 +1,23 @@
 import React, { useMemo, useCallback } from 'react'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
 import { Doughnut } from 'react-chartjs-2'
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  useTheme, 
+import {
+  Box,
+  Typography,
+  Paper,
+  useTheme,
   alpha,
   Fade,
   Tooltip as MuiTooltip,
   Chip,
-  CircularProgress
+  CircularProgress,
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import PendingIcon from '@mui/icons-material/Pending'
 import WarningIcon from '@mui/icons-material/Warning'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import StarIcon from '@mui/icons-material/Star'
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend)
@@ -62,6 +63,7 @@ interface DoughnutChartProps {
   matrixTitle?: string
   onExploreClick?: () => void
   showExploreButton?: boolean
+  isGateway?: boolean
 }
 
 interface ChartColors {
@@ -85,19 +87,25 @@ const StyledChartContainer = styled(Paper)(({ theme }) => ({
   justifyContent: 'center',
   padding: theme.spacing(2),
   borderRadius: theme.spacing(2),
-  background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.9)} 0%, ${alpha(theme.palette.background.default, 0.9)} 100%)`,
+  background: `linear-gradient(135deg, ${alpha(
+    theme.palette.background.paper,
+    0.9
+  )} 0%, ${alpha(theme.palette.background.default, 0.9)} 100%)`,
   boxShadow: theme.shadows[2],
   transition: 'all 0.3s ease',
   cursor: 'pointer',
   minHeight: 200,
   minWidth: 200,
-  
+
   '&:hover': {
     boxShadow: theme.shadows[8],
     transform: 'translateY(-4px)',
-    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+    background: `linear-gradient(135deg, ${alpha(
+      theme.palette.primary.main,
+      0.05
+    )} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
   },
-  
+
   [theme.breakpoints.down('sm')]: {
     minHeight: 150,
     minWidth: 150,
@@ -111,9 +119,48 @@ const StyledChartTitle = styled(Typography)(({ theme }) => ({
   marginBottom: theme.spacing(1),
   textAlign: 'center',
   fontSize: '1.4rem',
-  
+
   [theme.breakpoints.down('sm')]: {
     fontSize: '0.9rem',
+  },
+}))
+
+const StyledGatewayBadge = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: '-10px',
+  right: '-10px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 30,
+  height: 30,
+  borderRadius: '50%',
+  background: `linear-gradient(135deg, ${theme.palette.warning.light} 0%, ${theme.palette.warning.main} 100%)`,
+  boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.4)}`,
+  zIndex: 10,
+  animation: 'pulse 2s ease-in-out infinite',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+
+  '&:hover': {
+    transform: 'scale(1.1) rotate(90deg)',
+    boxShadow: `0 6px 16px ${alpha(theme.palette.warning.main, 0.6)}`,
+  },
+
+  '@keyframes pulse': {
+    '0%, 100%': {
+      boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.4)}`,
+    },
+    '50%': {
+      boxShadow: `0 6px 20px ${alpha(theme.palette.warning.main, 0.6)}`,
+    },
+  },
+
+  [theme.breakpoints.down('sm')]: {
+    width: 32,
+    height: 32,
+    top: theme.spacing(1),
+    right: theme.spacing(1),
   },
 }))
 
@@ -132,20 +179,22 @@ const StyledLegendItem = styled(Box)(({ theme }) => ({
   padding: theme.spacing(0.5),
   borderRadius: theme.spacing(1),
   transition: 'background-color 0.2s ease',
-  
+
   '&:hover': {
     backgroundColor: alpha(theme.palette.primary.main, 0.1),
   },
 }))
 
-const StyledLegendColor = styled(Box)<{ color: string }>(({ theme, color }) => ({
-  width: 15,
-  height: 15,
-  borderRadius: '50%',
-  backgroundColor: color,
-  border: `2px solid ${theme.palette.background.paper}`,
-  boxShadow: theme.shadows[1],
-}))
+const StyledLegendColor = styled(Box)<{ color: string }>(
+  ({ theme, color }) => ({
+    width: 15,
+    height: 15,
+    borderRadius: '50%',
+    backgroundColor: color,
+    border: `2px solid ${theme.palette.background.paper}`,
+    boxShadow: theme.shadows[1],
+  })
+)
 
 const StyledLegendText = styled(Typography)(({ theme }) => ({
   fontSize: '1.5rem',
@@ -169,7 +218,7 @@ const StyledProgressText = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
   color: theme.palette.primary.main,
   fontSize: '1.2rem',
-  
+
   [theme.breakpoints.down('sm')]: {
     fontSize: '1rem',
   },
@@ -196,7 +245,11 @@ const StyledMatrixTitle = styled(Typography)(({ theme }) => ({
 }))
 
 // Chart configuration
-const getChartOptions = (theme: any, animated: boolean = true, isMatrix: boolean = false): any => ({
+const getChartOptions = (
+  theme: any,
+  animated: boolean = true,
+  isMatrix: boolean = false
+): any => ({
   responsive: true,
   maintainAspectRatio: true,
   cutout: isMatrix ? '30%' : '65%',
@@ -217,19 +270,25 @@ const getChartOptions = (theme: any, animated: boolean = true, isMatrix: boolean
         label: (context: any) => {
           const label = context.label || ''
           const value = context.parsed || 0
-          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
-          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0'
+          const total = context.dataset.data.reduce(
+            (a: number, b: number) => a + b,
+            0
+          )
+          const percentage =
+            total > 0 ? ((value / total) * 100).toFixed(1) : '0'
           return `${percentage}%`
         },
       },
     },
   },
-  animation: animated ? {
-    animateRotate: true,
-    animateScale: true,
-    duration: 2000,
-    easing: 'easeInOutQuart' as const,
-  } : false,
+  animation: animated
+    ? {
+        animateRotate: true,
+        animateScale: true,
+        duration: 2000,
+        easing: 'easeInOutQuart' as const,
+      }
+    : false,
   elements: {
     arc: {
       borderWidth: 2,
@@ -280,13 +339,14 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
   matrixTitle = '2025 matrix',
   onExploreClick,
   showExploreButton = true,
+  isGateway = false,
 }) => {
   const theme = useTheme()
   const colors = getChartColors(theme)
-  
+
   // Determine if we're using matrix data
   const isMatrix = variant === 'matrix' && 'yetToComplete' in value
-  
+
   // Memoized chart data
   const chartData = useMemo(() => {
     if (isMatrix) {
@@ -301,19 +361,18 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
       } = matrixValue
 
       const hasData = totalUnits > 0
-      const innerData = [
-        yetToComplete,
-        fullyCompleted,
-        workInProgress,
-      ]
+      const innerData = [yetToComplete, fullyCompleted, workInProgress]
 
-      const outerData = [
-        duration,
-        totalDuration - duration,
-      ]
+      const outerData = [duration, totalDuration - duration]
 
       return {
-        labels: ['Yet to Complete', 'Fully Completed', 'Work in Progress', 'Duration', 'Remaining'],
+        labels: [
+          'Yet to Complete',
+          'Fully Completed',
+          'Work in Progress',
+          'Duration',
+          'Remaining',
+        ],
         datasets: [
           // Inner ring
           {
@@ -421,8 +480,8 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
   }, [value, colors, isMatrix])
 
   // Memoized chart options
-  const chartOptions = useMemo(() => 
-    getChartOptions(theme, animated, isMatrix), 
+  const chartOptions = useMemo(
+    () => getChartOptions(theme, animated, isMatrix),
     [theme, animated, isMatrix]
   )
 
@@ -431,11 +490,15 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
     if (isMatrix) {
       const matrixValue = value as MatrixChartData
       const { fullyCompleted = 0, totalUnits = 0 } = matrixValue
-      return totalUnits > 0 ? Math.round((fullyCompleted / totalUnits) * 100) : 0
+      return totalUnits > 0
+        ? Math.round((fullyCompleted / totalUnits) * 100)
+        : 0
     } else {
       const standardValue = value as ChartData
       const { fullyCompleted = 0, totalSubUnits = 0 } = standardValue
-      return totalSubUnits > 0 ? Math.round((fullyCompleted / totalSubUnits) * 100) : 0
+      return totalSubUnits > 0
+        ? Math.round((fullyCompleted / totalSubUnits) * 100)
+        : 0
     }
   }, [value, isMatrix])
 
@@ -464,11 +527,12 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
           icon: <PendingIcon sx={{ fontSize: 18 }} />,
         },
       ]
-      
+
       // Calculate average for each item
-      return items.map(item => ({
+      return items.map((item) => ({
         ...item,
-        average: totalUnits > 0 ? ((item.value / totalUnits) * 100).toFixed(1) : '0.0'
+        average:
+          totalUnits > 0 ? ((item.value / totalUnits) * 100).toFixed(1) : '0.0',
       }))
     } else {
       const standardValue = value as ChartData
@@ -493,33 +557,39 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
           icon: <WarningIcon sx={{ fontSize: 14 }} />,
         },
       ]
-      
+
       // Calculate average for each item
-      return items.map(item => ({
+      return items.map((item) => ({
         ...item,
-        average: totalSubUnits > 0 ? ((item.value / totalSubUnits) * 100).toFixed(1) : '0.0'
+        average:
+          totalSubUnits > 0
+            ? ((item.value / totalSubUnits) * 100).toFixed(1)
+            : '0.0',
       }))
     }
   }, [value, colors, isMatrix])
 
   // Event handlers
-  const handleChartClick = useCallback((event: any, elements: any[]) => {
-    if (elements.length > 0) {
-      const element = elements[0]
-      console.log('Chart segment clicked:', {
-        index: element.index,
-        label: chartData.labels[element.index],
-        value: chartData.datasets[0].data[element.index],
-      })
-    }
-  }, [chartData])
+  const handleChartClick = useCallback(
+    (event: any, elements: any[]) => {
+      if (elements.length > 0) {
+        const element = elements[0]
+        console.log('Chart segment clicked:', {
+          index: element.index,
+          label: chartData.labels[element.index],
+          value: chartData.datasets[0].data[element.index],
+        })
+      }
+    },
+    [chartData]
+  )
 
   // Loading state
-  if (!value || Object.values(value).every(val => val === 0)) {
+  if (!value || Object.values(value).every((val) => val === 0)) {
     return (
       <StyledChartContainer className={className}>
         <CircularProgress size={40} />
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+        <Typography variant='caption' color='text.secondary' sx={{ mt: 1 }}>
           No data available
         </Typography>
       </StyledChartContainer>
@@ -529,17 +599,25 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
   return (
     <Fade in={true} timeout={1000}>
       <StyledChartContainer className={className}>
-        {/* {isMatrix && (
-          <StyledMatrixTitle variant="subtitle2">
-            {matrixTitle}
-          </StyledMatrixTitle>
-        )} */}
-        {title && (
-          <StyledChartTitle variant="subtitle2">
-            {title}
-          </StyledChartTitle>
+        {/* Gateway Badge - Top Right Corner */}
+        {isGateway && (
+          <MuiTooltip title="Gateway" arrow placement="top">
+          <StyledGatewayBadge>
+            <StarIcon
+              sx={{
+                color: 'white',
+                fontSize: { xs: 20, sm: 24 },
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+              }}
+            />
+            </StyledGatewayBadge>
+          </MuiTooltip>
         )}
-        
+
+        {title && (
+          <StyledChartTitle variant='subtitle2'>{title}</StyledChartTitle>
+        )}
+
         <Box sx={{ position: 'relative', width: size, height: size }}>
           <Doughnut
             data={chartData}
@@ -550,13 +628,13 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
             width={size}
             height={size}
           />
-          
+
           {/* Center progress indicator */}
           <StyledProgressContainer>
-            <StyledProgressText variant="h6">
+            <StyledProgressText variant='h6'>
               {Math.max(0, (value as MatrixChartData).dayPending || 0)}
             </StyledProgressText>
-            <StyledProgressLabel variant="caption">
+            <StyledProgressLabel variant='caption'>
               days left
             </StyledProgressLabel>
           </StyledProgressContainer>
@@ -566,18 +644,28 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
         {showLabels && (
           <StyledLegendContainer>
             {legendData.map((item, index) => (
-              <MuiTooltip 
+              <MuiTooltip
                 key={index}
                 title={`${item.label}: ${item.value} units (${item.average}%)`}
                 arrow
               >
                 <StyledLegendItem>
                   <StyledLegendColor color={item.color} />
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      width: '100%',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Box
+                      sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                    >
                       {item.icon}
                       <StyledLegendText>
-                      {item.average}%  ({item.value})
+                        {item.average}% ({item.value})
                       </StyledLegendText>
                     </Box>
                   </Box>
@@ -591,15 +679,19 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
         <Chip
           icon={<TrendingUpIcon />}
           label={
-            isMatrix 
-              ? `${(value as MatrixChartData).fullyCompleted || 0}/${(value as MatrixChartData).totalUnits || 0} Complete`
-              : `${(value as ChartData).fullyCompleted || 0}/${(value as ChartData).totalSubUnits || 0} Complete`
+            isMatrix
+              ? `${(value as MatrixChartData).fullyCompleted || 0}/${
+                  (value as MatrixChartData).totalUnits || 0
+                } Complete`
+              : `${(value as ChartData).fullyCompleted || 0}/${
+                  (value as ChartData).totalSubUnits || 0
+                } Complete`
           }
-          size="small"
-          color="primary"
-          variant="outlined"
-          sx={{ 
-            mt: 1, 
+          size='small'
+          color='primary'
+          variant='outlined'
+          sx={{
+            mt: 1,
             fontSize: '1.2rem',
             height: 24,
           }}
@@ -607,8 +699,8 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
 
         {/* Click to explore more button */}
         {showExploreButton && (
-          <Box 
-            sx={{ 
+          <Box
+            sx={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -626,9 +718,9 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
                 transform: 'translateY(-2px)',
                 boxShadow: theme.shadows[4],
                 '& .explore-arrow': {
-                  transform: 'translateX(4px)'
-                }
-              }
+                  transform: 'translateX(4px)',
+                },
+              },
             }}
             onClick={() => {
               if (onExploreClick) {
@@ -638,25 +730,25 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
               }
             }}
           >
-            <Typography 
-              variant='body2' 
-              sx={{ 
+            <Typography
+              variant='body2'
+              sx={{
                 color: theme.palette.primary.main,
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 0.5
+                gap: 0.5,
               }}
             >
               🎯 Click to explore more
             </Typography>
-            <Typography 
-              className="explore-arrow"
-              variant='body2' 
-              sx={{ 
+            <Typography
+              className='explore-arrow'
+              variant='body2'
+              sx={{
                 color: theme.palette.primary.main,
                 fontSize: '1.2rem',
-                transition: 'transform 0.3s ease-in-out'
+                transition: 'transform 0.3s ease-in-out',
               }}
             >
               →
@@ -664,9 +756,6 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
           </Box>
         )}
       </StyledChartContainer>
-
-        
-
     </Fade>
   )
 }
