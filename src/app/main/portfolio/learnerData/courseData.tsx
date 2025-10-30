@@ -32,8 +32,13 @@ import {
   getAllPortfolioCounts,
   PortfolioCountData,
 } from 'src/app/utils/portfolioCountUtils'
-import { useCurrentUser, useLearnerId, useLearnerUserId } from 'src/app/utils/userHelpers'
+import {
+  useCurrentUser,
+  useLearnerId,
+  useLearnerUserId,
+} from 'src/app/utils/userHelpers'
 import { UserRole } from 'src/enum'
+import GatewayChecklist from 'src/app/component/Courses/GatewayChecklist'
 
 // Type-safe wrapper for FuseSvgIcon
 const Icon = (props: { size?: number; color?: string; children: string }) => {
@@ -296,10 +301,10 @@ const CourseData = () => {
     selectCourseManagement
   )
   const course = singleData?.course
+  console.log('🚀 ~ CourseData ~ course:', course)
   const [courseStatus, setCourseStatus] = useState(
     singleData?.course_status || ''
   )
-
 
   const isGateway = useMemo(() => {
     return course?.course_core_type === 'Gateway'
@@ -530,6 +535,30 @@ const CourseData = () => {
       </>
       <Fade in={true} timeout={500}>
         <StyledSection>
+          {/* Gateway Checklist */}
+          {isGateway && (
+            <Box sx={{ mb: 6 }}>
+              <GatewayChecklist
+                // @ts-ignore backend returns the same shape from course builder
+                questions={course?.questions || []}
+                canEditAnswer={user?.role === UserRole.Learner}
+                canSetAchieved={user?.role !== UserRole.Learner}
+                courseId={course?.course_id}
+                user_course_id={singleData?.user_course_id}
+                learnerId={learnerId || ''}
+                onSubmit={async () => {
+                  // Placeholder: hook API here if available
+                  dispatch(
+                    showMessage({
+                      message: 'Answer saved',
+                      variant: 'success',
+                    })
+                  )
+                }}
+              />
+            </Box>
+          )}
+
           {/* Course Information Cards */}
           <div className='flex justify-between items-center'>
             <Typography
