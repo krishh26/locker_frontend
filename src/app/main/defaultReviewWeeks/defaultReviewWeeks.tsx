@@ -255,7 +255,7 @@ const DefaultReviewWeeks: React.FC = () => {
               </Grid>
 
               {/* File Upload Requirement */}
-              <Grid item xs={12}>
+              {/* <Grid item xs={12}>
                 <Controller
                   name='requireFileUpload'
                   control={control}
@@ -287,7 +287,7 @@ const DefaultReviewWeeks: React.FC = () => {
                     />
                   )}
                 />
-              </Grid>
+              </Grid> */}
 
               {/* Status Messages */}
               {saveStatus === 'saved' && (
@@ -316,7 +316,7 @@ const DefaultReviewWeeks: React.FC = () => {
                     disabled={isSaving}
                     startIcon={<SaveIcon />}
                   >
-                    {isSaving ? 'Saving...' : 'Confirm'}
+                    {isSaving ? 'Saving...' : 'Save'}
                   </Button>
                 </Box>
               </Grid>

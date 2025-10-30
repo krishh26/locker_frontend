@@ -447,9 +447,10 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           mb: 2,
+          flexWrap: 'wrap',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 , flexWrap: 'wrap'}}>
           <IconButton
             size='small'
             {...attributes}
@@ -475,7 +476,7 @@ const SimpleFormField: React.FC<SimpleFormFieldProps> = ({
           <Chip label={field.width || 'full'} size='small' variant='outlined' />
         </Box>
 
-        <ButtonGroup size='small' variant='outlined'>
+        <ButtonGroup size='small' variant='outlined' className='flex items-center'>
           <Tooltip title='Edit'>
             <IconButton size='small' onClick={onEdit}>
               <EditIcon fontSize='small' />

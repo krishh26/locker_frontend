@@ -270,13 +270,15 @@ const AcknowledgeMessage: React.FC = () => {
           <form onSubmit={handleSubmit(onSubmit)}>
             <Stack spacing={3}>
               {/* Message Field */}
+              <Typography variant='h6' gutterBottom>
+                Message
+              </Typography>
               <Controller
                 name='message'
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label='Message'
                     multiline
                     rows={6}
                     fullWidth
