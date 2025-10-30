@@ -155,8 +155,20 @@ export const fetchCourseById = (course_id) => async (dispatch) => {
 
             assigned_gateway_id: courseData.assigned_gateway_id || null,
             assigned_gateway_name: courseData.assigned_gateway_name || "",
-            checklist: courseData.checklist || [],
-            assigned_standards: courseData.assigned_standards || [],
+            questions: courseData.questions || courseData.checklist || [],
+            assigned_standards: courseData.assigned_standards
+              ? // Normalize to array of IDs: support both [1, 2] and [{id: 1, name: '...'}]
+                courseData.assigned_standards.map((s: any) => {
+                  if (typeof s === 'object' && s !== null && s.id !== undefined) {
+                    // Convert object to ID
+                    const idNum = Number(s.id)
+                    return isNaN(idNum) ? s.id : idNum
+                  }
+                  // Already an ID, just normalize it
+                  const idNum = Number(s)
+                  return isNaN(idNum) ? s : idNum
+                })
+              : [],
         };
 
         // Log the prefill data for debugging

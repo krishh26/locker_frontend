@@ -415,6 +415,68 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
         dayPending: 0,
       }
 
+    // Special handling for Gateway courses using course.questions
+    // Expected structure: data.course.questions -> array of question objects
+    // Completed = count of items with achieved === true
+    try {
+      const coreType = data?.course_core_type || data?.course?.course_core_type
+      const isGateway = coreType === 'Gateway'
+      const questions = Array.isArray(data?.course?.questions)
+        ? data.course.questions
+        : Array.isArray(data?.questions)
+        ? data.questions
+        : []
+
+      if (isGateway && questions.length > 0) {
+        const totalUnits = questions.length
+        const fullyCompleted = questions.filter((q: any) => q?.achieved === true)
+          .length
+
+        // Preserve date-based duration if present; otherwise default safe values
+        let duration = 0
+        let totalDuration = 1
+        let dayPending = 0
+        if (data.start_date && data.end_date) {
+          const startDate = new Date(data.start_date)
+          const endDate = new Date(data.end_date)
+          const currentDate = new Date()
+          totalDuration = Math.max(
+            1,
+            Math.ceil(
+              (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+            )
+          )
+          duration = Math.max(
+            0,
+            Math.ceil(
+              (currentDate.getTime() - startDate.getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          )
+          dayPending = Math.max(
+            0,
+            Math.ceil(
+              (endDate.getTime() - currentDate.getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          )
+        }
+
+        return {
+          yetToComplete: Math.max(0, totalUnits - fullyCompleted),
+          fullyCompleted,
+          workInProgress: 0,
+          totalUnits,
+          duration,
+          totalDuration,
+          dayPending,
+        }
+      }
+    } catch (e) {
+      // Fallback to default behavior if parsing fails
+      // console.warn('Gateway conversion failed', e)
+    }
+
     // Calculate duration from start and end dates
     const startDate = new Date(data.start_date)
     const endDate = new Date(data.end_date)
@@ -906,29 +968,34 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
                           <Box
                             sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}
                           >
-                            {learner.course.map((value, index) => (
-                              <Link
-                                key={index}
-                                to='/portfolio/courseData'
-                                style={{
-                                  color: 'inherit',
-                                  textDecoration: 'none',
-                                }}
-                                onClick={(e) => {
-                                  handleClickSingleData(value)
-                                  handleClickData(e, value)
-                                }}
-                              >
-                                <DoughnutChart
-                                  value={convertToMatrixData(value)}
-                                  variant='matrix'
-                                  size={180}
-                                  showLabels={true}
-                                  animated={true}
-                                  title={value.course.course_name}
-                                />
-                              </Link>
-                            ))}
+                            {learner.course.map((value, index) => {
+                              return (
+                                (
+                                  <Link
+                                    key={index}
+                                    to='/portfolio/courseData'
+                                    style={{
+                                      color: 'inherit',
+                                      textDecoration: 'none',
+                                    }}
+                                    onClick={(e) => {
+                                      handleClickSingleData(value)
+                                      handleClickData(e, value)
+                                    }}
+                                  >
+                                    <DoughnutChart
+                                      value={convertToMatrixData(value)}
+                                      variant='matrix'
+                                      size={180}
+                                      showLabels={true}
+                                      animated={true}
+                                      title={value.course.course_name}
+                                      isGateway={value.course?.course_core_type === 'Gateway'}
+                                    />
+                                  </Link>
+                                )
+                              )
+                            })}
                           </Box>
                         </StyledProgressSection>
                       </>

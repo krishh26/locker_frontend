@@ -23,7 +23,7 @@ interface CourseData {
   active: string;
   included_in_off_the_job: string;
   awarding_body: string;
-  checklist: any[];
+  questions: any[];
   assigned_standards: any[];
   [key: string]: any;
 }
@@ -94,7 +94,7 @@ export const EMPTY_COURSE_DATA = {
   awarding_body: 'No Awarding Body',
   assigned_gateway_id: null,
   assigned_gateway_name: '',
-  checklist: [],
+  questions: [],
   assigned_standards: []
 };
 

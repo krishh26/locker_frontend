@@ -23,7 +23,7 @@ export interface CourseData {
   active: string;
   included_in_off_the_job: string;
   awarding_body: string;
-  checklist: any[];
+  questions: any[];
   assigned_standards: any[];
   [key: string]: any;
 }
