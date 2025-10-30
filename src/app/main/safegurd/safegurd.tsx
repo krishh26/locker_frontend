@@ -19,6 +19,8 @@ import {
   Typography,
   useTheme
 } from '@mui/material'
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 import {
   SafeguardingContact,
   useGetSafeguardingContactsQuery,
@@ -235,59 +237,52 @@ const Safeguarding = () => {
 
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label='Telephone Number'
-                    placeholder='+44 20 1234 5678'
-                    value={formData.telNumber}
-                    onChange={handleInputChange('telNumber')}
-                    variant='outlined'
-                    InputProps={{
-                      startAdornment: (
-                        <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                      ),
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant='subtitle2' sx={{ mb: 1, color: 'text.secondary' }}>
+                      Telephone Number
+                    </Typography>
+                    <PhoneInput
+                      international
+                      defaultCountry='GB'
+                      countryCallingCodeEditable={false}
+                      placeholder='+44 20 1234 5678'
+                      value={formData.telNumber}
+                      style={{
+                        border: '1px solid lightgray',
+                        padding: "9px",
+                        borderRadius: "4px"
                     }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                        '&:hover fieldset': {
-                          borderColor: theme.palette.primary.main,
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: theme.palette.primary.main,
-                          borderWidth: 2,
-                        },
-                      },
-                    }}
-                  />
+                      onChange={(value) =>
+                        
+                        setFormData({ ...formData, telNumber: value || '' })
+                      }
+                      className='mui-like-phone-input'
+                    />
+                  </Box>
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label='Mobile Number'
-                    placeholder='+44 7700 900123'
-                    value={formData.mobileNumber}
-                    onChange={handleInputChange('mobileNumber')}
-                    variant='outlined'
-                    InputProps={{
-                      startAdornment: (
-                        <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                      ),
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant='subtitle2' sx={{ mb: 1, color: 'text.secondary' }}>
+                      Mobile Number
+                    </Typography>
+                    <PhoneInput
+                      international
+                      defaultCountry='GB'
+                      countryCallingCodeEditable={false}
+                      placeholder='+44 7700 900123'
+                      value={formData.mobileNumber}
+                      style={{
+                        border: '1px solid lightgray',
+                        padding: "9px",
+                        borderRadius: "4px"
                     }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                        '&:hover fieldset': {
-                          borderColor: theme.palette.primary.main,
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: theme.palette.primary.main,
-                          borderWidth: 2,
-                        },
-                      },
-                    }}
-                  />
+                      onChange={(value) =>
+                        setFormData({ ...formData, mobileNumber: value || '' })
+                      }
+                      className='mui-like-phone-input'
+                    />
+                  </Box>
                 </Grid>
 
                 <Grid item xs={12}>

@@ -67,6 +67,49 @@ const courseManagementSlice = createSlice({
         setSingleDataStatus(state, action) {
             state.singleData = { ...state.singleData, course_status: action.payload };
         },
+        setGatewayAnswers(state, action) {
+            try {
+                const responses = action.payload || [];
+                const course = (state.singleData as any)?.course || {};
+                const key = Array.isArray(course.questions) ? 'questions' : (Array.isArray(course.checklist) ? 'checklist' : null);
+                if (!key) return;
+                const updated = (course[key] || []).map((q) => {
+                    const match = responses.find((r) => r.questionId === q.id);
+                    if (match) {
+                        return { ...q, learner_answer: match.answer };
+                    }
+                    return q;
+                });
+                state.singleData = {
+                    ...state.singleData,
+                    course: {
+                        ...course,
+                        [key]: updated,
+                    },
+                } as any;
+            } catch {}
+        },
+        setGatewayAchieved(state, action) {
+            try {
+                const { questionId, achieved, dateAchieved } = action.payload;
+                const course = (state.singleData as any)?.course || {};
+                const key = Array.isArray(course.questions) ? 'questions' : (Array.isArray(course.checklist) ? 'checklist' : null);
+                if (!key) return;
+                const updated = (course[key] || []).map((q) => {
+                    if (q.id === questionId) {
+                        return { ...q, achieved, dateAchieved };
+                    }
+                    return q;
+                });
+                state.singleData = {
+                    ...state.singleData,
+                    course: {
+                        ...course,
+                        [key]: updated,
+                    },
+                } as any;
+            } catch {}
+        },
         resetCourseData(state) {
             state.preFillData = {};
         },
@@ -425,6 +468,49 @@ export const fetchActiveStandardCourses = async () => {
 // Action to reset course data in the Redux store
 export const resetCourseData = () => (dispatch) => {
     dispatch(slice.resetCourseData());
+};
+
+// Submit gateway answers and update store
+export const submitGatewayAnswers = (courseId, learnerId, responses) => async (dispatch) => {
+    try {
+        const payload = { learner_id: Number(learnerId), responses };
+        const response = await axios.post(`${URL_BASE_LINK}/course/gateway/${courseId}/submit-answers`, payload);
+        dispatch(slice.setGatewayAnswers(responses));
+        dispatch(showMessage({ message: response.data?.message || 'Answers saved', variant: 'success' }));
+        return true;
+    } catch (err) {
+        dispatch(showMessage({ message: err.response?.data?.message || 'Failed to save answers', variant: 'error' }));
+        return false;
+    }
+};
+
+// Review gateway answer (achieved toggle) - admin/trainer only
+export const reviewGatewayResponse = (user_course_id, questionId, achieved) => async (dispatch) => {
+    try {
+        const payload = { questionId, achieved };
+        const response = await axios.patch(`${URL_BASE_LINK}/course/gateway-response/${user_course_id}/review`, payload);
+        const dateAchieved = achieved ? new Date().toISOString() : undefined;
+        dispatch(slice.setGatewayAchieved({ questionId, achieved, dateAchieved }));
+        dispatch(showMessage({ message: response.data?.message || 'Updated', variant: 'success' }));
+        return true;
+    } catch (err) {
+        dispatch(showMessage({ message: err.response?.data?.message || 'Failed to update', variant: 'error' }));
+        return false;
+    }
+};
+
+// Upload gateway evidence files
+export const uploadGatewayEvidence = (files: File[]) => async (dispatch) => {
+    try {
+        const formData = new FormData();
+        files.forEach((f) => formData.append('files', f));
+        formData.append('folder', 'gateway_evidence');
+        const response: any = await axios.post(`${URL_BASE_LINK}/upload/files`, formData);
+        return response.data; // expected to contain uploaded file metadata
+    } catch (err) {
+        dispatch(showMessage({ message: err.response?.data?.message || 'Upload failed', variant: 'error' }));
+        return false;
+    }
 };
 
 export default courseManagementSlice.reducer;
