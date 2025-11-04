@@ -365,6 +365,42 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
 
       const outerData = [duration, totalDuration - duration]
 
+      // If isGateway, only show inner ring without outer ring
+      if (isGateway) {
+        return {
+          labels: [
+            'Yet to Complete',
+            'Fully Completed',
+            'Work in Progress',
+          ],
+          datasets: [
+            // Inner ring only
+            {
+              label: 'Progress',
+              data: innerData,
+              backgroundColor: [
+                colors.yetToComplete,
+                colors.completed,
+                colors.workInProgress,
+              ],
+              borderColor: [
+                alpha(colors.yetToComplete, 0.8),
+                alpha(colors.completed, 0.8),
+                alpha(colors.workInProgress, 0.8),
+              ],
+              borderWidth: 2,
+              hoverBackgroundColor: [
+                alpha(colors.yetToComplete, 0.8),
+                alpha(colors.completed, 0.8),
+                alpha(colors.workInProgress, 0.8),
+              ],
+              hoverBorderWidth: 3,
+              cutout: '65%',
+            },
+          ],
+        }
+      }
+
       return {
         labels: [
           'Yet to Complete',
@@ -477,7 +513,7 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
         ],
       }
     }
-  }, [value, colors, isMatrix])
+  }, [value, colors, isMatrix, isGateway])
 
   // Memoized chart options
   const chartOptions = useMemo(
@@ -630,14 +666,16 @@ const DoughnutChart: React.FC<DoughnutChartProps> = ({
           />
 
           {/* Center progress indicator */}
-          <StyledProgressContainer>
-            <StyledProgressText variant='h6'>
-              {Math.max(0, (value as MatrixChartData).dayPending || 0)}
-            </StyledProgressText>
-            <StyledProgressLabel variant='caption'>
-              days left
-            </StyledProgressLabel>
-          </StyledProgressContainer>
+          {!isGateway && (
+            <StyledProgressContainer>
+              <StyledProgressText variant='h6'>
+                {Math.max(0, (value as MatrixChartData).dayPending || 0)}
+              </StyledProgressText>
+              <StyledProgressLabel variant='caption'>
+                days left
+              </StyledProgressLabel>
+            </StyledProgressContainer>
+          )}
         </Box>
 
         {/* Legend */}

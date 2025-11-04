@@ -39,7 +39,7 @@ export interface GatewayQuestionItem {
   achieved?: boolean
   achieved_at?: string
   Achieved_at?: string
-  learner_file?: { key: string; url: string }[]
+  learner_files?: { url: string; uploaded_at: string }[]
 }
 
 interface LearnerAnswer {
@@ -122,10 +122,38 @@ const GatewayChecklist = ({
     setLearnerFiles((prev) => {
       const next = { ...prev }
       questions.forEach((q) => {
-        if (q.learner_file && q.learner_file.length) {
-          next[q.id] = q.learner_file
+        if (q.learner_files && q.learner_files.length) {
+          // Convert backend format { url, uploaded_at } to internal format { key, url }
+          next[q.id] = q.learner_files.map((file) => {
+            // Extract key from URL (filename part, remove query params if any)
+            const urlWithoutParams = file.url.split('?')[0]
+            const urlParts = urlWithoutParams.split('/')
+            const key = urlParts[urlParts.length - 1] || file.url
+            return { key, url: file.url }
+          })
         } else if (!next[q.id]) {
           next[q.id] = []
+        }
+      })
+      return next
+    })
+    // seed uploaded dates from backend
+    setUploadedDates((prev) => {
+      const next = { ...prev }
+      questions.forEach((q) => {
+        if (q.learner_files && q.learner_files.length) {
+          const dates: Record<string, string> = {}
+          q.learner_files.forEach((file) => {
+            // Extract key from URL (filename part, remove query params if any)
+            const urlWithoutParams = file.url.split('?')[0]
+            const urlParts = urlWithoutParams.split('/')
+            const key = urlParts[urlParts.length - 1] || file.url
+            // Convert ISO format to display format
+            if (file.uploaded_at) {
+              dates[key] = dayjs(file.uploaded_at).format('DD/MM/YYYY HH:mm')
+            }
+          })
+          next[q.id] = dates
         }
       })
       return next
@@ -257,15 +285,6 @@ const GatewayChecklist = ({
     }
   }
 
-  const handleDeleteUpload = async (uploadId: string) => {
-    if (!activeQuestion) return
-    await onDeleteUploaded?.(activeQuestion.id, uploadId)
-    setUploaded((prev) => ({
-      ...prev,
-      [activeQuestion.id]: (prev[activeQuestion.id] || []).filter((u) => u.id !== uploadId),
-    }))
-  }
-
   return (
     <Box>
       <Typography variant='h6' sx={{ mb: 2 }}>Gateway Checklist</Typography>
@@ -320,7 +339,7 @@ const GatewayChecklist = ({
         <DialogTitle>Answer Question</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }}>{activeQuestion?.question}</Typography>
-          {activeQuestion?.isDropdown ? (
+          {activeQuestion?.isDropdown && (
             <Controller
               control={control}
               name='answer'
@@ -339,23 +358,6 @@ const GatewayChecklist = ({
                     />
                   )}
                   disabled={!canEditAnswer || watch('achieved') === true || activeQuestion?.achieved === true}
-                />
-              )}
-            />
-          ) : (
-            <Controller
-              control={control}
-              name='answer'
-              rules={{ required: 'Answer is required' }}
-              render={({ field }) => (
-                <TextField
-                  fullWidth
-                  placeholder='Type your answer'
-                  sx={{ mt: 1 }}
-                  disabled={!canEditAnswer || watch('achieved') === true || activeQuestion?.achieved === true}
-                  {...field}
-                  error={!!errors.answer}
-                  helperText={errors.answer?.message}
                 />
               )}
             />
@@ -447,10 +449,60 @@ const GatewayChecklist = ({
                         if (!activeQuestion) return
                         const meta = uploadedMeta[activeQuestion.id]
                         if (!meta) return
+                        
+                        // Get the answer from form or answers state
+                        const currentAnswer = watch('answer') || answers[activeQuestion.id]?.answer || ''
+                        
+                        // Get existing files and combine with new file
+                        const existingFiles = learnerFiles[activeQuestion.id] || []
+                        const allFiles = [...existingFiles, meta]
+                        
+                        // Format files array with url and uploaded_at in ISO format
+                        const files = allFiles.map((file) => {
+                          let uploadedDate: string
+                          
+                          // Check if date exists in uploadedDates (for newly uploaded files)
+                          const storedDate = uploadedDates[activeQuestion.id]?.[file.key]
+                          if (storedDate) {
+                            // Try to parse the stored date (could be in DD/MM/YYYY HH:mm format)
+                            const parsedDate = dayjs(storedDate, 'DD/MM/YYYY HH:mm', true)
+                            if (parsedDate.isValid()) {
+                              uploadedDate = parsedDate.toISOString()
+                            } else {
+                              // If parsing fails, try parsing as ISO format
+                              const isoDate = dayjs(storedDate)
+                              uploadedDate = isoDate.isValid() ? isoDate.toISOString() : dayjs().toISOString()
+                            }
+                          } else {
+                            // Check if this file came from backend (should have uploaded_at in question data)
+                            const questionData = questions.find(q => q.id === activeQuestion.id)
+                            const backendFile = questionData?.learner_files?.find(f => {
+                              const urlWithoutParams = f.url.split('?')[0]
+                              const urlParts = urlWithoutParams.split('/')
+                              const key = urlParts[urlParts.length - 1] || f.url
+                              return key === file.key
+                            })
+                            
+                            if (backendFile?.uploaded_at) {
+                              // Use the uploaded_at from backend (already in ISO format)
+                              uploadedDate = backendFile.uploaded_at
+                            } else {
+                              // Default to current time
+                              uploadedDate = dayjs().toISOString()
+                            }
+                          }
+                          
+                          return {
+                            url: file.url,
+                            uploaded_at: uploadedDate
+                          }
+                        })
+                        
                         const responses = [
                           {
                             questionId: activeQuestion.id,
-                            file: meta,
+                            answer: currentAnswer,
+                            files: files,
                           },
                         ]
                         await dispatch(submitGatewayAnswers(courseId, learnerId, responses))
@@ -458,6 +510,7 @@ const GatewayChecklist = ({
                           ...prev,
                           [activeQuestion.id]: [...(prev[activeQuestion.id] || []), meta],
                         }))
+                        setPendingChosenNames((prev) => ({ ...prev, [activeQuestion.id]: '' }))
                         setUploadedDates((prev) => ({
                           ...prev,
                           [activeQuestion.id]: {
@@ -496,7 +549,65 @@ const GatewayChecklist = ({
                                 size='small'
                                 onClick={async () => {
                                   if (!activeQuestion) return
-                                  await onDeleteUploaded?.(activeQuestion.id, f.key)
+                                  
+                                  // Get the answer from form or answers state
+                                  const currentAnswer = watch('answer') || answers[activeQuestion.id]?.answer || ''
+                                  
+                                  // Get all existing files except the one being deleted
+                                  const remainingFiles = (learnerFiles[activeQuestion.id] || []).filter((x) => x.key !== f.key)
+                                  
+                                  // Format remaining files array with url and uploaded_at in ISO format
+                                  const files = remainingFiles.map((file) => {
+                                    let uploadedDate: string
+                                    
+                                    // Check if date exists in uploadedDates (for newly uploaded files)
+                                    const storedDate = uploadedDates[activeQuestion.id]?.[file.key]
+                                    if (storedDate) {
+                                      // Try to parse the stored date (could be in DD/MM/YYYY HH:mm format)
+                                      const parsedDate = dayjs(storedDate, 'DD/MM/YYYY HH:mm', true)
+                                      if (parsedDate.isValid()) {
+                                        uploadedDate = parsedDate.toISOString()
+                                      } else {
+                                        // If parsing fails, try parsing as ISO format
+                                        const isoDate = dayjs(storedDate)
+                                        uploadedDate = isoDate.isValid() ? isoDate.toISOString() : dayjs().toISOString()
+                                      }
+                                    } else {
+                                      // Check if this file came from backend (should have uploaded_at in question data)
+                                      const questionData = questions.find(q => q.id === activeQuestion.id)
+                                      const backendFile = questionData?.learner_files?.find(bf => {
+                                        const urlWithoutParams = bf.url.split('?')[0]
+                                        const urlParts = urlWithoutParams.split('/')
+                                        const key = urlParts[urlParts.length - 1] || bf.url
+                                        return key === file.key
+                                      })
+                                      
+                                      if (backendFile?.uploaded_at) {
+                                        // Use the uploaded_at from backend (already in ISO format)
+                                        uploadedDate = backendFile.uploaded_at
+                                      } else {
+                                        // Default to current time
+                                        uploadedDate = dayjs().toISOString()
+                                      }
+                                    }
+                                    
+                                    return {
+                                      url: file.url,
+                                      uploaded_at: uploadedDate
+                                    }
+                                  })
+                                  
+                                  const responses = [
+                                    {
+                                      questionId: activeQuestion.id,
+                                      answer: currentAnswer,
+                                      // files: files,
+                                      deleteFiles: [f.url],
+                                    },
+                                  ]
+                                  await dispatch(submitGatewayAnswers(courseId, learnerId, responses))
+                                  
+                                  // Update local state after successful deletion
                                   setLearnerFiles((prev) => ({
                                     ...prev,
                                     [activeQuestion.id]: (prev[activeQuestion.id] || []).filter((x) => x.key !== f.key),
@@ -506,6 +617,9 @@ const GatewayChecklist = ({
                                     delete copy[f.key]
                                     return { ...prev, [activeQuestion.id]: copy }
                                   })
+                                  
+                                  // Also call optional callback if provided
+                                  await onDeleteUploaded?.(activeQuestion.id, f.key)
                                 }}
                               >
                                 Delete
