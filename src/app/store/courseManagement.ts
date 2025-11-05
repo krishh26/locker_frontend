@@ -69,25 +69,45 @@ const courseManagementSlice = createSlice({
         },
         setGatewayAnswers(state, action) {
             try {
-                const responses = action.payload || [];
-                const course = (state.singleData as any)?.course || {};
-                const key = Array.isArray(course.questions) ? 'questions' : (Array.isArray(course.checklist) ? 'checklist' : null);
-                if (!key) return;
-                const updated = (course[key] || []).map((q) => {
-                    const match = responses.find((r) => r.questionId === q.id);
-                    if (match) {
-                        return { ...q, learner_answer: match.answer };
-                    }
-                    return q;
-                });
-                state.singleData = {
-                    ...state.singleData,
-                    course: {
-                        ...course,
-                        [key]: updated,
-                    },
-                } as any;
-            } catch {}
+                // action.payload can be either:
+                // 1. Response object with full course data: { data: { course: {...} } }
+                // 2. Course object directly: { questions: [...], checklist: [...] }
+                const payload = action.payload || {};
+                
+                // Check if payload is a response object with nested data
+                let courseData = payload;
+                if (payload.data && payload.data.course) {
+                    // Response structure: response.data.data.course
+                    courseData = payload.data.course;
+                } else if (payload.course) {
+                    // Response structure: response.data.course
+                    courseData = payload.course;
+                }
+                
+                // Determine if questions or checklist
+                const key = Array.isArray(courseData.questions) ? 'questions' : (Array.isArray(courseData.checklist) ? 'checklist' : null);
+                
+                if (key && courseData[key]) {
+                    // Update the course data with the response data
+                    const currentCourse = (state.singleData as any)?.course || {};
+                    state.singleData = {
+                        ...state.singleData,
+                        course: {
+                            ...currentCourse,
+                            ...courseData,
+                            [key]: courseData[key].map((q: any) => {
+                                // Ensure learner_files is always an array (handle null/undefined)
+                                return {
+                                    ...q,
+                                    learner_files: q.learner_files || []
+                                };
+                            })
+                        },
+                    } as any;
+                }
+            } catch (err) {
+                console.error('Error updating gateway answers:', err);
+            }
         },
         setGatewayAchieved(state, action) {
             try {
@@ -475,7 +495,9 @@ export const submitGatewayAnswers = (courseId, learnerId, responses) => async (d
     try {
         const payload = { learner_id: Number(learnerId), responses };
         const response = await axios.post(`${URL_BASE_LINK}/course/gateway/${courseId}/submit-answers`, payload);
-        dispatch(slice.setGatewayAnswers(responses));
+        // Pass the full response data to update the state with the complete course data
+        dispatch(slice.setGatewayAnswers(response.data));
+        
         dispatch(showMessage({ message: response.data?.message || 'Answers saved', variant: 'success' }));
         return true;
     } catch (err) {
