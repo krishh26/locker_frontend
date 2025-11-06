@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Grid, TextField, Card, Box, Typography, Select, MenuItem } from '@mui/material';
+import { Grid, TextField, Card, Box, Typography, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import { SecondaryButton } from 'src/app/component/Buttons';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
@@ -41,7 +41,7 @@ const NewTimeLog = (props) => {
                 course_id: null,
                 activity_date: '',
                 activity_type: '',
-                unit: '',
+                unit: [],
                 trainer_id: null,
                 type: '',
                 spend_time: '0:0',
@@ -59,7 +59,20 @@ const NewTimeLog = (props) => {
         return formattedDate;
     };
 
-    const isTimeLog = Object.values(timeLogData?.user_id || timeLogData?.course_id || timeLogData?.activity_date || timeLogData?.activity_type || timeLogData?.trainer_id || timeLogData?.type || timeLogData?.spend_time || timeLogData?.start_time || timeLogData?.end_time || timeLogData?.impact_on_learner || timeLogData?.evidence_link).find(data => data === "") === undefined;
+    const isTimeLog = timeLogData?.user_id && 
+                      timeLogData?.course_id && 
+                      timeLogData?.activity_date && 
+                      timeLogData?.activity_type && 
+                      timeLogData?.trainer_id && 
+                      timeLogData?.type && 
+                      timeLogData?.spend_time && 
+                      timeLogData?.start_time && 
+                      timeLogData?.end_time && 
+                      timeLogData?.impact_on_learner && 
+                      timeLogData?.evidence_link &&
+                      timeLogData?.unit && 
+                      Array.isArray(timeLogData?.unit) && 
+                      timeLogData?.unit.length > 0;
 
     return (
         <Grid>
@@ -131,16 +144,24 @@ const NewTimeLog = (props) => {
                                 <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem", fontWeight: "500" }}>4. Select Unit</Typography>
                                 <Select
                                     name="unit"
-                                    value={timeLogData?.unit}
+                                    value={Array.isArray(timeLogData?.unit) ? timeLogData.unit : []}
                                     size="small"
                                     placeholder='Select Unit'
                                     required
                                     fullWidth
+                                    multiple
                                     onChange={handleDataUpdate}
+                                    renderValue={(selected) => {
+                                        if (!selected || selected.length === 0) {
+                                            return <em>Select Unit(s)</em>;
+                                        }
+                                        return selected.join(', ');
+                                    }}
                                 >
                                     {data?.filter((course) => course.course_id === timeLogData.course_id)[0]?.units?.map((unit) => (
                                         <MenuItem key={unit.id} value={unit.title}>
-                                            {unit.title}
+                                            <Checkbox checked={Array.isArray(timeLogData?.unit) && timeLogData.unit.includes(unit.title)} />
+                                            <ListItemText primary={unit.title} />
                                         </MenuItem>
                                     ))}
                                 </Select>
