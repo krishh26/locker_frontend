@@ -404,6 +404,7 @@ const CreateViewEvidenceLibrary = () => {
 
   // Watch units from form - must be declared before any conditional returns
   const unitsWatch = watch('units')
+  console.log("🚀 ~ CreateViewEvidenceLibrary ~ unitsWatch:", unitsWatch)
   
   // Sync selected units from evidence form to time log
   useEffect(() => {
@@ -1054,9 +1055,7 @@ const CreateViewEvidenceLibrary = () => {
                   key={method.id}
                   control={
                     <Checkbox
-                      checked={unitsWatch?.some(
-                        (unit) => unit.id === method.id
-                      )}
+                      checked={!!(watch('units') && watch('units').some((unit) => unit.id == method.id))}
                       onChange={(e) => handleCheckboxUnits(e, method)}
                       name='units'
                       disabled={isEditMode}
