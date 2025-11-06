@@ -174,7 +174,7 @@ export const HomePageData = [
     backgroundColor: 'var(--pc1)',
     textColor: 'rgba(63, 102, 52, 1)',
     radiusColor: 'rgba(63, 102, 52, 0.1)',
-    title: 'Due activities',
+    title: 'Due actions',
     isIcon: true,
   },
   {
@@ -183,7 +183,7 @@ export const HomePageData = [
     backgroundColor: 'var(--pc1)',
     textColor: 'rgba(195, 66, 63, 1)',
     radiusColor: 'rgba(195, 66, 63, 0.1)',
-    title: 'Overdue activities',
+    title: 'Overdue actions',
     isIcon: true,
   },
   {
@@ -192,7 +192,7 @@ export const HomePageData = [
     backgroundColor: 'var(--pc1)',
     textColor: 'rgba(155, 197, 61, 1)',
     radiusColor: 'rgba(155, 197, 61, 0.1)',
-    title: 'Activities due in the next 7 days',
+    title: 'Actions due in the next 7 days',
     isIcon: true,
   },
   {
