@@ -282,7 +282,7 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
             sx={{ fontSize: '0.9vw', marginBottom: '0.5rem' }}
             className={Style.name}
           >
-            Yes or No
+          Active Course (Yes or No)
           </Typography>
           <Autocomplete
             size='small'

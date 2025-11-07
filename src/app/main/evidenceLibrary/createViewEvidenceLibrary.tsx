@@ -9,6 +9,8 @@ import {
   Checkbox,
   CircularProgress,
   Container,
+  Dialog,
+  DialogContent,
   FormControl,
   FormControlLabel,
   FormGroup,
@@ -56,6 +58,10 @@ import {
   useUserRole,
 } from 'src/app/utils/userHelpers'
 import { formatSessionTime } from 'src/utils/string'
+import { selectGlobalUser } from 'app/store/globalUser'
+import { getTrainerAPI, selectSession } from 'app/store/session'
+import { fetchCourseAPI } from 'app/store/courseManagement'
+import NewTimeLog from '../timeLog/newTimeLog'
 import SignatureTable from './components/SignatureTable'
 import { FormValues } from './lib/types'
 import { getValidationSchema } from './schema'
@@ -67,6 +73,21 @@ const CreateViewEvidenceLibrary = () => {
     location.state && location.state?.isEdit
   )
   const [sessions, setSessions] = useState([])
+  const [isTimeLogDialogOpen, setIsTimeLogDialogOpen] = useState(false)
+  const [timeLogData, setTimeLogData] = useState({
+    user_id: null,
+    course_id: null,
+    activity_date: '',
+    activity_type: '',
+    unit: [],
+    trainer_id: null,
+    type: '',
+    spend_time: '0:0',
+    start_time: '0:0',
+    end_time: '0:0',
+    impact_on_learner: '',
+    evidence_link: '',
+  })
 
   const dispatch: any = useDispatch()
   const { id } = useParams()
@@ -75,6 +96,8 @@ const CreateViewEvidenceLibrary = () => {
   const learnerUserId = useLearnerUserId()
   const learnerId = useLearnerId()
   const userRole = useUserRole()
+  const { currentUser, selectedUser, selected } = useSelector(selectGlobalUser)
+  const session = useSelector(selectSession)
 
   const {
     control,
@@ -284,6 +307,14 @@ const CreateViewEvidenceLibrary = () => {
     }
   }, [data, isLoading, isError, error])
 
+  // Fetch course and trainer data for time log
+  useEffect(() => {
+    if (isTimeLogDialogOpen) {
+      dispatch(fetchCourseAPI())
+      dispatch(getTrainerAPI('Trainer'))
+    }
+  }, [isTimeLogDialogOpen, dispatch])
+
   const [updateEvidenceId, { isLoading: isUpdateLoading }] =
     useUpdateEvidenceIdMutation()
   const [uploadExternalEvidenceFile] = useUploadExternalEvidenceFileMutation()
@@ -346,8 +377,54 @@ const CreateViewEvidenceLibrary = () => {
       setValue('units', units ? units : [])
       setValue('session', session ? session : '')
       setValue('audio', external_feedback ? external_feedback : '')
+      setValue('evidence_time_log', evidenceDetails.data.evidence_time_log || false)
     }
   }, [evidenceDetails, setValue, isError, id, isLoading])
+
+  // Initialize time log data when evidence details are loaded
+  useEffect(() => {
+    if (evidenceDetails?.data && learnerUserId) {
+      const evidence = evidenceDetails.data
+      
+      // Get units from evidence data as array (will be synced when unitsWatch changes)
+      const evidenceUnits = evidence.units && evidence.units.length > 0 
+        ? evidence.units.map((unit) => unit?.title || '').filter(Boolean)
+        : []
+      
+      setTimeLogData((prev) => ({
+        ...prev,
+        user_id: selected ? selectedUser?.user_id : currentUser?.user_id || learnerUserId,
+        course_id: evidence.course_id?.course_id || prev.course_id,
+        unit: evidenceUnits.length > 0 ? evidenceUnits : prev.unit,
+        impact_on_learner: evidence.description || prev.impact_on_learner,
+        evidence_link: evidence.file?.url || window.location.href,
+      }))
+    }
+  }, [evidenceDetails, learnerUserId, selected, selectedUser, currentUser])
+
+  // Watch units from form - must be declared before any conditional returns
+  const unitsWatch = watch('units')
+  console.log("🚀 ~ CreateViewEvidenceLibrary ~ unitsWatch:", unitsWatch)
+  
+  // Sync selected units from evidence form to time log
+  useEffect(() => {
+    if (unitsWatch && unitsWatch.length > 0) {
+      // Get all selected unit titles as an array for time log
+      const selectedUnitTitles = unitsWatch.map((unit) => unit?.title || '').filter(Boolean)
+      if (selectedUnitTitles.length > 0) {
+        setTimeLogData((prev) => ({
+          ...prev,
+          unit: selectedUnitTitles,
+        }))
+      }
+    } else {
+      // Reset to empty array if no units selected
+      setTimeLogData((prev) => ({
+        ...prev,
+        unit: [],
+      }))
+    }
+  }, [unitsWatch])
 
   if (isLoading) {
     return (
@@ -366,8 +443,6 @@ const CreateViewEvidenceLibrary = () => {
       console.error('File URL is not available')
     }
   }
-
-  const unitsWatch = watch('units')
 
   const handleCheckboxUnits = (event, method) => {
     const currentUnits = [...(unitsWatch || [])]
@@ -427,6 +502,58 @@ const CreateViewEvidenceLibrary = () => {
       })
     })
     setValue('units', updated)
+  }
+
+  // Handle time log data update
+  const handleTimeLogDataUpdate = (e) => {
+    const { name, value } = e.target
+    setTimeLogData((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }))
+  }
+
+  // Handle evidence time log radio change
+  const handleEvidenceTimeLogChange = (value: boolean) => {
+    if (value === true) {
+      // Pre-populate time log data with evidence information
+      if (evidenceDetails?.data) {
+        const evidence = evidenceDetails.data
+        
+        // Get units from currently selected units in evidence form, or from evidence data
+        const selectedUnits = unitsWatch && unitsWatch.length > 0
+          ? unitsWatch.map((unit) => unit?.title || '').filter(Boolean)
+          : evidence.units && evidence.units.length > 0
+          ? evidence.units.map((unit) => unit?.title || '').filter(Boolean)
+          : []
+        
+        setTimeLogData((prev) => ({
+          ...prev,
+          user_id: selected ? selectedUser?.user_id : currentUser?.user_id || learnerUserId,
+          course_id: evidence.course_id?.course_id || prev.course_id,
+          unit: selectedUnits.length > 0 ? selectedUnits : prev.unit,
+          impact_on_learner: evidence.description || prev.impact_on_learner,
+          evidence_link: evidence.file?.url || window.location.href,
+        }))
+      }
+      setIsTimeLogDialogOpen(true)
+    }
+  }
+
+  // Handle time log dialog close
+  const handleTimeLogDialogClose = () => {
+    setIsTimeLogDialogOpen(false)
+  }
+
+  // Handle time log submission success
+  const handleTimeLogSubmitSuccess = () => {
+    setIsTimeLogDialogOpen(false)
+    dispatch(
+      showMessage({
+        message: 'Time log created successfully',
+        variant: 'success',
+      })
+    )
   }
 
   const onSubmit = async (data: FormValues) => {
@@ -832,7 +959,13 @@ const CreateViewEvidenceLibrary = () => {
                         ? 'no'
                         : ''
                     }
-                    onChange={(e) => field.onChange(e.target.value === 'yes')}
+                    onChange={(e) => {
+                      const newValue = e.target.value === 'yes'
+                      field.onChange(newValue)
+                      if (!isEditMode) {
+                        handleEvidenceTimeLogChange(newValue)
+                      }
+                    }}
                   >
                     <FormControlLabel
                       value='yes'
@@ -922,9 +1055,7 @@ const CreateViewEvidenceLibrary = () => {
                   key={method.id}
                   control={
                     <Checkbox
-                      checked={unitsWatch?.some(
-                        (unit) => unit.id === method.id
-                      )}
+                      checked={!!(watch('units') && watch('units').some((unit) => unit.id == method.id))}
                       onChange={(e) => handleCheckboxUnits(e, method)}
                       name='units'
                       disabled={isEditMode}
@@ -1093,6 +1224,32 @@ const CreateViewEvidenceLibrary = () => {
           </Grid>
         </Grid>
       </form>
+
+      {/* Time Log Dialog */}
+      <Dialog
+        open={isTimeLogDialogOpen}
+        onClose={handleTimeLogDialogClose}
+        maxWidth="md"
+        fullWidth
+        sx={{
+          '.MuiDialog-paper': {
+            borderRadius: 3,
+            padding: 0,
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <NewTimeLog
+            edit="Save"
+            handleCloseDialog={handleTimeLogDialogClose}
+            handleDataUpdate={handleTimeLogDataUpdate}
+            timeLogData={timeLogData}
+            setTimeLogData={setTimeLogData}
+            filterData={{}}
+          />
+        </DialogContent>
+      </Dialog>
     </Container>
   )
 }

@@ -32,7 +32,7 @@ const TimeLog = (props) => {
     course_id: null,
     activity_date: '',
     activity_type: '',
-    unit: '',
+    unit: [],
     trainer_id: null,
     type: '',
     spend_time: '0:0',
@@ -68,7 +68,16 @@ const TimeLog = (props) => {
 
   const handleEdit = (edit) => {
     setEdit(edit);
-    setTimeLogData({ ...selectedRow, course_id: selectedRow.course_id.course_id, trainer_id: selectedRow.trainer_id.user_id });
+    // Handle unit as string (old data) or array (new data)
+    const unitValue = selectedRow.unit 
+      ? (Array.isArray(selectedRow.unit) ? selectedRow.unit : [selectedRow.unit])
+      : [];
+    setTimeLogData({ 
+      ...selectedRow, 
+      course_id: selectedRow.course_id.course_id, 
+      trainer_id: selectedRow.trainer_id.user_id,
+      unit: unitValue
+    });
     handleClickOpen();
   };
 
@@ -150,7 +159,7 @@ const TimeLog = (props) => {
       course_id: null,
       activity_date: '',
       activity_type: '',
-      unit: '',
+      unit: [],
       trainer_id: null,
       type: '',
       spend_time: '0:0',
