@@ -840,82 +840,269 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
               {/* Overall Progress Bar on Right Side */}
               <Box
                 sx={{
-                  minWidth: 300,
-                  maxWidth: 350,
+                  display: 'flex',
+                  gap: 2,
                   flexShrink: 0,
-                  display: { xs: 'none', md: 'block' },
+                  flexDirection: { xs: 'column', md: 'row' },
                 }}
               >
                 <Box
                   sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    backgroundColor: alpha(
-                      theme.palette.primary.contrastText,
-                      0.1
-                    ),
-                    border: `2px solid ${alpha(
-                      theme.palette.primary.contrastText,
-                      0.3
-                    )}`,
+                    minWidth: 300,
+                    maxWidth: 350,
+                    flexShrink: 0,
+                    display: { xs: 'none', md: 'block' },
                   }}
                 >
                   <Box
                     sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 2,
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor: alpha(
+                        theme.palette.primary.contrastText,
+                        0.1
+                      ),
+                      border: `2px solid ${alpha(
+                        theme.palette.primary.contrastText,
+                        0.3
+                      )}`,
                     }}
                   >
-                    <Typography
-                      variant='subtitle2'
+                    <Box
                       sx={{
-                        fontWeight: 700,
-                        color: theme.palette.primary.contrastText,
-                        fontSize: '1.2rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        mb: 1,
                       }}
                     >
-                      Time Log
-                    </Typography>
-                    <Chip
-                      label={loadingTimeLog ? '...' : calculateTotalHours()}
-                      size='small'
+                      <Typography
+                        variant='subtitle2'
+                        sx={{
+                          fontWeight: 700,
+                          color: theme.palette.primary.contrastText,
+                          fontSize: '1.2rem',
+                        }}
+                      >
+                        Overall Progress
+                      </Typography>
+                      <Chip
+                        label={`${overallProgressData.completionPercentage.toFixed(
+                          0
+                        )}%`}
+                        size='small'
+                        sx={{
+                          backgroundColor: theme.palette.primary.contrastText,
+                          color: theme.palette.primary.main,
+                          fontWeight: 700,
+                          fontSize: '1rem',
+                        }}
+                      />
+                    </Box>
+
+                    <LinearProgress
+                      variant='determinate'
+                      value={Math.min(
+                        overallProgressData.completionPercentage,
+                        100
+                      )}
                       sx={{
-                        backgroundColor: theme.palette.primary.contrastText,
-                        color: theme.palette.primary.main,
-                        fontWeight: 700,
-                        fontSize: '1rem',
+                        height: 12,
+                        borderRadius: 6,
+                        backgroundColor: alpha(
+                          theme.palette.primary.contrastText,
+                          0.2
+                        ),
+                        mb: 1.5,
+                        '& .MuiLinearProgress-bar': {
+                          borderRadius: 6,
+                          background: `linear-gradient(90deg, ${theme.palette.primary.contrastText} 0%, rgba(255, 255, 255, 0.9) 100%)`,
+                        },
                       }}
                     />
-                  </Box>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      gap: 2,
-                    }}
-                  >
-                    {/* On The Job Section */}
-                    <Box sx={{ flex: 1 }}>
+
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 1,
+                      }}
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            opacity: 0.9,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          ✓ Completed
+                        </Typography>
+                        <Typography
+                          variant='body2'
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: 700,
+                            fontSize: '1.5rem',
+                          }}
+                        >
+                          {overallProgressData.fullyCompleted}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            opacity: 0.9,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          ⟳ In Progress
+                        </Typography>
+                        <Typography
+                          variant='body2'
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: 700,
+                            fontSize: '1.5rem',
+                          }}
+                        >
+                          {overallProgressData.workInProgress}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            opacity: 0.9,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          ○ Pending
+                        </Typography>
+                        <Typography
+                          variant='body2'
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            fontWeight: 700,
+                            fontSize: '1.5rem',
+                          }}
+                        >
+                          {overallProgressData.yetToComplete}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        mt: 1.5,
+                        pt: 1.5,
+                        borderTop: `1px solid ${alpha(
+                          theme.palette.primary.contrastText,
+                          0.3
+                        )}`,
+                      }}
+                    >
                       <Typography
                         variant='caption'
                         sx={{
                           color: theme.palette.primary.contrastText,
-                          opacity: 0.9,
                           fontSize: '1rem',
-                          fontWeight: 600,
                         }}
                       >
-                        On The Job
+                        Total: {overallProgressData.totalUnits} units across{' '}
+                        {learner?.course?.length || 0} course
+                        {learner?.course?.length !== 1 ? 's' : ''}
                       </Typography>
-                      <Box
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Combined Time Log Progress Box - On the Job and Off the Job */}
+                <Box
+                  sx={{
+                    minWidth: 300,
+                    maxWidth: 350,
+                    flexShrink: 0,
+                    display: { xs: 'none', md: 'block' },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor: alpha(
+                        theme.palette.primary.contrastText,
+                        0.1
+                      ),
+                      border: `2px solid ${alpha(
+                        theme.palette.primary.contrastText,
+                        0.3
+                      )}`,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        mb: 2,
+                      }}
+                    >
+                      <Typography
+                        variant='subtitle2'
                         sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 1.5,
+                          fontWeight: 700,
+                          color: theme.palette.primary.contrastText,
+                          fontSize: '1.2rem',
                         }}
                       >
-                        {/* <Box>
+                        Time Log
+                      </Typography>
+                      <Chip
+                        label={loadingTimeLog ? '...' : calculateTotalHours()}
+                        size='small'
+                        sx={{
+                          backgroundColor: theme.palette.primary.contrastText,
+                          color: theme.palette.primary.main,
+                          fontWeight: 700,
+                          fontSize: '1rem',
+                        }}
+                      />
+                    </Box>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        gap: 2,
+                      }}
+                    >
+                      {/* On The Job Section */}
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            opacity: 0.9,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          On The Job
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1.5,
+                          }}
+                        >
+                          {/* <Box>
                           <Typography
                             variant='caption'
                             sx={{
@@ -939,7 +1126,7 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
                           </Typography>
                         </Box> */}
 
-                        {/* <Box
+                          {/* <Box
                           sx={{
                             pt: 1,
                             borderTop: `1px solid ${alpha(
@@ -971,70 +1158,70 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
                           </Typography>
                         </Box> */}
 
-                        <Box
-                          sx={{
-                            pt: 1,
-                            borderTop: `1px solid ${alpha(
-                              theme.palette.divider,
-                              0.3
-                            )}`,
-                          }}
-                        >
-                          <Typography
-                            variant='caption'
+                          <Box
                             sx={{
-                              color: theme.palette.primary.contrastText,
-                              fontSize: '1rem',
+                              pt: 1,
+                              borderTop: `1px solid ${alpha(
+                                theme.palette.divider,
+                                0.3
+                              )}`,
                             }}
                           >
-                            Total
-                          </Typography>
-                          <Typography
-                            variant='body2'
-                            sx={{
-                              color: theme.palette.primary.contrastText,
-                              fontSize: '1.5rem',
-                              fontWeight: 700,
-                            }}
-                          >
-                            {loadingTimeLog
-                              ? '...'
-                              : formatTime(otjTimeLogData?.total)}
-                          </Typography>
+                            <Typography
+                              variant='caption'
+                              sx={{
+                                color: theme.palette.primary.contrastText,
+                                fontSize: '1rem',
+                              }}
+                            >
+                              Total
+                            </Typography>
+                            <Typography
+                              variant='body2'
+                              sx={{
+                                color: theme.palette.primary.contrastText,
+                                fontSize: '1.5rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              {loadingTimeLog
+                                ? '...'
+                                : formatTime(otjTimeLogData?.total)}
+                            </Typography>
+                          </Box>
                         </Box>
                       </Box>
-                    </Box>
 
-                    {/* Divider */}
-                    <Box
-                      sx={{
-                        width: '1px',
-                        backgroundColor: alpha(theme.palette.divider, 0.3),
-                        my: 1,
-                      }}
-                    />
-
-                    {/* Off The Job Section */}
-                    <Box sx={{ flex: 1 }}>
-                      <Typography
-                        variant='caption'
-                        sx={{
-                          color: theme.palette.primary.contrastText,
-                          opacity: 0.9,
-                          fontSize: '1rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Off The Job
-                      </Typography>
+                      {/* Divider */}
                       <Box
                         sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 1.5,
+                          width: '1px',
+                          backgroundColor: alpha(theme.palette.divider, 0.3),
+                          my: 1,
                         }}
-                      >
-                        {/* <Box>
+                      />
+
+                      {/* Off The Job Section */}
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            color: theme.palette.primary.contrastText,
+                            opacity: 0.9,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Off The Job
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1.5,
+                          }}
+                        >
+                          {/* <Box>
                           <Typography
                             variant='caption'
                             sx={{
@@ -1090,36 +1277,37 @@ const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
                           </Typography>
                         </Box> */}
 
-                        <Box
-                          sx={{
-                            pt: 1,
-                            borderTop: `1px solid ${alpha(
-                              theme.palette.divider,
-                              0.3
-                            )}`,
-                          }}
-                        >
-                          <Typography
-                            variant='caption'
+                          <Box
                             sx={{
-                              color: theme.palette.primary.contrastText,
-                              fontSize: '1rem',
+                              pt: 1,
+                              borderTop: `1px solid ${alpha(
+                                theme.palette.divider,
+                                0.3
+                              )}`,
                             }}
                           >
-                            Total
-                          </Typography>
-                          <Typography
-                            variant='body2'
-                            sx={{
-                              color: theme.palette.primary.contrastText,
-                              fontSize: '1.5rem',
-                              fontWeight: 700,
-                            }}
-                          >
-                            {loadingTimeLog
-                              ? '...'
-                              : formatTime(ofjTimeLogData?.total)}
-                          </Typography>
+                            <Typography
+                              variant='caption'
+                              sx={{
+                                color: theme.palette.primary.contrastText,
+                                fontSize: '1rem',
+                              }}
+                            >
+                              Total
+                            </Typography>
+                            <Typography
+                              variant='body2'
+                              sx={{
+                                color: theme.palette.primary.contrastText,
+                                fontSize: '1.5rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              {loadingTimeLog
+                                ? '...'
+                                : formatTime(ofjTimeLogData?.total)}
+                            </Typography>
+                          </Box>
                         </Box>
                       </Box>
                     </Box>
