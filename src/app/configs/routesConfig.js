@@ -44,6 +44,7 @@ import GatewayReportConfig from '../main/gatewayReport/gatewayReportConfig'
 import learnerDashboardConfig from '../main/learner-dashboard/learnerDashboardConfig'
 import DocsToSignConfig from '../main/docsToSign/docsToSignConfig'
 import ProgressExclusionConfig from '../main/progressExclusion/progressExclusionConfig'
+import QASamplePlanConfig from '../main/qaSamplePlan/qaSamplePlanConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -87,7 +88,8 @@ const routeConfigs = [
   GatewayReportConfig,
   learnerDashboardConfig,
   DocsToSignConfig,
-  ProgressExclusionConfig
+  ProgressExclusionConfig,
+  QASamplePlanConfig
 ]
 
 const routes = [
