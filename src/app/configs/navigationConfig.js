@@ -226,11 +226,11 @@ const navigationConfig = [
     visible: [UserRole.Admin],
   },
   {
-    id: 'dashboards.SamplingPlan',
-    title: 'Sampling Plan',
+    id: 'dashboards.qaSamplePlan',
+    title: 'QA Sample Plan',
     type: 'item',
-    icon: 'heroicons-outline:puzzle',
-    // url: '/criteria-demo',
+    icon: 'heroicons-outline:clipboard-check',
+    url: '/qa-sample-plan',
     visible: [UserRole.Admin],
   },
   {
