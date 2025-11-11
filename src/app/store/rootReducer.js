@@ -41,6 +41,7 @@ import { defaultReviewWeeksApi } from './api/default-review-weeks-api'
 import { awaitingSignatureAPI } from './api/awaiting-signature-api'
 import { gatewayReportAPI } from './api/gateway-report-api'
 import { timelogExportAPI } from './api/timelog-export-api'
+import { samplePlanAPI } from './api/sample-plan-api'
 
 const createReducer = (asyncReducers) => (state, action) => {
   const combinedReducer = combineReducers({
@@ -88,6 +89,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     [awaitingSignatureAPI.reducerPath]: awaitingSignatureAPI.reducer,
     [gatewayReportAPI.reducerPath]: gatewayReportAPI.reducer,
     [timelogExportAPI.reducerPath]: timelogExportAPI.reducer,
+    [samplePlanAPI.reducerPath]: samplePlanAPI.reducer,
     ...asyncReducers,
   })
 
@@ -114,6 +116,7 @@ export const concatMiddleware = [
   awaitingSignatureAPI.middleware,
   gatewayReportAPI.middleware,
   timelogExportAPI.middleware,
+  samplePlanAPI.middleware,
 ]
 
 export default createReducer
