@@ -231,7 +231,7 @@ const navigationConfig = [
     type: 'item',
     icon: 'heroicons-outline:clipboard-check',
     url: '/qa-sample-plan',
-    visible: [UserRole.Admin],
+    visible: [UserRole.Admin ,UserRole.IQA],
   },
   {
     id: 'dashboards.surveys',

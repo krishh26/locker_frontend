@@ -25,7 +25,7 @@ const QASamplePlanConfig = {
       },
     },
   },
-  auth: [authRoles.Admin],
+  auth: [authRoles.Admin ,authRoles.IQA],
   routes: [
     {
       path: '/qa-sample-plan',

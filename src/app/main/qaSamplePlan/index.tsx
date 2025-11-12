@@ -4,6 +4,7 @@ import {
   Card,
   Checkbox,
   Chip,
+  Dialog,
   Divider,
   FormControl,
   FormControlLabel,
@@ -13,8 +14,12 @@ import {
   InputLabel,
   MenuItem,
   Paper,
+  Radio,
+  RadioGroup,
   Select,
   Stack,
+  Tab,
+  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -27,11 +32,17 @@ import {
 import type { ChipProps } from '@mui/material/Chip'
 import Autocomplete from '@mui/material/Autocomplete'
 import CircularProgress from '@mui/material/CircularProgress'
+import CloseIcon from '@mui/icons-material/Close'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import FolderSharedOutlinedIcon from '@mui/icons-material/FolderSharedOutlined'
 import FilterListOutlinedIcon from '@mui/icons-material/FilterListOutlined'
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import AddIcon from '@mui/icons-material/Add'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
+import DeleteIcon from '@mui/icons-material/Delete'
 import React, { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { skipToken } from '@reduxjs/toolkit/query'
@@ -71,16 +82,48 @@ const additionalAssessmentMethodCodes = [
 ]
 
 const assessmentMethodCodesForPayload = Array.from(
-  new Set([...assessmentMethods.map((method) => method.code), ...additionalAssessmentMethodCodes])
+  new Set([
+    ...assessmentMethods.map((method) => method.code),
+    ...additionalAssessmentMethodCodes,
+  ])
 )
 
-const qaStatuses = ['All', 'QA Approved',]
+const qaStatuses = ['All', 'QA Approved']
 
 const sampleTypes = [
   'Planned Sample',
   'Random Sample',
   'Targeted Sample',
   'Learner Risk Sample',
+]
+
+const modalSampleTypes = [
+  'Learner interview',
+  'Observation',
+  'Portfolio review',
+  'Assessment review',
+]
+
+const assessmentMethodCodes = [
+  'WO',
+  'WP',
+  'PW',
+  'VI',
+  'LB',
+  'PD',
+  'PT',
+  'TE',
+  'RJ',
+  'OT',
+  'RPL',
+]
+
+const iqaConclusionOptions = [
+  'Valid',
+  'Authentic',
+  'Sufficient',
+  'Relevant',
+  'Current',
 ]
 
 const URL_BASE_LINK = jsonData.API_LOCAL_URL
@@ -137,7 +180,9 @@ const countSelectedUnits = (units?: SamplePlanLearnerUnit[]) => {
 
 const Index: React.FC = () => {
   const dispatch = useDispatch()
-  const [courses, setCourses] = useState<Array<{ id: string; name: string }>>([])
+  const [courses, setCourses] = useState<Array<{ id: string; name: string }>>(
+    []
+  )
   const [plans, setPlans] = useState<Array<{ id: string; label: string }>>([])
   const [selectedMethods, setSelectedMethods] = useState<string[]>(
     assessmentMethods.map((method) => method.code)
@@ -157,6 +202,27 @@ const Index: React.FC = () => {
     planId?: string
     courseName?: string
   }>()
+  const [modalOpen, setModalOpen] = useState<boolean>(false)
+  const [selectedUnit, setSelectedUnit] = useState<{
+    unit: SamplePlanLearnerUnit
+    learner: SamplePlanLearner
+  } | null>(null)
+  const [activeTab, setActiveTab] = useState<number>(0)
+  const [modalFormData, setModalFormData] = useState({
+    qaName: '',
+    plannedDate: '',
+    assessmentMethods: ['TE'],
+    assessmentProcesses: '',
+    feedback: '',
+    type: 'Formative',
+    completedDate: '',
+    sampleType: 'Learner interview',
+    iqaConclusion: [] as string[],
+    assessorDecisionCorrect: 'No',
+  })
+  const [sampleQuestions, setSampleQuestions] = useState<
+    Array<{ id: string; question: string; answer: 'Yes' | 'No' | '' }>
+  >([{ id: '1', question: 'Test', answer: 'Yes' }])
 
   const [
     triggerSamplePlanLearners,
@@ -260,7 +326,9 @@ const Index: React.FC = () => {
     ) {
       rawPlans = [rawPlanDataSource as Record<string, any>]
     } else if (Array.isArray((samplePlanResponse as any)?.data?.data)) {
-      rawPlans = ((samplePlanResponse as any).data.data ?? []) as Array<Record<string, any>>
+      rawPlans = ((samplePlanResponse as any).data.data ?? []) as Array<
+        Record<string, any>
+      >
     } else {
       const fallbackCandidate = samplePlanResponse as unknown
       if (Array.isArray(fallbackCandidate)) {
@@ -272,7 +340,11 @@ const Index: React.FC = () => {
       const normalizedPlans: Array<{ id: string; label: string }> = rawPlans
         .map((plan: Record<string, any>) => {
           const idCandidate =
-            plan?.plan_id ?? plan?.planId ?? plan?.id ?? plan?.sample_plan_id ?? ''
+            plan?.plan_id ??
+            plan?.planId ??
+            plan?.id ??
+            plan?.sample_plan_id ??
+            ''
           const nameCandidate =
             plan?.plan_name ??
             plan?.planName ??
@@ -281,12 +353,15 @@ const Index: React.FC = () => {
             plan?.name ??
             ''
 
-          const id = idCandidate !== null && idCandidate !== undefined ? String(idCandidate) : ''
+          const id =
+            idCandidate !== null && idCandidate !== undefined
+              ? String(idCandidate)
+              : ''
           const label = nameCandidate
             ? String(nameCandidate)
             : id
-              ? `Plan ${id}`
-              : ''
+            ? `Plan ${id}`
+            : ''
 
           return {
             id,
@@ -333,9 +408,15 @@ const Index: React.FC = () => {
     ) {
       setPlanSummary((previous) => {
         const planIdValue =
-          responseData?.plan_id ?? responseData?.planId ?? responseData?.id ?? selectedPlan
+          responseData?.plan_id ??
+          responseData?.planId ??
+          responseData?.id ??
+          selectedPlan
         const courseNameValue =
-          responseData?.course_name ?? responseData?.courseName ?? responseData?.name ?? ''
+          responseData?.course_name ??
+          responseData?.courseName ??
+          responseData?.name ??
+          ''
 
         return {
           planId:
@@ -364,7 +445,9 @@ const Index: React.FC = () => {
 
     const apiError = learnersError as any
     const message =
-      apiError?.data?.message || apiError?.error || 'Failed to fetch learners for the selected plan.'
+      apiError?.data?.message ||
+      apiError?.error ||
+      'Failed to fetch learners for the selected plan.'
     setFilterError(message)
     setFilterApplied(false)
     setPlanSummary(undefined)
@@ -382,7 +465,9 @@ const Index: React.FC = () => {
     }
 
     if (!iqaId) {
-      setFilterError('Unable to determine current user. Please re-login and try again.')
+      setFilterError(
+        'Unable to determine current user. Please re-login and try again.'
+      )
       return
     }
 
@@ -392,8 +477,7 @@ const Index: React.FC = () => {
 
     const learnersPayload = learnersData
       .map((row, rowIndex) => {
-        const learnerId =
-          row?.learner_id ?? row?.learnerId ?? row?.id ?? null
+        const learnerId = row?.learner_id ?? row?.learnerId ?? row?.id ?? null
         const units = Array.isArray(row.units) ? row.units : []
 
         const selectedUnits = units
@@ -413,7 +497,8 @@ const Index: React.FC = () => {
               unit?.unit_code ??
               unitIdRaw
 
-            const unitId = String(unitIdRaw).trim() || `${rowIndex}-${unitIndex}`
+            const unitId =
+              String(unitIdRaw).trim() || `${rowIndex}-${unitIndex}`
             const unitRef = String(unitRefRaw).trim() || unitId
 
             return {
@@ -439,13 +524,15 @@ const Index: React.FC = () => {
         }
       })
       .filter(Boolean) as Array<{
-        learner_id: string | number
-        plannedDate: string | null
-        units: Array<{ id: string | number; unit_ref: string }>
-      }>
+      learner_id: string | number
+      plannedDate: string | null
+      units: Array<{ id: string | number; unit_ref: string }>
+    }>
 
     if (!learnersPayload.length) {
-      setFilterError('Select at least one learner with sampled units before applying.')
+      setFilterError(
+        'Select at least one learner with sampled units before applying.'
+      )
       return
     }
 
@@ -458,7 +545,9 @@ const Index: React.FC = () => {
     )
 
     const numericPlanId = Number(selectedPlan)
-    const planIdForRequest = Number.isFinite(numericPlanId) ? numericPlanId : selectedPlan
+    const planIdForRequest = Number.isFinite(numericPlanId)
+      ? numericPlanId
+      : selectedPlan
 
     const payload = {
       plan_id: planIdForRequest,
@@ -471,8 +560,7 @@ const Index: React.FC = () => {
     try {
       const response = await applySamplePlanLearners(payload).unwrap()
       const successMessage =
-        response?.message ||
-        'Sampled learners added successfully.'
+        response?.message || 'Sampled learners added successfully.'
 
       dispatch(
         showMessage({
@@ -571,7 +659,9 @@ const Index: React.FC = () => {
 
   const toggleMethod = (code: string) => {
     setSelectedMethods((prev) =>
-      prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code]
+      prev.includes(code)
+        ? prev.filter((item) => item !== code)
+        : [...prev, code]
     )
   }
 
@@ -615,15 +705,98 @@ const Index: React.FC = () => {
     triggerSamplePlanLearners(selectedPlan)
   }
 
+  const handleUnitClick = (
+    unit: SamplePlanLearnerUnit,
+    learner: SamplePlanLearner
+  ) => {
+    setSelectedUnit({ unit, learner })
+    setModalFormData({
+      qaName: 'Raj Bhudia',
+      plannedDate: '11/11/2025',
+      assessmentMethods: ['TE'],
+      assessmentProcesses: '',
+      feedback: '',
+      type: 'Formative',
+      completedDate: '',
+      sampleType: 'Learner interview',
+      iqaConclusion: [],
+      assessorDecisionCorrect: 'No',
+    })
+    setSampleQuestions([{ id: '1', question: 'Test', answer: 'Yes' }])
+    setActiveTab(0)
+    setModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setModalOpen(false)
+    setSelectedUnit(null)
+  }
+
+  const handleModalFormChange = (field: string, value: any) => {
+    setModalFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleAssessmentMethodToggle = (code: string) => {
+    setModalFormData((prev) => {
+      const methods = prev.assessmentMethods.includes(code)
+        ? prev.assessmentMethods.filter((m) => m !== code)
+        : [...prev.assessmentMethods, code]
+      return { ...prev, assessmentMethods: methods }
+    })
+  }
+
+  const handleIqaConclusionToggle = (option: string) => {
+    setModalFormData((prev) => {
+      const conclusions = prev.iqaConclusion.includes(option)
+        ? prev.iqaConclusion.filter((c) => c !== option)
+        : [...prev.iqaConclusion, option]
+      return { ...prev, iqaConclusion: conclusions }
+    })
+  }
+
+  const handleQuestionChange = (id: string, question: string) => {
+    setSampleQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, question } : q))
+    )
+  }
+
+  const handleAnswerChange = (id: string, answer: 'Yes' | 'No') => {
+    setSampleQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, answer } : q))
+    )
+  }
+
+  const handleAddQuestion = () => {
+    const newId = String(Date.now())
+    setSampleQuestions((prev) => [
+      ...prev,
+      { id: newId, question: '', answer: '' },
+    ])
+  }
+
+  const handleDeleteQuestion = (id: string) => {
+    setSampleQuestions((prev) => prev.filter((q) => q.id !== id))
+  }
+
+  const handleSaveQuestions = () => {
+    // Handle save logic here
+    dispatch(
+      showMessage({
+        message: 'Sample questions saved successfully.',
+        variant: 'success',
+      })
+    )
+  }
+
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: '100%', margin: '0 auto' }}>
       <Typography variant='h4' sx={{ fontWeight: 600, mb: 2 }}>
         QA Sample Plan
       </Typography>
       <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
-        Manage sampling plans, monitor assessor activity and keep QA stakeholders
-        aligned. Configure the parameters on the left, filter the learner plan list
-        on the right, and export your selections in one click.
+        Manage sampling plans, monitor assessor activity and keep QA
+        stakeholders aligned. Configure the parameters on the left, filter the
+        learner plan list on the right, and export your selections in one click.
       </Typography>
 
       <Grid container spacing={3}>
@@ -659,7 +832,9 @@ const Index: React.FC = () => {
                           selectedMethods.length < assessmentMethods.length
                         }
                         onChange={() => {
-                          if (selectedMethods.length === assessmentMethods.length) {
+                          if (
+                            selectedMethods.length === assessmentMethods.length
+                          ) {
                             setSelectedMethods([])
                           } else {
                             setSelectedMethods(
@@ -793,7 +968,8 @@ const Index: React.FC = () => {
                   options={courses}
                   getOptionLabel={(option) => option.name || ''}
                   value={
-                    courses.find((course) => course.id === selectedCourse) || null
+                    courses.find((course) => course.id === selectedCourse) ||
+                    null
                   }
                   onChange={(_, newValue) => {
                     setSelectedCourse(newValue?.id || '')
@@ -824,7 +1000,9 @@ const Index: React.FC = () => {
                       }}
                     />
                   )}
-                  noOptionsText={coursesLoading ? 'Loading courses…' : 'No courses'}
+                  noOptionsText={
+                    coursesLoading ? 'Loading courses…' : 'No courses'
+                  }
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -838,7 +1016,9 @@ const Index: React.FC = () => {
                       if (!value) {
                         return planPlaceholderText
                       }
-                      const matchedPlan = plans.find((plan) => plan.id === value)
+                      const matchedPlan = plans.find(
+                        (plan) => plan.id === value
+                      )
                       return matchedPlan?.label || value
                     }}
                     onChange={(event) => {
@@ -865,7 +1045,8 @@ const Index: React.FC = () => {
                     color='error'
                     sx={{ mt: 1, display: 'block' }}
                   >
-                    Unable to load plans for the selected course. Please try again.
+                    Unable to load plans for the selected course. Please try
+                    again.
                   </Typography>
                 )}
               </Grid>
@@ -891,7 +1072,9 @@ const Index: React.FC = () => {
                   control={
                     <Checkbox
                       checked={onlyIncomplete}
-                      onChange={(event) => setOnlyIncomplete(event.target.checked)}
+                      onChange={(event) =>
+                        setOnlyIncomplete(event.target.checked)
+                      }
                     />
                   }
                   label='Do not show learners with completed course status'
@@ -937,7 +1120,9 @@ const Index: React.FC = () => {
                   color='secondary'
                   startIcon={<DownloadOutlinedIcon />}
                   sx={{ textTransform: 'none', fontWeight: 600 }}
-                  disabled={!filterApplied || !visibleRows.length || isLearnersInFlight}
+                  disabled={
+                    !filterApplied || !visibleRows.length || isLearnersInFlight
+                  }
                 >
                   Export
                 </Button>
@@ -980,13 +1165,11 @@ const Index: React.FC = () => {
             )}
 
             {filterApplied && !filterError && planSummary && (
-              <Typography
-                variant='body2'
-                color='text.secondary'
-                sx={{ mt: 2 }}
-              >
+              <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>
                 Viewing plan{' '}
-                <strong>{planSummary.planId ? `#${planSummary.planId}` : 'N/A'}</strong>
+                <strong>
+                  {planSummary.planId ? `#${planSummary.planId}` : 'N/A'}
+                </strong>
                 {planSummary.courseName ? ` • ${planSummary.courseName}` : ''}
               </Typography>
             )}
@@ -1064,7 +1247,8 @@ const Index: React.FC = () => {
                       <TableRow>
                         <TableCell colSpan={9} align='center' sx={{ py: 6 }}>
                           <Typography variant='body2' color='text.secondary'>
-                            Select a course and plan, then choose Filter to load learners.
+                            Select a course and plan, then choose Filter to load
+                            learners.
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -1101,7 +1285,9 @@ const Index: React.FC = () => {
 
                         return (
                           <TableRow
-                            key={`${row.assessor_name ?? 'assessor'}-${row.learner_name ?? index}`}
+                            key={`${row.assessor_name ?? 'assessor'}-${
+                              row.learner_name ?? index
+                            }`}
                             hover
                             sx={{
                               '&:last-child td, &:last-child th': { border: 0 },
@@ -1139,7 +1325,10 @@ const Index: React.FC = () => {
                               <Typography variant='body2'>
                                 {sanitizeText(row.sample_type)}
                               </Typography>
-                              <Typography variant='caption' color='text.secondary'>
+                              <Typography
+                                variant='caption'
+                                color='text.secondary'
+                              >
                                 Status: {sanitizeText(row.status)}
                               </Typography>
                             </TableCell>
@@ -1172,22 +1361,40 @@ const Index: React.FC = () => {
                                 {units.length ? (
                                   units.map((unit, unitIndex) => (
                                     <Paper
-                                      key={`${unit.unit_code ?? unit.unit_name ?? unitIndex}`}
+                                      key={`${
+                                        unit.unit_code ??
+                                        unit.unit_name ??
+                                        unitIndex
+                                      }`}
                                       variant='outlined'
+                                      onClick={() => handleUnitClick(unit, row)}
                                       sx={{
                                         p: 1,
                                         borderRadius: 1.5,
                                         display: 'flex',
                                         flexDirection: 'column',
                                         gap: 0.5,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease-in-out',
+                                        '&:hover': {
+                                          backgroundColor: (theme) =>
+                                            theme.palette.mode === 'light'
+                                              ? 'rgba(25, 118, 210, 0.08)'
+                                              : 'rgba(25, 118, 210, 0.16)',
+                                          borderColor: (theme) =>
+                                            theme.palette.primary.main,
+                                          transform: 'translateY(-2px)',
+                                          boxShadow: (theme) =>
+                                            theme.shadows[2],
+                                        },
                                         backgroundColor: (theme) =>
                                           unit.is_selected
                                             ? theme.palette.mode === 'light'
                                               ? 'rgba(46, 125, 50, 0.08)'
                                               : 'rgba(76, 175, 80, 0.16)'
                                             : theme.palette.mode === 'light'
-                                              ? theme.palette.grey[50]
-                                              : theme.palette.background.paper,
+                                            ? theme.palette.grey[50]
+                                            : theme.palette.background.paper,
                                       }}
                                     >
                                       <Stack
@@ -1249,9 +1456,791 @@ const Index: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Edit Sample Modal */}
+      <Dialog
+        open={modalOpen}
+        onClose={handleCloseModal}
+        maxWidth='xl'
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '90vh',
+            height: '90vh',
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Header */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              p: 2.5,
+              borderBottom: 1,
+              borderColor: 'divider',
+            }}
+          >
+            <Typography variant='h6' sx={{ fontWeight: 600 }}>
+              Edit Sample
+            </Typography>
+            <IconButton onClick={handleCloseModal} size='small'>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {/* Tabs and Create New Button */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              px: 2.5,
+              pt: 2,
+              borderBottom: 1,
+              borderColor: 'divider',
+            }}
+          >
+            <Tabs
+              value={activeTab}
+              onChange={(_, newValue) => setActiveTab(newValue)}
+              sx={{
+                '& .MuiTab-root': {
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  minHeight: 48,
+                },
+                '& .MuiTabs-indicator': {
+                  backgroundColor: '#e91e63',
+                },
+              }}
+            >
+              <Tab
+                label='FS 1 - (10/11/2025)'
+                sx={{
+                  '&.Mui-selected': {
+                    color: 'primary.main',
+                    fontWeight: 600,
+                  },
+                }}
+              />
+              <Tab
+                label='FS 2 - (11/11/2025)'
+                sx={{
+                  '&.Mui-selected': {
+                    color: '#e91e63',
+                    fontWeight: 600,
+                  },
+                }}
+              />
+            </Tabs>
+            <Button
+              variant='contained'
+              startIcon={<AddIcon />}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                bgcolor: '#e91e63',
+                '&:hover': {
+                  bgcolor: '#c2185b',
+                },
+              }}
+            >
+              Create New
+            </Button>
+          </Box>
+
+          {/* Action Buttons */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              flexWrap: 'wrap',
+              gap: 1.5,
+              px: 2.5,
+              pt: 2,
+              pb: 1,
+            }}
+          >
+            <Button
+              variant='outlined'
+              onClick={handleCloseModal}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderColor: '#ff9800',
+                color: '#ff9800',
+                '&:hover': {
+                  borderColor: '#f57c00',
+                  bgcolor: 'rgba(255, 152, 0, 0.08)',
+                },
+              }}
+            >
+              Cancel / Close
+            </Button>
+            <Button
+              variant='outlined'
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderColor: '#f44336',
+                color: '#f44336',
+                '&:hover': {
+                  borderColor: '#d32f2f',
+                  bgcolor: 'rgba(244, 67, 54, 0.08)',
+                },
+              }}
+            >
+              Delete
+            </Button>
+            <Button
+              variant='contained'
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                bgcolor: '#4caf50',
+                '&:hover': {
+                  bgcolor: '#388e3c',
+                },
+              }}
+            >
+              Save
+            </Button>
+            <Button
+              variant='contained'
+              onClick={handleCloseModal}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                bgcolor: '#4caf50',
+                '&:hover': {
+                  bgcolor: '#388e3c',
+                },
+              }}
+            >
+              Save & Close
+            </Button>
+          </Box>
+
+          {/* Content */}
+          <Box sx={{ flex: 1, overflow: 'auto', p: 2.5 }}>
+            <Grid container spacing={3}>
+              {/* Left Column */}
+              <Grid item xs={12} md={4}>
+                <Stack spacing={2.5}>
+                  <FormControl fullWidth size='small'>
+                    <InputLabel>QA Name</InputLabel>
+                    <Select
+                      value={modalFormData.qaName}
+                      label='QA Name'
+                      onChange={(e) =>
+                        handleModalFormChange('qaName', e.target.value)
+                      }
+                    >
+                      <MenuItem value='Raj Bhudia'>Raj Bhudia</MenuItem>
+                      <MenuItem value='Other QA'>Other QA</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Stack spacing={2.5}>
+                  <FormControl fullWidth size='small'>
+                    <InputLabel>Type</InputLabel>
+                    <Select
+                      value={modalFormData.type}
+                      label='Type'
+                      onChange={(e) =>
+                        handleModalFormChange('type', e.target.value)
+                      }
+                    >
+                      <MenuItem value='Formative'>Formative</MenuItem>
+                      <MenuItem value='Summative'>Summative</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Grid>
+              {/* Right Column */}
+              <Grid item xs={12} md={4}>
+                <Stack spacing={2.5}>
+                  <FormControl fullWidth size='small'>
+                    <InputLabel>Sample Type</InputLabel>
+                    <Select
+                      value={modalFormData.sampleType}
+                      label='Sample Type'
+                      onChange={(e) =>
+                        handleModalFormChange('sampleType', e.target.value)
+                      }
+                    >
+                      {modalSampleTypes.map((type) => (
+                        <MenuItem key={type} value={type}>
+                          {type}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  size='small'
+                  label='Planned Date'
+                  type='date'
+                  value={modalFormData.plannedDate}
+                  onChange={(e) =>
+                    handleModalFormChange('plannedDate', e.target.value)
+                  }
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  size='small'
+                  label='Completed Date'
+                  type='date'
+                  value={modalFormData.completedDate}
+                  onChange={(e) =>
+                    handleModalFormChange('completedDate', e.target.value)
+                  }
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box>
+                  <Typography
+                    variant='subtitle2'
+                    sx={{ fontWeight: 600, mb: 1 }}
+                  >
+                    Assessment Methods
+                  </Typography>
+                  <Paper variant='outlined' sx={{ p: 2, borderRadius: 1 }}>
+                    <Grid container spacing={1}>
+                      {assessmentMethodCodes.map((code) => (
+                        <Grid item xs={3} key={code}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                size='small'
+                                checked={modalFormData.assessmentMethods.includes(
+                                  code
+                                )}
+                                onChange={() =>
+                                  handleAssessmentMethodToggle(code)
+                                }
+                              />
+                            }
+                            label={code}
+                          />
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Paper>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box>
+                  <Typography
+                    variant='subtitle2'
+                    sx={{ fontWeight: 600, mb: 1 }}
+                  >
+                    IQA Conclusion
+                  </Typography>
+                  <Paper variant='outlined' sx={{ p: 2, borderRadius: 1 }}>
+                    <FormGroup row>
+                      {iqaConclusionOptions.map((option) => (
+                        <FormControlLabel
+                          key={option}
+                          control={
+                            <Checkbox
+                              size='small'
+                              checked={modalFormData.iqaConclusion.includes(
+                                option
+                              )}
+                              onChange={() => handleIqaConclusionToggle(option)}
+                            />
+                          }
+                          label={option}
+                        />
+                      ))}
+                    </FormGroup>
+                  </Paper>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Box>
+                  <Typography
+                    variant='subtitle2'
+                    sx={{ fontWeight: 600, mb: 1 }}
+                  >
+                    Assessor Decision Correct
+                  </Typography>
+                  <FormControl component='fieldset'>
+                    <RadioGroup
+                      row
+                      value={modalFormData.assessorDecisionCorrect}
+                      onChange={(e) =>
+                        handleModalFormChange(
+                          'assessorDecisionCorrect',
+                          e.target.value
+                        )
+                      }
+                    >
+                      <FormControlLabel
+                        value='Yes'
+                        control={<Radio size='small' />}
+                        label='Yes'
+                      />
+                      <FormControlLabel
+                        value='No'
+                        control={<Radio size='small' />}
+                        label='No'
+                      />
+                    </RadioGroup>
+                  </FormControl>
+                </Box>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  size='small'
+                  label='Assessment Processes'
+                  value={modalFormData.assessmentProcesses}
+                  onChange={(e) =>
+                    handleModalFormChange('assessmentProcesses', e.target.value)
+                  }
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={6}
+                  size='small'
+                  label='Feedback'
+                  value={modalFormData.feedback}
+                  onChange={(e) =>
+                    handleModalFormChange('feedback', e.target.value)
+                  }
+                  placeholder='Please type in feedback. Max 4400 characters.'
+                  inputProps={{ maxLength: 4400 }}
+                />
+              </Grid>
+            </Grid>
+            <Button
+              variant='contained'
+              sx={{
+                textTransform: 'none',
+                mt: 3,
+                fontWeight: 600,
+                bgcolor: '#e91e63',
+                '&:hover': {
+                  bgcolor: '#c2185b',
+                },
+              }}
+            >
+              Examine Evidence
+            </Button>
+            <Box
+              sx={{
+                mt: 3,
+                mb: 2,
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 3,
+                flexWrap: 'wrap',
+              }}
+            >
+              {/* Evidence Links Table */}
+              <Box sx={{ mb: 3 }} flex={1}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    mb: 1.5,
+                  }}
+                >
+                  <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
+                    Evidence Links for Sample
+                  </Typography>
+                  <Stack direction='row' spacing={1}>
+                    <IconButton size='small'>
+                      <RefreshIcon fontSize='small' />
+                    </IconButton>
+                  </Stack>
+                </Box>
+                <TableContainer component={Paper} variant='outlined'>
+                  <Table size='small'>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Examined Evidence</TableCell>
+                        <TableCell>Assessment Methods Used</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell colSpan={3} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            There are no Evidence Links on this Sample
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+
+              {/* Actions Table */}
+              <Box flex={1}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    mb: 1.5,
+                  }}
+                >
+                  <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
+                    Actions for Sample
+                  </Typography>
+                  <Stack direction='row' spacing={1}>
+                    <Button
+                      variant='contained'
+                      size='small'
+                      startIcon={<AddIcon />}
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        bgcolor: '#4caf50',
+                        '&:hover': {
+                          bgcolor: '#388e3c',
+                        },
+                      }}
+                    >
+                      Add Action
+                    </Button>
+                  </Stack>
+                </Box>
+                <TableContainer component={Paper} variant='outlined'>
+                  <Table size='small'>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Summary</TableCell>
+                        <TableCell>Action Required</TableCell>
+                        <TableCell>Action With</TableCell>
+                        <TableCell>Target Date</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell colSpan={5} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            There are no Actions on this Sample
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            </Box>
+
+            {/* Allocated Forms and Documents for Sample */}
+            <Box
+              sx={{
+                mt: 3,
+                display: 'flex',
+                gap: 3,
+                flexWrap: 'wrap',
+              }}
+            >
+              {/* Allocated Forms Section */}
+              <Box sx={{ flex: 1, minWidth: 400 }}>
+                <Typography variant='subtitle1' sx={{ fontWeight: 600, mb: 1.5 }}>
+                  Allocated Forms
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 1.5,
+                    mb: 1.5,
+                    alignItems: 'center',
+                  }}
+                >
+                  <TextField
+                    fullWidth
+                    size='small'
+                    placeholder='Select form...'
+                    sx={{ flex: 1 }}
+                  />
+                  <Button
+                    variant='contained'
+                    size='small'
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      bgcolor: '#ff9800',
+                      color: '#fff',
+                      '&:hover': {
+                        bgcolor: '#f57c00',
+                      },
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Allocate Form
+                  </Button>
+                </Box>
+                <TableContainer component={Paper} variant='outlined'>
+                  <Table size='small'>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Description</TableCell>
+                        <TableCell>Completed Date</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            There are no Forms on this Sample
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+
+              {/* Documents for Sample Section */}
+              <Box sx={{ flex: 1, minWidth: 400 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    mb: 1.5,
+                  }}
+                >
+                  <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
+                    Documents for Sample
+                  </Typography>
+                  <Button
+                    variant='contained'
+                    size='small'
+                    startIcon={<CloudUploadIcon />}
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      bgcolor: '#4caf50',
+                      '&:hover': {
+                        bgcolor: '#388e3c',
+                      },
+                    }}
+                  >
+                    Upload File
+                  </Button>
+                </Box>
+                <TableContainer component={Paper} variant='outlined'>
+                  <Table size='small'>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>File</TableCell>
+                        <TableCell>File Name</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell colSpan={3} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            There are no Files on this Sample
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            </Box>
+
+            {/* Sample Questions Section */}
+            <Box sx={{ mt: 3 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography
+                    variant='subtitle1'
+                    sx={{
+                      fontWeight: 600,
+                      color: '#e91e63',
+                    }}
+                  >
+                    Sample Questions
+                  </Typography>
+                </Box>
+                <Button
+                  variant='contained'
+                  size='small'
+                  onClick={handleSaveQuestions}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    bgcolor: '#4caf50',
+                    '&:hover': {
+                      bgcolor: '#388e3c',
+                    },
+                  }}
+                >
+                  Save
+                </Button>
+              </Box>
+
+              <Paper
+                variant='outlined'
+                sx={{
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === 'light'
+                      ? theme.palette.grey[50]
+                      : theme.palette.background.default,
+                }}
+              >
+                <TableContainer>
+                  <Table size='small'>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, width: '60%' }}>
+                          Question
+                        </TableCell>
+                        <TableCell
+                          align='center'
+                          sx={{ fontWeight: 600, width: '15%' }}
+                        >
+                          Yes
+                        </TableCell>
+                        <TableCell
+                          align='center'
+                          sx={{ fontWeight: 600, width: '15%' }}
+                        >
+                          No
+                        </TableCell>
+                        <TableCell
+                          align='center'
+                          sx={{ fontWeight: 600, width: '10%' }}
+                        >
+                          Actions
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {sampleQuestions.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
+                            <Typography variant='body2' color='text.secondary'>
+                              No questions added yet. Click "Add Question" to get
+                              started.
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        sampleQuestions.map((question, index) => (
+                          <TableRow key={question.id} hover>
+                            <TableCell>
+                              <TextField
+                                fullWidth
+                                size='small'
+                                value={question.question}
+                                onChange={(e) =>
+                                  handleQuestionChange(question.id, e.target.value)
+                                }
+                                placeholder={`Question ${index + 1}`}
+                                sx={{
+                                  '& .MuiOutlinedInput-root': {
+                                    backgroundColor: 'background.paper',
+                                  },
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell align='center'>
+                              <Radio
+                                size='small'
+                                checked={question.answer === 'Yes'}
+                                onChange={() =>
+                                  handleAnswerChange(question.id, 'Yes')
+                                }
+                                value='Yes'
+                              />
+                            </TableCell>
+                            <TableCell align='center'>
+                              <Radio
+                                size='small'
+                                checked={question.answer === 'No'}
+                                onChange={() =>
+                                  handleAnswerChange(question.id, 'No')
+                                }
+                                value='No'
+                              />
+                            </TableCell>
+                            <TableCell align='center'>
+                              <IconButton
+                                size='small'
+                                onClick={() => handleDeleteQuestion(question.id)}
+                                sx={{
+                                  color: 'error.main',
+                                  '&:hover': {
+                                    bgcolor: 'error.light',
+                                    color: 'error.dark',
+                                  },
+                                }}
+                              >
+                                <DeleteIcon fontSize='small' />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {/* Add Question Button */}
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+                  <Button
+                    variant='outlined'
+                    size='small'
+                    startIcon={<AddIcon />}
+                    onClick={handleAddQuestion}
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Add Question
+                  </Button>
+                </Box>
+              </Paper>
+            </Box>
+          </Box>
+        </Box>
+      </Dialog>
     </Box>
   )
 }
 
 export default Index
-
