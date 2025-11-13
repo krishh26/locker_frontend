@@ -202,6 +202,12 @@ const Index: React.FC = () => {
     planId?: string
     courseName?: string
   }>()
+  const [unitSelectionDialogOpen, setUnitSelectionDialogOpen] = useState<boolean>(false)
+  const [selectedLearnerForUnits, setSelectedLearnerForUnits] = useState<{
+    learner: SamplePlanLearner
+    learnerIndex: number
+  } | null>(null)
+  const [selectedUnitsMap, setSelectedUnitsMap] = useState<Record<string, Set<string>>>({})
   const [modalOpen, setModalOpen] = useState<boolean>(false)
   const [selectedUnit, setSelectedUnit] = useState<{
     unit: SamplePlanLearnerUnit
@@ -481,7 +487,10 @@ const Index: React.FC = () => {
         const units = Array.isArray(row.units) ? row.units : []
 
         const selectedUnits = units
-          .filter((unit) => unit && unit.is_selected)
+          .filter((unit) => {
+            if (!unit) return false
+            return unit.is_selected === true
+          })
           .map((unit, unitIndex) => {
             const unitIdRaw =
               unit?.id ??
@@ -528,6 +537,8 @@ const Index: React.FC = () => {
       plannedDate: string | null
       units: Array<{ id: string | number; unit_ref: string }>
     }>
+
+     console.log('learnersPayload',learnersData)
 
     if (!learnersPayload.length) {
       setFilterError(
@@ -605,6 +616,45 @@ const Index: React.FC = () => {
 
     return []
   }, [learnersResponse])
+
+  // Initialize selectedUnitsMap from API response
+  useEffect(() => {
+    if (!learnersData.length) {
+      return
+    }
+
+    const newMap: Record<string, Set<string>> = {}
+    learnersData.forEach((learner, index) => {
+      const learnerKey = `${learner.learner_name ?? ''}-${index}`
+      const selectedSet = new Set<string>()
+      
+      if (Array.isArray(learner.units)) {
+        learner.units.forEach((unit) => {
+          if (unit?.is_selected) {
+            const unitKey = unit.unit_code || unit.unit_name || ''
+            if (unitKey) {
+              selectedSet.add(unitKey)
+            }
+          }
+        })
+      }
+      
+      if (selectedSet.size > 0) {
+        newMap[learnerKey] = selectedSet
+      }
+    })
+
+    setSelectedUnitsMap((prev) => {
+      // Merge with existing selections to preserve user changes
+      const merged = { ...prev }
+      Object.keys(newMap).forEach((key) => {
+        if (!merged[key]) {
+          merged[key] = newMap[key]
+        }
+      })
+      return merged
+    })
+  }, [learnersData])
 
   const visibleRows: SamplePlanLearner[] = useMemo(() => {
     if (!filterApplied) {
@@ -705,26 +755,82 @@ const Index: React.FC = () => {
     triggerSamplePlanLearners(selectedPlan)
   }
 
-  const handleUnitClick = (
-    unit: SamplePlanLearnerUnit,
-    learner: SamplePlanLearner
+  const handleOpenUnitSelectionDialog = (
+    learner: SamplePlanLearner,
+    learnerIndex: number
   ) => {
-    setSelectedUnit({ unit, learner })
-    setModalFormData({
-      qaName: 'Raj Bhudia',
-      plannedDate: '11/11/2025',
-      assessmentMethods: ['TE'],
-      assessmentProcesses: '',
-      feedback: '',
-      type: 'Formative',
-      completedDate: '',
-      sampleType: 'Learner interview',
-      iqaConclusion: [],
-      assessorDecisionCorrect: 'No',
+    setSelectedLearnerForUnits({ learner, learnerIndex })
+    const learnerKey = `${learner.learner_name ?? ''}-${learnerIndex}`
+    const existingSelections = selectedUnitsMap[learnerKey] || new Set<string>()
+    
+    // Initialize with current selections from the learner's units
+    if (Array.isArray(learner.units)) {
+      learner.units.forEach((unit) => {
+        if (unit?.is_selected) {
+          const unitKey = unit.unit_code || unit.unit_name || ''
+          if (unitKey) {
+            existingSelections.add(unitKey)
+          }
+        }
+      })
+    }
+    
+    setSelectedUnitsMap((prev) => ({
+      ...prev,
+      [learnerKey]: existingSelections,
+    }))
+    setUnitSelectionDialogOpen(true)
+  }
+
+  const handleCloseUnitSelectionDialog = () => {
+    setUnitSelectionDialogOpen(false)
+    setSelectedLearnerForUnits(null)
+  }
+
+  const handleUnitToggle = (unitKey: string) => {
+    if (!selectedLearnerForUnits) return
+    
+    const learnerKey = `${selectedLearnerForUnits.learner.learner_name ?? ''}-${selectedLearnerForUnits.learnerIndex}`
+    setSelectedUnitsMap((prev) => {
+      const current = prev[learnerKey] || new Set<string>()
+      const updated = new Set(current)
+      
+      if (updated.has(unitKey)) {
+        updated.delete(unitKey)
+      } else {
+        updated.add(unitKey)
+      }
+      
+      return {
+        ...prev,
+        [learnerKey]: updated,
+      }
     })
-    setSampleQuestions([{ id: '1', question: 'Test', answer: 'Yes' }])
-    setActiveTab(0)
-    setModalOpen(true)
+  }
+
+  const handleSaveUnitSelection = () => {
+    if (!selectedLearnerForUnits) return
+    
+    const learnerKey = `${selectedLearnerForUnits.learner.learner_name ?? ''}-${selectedLearnerForUnits.learnerIndex}`
+    const selectedUnits = selectedUnitsMap[learnerKey] || new Set<string>()
+    
+    // Update the learner's units in the data
+    if (Array.isArray(selectedLearnerForUnits.learner.units)) {
+      selectedLearnerForUnits.learner.units = selectedLearnerForUnits.learner.units.map((unit) => {
+        const unitKey = unit.unit_code || unit.unit_name || ''
+        return {
+          ...unit,
+          is_selected: unitKey ? selectedUnits.has(unitKey) : false,
+        }
+      })
+    }
+    
+    handleCloseUnitSelectionDialog()
+  }
+
+  const getSelectedUnitsForLearner = (learner: SamplePlanLearner, learnerIndex: number): Set<string> => {
+    const learnerKey = `${learner.learner_name ?? ''}-${learnerIndex}`
+    return selectedUnitsMap[learnerKey] || new Set<string>()
   }
 
   const handleCloseModal = () => {
@@ -1238,14 +1344,13 @@ const Index: React.FC = () => {
                       <TableCell>Sample Type / Status</TableCell>
                       <TableCell>Planned Date</TableCell>
                       <TableCell align='center'>Actions</TableCell>
-                      <TableCell>Number Selected</TableCell>
                       <TableCell>Units</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {!filterApplied ? (
                       <TableRow>
-                        <TableCell colSpan={9} align='center' sx={{ py: 6 }}>
+                        <TableCell colSpan={8} align='center' sx={{ py: 6 }}>
                           <Typography variant='body2' color='text.secondary'>
                             Select a course and plan, then choose Filter to load
                             learners.
@@ -1254,7 +1359,7 @@ const Index: React.FC = () => {
                       </TableRow>
                     ) : isLearnersInFlight ? (
                       <TableRow>
-                        <TableCell colSpan={9} align='center' sx={{ py: 6 }}>
+                        <TableCell colSpan={8} align='center' sx={{ py: 6 }}>
                           <Stack
                             direction='row'
                             spacing={1}
@@ -1270,7 +1375,7 @@ const Index: React.FC = () => {
                       </TableRow>
                     ) : isLearnersError ? (
                       <TableRow>
-                        <TableCell colSpan={9} align='center' sx={{ py: 6 }}>
+                        <TableCell colSpan={8} align='center' sx={{ py: 6 }}>
                           <Typography variant='body2' color='error'>
                             {filterError ||
                               'Something went wrong while fetching learners for this plan.'}
@@ -1280,7 +1385,8 @@ const Index: React.FC = () => {
                     ) : visibleRows.length ? (
                       visibleRows.map((row, index) => {
                         const units = Array.isArray(row.units) ? row.units : []
-                        const selectedUnits = countSelectedUnits(units)
+                        const selectedUnitsSet = getSelectedUnitsForLearner(row, index)
+                        const selectedUnits = selectedUnitsSet.size || countSelectedUnits(units)
                         const totalUnits = units.length
 
                         return (
@@ -1351,98 +1457,106 @@ const Index: React.FC = () => {
                                 </IconButton>
                               </Stack>
                             </TableCell>
-                            <TableCell sx={{ minWidth: 140 }}>
-                              <Typography variant='body2' fontWeight={600}>
-                                Units: {selectedUnits} ({totalUnits})
-                              </Typography>
-                            </TableCell>
-                            <TableCell sx={{ minWidth: 260 }}>
-                              <Stack spacing={1}>
-                                {units.length ? (
-                                  units.map((unit, unitIndex) => (
-                                    <Paper
-                                      key={`${
-                                        unit.unit_code ??
-                                        unit.unit_name ??
-                                        unitIndex
-                                      }`}
-                                      variant='outlined'
-                                      onClick={() => handleUnitClick(unit, row)}
-                                      sx={{
-                                        p: 1,
-                                        borderRadius: 1.5,
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: 0.5,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease-in-out',
-                                        '&:hover': {
-                                          backgroundColor: (theme) =>
-                                            theme.palette.mode === 'light'
-                                              ? 'rgba(25, 118, 210, 0.08)'
-                                              : 'rgba(25, 118, 210, 0.16)',
-                                          borderColor: (theme) =>
-                                            theme.palette.primary.main,
-                                          transform: 'translateY(-2px)',
-                                          boxShadow: (theme) =>
-                                            theme.shadows[2],
-                                        },
-                                        backgroundColor: (theme) =>
-                                          unit.is_selected
-                                            ? theme.palette.mode === 'light'
-                                              ? 'rgba(46, 125, 50, 0.08)'
-                                              : 'rgba(76, 175, 80, 0.16)'
-                                            : theme.palette.mode === 'light'
-                                            ? theme.palette.grey[50]
-                                            : theme.palette.background.paper,
-                                      }}
+                            <TableCell sx={{ minWidth: 300 }}>
+                              <Paper
+                                variant='outlined'
+                                onClick={() => handleOpenUnitSelectionDialog(row, index)}
+                                sx={{
+                                  p: 2,
+                                  borderRadius: 2,
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease-in-out',
+                                  backgroundColor: (theme) =>
+                                    theme.palette.mode === 'light'
+                                      ? theme.palette.grey[50]
+                                      : theme.palette.background.paper,
+                                  '&:hover': {
+                                    backgroundColor: (theme) =>
+                                      theme.palette.mode === 'light'
+                                        ? 'rgba(25, 118, 210, 0.08)'
+                                        : 'rgba(25, 118, 210, 0.16)',
+                                    borderColor: (theme) => theme.palette.primary.main,
+                                    boxShadow: (theme) => theme.shadows[2],
+                                  },
+                                }}
+                              >
+                                <Stack spacing={1.5}>
+                                  <Stack
+                                    direction='row'
+                                    alignItems='center'
+                                    justifyContent='space-between'
+                                  >
+                                    <Typography
+                                      variant='body2'
+                                      fontWeight={600}
+                                      color='primary'
                                     >
-                                      <Stack
-                                        direction='row'
-                                        alignItems='center'
-                                        justifyContent='space-between'
+                                      Click to Select Units
+                                    </Typography>
+                                    <Chip
+                                      size='small'
+                                      label={`${selectedUnits}/${totalUnits} selected`}
+                                      color={selectedUnits > 0 ? 'primary' : 'default'}
+                                      variant='outlined'
+                                    />
+                                  </Stack>
+                                  {selectedUnits > 0 && (
+                                    <Stack spacing={0.5}>
+                                      <Typography
+                                        variant='caption'
+                                        color='text.secondary'
+                                        sx={{ fontWeight: 600 }}
                                       >
-                                        <Typography
-                                          variant='caption'
-                                          sx={{ fontWeight: 600 }}
-                                        >
-                                          {sanitizeText(unit.unit_name)}
-                                        </Typography>
-                                        {unit.is_selected && (
-                                          <Chip
-                                            size='small'
-                                            label='Selected'
-                                            color='success'
-                                            variant='outlined'
-                                          />
+                                        Selected Units:
+                                      </Typography>
+                                      <Stack spacing={0.5}>
+                                        {units
+                                          .filter((unit) => {
+                                            const unitKey = unit.unit_code || unit.unit_name || ''
+                                            const selectedSet = getSelectedUnitsForLearner(row, index)
+                                            return unitKey && selectedSet.has(unitKey)
+                                          })
+                                          .slice(0, 3)
+                                          .map((unit, unitIndex) => (
+                                            <Chip
+                                              key={`selected-${unit.unit_code || unit.unit_name || unitIndex}`}
+                                              label={sanitizeText(unit.unit_name || unit.unit_code || 'Unit')}
+                                              size='small'
+                                              color='success'
+                                              variant='outlined'
+                                              sx={{ fontSize: '0.7rem' }}
+                                            />
+                                          ))}
+                                        {selectedUnits > 3 && (
+                                          <Typography
+                                            variant='caption'
+                                            color='text.secondary'
+                                            sx={{ fontStyle: 'italic' }}
+                                          >
+                                            +{selectedUnits - 3} more...
+                                          </Typography>
                                         )}
                                       </Stack>
-                                      {unit.unit_code && (
-                                        <Typography
-                                          variant='caption'
-                                          color='text.secondary'
-                                        >
-                                          Code: {sanitizeText(unit.unit_code)}
-                                        </Typography>
-                                      )}
-                                    </Paper>
-                                  ))
-                                ) : (
-                                  <Typography
-                                    variant='caption'
-                                    color='text.secondary'
-                                  >
-                                    No units assigned yet.
-                                  </Typography>
-                                )}
-                              </Stack>
+                                    </Stack>
+                                  )}
+                                  {selectedUnits === 0 && (
+                                    <Typography
+                                      variant='caption'
+                                      color='text.secondary'
+                                      sx={{ fontStyle: 'italic' }}
+                                    >
+                                      No units selected. Click to choose units.
+                                    </Typography>
+                                  )}
+                                </Stack>
+                              </Paper>
                             </TableCell>
                           </TableRow>
                         )
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={9} align='center' sx={{ py: 6 }}>
+                        <TableCell colSpan={8} align='center' sx={{ py: 6 }}>
                           <Typography variant='body2' color='text.secondary'>
                             No learners match the current filters.
                           </Typography>
@@ -1456,6 +1570,158 @@ const Index: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Unit Selection Dialog */}
+      <Dialog
+        open={unitSelectionDialogOpen}
+        onClose={handleCloseUnitSelectionDialog}
+        maxWidth='md'
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '80vh',
+          },
+        }}
+      >
+        <Box sx={{ p: 3 }}>
+          <Stack spacing={3}>
+            <Stack
+              direction='row'
+              alignItems='center'
+              justifyContent='space-between'
+            >
+              <Typography variant='h6' fontWeight={600}>
+                Select Units
+              </Typography>
+              <IconButton
+                size='small'
+                onClick={handleCloseUnitSelectionDialog}
+                sx={{ color: 'text.secondary' }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Stack>
+
+            {selectedLearnerForUnits && (
+              <>
+                <Paper
+                  variant='outlined'
+                  sx={{
+                    p: 2,
+                    backgroundColor: (theme) =>
+                      theme.palette.mode === 'light'
+                        ? theme.palette.grey[50]
+                        : theme.palette.background.default,
+                  }}
+                >
+                  <Stack spacing={1}>
+                    <Typography variant='subtitle2' fontWeight={600}>
+                      Learner: {sanitizeText(selectedLearnerForUnits.learner.learner_name)}
+                    </Typography>
+                    <Typography variant='body2' color='text.secondary'>
+                      Assessor: {sanitizeText(selectedLearnerForUnits.learner.assessor_name)}
+                    </Typography>
+                  </Stack>
+                </Paper>
+
+                <Box
+                  sx={{
+                    maxHeight: '50vh',
+                    overflowY: 'auto',
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                    borderRadius: 2,
+                    p: 2,
+                  }}
+                >
+                  <Stack spacing={2}>
+                    {Array.isArray(selectedLearnerForUnits.learner.units) &&
+                    selectedLearnerForUnits.learner.units.length > 0 ? (
+                      selectedLearnerForUnits.learner.units.map((unit, unitIndex) => {
+                        const unitKey = unit.unit_code || unit.unit_name || ''
+                        const learnerKey = `${selectedLearnerForUnits.learner.learner_name ?? ''}-${selectedLearnerForUnits.learnerIndex}`
+                        const selectedUnits = selectedUnitsMap[learnerKey] || new Set<string>()
+                        const isSelected = unitKey ? selectedUnits.has(unitKey) : false
+
+                        return (
+                          <Paper
+                            key={`unit-${unitKey || unitIndex}`}
+                            variant='outlined'
+                            sx={{
+                              p: 2,
+                              transition: 'all 0.2s ease-in-out',
+                              backgroundColor: (theme) =>
+                                isSelected
+                                  ? theme.palette.mode === 'light'
+                                    ? 'rgba(46, 125, 50, 0.08)'
+                                    : 'rgba(76, 175, 80, 0.16)'
+                                  : theme.palette.mode === 'light'
+                                  ? theme.palette.background.paper
+                                  : theme.palette.background.default,
+                              borderColor: (theme) =>
+                                isSelected
+                                  ? theme.palette.success.main
+                                  : theme.palette.divider,
+                              '&:hover': {
+                                borderColor: (theme) => theme.palette.primary.main,
+                                boxShadow: (theme) => theme.shadows[2],
+                              },
+                            }}
+                          >
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  checked={isSelected}
+                                  onChange={() => handleUnitToggle(unitKey)}
+                                  color='primary'
+                                />
+                              }
+                              label={
+                                <Stack spacing={0.5}>
+                                  <Typography variant='body2' fontWeight={600}>
+                                    {sanitizeText(unit.unit_name || 'Unit')}
+                                  </Typography>
+                                  {unit.unit_code && (
+                                    <Typography variant='caption' color='text.secondary'>
+                                      Code: {sanitizeText(unit.unit_code)}
+                                    </Typography>
+                                  )}
+                                </Stack>
+                              }
+                              sx={{ alignItems: 'flex-start', m: 0 }}
+                            />
+                          </Paper>
+                        )
+                      })
+                    ) : (
+                      <Typography variant='body2' color='text.secondary' align='center' sx={{ py: 4 }}>
+                        No units available for this learner.
+                      </Typography>
+                    )}
+                  </Stack>
+                </Box>
+
+                <Stack direction='row' spacing={2} justifyContent='flex-end'>
+                  <Button
+                    variant='outlined'
+                    onClick={handleCloseUnitSelectionDialog}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant='contained'
+                    onClick={handleSaveUnitSelection}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Save Selection
+                  </Button>
+                </Stack>
+              </>
+            )}
+          </Stack>
+        </Box>
+      </Dialog>
 
       {/* Edit Sample Modal */}
       <Dialog
