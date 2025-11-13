@@ -309,14 +309,14 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
   return (
     <Paper elevation={0} className={styles.container}>
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          {/* {!readOnly && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 , gap: 2}}>
+          {!readOnly && (
             <SecondaryButton
               name="Add Module"
               startIcon={<AddIcon />}
               onClick={openAddModuleDialog}
             />
-          )} */}
+          )}
           {!readOnly && (
             <SecondaryButton
               name='Import Modules'
@@ -473,14 +473,14 @@ const ModuleEditor: React.FC<ModuleEditorProps> = ({
         {/* <ModuleAccordion /> */}
       </Box>
 
-      {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
         {!readOnly &&
           (isSaving ? (
             <LoadingButton />
           ) : (
             <SecondaryButton name='Save Outcomes' onClick={handleSave} />
           ))}
-      </Box> */}
+      </Box>
       <Dialog
         open={isOpenModule}
         onClose={() => setIsOpenModule(false)}
