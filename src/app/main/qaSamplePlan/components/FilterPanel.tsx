@@ -149,23 +149,12 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12}>
           <TextField
             label='Planned Sample Date'
             type='date'
             value={dateFrom}
             onChange={(event) => onDateFromChange(event.target.value)}
-            size='small'
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            label='QA Completion Date'
-            type='date'
-            value={dateTo}
-            onChange={(event) => onDateToChange(event.target.value)}
             size='small'
             fullWidth
             InputLabelProps={{ shrink: true }}
