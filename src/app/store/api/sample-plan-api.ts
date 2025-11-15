@@ -113,13 +113,205 @@ export const samplePlanAPI = createApi({
         body,
       }),
     }),
+    updateSamplePlanDetail: builder.mutation<
+      SamplePlanLearnersResponse,
+      {
+        plan_id: string | number
+        completedDate?: string
+        feedback?: string
+        status?: string
+        assessment_methods?: Record<string, boolean>
+        iqa_conclusion?: Record<string, any>
+        assessor_decision_correct?: boolean
+        sample_type?: string
+        plannedDate?: string
+        type?: string
+      }
+    >({
+      query: ({ plan_id, ...body }) => {
+        const encodedId = encodeURIComponent(String(plan_id))
+        return {
+          url: `sample-plan/detail/${encodedId}`,
+          method: 'PATCH',
+          body,
+        }
+      },
+    }),
+    // Sample Action endpoints
+    getSampleActions: builder.query<
+      {
+        message?: string
+        status?: boolean
+        data?: SampleAction[]
+      },
+      string | number
+    >({
+      query: (planDetailId) => {
+        const encodedId = encodeURIComponent(String(planDetailId))
+        return {
+          url: `sample-action/list/${encodedId}`,
+        }
+      },
+    }),
+    createSampleAction: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+        data?: SampleAction
+      },
+      {
+        plan_detail_id: string | number
+        action_with_id: string | number
+        action_required: string
+        target_date: string
+        status: 'Pending' | 'In Progress' | 'Completed' | 'Closed'
+        created_by_id: string | number
+        assessor_feedback?: string
+      }
+    >({
+      query: (body) => ({
+        url: 'sample-action/create',
+        method: 'POST',
+        body,
+      }),
+    }),
+    updateSampleAction: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+        data?: SampleAction
+      },
+      {
+        actionId: string | number
+        action_required?: string
+        target_date?: string
+        status?: 'Pending' | 'In Progress' | 'Completed' | 'Closed'
+        assessor_feedback?: string
+        action_with_id?: string | number
+      }
+    >({
+      query: ({ actionId, ...body }) => {
+        const encodedId = encodeURIComponent(String(actionId))
+        return {
+          url: `sample-action/update/${encodedId}`,
+          method: 'PATCH',
+          body,
+        }
+      },
+    }),
+    deleteSampleAction: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+      },
+      string | number
+    >({
+      query: (actionId) => {
+        const encodedId = encodeURIComponent(String(actionId))
+        return {
+          url: `sample-action/delete/${encodedId}`,
+          method: 'DELETE',
+        }
+      },
+    }),
+    // Sample Document endpoints
+    getSampleDocuments: builder.query<
+      {
+        message?: string
+        status?: boolean
+        data?: SampleDocument[]
+      },
+      string | number
+    >({
+      query: (planDetailId) => {
+        const encodedId = encodeURIComponent(String(planDetailId))
+        return {
+          url: `sample-doc/list/${encodedId}`,
+        }
+      },
+    }),
+    uploadSampleDocument: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+        data?: SampleDocument
+      },
+      FormData
+    >({
+      query: (formData) => {
+        return {
+          url: 'sample-doc/upload',
+          method: 'POST',
+          body: formData,
+        }
+      },
+    }),
+    deleteSampleDocument: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+      },
+      string | number
+    >({
+      query: (docId) => {
+        const encodedId = encodeURIComponent(String(docId))
+        return {
+          url: `sample-doc/delete/${encodedId}`,
+          method: 'DELETE',
+        }
+      },
+    }),
   }),
 })
+
+export interface SampleAction {
+  id: number
+  action_required: string
+  target_date: string
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Closed'
+  assessor_feedback: string | null
+  created_at: string
+  updated_at: string
+  action_with: {
+    user_id: number
+    user_name: string
+    first_name: string
+    last_name: string
+    email: string
+    [key: string]: unknown
+  }
+  created_by: {
+    user_id: number
+    user_name: string
+    first_name: string
+    last_name: string
+    email: string
+    [key: string]: unknown
+  }
+}
+
+export interface SampleDocument {
+  id: number
+  file_name: string
+  file_path?: string
+  file_url?: string
+  uploaded_at: string
+}
 
 export const {
   useGetSamplePlansQuery,
   useLazyGetSamplePlanLearnersQuery,
   useApplySamplePlanLearnersMutation,
+  useUpdateSamplePlanDetailMutation,
+  useGetSampleActionsQuery,
+  useLazyGetSampleActionsQuery,
+  useCreateSampleActionMutation,
+  useUpdateSampleActionMutation,
+  useDeleteSampleActionMutation,
+  useGetSampleDocumentsQuery,
+  useLazyGetSampleDocumentsQuery,
+  useUploadSampleDocumentMutation,
+  useDeleteSampleDocumentMutation,
 } = samplePlanAPI
 
 

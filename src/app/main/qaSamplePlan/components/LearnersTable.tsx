@@ -66,6 +66,9 @@ interface LearnersTableProps {
   onOpenUnitSelectionDialog: (learner: SamplePlanLearner, learnerIndex: number) => void
   getSelectedUnitsForLearner: (learner: SamplePlanLearner, learnerIndex: number) => Set<string>
   countSelectedUnits: (units?: any[]) => number
+  hasPlannedDate?: boolean
+  courseName?: string
+  onOpenLearnerDetailsDialog: (learner: SamplePlanLearner, learnerIndex: number) => void
 }
 
 export const LearnersTable: React.FC<LearnersTableProps> = ({
@@ -100,6 +103,9 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
   onOpenUnitSelectionDialog,
   getSelectedUnitsForLearner,
   countSelectedUnits,
+  hasPlannedDate = false,
+  courseName = '',
+  onOpenLearnerDetailsDialog,
 }) => {
   return (
     <Card sx={{ p: { xs: 2, md: 3 }, borderRadius: 2 }}>
@@ -338,16 +344,16 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                 <TableCell>Risk Level</TableCell>
                 <TableCell>QA Approved</TableCell>
                 <TableCell>Learner</TableCell>
-                <TableCell>Sample Type / Status</TableCell>
-                <TableCell>Planned Date</TableCell>
+                <TableCell>Employer</TableCell>
                 <TableCell align='center'>Actions</TableCell>
                 <TableCell>Units</TableCell>
+                {hasPlannedDate && <TableCell> {sanitizeText(courseName)}</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {!filterApplied ? (
                 <TableRow>
-                  <TableCell colSpan={8} align='center' sx={{ py: 6 }}>
+                  <TableCell colSpan={hasPlannedDate ? 8 : 7} align='center' sx={{ py: 6 }}>
                     <Typography variant='body2' color='text.secondary'>
                       Select a course and plan, then choose Filter to load learners.
                     </Typography>
@@ -355,7 +361,7 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                 </TableRow>
               ) : isLearnersInFlight ? (
                 <TableRow>
-                  <TableCell colSpan={8} align='center' sx={{ py: 6 }}>
+                  <TableCell colSpan={hasPlannedDate ? 8 : 7} align='center' sx={{ py: 6 }}>
                     <Stack
                       direction='row'
                       spacing={1}
@@ -371,7 +377,7 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                 </TableRow>
               ) : isLearnersError ? (
                 <TableRow>
-                  <TableCell colSpan={8} align='center' sx={{ py: 6 }}>
+                  <TableCell colSpan={hasPlannedDate ? 8 : 7} align='center' sx={{ py: 6 }}>
                     <Typography variant='body2' color='error'>
                       {filterError ||
                         'Something went wrong while fetching learners for this plan.'}
@@ -424,15 +430,7 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                       </TableCell>
                       <TableCell sx={{ minWidth: 180 }}>
                         <Typography variant='body2'>
-                          {sanitizeText(row.sample_type)}
-                        </Typography>
-                        <Typography variant='caption' color='text.secondary'>
-                          Status: {sanitizeText(row.status)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell sx={{ minWidth: 140 }}>
-                        <Typography variant='body2'>
-                          {formatDisplayDate(row.planned_date)}
+                          -
                         </Typography>
                       </TableCell>
                       <TableCell align='center'>
@@ -445,106 +443,33 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                           </IconButton>
                         </Stack>
                       </TableCell>
-                      <TableCell sx={{ minWidth: 300 }}>
-                        <Paper
-                          variant='outlined'
+                      <TableCell sx={{ minWidth: 120 }}>
+                        <Typography
+                          variant='body2'
                           onClick={() => onOpenUnitSelectionDialog(row, index)}
                           sx={{
-                            p: 2,
-                            borderRadius: 2,
                             cursor: 'pointer',
-                            transition: 'all 0.2s ease-in-out',
-                            backgroundColor: (theme) =>
-                              theme.palette.mode === 'light'
-                                ? theme.palette.grey[50]
-                                : theme.palette.background.paper,
+                            color: 'primary.main',
+                            textDecoration: 'underline',
                             '&:hover': {
-                              backgroundColor: (theme) =>
-                                theme.palette.mode === 'light'
-                                  ? 'rgba(25, 118, 210, 0.08)'
-                                  : 'rgba(25, 118, 210, 0.16)',
-                              borderColor: (theme) => theme.palette.primary.main,
-                              boxShadow: (theme) => theme.shadows[2],
+                              color: 'primary.dark',
                             },
                           }}
                         >
-                          <Stack spacing={1.5}>
-                            <Stack
-                              direction='row'
-                              alignItems='center'
-                              justifyContent='space-between'
-                            >
-                              <Typography
-                                variant='body2'
-                                fontWeight={600}
-                                color='primary'
-                              >
-                                Click to Select Units
-                              </Typography>
-                              <Chip
-                                size='small'
-                                label={`${selectedUnits}/${totalUnits} selected`}
-                                color={selectedUnits > 0 ? 'primary' : 'default'}
-                                variant='outlined'
-                              />
-                            </Stack>
-                            {selectedUnits > 0 && (
-                              <Stack spacing={0.5}>
-                                <Typography
-                                  variant='caption'
-                                  color='text.secondary'
-                                  sx={{ fontWeight: 600 }}
-                                >
-                                  Selected Units:
-                                </Typography>
-                                <Stack spacing={0.5}>
-                                  {units
-                                    .filter((unit) => {
-                                      const unitKey = unit.unit_code || unit.unit_name || ''
-                                      const selectedSet = getSelectedUnitsForLearner(row, index)
-                                      return unitKey && selectedSet.has(unitKey)
-                                    })
-                                    .slice(0, 3)
-                                    .map((unit, unitIndex) => (
-                                      <Chip
-                                        key={`selected-${unit.unit_code || unit.unit_name || unitIndex}`}
-                                        label={sanitizeText(unit.unit_name || unit.unit_code || 'Unit')}
-                                        size='small'
-                                        color='success'
-                                        variant='outlined'
-                                        sx={{ fontSize: '0.7rem' }}
-                                      />
-                                    ))}
-                                  {selectedUnits > 3 && (
-                                    <Typography
-                                      variant='caption'
-                                      color='text.secondary'
-                                      sx={{ fontStyle: 'italic' }}
-                                    >
-                                      +{selectedUnits - 3} more...
-                                    </Typography>
-                                  )}
-                                </Stack>
-                              </Stack>
-                            )}
-                            {selectedUnits === 0 && (
-                              <Typography
-                                variant='caption'
-                                color='text.secondary'
-                                sx={{ fontStyle: 'italic' }}
-                              >
-                                No units selected. Click to choose units.
-                              </Typography>
-                            )}
-                          </Stack>
-                        </Paper>
+                          {selectedUnits}/{totalUnits} units
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: hasPlannedDate ? 160 : 140 }} className='cursor-pointer' onClick={() => onOpenLearnerDetailsDialog(row, index)}>
+                        <Typography variant='body2'>
+                          {formatDisplayDate(row.planned_date)}
+                        </Typography>
                       </TableCell>
                     </TableRow>
                   )
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} align='center' sx={{ py: 6 }}>
+                  <TableCell colSpan={hasPlannedDate ? 8 : 7} align='center' sx={{ py: 6 }}>
                     <Typography variant='body2' color='text.secondary'>
                       No learners match the current filters.
                     </Typography>
