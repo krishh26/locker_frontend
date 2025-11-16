@@ -261,6 +261,148 @@ export const samplePlanAPI = createApi({
         }
       },
     }),
+    // Sample Question endpoints
+    getSampleQuestions: builder.query<
+      {
+        message?: string
+        status?: boolean
+        data?: Array<{
+          id: number
+          question_text: string
+          answer: string
+        }>
+      },
+      string | number
+    >({
+      query: (planDetailId) => {
+        const encodedId = encodeURIComponent(String(planDetailId))
+        return {
+          url: `sample-question/list/${encodedId}`,
+        }
+      },
+    }),
+    createSampleQuestions: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+        data?: Array<{
+          id: number
+          question_text: string
+          answer: string
+        }>
+      },
+      {
+        plan_detail_id: string | number
+        answered_by_id: string | number
+        questions: Array<{ question_text: string; answer: string }>
+      }
+    >({
+      query: (body) => ({
+        url: 'sample-question/create',
+        method: 'POST',
+        body,
+      }),
+    }),
+    updateSampleQuestion: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+        data?: {
+          id: number
+          question_text: string
+          answer: string
+        }
+      },
+      {
+        id: string | number
+        question_text: string
+        answer: string
+      }
+    >({
+      query: ({ id, ...body }) => {
+        const encodedId = encodeURIComponent(String(id))
+        return {
+          url: `sample-question/update/${encodedId}`,
+          method: 'PUT',
+          body,
+        }
+      },
+    }),
+    deleteSampleQuestion: builder.mutation<
+      { message?: string; status?: boolean },
+      string | number
+    >({
+      query: (id) => {
+        const encodedId = encodeURIComponent(String(id))
+        return {
+          url: `sample-question/delete/${encodedId}`,
+          method: 'DELETE',
+        }
+      },
+    }),
+    // Sample Forms endpoints
+    getSampleForms: builder.query<
+      {
+        message?: string
+        status?: boolean
+        data?: SampleAllocatedForm[]
+      },
+      string | number
+    >({
+      query: (planDetailId) => {
+        const encodedId = encodeURIComponent(String(planDetailId))
+        return {
+          url: `sample-form/list/${encodedId}`,
+        }
+      },
+    }),
+    createSampleForm: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+        data?: SampleAllocatedForm
+      },
+      {
+        plan_detail_id: string | number
+        form_id: string | number
+        allocated_by_id: string | number
+        description?: string
+      }
+    >({
+      query: (body) => ({
+        url: 'sample-form/create',
+        method: 'POST',
+        body,
+      }),
+    }),
+    deleteSampleForm: builder.mutation<
+      { message?: string; status?: boolean },
+      string | number
+    >({
+      query: (id) => {
+        const encodedId = encodeURIComponent(String(id))
+        return {
+          url: `sample-form/delete/${encodedId}`,
+          method: 'DELETE',
+        }
+      },
+    }),
+    completeSampleForm: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+        data?: SampleAllocatedForm
+      },
+      string | number
+    >({
+      query: (id) => {
+        const encodedId = encodeURIComponent(String(id))
+        return {
+          url: `sample-form/complete/${encodedId}`,
+          method: 'PUT',
+        }
+      },
+    }),
   }),
 })
 
@@ -298,6 +440,19 @@ export interface SampleDocument {
   uploaded_at: string
 }
 
+export interface SampleAllocatedForm {
+  id: number
+  description?: string | null
+  completed_date?: string | null
+  created_at?: string
+  updated_at?: string
+  form?: {
+    id: number
+    form_name: string
+    description?: string
+  }
+}
+
 export const {
   useGetSamplePlansQuery,
   useLazyGetSamplePlanLearnersQuery,
@@ -312,6 +467,16 @@ export const {
   useLazyGetSampleDocumentsQuery,
   useUploadSampleDocumentMutation,
   useDeleteSampleDocumentMutation,
+  useGetSampleQuestionsQuery,
+  useLazyGetSampleQuestionsQuery,
+  useCreateSampleQuestionsMutation,
+  useUpdateSampleQuestionMutation,
+  useDeleteSampleQuestionMutation,
+  useGetSampleFormsQuery,
+  useLazyGetSampleFormsQuery,
+  useCreateSampleFormMutation,
+  useDeleteSampleFormMutation,
+  useCompleteSampleFormMutation,
 } = samplePlanAPI
 
 

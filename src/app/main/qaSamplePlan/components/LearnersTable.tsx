@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Button,
@@ -23,6 +23,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
 import Autocomplete from '@mui/material/Autocomplete'
 import CircularProgress from '@mui/material/CircularProgress'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
@@ -33,6 +37,11 @@ import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import type { SamplePlanLearner } from 'app/store/api/sample-plan-api'
 import { sanitizeText, formatDisplayDate, getRiskChipColor } from '../utils'
 import { qaStatuses } from '../constants'
+import axios from 'axios'
+import jsonData from 'src/url.json'
+import { useUserId } from 'src/app/utils/userHelpers'
+import { useDispatch } from 'react-redux'
+import { showMessage } from 'app/store/fuse/messageSlice'
 
 interface LearnersTableProps {
   courses: Array<{ id: string; name: string }>
@@ -107,6 +116,49 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
   courseName = '',
   onOpenLearnerDetailsDialog,
 }) => {
+  const dispatch = useDispatch()
+  const iqaId = useUserId()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingRow, setPendingRow] = useState<SamplePlanLearner | null>(null)
+
+  const URL_BASE_LINK = (jsonData as any).API_LOCAL_URL
+
+  const requestSignoff = async () => {
+    if (!pendingRow || !selectedCourse || !iqaId) {
+      setConfirmOpen(false)
+      return
+    }
+    try {
+      const learnerId =
+        (pendingRow as any)?.learner_id ??
+        (pendingRow as any)?.learnerId ??
+        (pendingRow as any)?.id
+      await axios.put(`${URL_BASE_LINK}/sample-plan/learner-signoff`, {
+        learner_id: learnerId,
+        course_id: selectedCourse,
+        iqa_id: iqaId,
+      })
+      dispatch(
+        showMessage({
+          message: `Learner ${learnerId} signed off successfully.`,
+          variant: 'success',
+        })
+      )
+      setConfirmOpen(false)
+      setPendingRow(null)
+      // Refresh current list if possible
+      onApplyFilter()
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        'Failed to update sign off status.'
+      dispatch(showMessage({ message, variant: 'error' }))
+      setConfirmOpen(false)
+      setPendingRow(null)
+    }
+  }
+
   return (
     <Card sx={{ p: { xs: 2, md: 3 }, borderRadius: 2 }}>
       <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -420,7 +472,10 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                         <Checkbox
                           color='primary'
                           checked={Boolean(row.qa_approved)}
-                          disabled
+                          onChange={() => {
+                            setPendingRow(row)
+                            setConfirmOpen(true)
+                          }}
                         />
                       </TableCell>
                       <TableCell sx={{ minWidth: 180 }}>
@@ -480,6 +535,22 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
           </Table>
         </TableContainer>
       </Paper>
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth='xs' fullWidth>
+        <DialogTitle>Confirm Sign Off</DialogTitle>
+        <DialogContent>
+          <Typography variant='body2'>
+            Are you sure you want to change the sign off status this Learner?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)} variant='outlined' sx={{ textTransform: 'none' }}>
+            Cancel
+          </Button>
+          <Button onClick={requestSignoff} variant='contained' sx={{ textTransform: 'none' }}>
+            Yes, Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

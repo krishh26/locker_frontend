@@ -24,6 +24,12 @@ import {
   iqaConclusionOptions,
   getAssessmentMethodByCode,
 } from './constants'
+import {
+  useLazyGetSampleQuestionsQuery,
+  useCreateSampleQuestionsMutation,
+  useUpdateSampleQuestionMutation,
+  useDeleteSampleQuestionMutation,
+} from 'app/store/api/sample-plan-api'
 import { countSelectedUnits } from './utils'
 import type {
   PlanSummary,
@@ -80,6 +86,10 @@ const Index: React.FC = () => {
   const [sampleQuestions, setSampleQuestions] = useState<SampleQuestion[]>([
     { id: '1', question: 'Test', answer: 'Yes' },
   ])
+  // Baseline snapshot to detect edits on Save
+  const [originalQuestionsMap, setOriginalQuestionsMap] = useState<
+    Record<string, { question: string; answer: 'Yes' | 'No' | '' }>
+  >({})
 
   const [
     triggerSamplePlanLearners,
@@ -95,6 +105,10 @@ const Index: React.FC = () => {
     useApplySamplePlanLearnersMutation()
   const [updateSamplePlanDetail, { isLoading: isUpdatingSampleDetail }] =
     useUpdateSamplePlanDetailMutation()
+  const [triggerGetSampleQuestions] = useLazyGetSampleQuestionsQuery()
+  const [createSampleQuestions] = useCreateSampleQuestionsMutation()
+  const [updateSampleQuestion] = useUpdateSampleQuestionMutation()
+  const [deleteSampleQuestion] = useDeleteSampleQuestionMutation()
 
   const isLearnersInFlight = isLearnersFetching || isLearnersLoading
 
@@ -745,24 +759,101 @@ const Index: React.FC = () => {
   }
 
   const handleAddQuestion = () => {
-    const newId = String(Date.now())
+    const newId = `new-${Date.now()}`
     setSampleQuestions((prev) => [
       ...prev,
       { id: newId, question: '', answer: '' },
     ])
   }
 
-  const handleDeleteQuestion = (id: string) => {
+  const handleDeleteQuestion = async (id: string) => {
+    const isNew = String(id).startsWith('new-')
+    if (!isNew) {
+      try {
+        await deleteSampleQuestion(id).unwrap()
+        dispatch(
+          showMessage({ message: 'Question deleted successfully.', variant: 'success' })
+        )
+      } catch (error: any) {
+        const message = error?.data?.message || 'Failed to delete question.'
+        dispatch(showMessage({ message, variant: 'error' }))
+        return
+      }
+    }
     setSampleQuestions((prev) => prev.filter((q) => q.id !== id))
   }
 
-  const handleSaveQuestions = () => {
-    dispatch(
-      showMessage({
-        message: 'Sample questions saved successfully.',
-        variant: 'success',
-      })
-    )
+  const handleSaveQuestions = async () => {
+    if (!planDetailId || !iqaId) {
+      dispatch(
+        showMessage({
+          message: 'Missing plan or user info to save questions.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    try {
+      const newQuestions = sampleQuestions.filter((q) => String(q.id).startsWith('new-'))
+      const existingQuestions = sampleQuestions.filter((q) => !String(q.id).startsWith('new-'))
+
+      if (newQuestions.length > 0) {
+        await createSampleQuestions({
+          plan_detail_id: planDetailId,
+          answered_by_id: iqaId,
+          questions: newQuestions.map((q) => ({
+            question_text: q.question,
+            answer: q.answer || '',
+          })),
+        }).unwrap()
+      }
+
+      if (existingQuestions.length > 0) {
+        // Update ONLY changed questions
+        const changed = existingQuestions.filter((q) => {
+          const baseline = originalQuestionsMap[String(q.id)]
+          if (!baseline) return true
+          const currAns = (q.answer || '') as 'Yes' | 'No' | ''
+          return baseline.question !== q.question || baseline.answer !== currAns
+        })
+        if (changed.length > 0) {
+          await Promise.all(
+            changed.map((q) =>
+              updateSampleQuestion({
+                id: q.id,
+                question_text: q.question,
+                answer: q.answer || '',
+              }).unwrap()
+            )
+          )
+        }
+      }
+
+      if (planDetailId) {
+        const res = await triggerGetSampleQuestions(planDetailId).unwrap()
+        const list = Array.isArray(res?.data) ? res.data : []
+        const mapped = list.map((q: any) => ({
+          id: String(q.id),
+          question: q.question_text ?? '',
+          answer: (q.answer as 'Yes' | 'No' | '') ?? '',
+        }))
+        setSampleQuestions(mapped)
+        // Reset baseline
+        const baseline: Record<string, { question: string; answer: 'Yes' | 'No' | '' }> = {}
+        mapped.forEach((q) => {
+          baseline[String(q.id)] = { question: q.question, answer: (q.answer || '') as any }
+        })
+        setOriginalQuestionsMap(baseline)
+      }
+
+      dispatch(
+        showMessage({ message: 'Sample questions saved successfully.', variant: 'success' })
+      )
+    } catch (error: any) {
+      const message = error?.data?.message || error?.error || 'Failed to save questions.'
+      dispatch(showMessage({ message, variant: 'error' }))
+    }
   }
 
   const handleOpenLearnerDetailsDialog = (learner: SamplePlanLearner, learnerIndex: number) => {
@@ -781,6 +872,31 @@ const Index: React.FC = () => {
       assessorDecisionCorrect: learner.assessor_decision_correct as 'Yes' | 'No' | '' || '',
     })
     setModalOpen(true)
+
+    // Load existing questions for this plan detail
+    if (selectedPlan) {
+      triggerGetSampleQuestions(selectedPlan)
+        .unwrap()
+        .then((res: any) => {
+          const list = Array.isArray(res?.data) ? res.data : []
+          const mapped = list.map((q: any) => ({
+            id: String(q.id),
+            question: q.question_text ?? '',
+            answer: (q.answer as 'Yes' | 'No' | '') ?? '',
+          }))
+          setSampleQuestions(mapped)
+          // Capture baseline for change detection
+          const baseline: Record<string, { question: string; answer: 'Yes' | 'No' | '' }> = {}
+          mapped.forEach((q) => {
+            baseline[String(q.id)] = { question: q.question, answer: (q.answer || '') as any }
+          })
+          setOriginalQuestionsMap(baseline)
+        })
+        .catch(() => {
+          setSampleQuestions([])
+          setOriginalQuestionsMap({})
+        })
+    }
   }
 
   const handleSaveSampleDetail = async () => {

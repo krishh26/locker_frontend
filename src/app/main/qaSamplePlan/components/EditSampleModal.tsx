@@ -42,12 +42,18 @@ import {
   useCreateSampleActionMutation,
   useUpdateSampleActionMutation,
   useDeleteSampleActionMutation,
+  useLazyGetSampleFormsQuery,
+  useCreateSampleFormMutation,
+  useDeleteSampleFormMutation,
+  useCompleteSampleFormMutation,
   useLazyGetSampleDocumentsQuery,
   useUploadSampleDocumentMutation,
   useDeleteSampleDocumentMutation,
   type SampleAction,
   type SampleDocument,
+  type SampleAllocatedForm,
 } from 'app/store/api/sample-plan-api'
+import { useGetAllFormsQuery } from 'app/store/api/form-api'
 import { useUserId } from 'src/app/utils/userHelpers'
 import { useDispatch } from 'react-redux'
 import { showMessage } from 'app/store/fuse/messageSlice'
@@ -99,6 +105,10 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   const [editingAction, setEditingAction] = useState<SampleAction | null>(null)
   const [actions, setActions] = useState<SampleAction[]>([])
   const [deleteActionId, setDeleteActionId] = useState<number | null>(null)
+  const [allocatedForms, setAllocatedForms] = useState<SampleAllocatedForm[]>([])
+  const [selectedFormId, setSelectedFormId] = useState<string>('') // from dropdown
+  const [formDescription, setFormDescription] = useState<string>('')
+  const [deleteFormId, setDeleteFormId] = useState<number | null>(null)
   const [documents, setDocuments] = useState<SampleDocument[]>([])
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -107,13 +117,19 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   const [createAction, { isLoading: isCreatingAction }] = useCreateSampleActionMutation()
   const [updateAction, { isLoading: isUpdatingAction }] = useUpdateSampleActionMutation()
   const [deleteAction, { isLoading: isDeletingAction }] = useDeleteSampleActionMutation()
+  const [triggerGetForms, { isLoading: isLoadingForms }] = useLazyGetSampleFormsQuery()
+  const [createSampleForm, { isLoading: isAllocatingForm }] = useCreateSampleFormMutation()
+  const [deleteSampleForm, { isLoading: isUnlinkingForm }] = useDeleteSampleFormMutation()
+  const [completeSampleForm, { isLoading: isCompletingForm }] = useCompleteSampleFormMutation()
   const [triggerGetDocuments, { isLoading: isLoadingDocuments }] = useLazyGetSampleDocumentsQuery()
   const [uploadDocument, { isLoading: isUploadingDocument }] = useUploadSampleDocumentMutation()
   const [deleteDocument, { isLoading: isDeletingDocument }] = useDeleteSampleDocumentMutation()
+  const { data: allFormsResponse } = useGetAllFormsQuery({ page: 1, page_size: 500 }, { refetchOnMountOrArgChange: false })
 
   useEffect(() => {
     if (open && planDetailId) {
       fetchActions()
+      fetchAllocatedForms()
       fetchDocuments()
     }
   }, [open, planDetailId])
@@ -277,6 +293,57 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
       : action.action_required
   }
 
+  // Allocated Forms handlers
+  const fetchAllocatedForms = async () => {
+    if (!planDetailId) return
+    try {
+      const res = await triggerGetForms(planDetailId).unwrap()
+      setAllocatedForms(res?.data || [])
+    } catch (e) {
+      setAllocatedForms([])
+    }
+  }
+
+  const handleAllocateForm = async () => {
+    if (!planDetailId || !iqaId || !selectedFormId) {
+      dispatch(showMessage({ message: 'Select a form to allocate.', variant: 'error' }))
+      return
+    }
+    createSampleForm({
+      plan_detail_id: planDetailId,
+      form_id: selectedFormId,
+      allocated_by_id: iqaId,
+      description: formDescription || undefined,
+    }).then((result) => {
+      dispatch(showMessage({ message: 'Form allocated successfully', variant: 'success' }))
+      setFormDescription('')
+      setSelectedFormId('')
+      fetchAllocatedForms()
+    }).catch((error: any) => {
+      dispatch(showMessage({ message: error?.data?.message || 'Failed to allocate form', variant: 'error' }))
+    })
+  }
+
+  const handleDeleteAllocatedForm = async (id: number) => {
+    deleteSampleForm(id).then((result) => {
+      dispatch(showMessage({ message: 'Form unlinked successfully', variant: 'success' }))
+      fetchAllocatedForms()
+      setDeleteFormId(null)
+    }).catch((error: any) => {
+      dispatch(showMessage({ message: error?.data?.message || 'Failed to unlink form', variant: 'error' }))
+      setDeleteFormId(null)
+    })
+  }
+
+  const handleCompleteForm = async (id: number) => {
+    completeSampleForm(id).then((result) => {
+      dispatch(showMessage({ message: 'Form marked as completed', variant: 'success' }))
+      fetchAllocatedForms()
+    }).catch((error: any) => {
+      dispatch(showMessage({ message: error?.data?.message || 'Failed to mark as completed', variant: 'error' }))
+    })
+  }
+
   const fetchDocuments = async () => {
     if (!planDetailId) return
     try {
@@ -303,7 +370,6 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
 
 
     uploadDocument(formData).then((result) => {
-      console.log('result', result)
       dispatch(
         showMessage({
           message: 'Document uploaded successfully',
@@ -330,7 +396,6 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
 
   const handleDeleteDocument = async (docId: number) => {
     deleteDocument(docId).then((result) => {
-      console.log('result', result)
       dispatch(
         showMessage({
           message: 'Document deleted successfully',
@@ -905,15 +970,25 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                   alignItems: 'center',
                 }}
               >
-                <TextField
-                  fullWidth
-                  size='small'
-                  placeholder='Select form...'
-                  sx={{ flex: 1 }}
-                />
+                <FormControl size='small' sx={{ minWidth: 260 }}>
+                  <InputLabel>Select form...</InputLabel>
+                  <Select
+                    label='Select form...'
+                    value={selectedFormId}
+                    onChange={(e) => setSelectedFormId(String(e.target.value))}
+                  >
+                    {(allFormsResponse as any)?.data?.data?.map((f: any) => (
+                      <MenuItem key={f?.id} value={String(f?.id)}>
+                        {f?.form_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
                 <Button
                   variant='contained'
                   size='small'
+                  onClick={handleAllocateForm}
+                  disabled={!planDetailId || !selectedFormId || isAllocatingForm}
                   sx={{
                     textTransform: 'none',
                     fontWeight: 600,
@@ -925,7 +1000,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  Allocate Form
+                  {isAllocatingForm ? 'Allocating...' : 'Allocate Form'}
                 </Button>
               </Box>
               <TableContainer component={Paper} variant='outlined'>
@@ -939,13 +1014,51 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
-                        <Typography variant='body2' color='text.secondary'>
-                          There are no Forms on this Sample
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
+                    {allocatedForms.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            There are no Forms on this Sample
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      allocatedForms.map((row) => (
+                        <TableRow key={row.id}>
+                          <TableCell>{row.form?.form_name || '-'}</TableCell>
+                          <TableCell>{row.description || '-'}</TableCell>
+                          <TableCell>
+                            {row.completed_date ? formatDate(row.completed_date) : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Stack direction='row' spacing={1}>
+                              <Button
+                                variant='outlined'
+                                size='small'
+                                onClick={() => handleCompleteForm(row.id)}
+                                disabled={isCompletingForm || row.completed_date ? true : false}
+                                sx={{ textTransform: 'none', bgcolor: row.completed_date ? '#4caf50' : '#ff9800', color: row.completed_date ? '#fff' : '#fff', '&:hover': { bgcolor: row.completed_date ? '#388e3c' : '#f57c00' } }}
+                              >
+                                {row.completed_date ? 'Completed' : 'Mark Complete'}
+                              </Button>
+                              <IconButton
+                                size='small'
+                                onClick={() => setDeleteFormId(row.id)}
+                                disabled={isUnlinkingForm}
+                                sx={{
+                                  color: 'error.main',
+                                  '&:hover': {
+                                    bgcolor: 'error.light',
+                                  },
+                                }}
+                              >
+                                <DeleteIcon fontSize='small' />
+                              </IconButton>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -1295,6 +1408,41 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
               sx={{ textTransform: 'none' }}
             >
               {isDeletingDocument ? 'Deleting...' : 'Delete'}
+            </Button>
+          </Stack>
+        </Box>
+      </Dialog>
+
+      {/* Delete Allocated Form Confirmation Dialog */}
+      <Dialog
+        open={deleteFormId !== null}
+        onClose={() => setDeleteFormId(null)}
+        maxWidth='xs'
+        fullWidth
+      >
+        <Box sx={{ p: 3 }}>
+          <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
+            Remove Allocated Form?
+          </Typography>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
+            Are you sure you want to unlink this form from the sample?
+          </Typography>
+          <Stack direction='row' spacing={2} justifyContent='flex-end'>
+            <Button
+              variant='outlined'
+              onClick={() => setDeleteFormId(null)}
+              sx={{ textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant='contained'
+              color='error'
+              onClick={() => deleteFormId && handleDeleteAllocatedForm(deleteFormId)}
+              disabled={isUnlinkingForm}
+              sx={{ textTransform: 'none' }}
+            >
+              {isUnlinkingForm ? 'Removing...' : 'Remove'}
             </Button>
           </Stack>
         </Box>
