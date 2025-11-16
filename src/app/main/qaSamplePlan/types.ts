@@ -4,6 +4,7 @@ import { SamplePlanLearner, SamplePlanLearnerUnit } from 'app/store/api/sample-p
 export type AssessmentMethod = {
   code: string
   title: string
+  assessmentMethodId?: string
 }
 
 export type PlanSummary = {
@@ -41,4 +42,9 @@ export type ModalFormData = {
 }
 
 export type RiskChipColor = ChipProps['color']
+
+export type SampleType = {
+  value: string
+  label: string
+}
 
