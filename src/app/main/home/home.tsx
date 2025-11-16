@@ -16,20 +16,20 @@ import {
 
 // Mapping of card titles to API types
 const cardTypeMapping: { [key: string]: string } = {
-  "Active learner": "active_learners",
-  "Learners on bil": "suspended_learners",
-  "Overdue learners": "learners_over_due",
-  "Overdue progress review": "learner_plan_due",
-  "Learners due complete in next 30 days": "learners_course_due_in_next_30_days",
-  "Learners off track": "assignments_without_mapped",
-  "Unmapped evidences": "assignments_without_mapped",
-  "Due IQA action in next 30 days": "session_learner_action_due",
-  "Due session in next 7 days": "session_action_due_in_next_7_days",
-  "Overdue IQA action": "session_learner_action_overdue",
-  "Outstanding IQA actions": "session_learner_action_overdue",
-  "Actions due in the next 7 days": "session_action_due_in_next_7_days",
-  "Learner all a sampling plan": "learner_plan_due_in_next_7_days",
-  "Learner not all a sampling plan": "learner_plan_due_in_next_7_days",
+  "Active learner": "active_learners_count",
+  "Learners on bil": "learners_suspended_count",
+  "Overdue learners": "learnersOverDue_count",
+  "Overdue progress review": "learnerPlanDue_count",
+  "Learners due complete in next 30 days": "learnersCourseDueInNext30Days_count",
+  "Learners off track": "assignmentsWithoutMapped_count",
+  "Unmapped evidences": "assignmentsWithoutMapped_count",
+  "Due IQA action in next 30 days": "sessionLearnerActionDue_count",
+  "Due session in next 7 days": "sessionLearnerActionDueInNext7Days_count",
+  "Overdue IQA action": "sessionLearnerActionOverdue_count",
+  "Outstanding IQA actions": "sessionLearnerActionOverdue_count",
+  "Actions due in the next 7 days": "sessionLearnerActionDueInNext7Days_count",
+  "Learner all a sampling plan": "learnerPlanDueInNext7Days_count",
+  "Learner not all a sampling plan": "learnerPlanDueInNext7Days_count",
 };
 
 const Home = () => {
