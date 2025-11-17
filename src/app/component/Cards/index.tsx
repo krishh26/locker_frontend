@@ -1,5 +1,5 @@
 import { useThemeMediaQuery } from '@fuse/hooks'
-import { Dialog, Tooltip, Typography } from '@mui/material'
+import { Dialog, Tooltip, Typography, IconButton, CircularProgress } from '@mui/material'
 import { styled, useTheme } from '@mui/material/styles'
 import { slice as globalSlice } from 'app/store/globalUser'
 import { useState, useEffect } from 'react'
@@ -9,6 +9,7 @@ import { themeHelpers, useThemeColors } from '../../utils/themeUtils'
 import Style from './style.module.css'
 import UploadWorkDialog from './uploadWorkDialog'
 import { PortfolioCountData } from 'src/app/utils/portfolioCountUtils'
+import FileDownloadIcon from '@mui/icons-material/FileDownload'
 
 // Theme-aware styled components
 interface ThemedCardProps {
@@ -32,6 +33,7 @@ const ThemedCard = styled('div')<ThemedCardProps>(
     backgroundColor: $background || theme.palette.background.paper,
     border: `1px solid ${theme.palette.divider}`,
     color: theme.palette.text.primary,
+    position: 'relative',
 
     '&:hover': {
       boxShadow: themeHelpers.getShadow(theme, 3),
@@ -58,6 +60,20 @@ const ThemedCard = styled('div')<ThemedCardProps>(
     },
   })
 )
+
+const ExportButton = styled(IconButton)(({ theme }) => ({
+  position: 'absolute',
+  top: '4px',
+  right: '4px',
+  padding: '4px',
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+  },
+  zIndex: 10,
+}))
 
 interface ThemedPortfolioCardProps {
   $background?: string
@@ -221,8 +237,20 @@ const CountValue = styled('span')(({ theme }) => ({
 }))
 
 export const Card = (props) => {
-  const { isIcon, name, title, color, background, textColor, radiusColor } =
-    props
+  const {
+    isIcon,
+    name,
+    title,
+    color,
+    background,
+    textColor,
+    radiusColor,
+    onExport,
+    onClick,
+    isExporting = false,
+    isFetching = false,
+    showExport = false,
+  } = props
 
   const isMobile = useThemeMediaQuery((theme) => theme.breakpoints.down('sm'))
   const colors = useThemeColors()
@@ -237,8 +265,52 @@ export const Card = (props) => {
   // Use the theme helper for smart hover color selection
   const hoverColor = themeHelpers.getHoverColor(theme, 'primary')
 
+  const handleExportClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (onExport) {
+      onExport()
+    }
+  }
+
+  const handleCardClick = () => {
+    if (onClick && !isFetching) {
+      onClick()
+    }
+  }
+
   return (
-    <ThemedCard $background={cardBackground} $hoverColor={hoverColor}>
+    <ThemedCard 
+      $background={cardBackground} 
+      $hoverColor={hoverColor}
+      onClick={handleCardClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
+      {showExport && onExport && (
+        <Tooltip title="Export to CSV" arrow>
+          <ExportButton
+            size="small"
+            onClick={handleExportClick}
+            disabled={isExporting || isFetching}
+          >
+            {isExporting ? (
+              <CircularProgress size={16} />
+            ) : (
+              <FileDownloadIcon fontSize="small" />
+            )}
+          </ExportButton>
+        </Tooltip>
+      )}
+      {isFetching && (
+        <div style={{ 
+          position: 'absolute', 
+          top: '50%', 
+          left: '50%', 
+          transform: 'translate(-50%, -50%)',
+          zIndex: 5
+        }}>
+          <CircularProgress size={24} />
+        </div>
+      )}
       {isIcon ? (
         <ThemedIcon $background={iconBackground} $textColor={iconTextColor}>
           {name}
