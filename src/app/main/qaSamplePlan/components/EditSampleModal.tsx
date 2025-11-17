@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Box,
   Button,
@@ -32,8 +32,31 @@ import AddIcon from '@mui/icons-material/Add'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
+import GetAppIcon from '@mui/icons-material/GetApp'
 import type { ModalFormData, SampleQuestion } from '../types'
-import { assessmentMethodCodes, iqaConclusionOptions, modalSampleTypes } from '../constants'
+import { assessmentMethods, formatDate, formatDateForInput, getTabColor, iqaConclusionOptions, sampleTypes } from '../constants'
+import { ActionModal, type ActionFormData } from './ActionModal'
+import {
+  useLazyGetSampleActionsQuery,
+  useCreateSampleActionMutation,
+  useUpdateSampleActionMutation,
+  useDeleteSampleActionMutation,
+  useLazyGetSampleFormsQuery,
+  useCreateSampleFormMutation,
+  useDeleteSampleFormMutation,
+  useCompleteSampleFormMutation,
+  useLazyGetSampleDocumentsQuery,
+  useUploadSampleDocumentMutation,
+  useDeleteSampleDocumentMutation,
+  type SampleAction,
+  type SampleDocument,
+  type SampleAllocatedForm,
+} from 'app/store/api/sample-plan-api'
+import { useGetAllFormsQuery } from 'app/store/api/form-api'
+import { useUserId } from 'src/app/utils/userHelpers'
+import { useDispatch } from 'react-redux'
+import { showMessage } from 'app/store/fuse/messageSlice'
 
 interface EditSampleModalProps {
   open: boolean
@@ -50,6 +73,10 @@ interface EditSampleModalProps {
   onAddQuestion: () => void
   onDeleteQuestion: (id: string) => void
   onSaveQuestions: () => void
+  plannedDates?: string[]
+  onSave?: () => void
+  isSaving?: boolean
+  planDetailId?: string | number | null
 }
 
 export const EditSampleModal: React.FC<EditSampleModalProps> = ({
@@ -67,7 +94,334 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   onAddQuestion,
   onDeleteQuestion,
   onSaveQuestions,
+  plannedDates = [],
+  onSave,
+  isSaving = false,
+  planDetailId = null,
 }) => {
+  const dispatch = useDispatch()
+  const iqaId = useUserId()
+  const [actionModalOpen, setActionModalOpen] = useState(false)
+  const [editingAction, setEditingAction] = useState<SampleAction | null>(null)
+  const [actions, setActions] = useState<SampleAction[]>([])
+  const [deleteActionId, setDeleteActionId] = useState<number | null>(null)
+  const [allocatedForms, setAllocatedForms] = useState<SampleAllocatedForm[]>([])
+  const [selectedFormId, setSelectedFormId] = useState<string>('') // from dropdown
+  const [formDescription, setFormDescription] = useState<string>('')
+  const [deleteFormId, setDeleteFormId] = useState<number | null>(null)
+  const [documents, setDocuments] = useState<SampleDocument[]>([])
+  const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const [triggerGetActions, { isLoading: isLoadingActions }] = useLazyGetSampleActionsQuery()
+  const [createAction, { isLoading: isCreatingAction }] = useCreateSampleActionMutation()
+  const [updateAction, { isLoading: isUpdatingAction }] = useUpdateSampleActionMutation()
+  const [deleteAction, { isLoading: isDeletingAction }] = useDeleteSampleActionMutation()
+  const [triggerGetForms, { isLoading: isLoadingForms }] = useLazyGetSampleFormsQuery()
+  const [createSampleForm, { isLoading: isAllocatingForm }] = useCreateSampleFormMutation()
+  const [deleteSampleForm, { isLoading: isUnlinkingForm }] = useDeleteSampleFormMutation()
+  const [completeSampleForm, { isLoading: isCompletingForm }] = useCompleteSampleFormMutation()
+  const [triggerGetDocuments, { isLoading: isLoadingDocuments }] = useLazyGetSampleDocumentsQuery()
+  const [uploadDocument, { isLoading: isUploadingDocument }] = useUploadSampleDocumentMutation()
+  const [deleteDocument, { isLoading: isDeletingDocument }] = useDeleteSampleDocumentMutation()
+  const { data: allFormsResponse } = useGetAllFormsQuery({ page: 1, page_size: 500 }, { refetchOnMountOrArgChange: false })
+
+  useEffect(() => {
+    if (open && planDetailId) {
+      fetchActions()
+      fetchAllocatedForms()
+      fetchDocuments()
+    }
+  }, [open, planDetailId])
+
+  const fetchActions = async () => {
+    if (!planDetailId) return
+    try {
+      const response = await triggerGetActions(planDetailId).unwrap()
+      setActions(response?.data || [])
+    } catch (error) {
+      console.error('Error fetching actions:', error)
+      setActions([])
+    }
+  }
+
+  const handleOpenActionModal = () => {
+    setEditingAction(null)
+    setActionModalOpen(true)
+  }
+
+  const handleCloseActionModal = () => {
+    setActionModalOpen(false)
+    setEditingAction(null)
+  }
+
+  const handleEditAction = (action: SampleAction) => {
+    setEditingAction(action)
+    setActionModalOpen(true)
+  }
+
+  const handleSaveAction = async (formData: ActionFormData) => {
+    if (!planDetailId || !iqaId) {
+      dispatch(
+        showMessage({
+          message: 'Missing required information',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    try {
+      if (editingAction) {
+        // Update existing action
+        await updateAction({
+          actionId: editingAction.id,
+          action_required: formData.action_required,
+          target_date: formData.target_date,
+          status: formData.status,
+          assessor_feedback: formData.assessor_feedback || undefined,
+          action_with_id: formData.action_with_id,
+        }).unwrap()
+
+        dispatch(
+          showMessage({
+            message: 'Action updated successfully',
+            variant: 'success',
+          })
+        )
+      } else {
+        // Create new action
+        try {
+          const result = await createAction({
+            plan_detail_id: planDetailId,
+            action_with_id: formData.action_with_id,
+            action_required: formData.action_required,
+            target_date: formData.target_date,
+            status: formData.status,
+            created_by_id: iqaId,
+            assessor_feedback: formData.assessor_feedback || undefined,
+          }).unwrap()
+
+          dispatch(
+            showMessage({
+              message: result?.message || 'Action created successfully',
+              variant: 'success',
+            })
+          )
+        } catch (createError: any) {
+          // Check if it's actually a success response with 201 status
+          // RTK Query sometimes treats 201 as error if response structure doesn't match exactly
+          if (createError?.status === 201 || (createError?.data?.status === true)) {
+            dispatch(
+              showMessage({
+                message: createError?.data?.message || 'Action created successfully',
+                variant: 'success',
+              })
+            )
+            handleCloseActionModal()
+            fetchActions()
+            return
+          }
+          // Re-throw if it's a real error
+          throw createError
+        }
+      }
+
+      handleCloseActionModal()
+      fetchActions()
+    } catch (error: any) {
+      // Check if it's actually a success response with 201 status
+      // Sometimes RTK Query treats 201 as error if response structure doesn't match
+      if (error?.status === 201 || (error?.data?.status === true && error?.data?.message)) {
+        // It's actually a success, just handle it
+        dispatch(
+          showMessage({
+            message: error?.data?.message || 'Action saved successfully',
+            variant: 'success',
+          })
+        )
+        handleCloseActionModal()
+        fetchActions()
+        return
+      }
+
+      const message = error?.data?.message || error?.error || 'Failed to save action'
+      dispatch(
+        showMessage({
+          message,
+          variant: 'error',
+        })
+      )
+    }
+  }
+
+  const handleDeleteAction = async (actionId: number) => {
+    try {
+      await deleteAction(actionId).unwrap()
+      dispatch(
+        showMessage({
+          message: 'Action deleted successfully',
+          variant: 'success',
+        })
+      )
+      fetchActions()
+      setDeleteActionId(null)
+    } catch (error: any) {
+      const message = error?.data?.message || error?.error || 'Failed to delete action'
+      dispatch(
+        showMessage({
+          message,
+          variant: 'error',
+        })
+      )
+      setDeleteActionId(null)
+    }
+  }
+
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
+  }
+
+  const getActionSummary = (action: SampleAction) => {
+    return action.action_required.length > 50
+      ? `${action.action_required.substring(0, 50)}...`
+      : action.action_required
+  }
+
+  // Allocated Forms handlers
+  const fetchAllocatedForms = async () => {
+    if (!planDetailId) return
+    try {
+      const res = await triggerGetForms(planDetailId).unwrap()
+      setAllocatedForms(res?.data || [])
+    } catch (e) {
+      setAllocatedForms([])
+    }
+  }
+
+  const handleAllocateForm = async () => {
+    if (!planDetailId || !iqaId || !selectedFormId) {
+      dispatch(showMessage({ message: 'Select a form to allocate.', variant: 'error' }))
+      return
+    }
+    createSampleForm({
+      plan_detail_id: planDetailId,
+      form_id: selectedFormId,
+      allocated_by_id: iqaId,
+      description: formDescription || undefined,
+    }).then((result) => {
+      dispatch(showMessage({ message: 'Form allocated successfully', variant: 'success' }))
+      setFormDescription('')
+      setSelectedFormId('')
+      fetchAllocatedForms()
+    }).catch((error: any) => {
+      dispatch(showMessage({ message: error?.data?.message || 'Failed to allocate form', variant: 'error' }))
+    })
+  }
+
+  const handleDeleteAllocatedForm = async (id: number) => {
+    deleteSampleForm(id).then((result) => {
+      dispatch(showMessage({ message: 'Form unlinked successfully', variant: 'success' }))
+      fetchAllocatedForms()
+      setDeleteFormId(null)
+    }).catch((error: any) => {
+      dispatch(showMessage({ message: error?.data?.message || 'Failed to unlink form', variant: 'error' }))
+      setDeleteFormId(null)
+    })
+  }
+
+  const handleCompleteForm = async (id: number) => {
+    completeSampleForm(id).then((result) => {
+      dispatch(showMessage({ message: 'Form marked as completed', variant: 'success' }))
+      fetchAllocatedForms()
+    }).catch((error: any) => {
+      dispatch(showMessage({ message: error?.data?.message || 'Failed to mark as completed', variant: 'error' }))
+    })
+  }
+
+  const fetchDocuments = async () => {
+    if (!planDetailId) return
+    try {
+      const response = await triggerGetDocuments(planDetailId).unwrap()
+      setDocuments(response?.data || [])
+    } catch (error) {
+      console.error('Error fetching documents:', error)
+      setDocuments([])
+    }
+  }
+
+  const handleFileUpload = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !planDetailId) return
+
+
+    const formData = new FormData()
+    formData.append('plan_detail_id', String(planDetailId))
+    formData.append('file', file)
+
+
+    uploadDocument(formData).then((result) => {
+      dispatch(
+        showMessage({
+          message: 'Document uploaded successfully',
+          variant: 'success',
+        })
+      )
+      fetchDocuments()
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+
+
+    }).catch((error) => {
+      console.log('error', error)
+      dispatch(
+        showMessage({
+          message: error?.data?.message || error?.error || 'Failed to upload document',
+          variant: 'error',
+        })
+      )
+    })
+  }
+
+  const handleDeleteDocument = async (docId: number) => {
+    deleteDocument(docId).then((result) => {
+      dispatch(
+        showMessage({
+          message: 'Document deleted successfully',
+          variant: 'success',
+        })
+      )
+      fetchDocuments()
+      setDeleteDocumentId(null)
+    }).catch((error) => {
+      console.log('error', error)
+      dispatch(
+        showMessage({
+          message: 'Failed to delete document',
+          variant: 'error',
+        })
+      )
+    })
+  }
+
+  const handleDownloadDocument = (document: SampleDocument) => {
+    const url = document.file_url || document.file_path
+    if (url) {
+      window.open(url, '_blank')
+    }
+  }
+
   return (
     <Dialog
       open={open}
@@ -128,24 +482,31 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
               },
             }}
           >
-            <Tab
-              label='FS 1 - (10/11/2025)'
-              sx={{
-                '&.Mui-selected': {
-                  color: 'primary.main',
-                  fontWeight: 600,
-                },
-              }}
-            />
-            <Tab
-              label='FS 2 - (11/11/2025)'
-              sx={{
-                '&.Mui-selected': {
-                  color: '#e91e63',
-                  fontWeight: 600,
-                },
-              }}
-            />
+            {plannedDates.length > 0 ? (
+              plannedDates.map((date, index) => (
+                <Tab
+                  key={date}
+                  label={`FS ${index + 1} - (${formatDate(date)})`}
+                  sx={{
+                    '&.Mui-selected': {
+                      color: getTabColor(index),
+                      fontWeight: 600,
+                    },
+                  }}
+                />
+              ))
+            ) : (
+              <Tab
+                label='No Planned Dates'
+                sx={{
+                  '&.Mui-selected': {
+                    color: 'primary.main',
+                    fontWeight: 600,
+                  },
+                }}
+                disabled
+              />
+            )}
           </Tabs>
           <Button
             variant='contained'
@@ -208,6 +569,8 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
           </Button>
           <Button
             variant='contained'
+            onClick={onSave}
+            disabled={isSaving}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
@@ -217,11 +580,15 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
               },
             }}
           >
-            Save
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
           <Button
             variant='contained'
-            onClick={onClose}
+            onClick={() => {
+              onSave()
+              onClose()
+            }}
+            disabled={isSaving}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
@@ -231,7 +598,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
               },
             }}
           >
-            Save & Close
+            {isSaving ? 'Saving...' : 'Save & Close'}
           </Button>
         </Box>
 
@@ -240,17 +607,13 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
               <Stack spacing={2.5}>
-                <FormControl fullWidth size='small'>
-                  <InputLabel>QA Name</InputLabel>
-                  <Select
-                    value={modalFormData.qaName}
-                    label='QA Name'
-                    onChange={(e) => onFormDataChange('qaName', e.target.value)}
-                  >
-                    <MenuItem value='Raj Bhudia'>Raj Bhudia</MenuItem>
-                    <MenuItem value='Other QA'>Other QA</MenuItem>
-                  </Select>
-                </FormControl>
+                <TextField
+                  fullWidth
+                  size='small'
+                  label='QA Name'
+                  value={modalFormData.qaName || ''}
+                  disabled
+                />
               </Stack>
             </Grid>
             <Grid item xs={12} md={4}>
@@ -277,9 +640,9 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                     label='Sample Type'
                     onChange={(e) => onFormDataChange('sampleType', e.target.value)}
                   >
-                    {modalSampleTypes.map((type) => (
-                      <MenuItem key={type} value={type}>
-                        {type}
+                    {sampleTypes.map((type) => (
+                      <MenuItem key={type.value} value={type.value}>
+                        {type.label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -293,7 +656,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                 size='small'
                 label='Planned Date'
                 type='date'
-                value={modalFormData.plannedDate}
+                value={formatDateForInput(modalFormData.plannedDate)}
                 onChange={(e) => onFormDataChange('plannedDate', e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
@@ -316,17 +679,17 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                 </Typography>
                 <Paper variant='outlined' sx={{ p: 2, borderRadius: 1 }}>
                   <Grid container spacing={1}>
-                    {assessmentMethodCodes.map((code) => (
-                      <Grid item xs={3} key={code}>
+                    {assessmentMethods.map((method) => (
+                      <Grid item xs={3} key={method.code}>
                         <FormControlLabel
                           control={
                             <Checkbox
                               size='small'
-                              checked={modalFormData.assessmentMethods.includes(code)}
-                              onChange={() => onAssessmentMethodToggle(code)}
+                              checked={modalFormData.assessmentMethods.includes(method.code)}
+                              onChange={() => onAssessmentMethodToggle(method.code)}
                             />
                           }
-                          label={code}
+                          label={`${method.code}`}
                         />
                       </Grid>
                     ))}
@@ -487,10 +850,15 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                   Actions for Sample
                 </Typography>
                 <Stack direction='row' spacing={1}>
+                  <IconButton size='small' onClick={fetchActions} disabled={isLoadingActions}>
+                    <RefreshIcon fontSize='small' />
+                  </IconButton>
                   <Button
                     variant='contained'
                     size='small'
                     startIcon={<AddIcon />}
+                    onClick={handleOpenActionModal}
+                    disabled={!planDetailId}
                     sx={{
                       textTransform: 'none',
                       fontWeight: 600,
@@ -516,13 +884,64 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={5} align='center' sx={{ py: 4 }}>
-                        <Typography variant='body2' color='text.secondary'>
-                          There are no Actions on this Sample
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
+                    {isLoadingActions ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            Loading actions...
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : actions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            There are no Actions on this Sample
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      actions.map((action) => (
+                        <TableRow key={action.id} hover>
+                          <TableCell>{getActionSummary(action)}</TableCell>
+                          <TableCell>{action.action_required}</TableCell>
+                          <TableCell>
+                            {`${action.action_with?.first_name || ''} ${action.action_with?.last_name || ''}`.trim() ||
+                              'N/A'}
+                          </TableCell>
+                          <TableCell>{formatDateForDisplay(action.target_date)}</TableCell>
+                          <TableCell>
+                            <Stack direction='row' spacing={1}>
+                              <IconButton
+                                size='small'
+                                onClick={() => handleEditAction(action)}
+                                sx={{
+                                  color: 'primary.main',
+                                  '&:hover': {
+                                    bgcolor: 'primary.light',
+                                  },
+                                }}
+                              >
+                                <EditIcon fontSize='small' />
+                              </IconButton>
+                              <IconButton
+                                size='small'
+                                onClick={() => setDeleteActionId(action.id)}
+                                disabled={isDeletingAction && deleteActionId === action.id}
+                                sx={{
+                                  color: 'error.main',
+                                  '&:hover': {
+                                    bgcolor: 'error.light',
+                                  },
+                                }}
+                              >
+                                <DeleteIcon fontSize='small' />
+                              </IconButton>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -551,15 +970,25 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                   alignItems: 'center',
                 }}
               >
-                <TextField
-                  fullWidth
-                  size='small'
-                  placeholder='Select form...'
-                  sx={{ flex: 1 }}
-                />
+                <FormControl size='small' sx={{ minWidth: 260 }}>
+                  <InputLabel>Select form...</InputLabel>
+                  <Select
+                    label='Select form...'
+                    value={selectedFormId}
+                    onChange={(e) => setSelectedFormId(String(e.target.value))}
+                  >
+                    {(allFormsResponse as any)?.data?.data?.map((f: any) => (
+                      <MenuItem key={f?.id} value={String(f?.id)}>
+                        {f?.form_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
                 <Button
                   variant='contained'
                   size='small'
+                  onClick={handleAllocateForm}
+                  disabled={!planDetailId || !selectedFormId || isAllocatingForm}
                   sx={{
                     textTransform: 'none',
                     fontWeight: 600,
@@ -571,7 +1000,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  Allocate Form
+                  {isAllocatingForm ? 'Allocating...' : 'Allocate Form'}
                 </Button>
               </Box>
               <TableContainer component={Paper} variant='outlined'>
@@ -585,13 +1014,51 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
-                        <Typography variant='body2' color='text.secondary'>
-                          There are no Forms on this Sample
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
+                    {allocatedForms.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            There are no Forms on this Sample
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      allocatedForms.map((row) => (
+                        <TableRow key={row.id}>
+                          <TableCell>{row.form?.form_name || '-'}</TableCell>
+                          <TableCell>{row.description || '-'}</TableCell>
+                          <TableCell>
+                            {row.completed_date ? formatDate(row.completed_date) : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Stack direction='row' spacing={1}>
+                              <Button
+                                variant='outlined'
+                                size='small'
+                                onClick={() => handleCompleteForm(row.id)}
+                                disabled={isCompletingForm || row.completed_date ? true : false}
+                                sx={{ textTransform: 'none', bgcolor: row.completed_date ? '#4caf50' : '#ff9800', color: row.completed_date ? '#fff' : '#fff', '&:hover': { bgcolor: row.completed_date ? '#388e3c' : '#f57c00' } }}
+                              >
+                                {row.completed_date ? 'Completed' : 'Mark Complete'}
+                              </Button>
+                              <IconButton
+                                size='small'
+                                onClick={() => setDeleteFormId(row.id)}
+                                disabled={isUnlinkingForm}
+                                sx={{
+                                  color: 'error.main',
+                                  '&:hover': {
+                                    bgcolor: 'error.light',
+                                  },
+                                }}
+                              >
+                                <DeleteIcon fontSize='small' />
+                              </IconButton>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -610,21 +1077,35 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                 <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
                   Documents for Sample
                 </Typography>
-                <Button
-                  variant='contained'
-                  size='small'
-                  startIcon={<CloudUploadIcon />}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    bgcolor: '#4caf50',
-                    '&:hover': {
-                      bgcolor: '#388e3c',
-                    },
-                  }}
-                >
-                  Upload File
-                </Button>
+                <Stack direction='row' spacing={1}>
+                  <IconButton size='small' onClick={fetchDocuments} disabled={isLoadingDocuments}>
+                    <RefreshIcon fontSize='small' />
+                  </IconButton>
+                  <Button
+                    variant='contained'
+                    size='small'
+                    startIcon={<CloudUploadIcon />}
+                    onClick={handleFileUpload}
+                    disabled={!planDetailId || isUploadingDocument}
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      bgcolor: '#4caf50',
+                      '&:hover': {
+                        bgcolor: '#388e3c',
+                      },
+                    }}
+                  >
+                    {isUploadingDocument ? 'Uploading...' : 'Upload File'}
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type='file'
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                    accept='*/*'
+                  />
+                </Stack>
               </Box>
               <TableContainer component={Paper} variant='outlined'>
                 <Table size='small'>
@@ -636,13 +1117,58 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={3} align='center' sx={{ py: 4 }}>
-                        <Typography variant='body2' color='text.secondary'>
-                          There are no Files on this Sample
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
+                    {isLoadingDocuments ? (
+                      <TableRow>
+                        <TableCell colSpan={3} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            Loading documents...
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : documents.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            There are no Files on this Sample
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      documents.map((document) => (
+                        <TableRow key={document.id} hover>
+                          <TableCell>
+                            <IconButton
+                              size='small'
+                              onClick={() => handleDownloadDocument(document)}
+                              sx={{
+                                color: 'primary.main',
+                                '&:hover': {
+                                  bgcolor: 'primary.light',
+                                },
+                              }}
+                            >
+                              <GetAppIcon fontSize='small' />
+                            </IconButton>
+                          </TableCell>
+                          <TableCell>{document.file_name}</TableCell>
+                          <TableCell>
+                            <IconButton
+                              size='small'
+                              onClick={() => setDeleteDocumentId(document.id)}
+                              disabled={isDeletingDocument && deleteDocumentId === document.id}
+                              sx={{
+                                color: 'error.main',
+                                '&:hover': {
+                                  bgcolor: 'error.light',
+                                },
+                              }}
+                            >
+                              <DeleteIcon fontSize='small' />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -806,6 +1332,121 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
           </Box>
         </Box>
       </Box>
+
+      {/* Action Modal */}
+      <ActionModal
+        open={actionModalOpen}
+        onClose={handleCloseActionModal}
+        onSave={handleSaveAction}
+        planDetailId={planDetailId}
+        editingAction={editingAction}
+        isSaving={isCreatingAction || isUpdatingAction}
+      />
+
+      {/* Delete Action Confirmation Dialog */}
+      <Dialog
+        open={deleteActionId !== null}
+        onClose={() => setDeleteActionId(null)}
+        maxWidth='xs'
+        fullWidth
+      >
+        <Box sx={{ p: 3 }}>
+          <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
+            Delete Action?
+          </Typography>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
+            Are you sure you want to delete this action? This action cannot be undone.
+          </Typography>
+          <Stack direction='row' spacing={2} justifyContent='flex-end'>
+            <Button
+              variant='outlined'
+              onClick={() => setDeleteActionId(null)}
+              sx={{ textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant='contained'
+              color='error'
+              onClick={() => deleteActionId && handleDeleteAction(deleteActionId)}
+              disabled={isDeletingAction}
+              sx={{ textTransform: 'none' }}
+            >
+              {isDeletingAction ? 'Deleting...' : 'Delete'}
+            </Button>
+          </Stack>
+        </Box>
+      </Dialog>
+
+      {/* Delete Document Confirmation Dialog */}
+      <Dialog
+        open={deleteDocumentId !== null}
+        onClose={() => setDeleteDocumentId(null)}
+        maxWidth='xs'
+        fullWidth
+      >
+        <Box sx={{ p: 3 }}>
+          <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
+            Delete Document?
+          </Typography>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
+            Are you sure you want to delete this document? This action cannot be undone.
+          </Typography>
+          <Stack direction='row' spacing={2} justifyContent='flex-end'>
+            <Button
+              variant='outlined'
+              onClick={() => setDeleteDocumentId(null)}
+              sx={{ textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant='contained'
+              color='error'
+              onClick={() => deleteDocumentId && handleDeleteDocument(deleteDocumentId)}
+              disabled={isDeletingDocument}
+              sx={{ textTransform: 'none' }}
+            >
+              {isDeletingDocument ? 'Deleting...' : 'Delete'}
+            </Button>
+          </Stack>
+        </Box>
+      </Dialog>
+
+      {/* Delete Allocated Form Confirmation Dialog */}
+      <Dialog
+        open={deleteFormId !== null}
+        onClose={() => setDeleteFormId(null)}
+        maxWidth='xs'
+        fullWidth
+      >
+        <Box sx={{ p: 3 }}>
+          <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
+            Remove Allocated Form?
+          </Typography>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
+            Are you sure you want to unlink this form from the sample?
+          </Typography>
+          <Stack direction='row' spacing={2} justifyContent='flex-end'>
+            <Button
+              variant='outlined'
+              onClick={() => setDeleteFormId(null)}
+              sx={{ textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant='contained'
+              color='error'
+              onClick={() => deleteFormId && handleDeleteAllocatedForm(deleteFormId)}
+              disabled={isUnlinkingForm}
+              sx={{ textTransform: 'none' }}
+            >
+              {isUnlinkingForm ? 'Removing...' : 'Remove'}
+            </Button>
+          </Stack>
+        </Box>
+      </Dialog>
     </Dialog>
   )
 }

@@ -50,9 +50,28 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   isApplySamplesDisabled,
   isApplySamplesLoading,
 }) => {
+  const [dateError, setDateError] = React.useState<string>('')
   const allSelected = selectedMethods.length === assessmentMethods.length
   const someSelected =
     selectedMethods.length > 0 && selectedMethods.length < assessmentMethods.length
+
+  const handleDateChange = (value: string) => {
+    onDateFromChange(value)
+    if (!value.trim()) {
+      setDateError('Planned Sample Date is required')
+    } else {
+      setDateError('')
+    }
+  }
+
+  const handleApplySamplesClick = () => {
+    if (!dateFrom.trim()) {
+      setDateError('Planned Sample Date is required')
+      return
+    }
+    setDateError('')
+    onApplySamples()
+  }
 
   return (
     <Card
@@ -103,7 +122,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                   />
                 }
                 label={`${method.code} - ${method.title}`}
-                sx={{ alignItems: 'flex-start' }}
+                sx={{ alignItems: 'center' }}
               />
             ))}
           </FormGroup>
@@ -142,33 +161,24 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             >
               <MenuItem value=''>Select a sample type</MenuItem>
               {sampleTypes.map((type) => (
-                <MenuItem key={type} value={type}>
-                  {type}
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12}>
           <TextField
             label='Planned Sample Date'
             type='date'
             value={dateFrom}
-            onChange={(event) => onDateFromChange(event.target.value)}
+            onChange={(event) => handleDateChange(event.target.value)}
             size='small'
             fullWidth
             InputLabelProps={{ shrink: true }}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            label='QA Completion Date'
-            type='date'
-            value={dateTo}
-            onChange={(event) => onDateToChange(event.target.value)}
-            size='small'
-            fullWidth
-            InputLabelProps={{ shrink: true }}
+            error={!!dateError}
+            helperText={dateError}
           />
         </Grid>
       </Grid>
@@ -178,7 +188,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           variant='contained'
           size='large'
           sx={{ textTransform: 'none', fontWeight: 600 }}
-          onClick={onApplySamples}
+          onClick={handleApplySamplesClick}
           disabled={isApplySamplesDisabled}
         >
           {isApplySamplesLoading ? 'Applying...' : 'Apply Samples'}
