@@ -409,7 +409,7 @@ const TimeLog = (props) => {
         </Grid>
       </Grid>
       {/* Off the Job Summary Section */}
-      <OffTheJobSummary />
+      <OffTheJobSummary courseId={filterData?.courseId || null} />
       <Grid className='w-full rounded-4 ' sx={{ border: '1px solid #ddd' }}>
         <Card className='rounded-4 p-10 bg-grey-200'>
           <Typography className='h5 font-400'>Recent Activity:</Typography>
