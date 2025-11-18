@@ -77,7 +77,7 @@ const courseSchema = yup.object().shape({
   course_status: yup.string().optional(),
   predicted_grade: yup.string().required('Please enter predicted grade'),
   final_grade: yup.string().required('Please enter final grade'),
-  is_main_course: yup.boolean().optional(),
+  is_main_course: yup.boolean().optional().nullable(),
 })
 
 const CourseTab = () => {
@@ -120,6 +120,8 @@ const CourseTab = () => {
       is_main_course: false,
     },
   })
+
+  console.log(errors)
 
   const handleLearnerRefetch = async () => {
     const data = await dispatch(getLearnerDetails(learnerId))

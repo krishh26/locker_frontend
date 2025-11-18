@@ -69,8 +69,8 @@ const OffTheJobSummary = ({ courseId = null }: OffTheJobSummaryProps) => {
 
   // Format duration weeks (round to 2 decimal places)
   const formattedDuration = summaryData.durationWeeks 
-    ? (Math.round(summaryData.durationWeeks * 100) / 100).toFixed(2)
-    : '0.00';
+    ? (Math.round(summaryData.durationWeeks * 100) / 100).toFixed(0)
+    : '0';
 
   // Calculate percentage if we have required to date
   const actualPercentage = summaryData.requiredToDate && summaryData.requiredToDate > 0 && summaryData.totalLoggedHours !== undefined
@@ -121,13 +121,13 @@ const OffTheJobSummary = ({ courseId = null }: OffTheJobSummaryProps) => {
             <Grid className="flex items-center gap-10">
               <Typography className="font-400">Off the Job Hours Required:</Typography>
               <Typography className="font-600">
-                {summaryData.otjRequired !== undefined ? `${summaryData.otjRequired.toFixed(2)} hours` : 'N/A'}
+                {summaryData.otjRequired !== undefined ? `${summaryData.otjRequired.toFixed(0)} hours` : 'N/A'}
               </Typography>
             </Grid>
             <Grid className="flex items-center gap-10">
               <Typography className="font-400">Off the Job Hours Required to Date:</Typography>
               <Typography className="font-600">
-                {summaryData.requiredToDate !== undefined ? `${summaryData.requiredToDate.toFixed(2)} hours` : 'N/A'}
+                {summaryData.requiredToDate !== undefined ? `${summaryData.requiredToDate.toFixed(0)} hours` : 'N/A'}
               </Typography>
             </Grid>
           </Grid>
