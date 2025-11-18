@@ -17,7 +17,9 @@ const initialState = {
     },
     timeLogspendData: {},
     singleData: {},
-    calenderData: []
+    calenderData: [],
+    otjSummaryData: null,
+    otjSummaryLoading: false
 };
 
 const timeLogSlice = createSlice({
@@ -57,6 +59,12 @@ const timeLogSlice = createSlice({
                     return time;
                 }
             });            
+        },
+        setOtjSummaryData(state, action) {
+            state.otjSummaryData = action.payload
+        },
+        setOtjSummaryLoading(state, action) {
+            state.otjSummaryLoading = action.payload
         }
     }
 });
@@ -234,6 +242,28 @@ export const getMonthByTimeLogData = (year, month, user_id) => async (dispatch) 
         return false
     };
 
+}
+
+// get Off the Job Summary
+export const getOtjSummary = (learnerId, courseId = null, includeUnverified = true) => async (dispatch) => {
+    try {
+        dispatch(slice.setOtjSummaryLoading(true));
+        
+        let url = `${URL_BASE_LINK}/time-log/otj-summary/${learnerId}?includeUnverified=${includeUnverified}`;
+        
+        if (courseId) {
+            url = `${url}&courseId=${courseId}`;
+        }
+        
+        const response = await axios.get(url);
+        dispatch(slice.setOtjSummaryData(response.data.data || response.data));
+        dispatch(slice.setOtjSummaryLoading(false));
+        return true;
+    } catch (err) {
+        dispatch(showMessage({ message: err.response?.data?.message || 'Error fetching OTJ summary', variant: "error" }))
+        dispatch(slice.setOtjSummaryLoading(false));
+        return false;
+    };
 }
 
 export default timeLogSlice.reducer;
