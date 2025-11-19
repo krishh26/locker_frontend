@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Grid, TextField, Card, Box, Typography, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import { SecondaryButton } from 'src/app/component/Buttons';
 import { useDispatch } from 'react-redux';
@@ -11,6 +11,66 @@ import { createTimeLogAPI, getTimeLogAPI, updateTimeLogAPI } from 'app/store/tim
 const NewTimeLog = (props) => {
 
     const { handleCloseDialog, handleDataUpdate, timeLogData, setTimeLogData, filterData, edit = "Save", } = props;
+
+    // Convert time string (HH:MM) to total minutes
+    const timeToMinutes = (timeStr: string): number => {
+        if (!timeStr || timeStr === '0:0' || timeStr === '00:00') return 0;
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return (hours || 0) * 60 + (minutes || 0);
+    };
+
+    // Convert total minutes to time string (HH:MM)
+    const minutesToTime = (totalMinutes: number): string => {
+        if (totalMinutes < 0) return '00:00';
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    };
+
+    // Calculate end time based on start time and spend time
+    const calculateEndTime = (startTime: string, spendTime: string): string => {
+        if (!startTime || startTime === '0:0' || startTime === '00:00') return '';
+        if (!spendTime || spendTime === '0:0' || spendTime === '00:00') return '';
+
+        const startMinutes = timeToMinutes(startTime);
+        const spendMinutes = timeToMinutes(spendTime);
+        const endMinutes = startMinutes + spendMinutes;
+
+        // Handle day overflow (if end time goes past 24:00, wrap to next day)
+        const maxMinutesInDay = 24 * 60;
+        const finalMinutes = endMinutes % maxMinutesInDay;
+
+        return minutesToTime(finalMinutes);
+    };
+
+    // Enhanced handleDataUpdate that calculates end_time automatically
+    const handleDataUpdateWithCalculation = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: any } }) => {
+        const { name, value } = e.target;
+        
+        // Calculate end_time if start_time or spend_time changes
+        if (name === 'start_time' || name === 'spend_time') {
+            const newStartTime = name === 'start_time' ? value : timeLogData?.start_time;
+            const newSpendTime = name === 'spend_time' ? value : timeLogData?.spend_time;
+
+            // Update the field and calculate end_time if both values are available
+            if (newStartTime && newSpendTime && 
+                newStartTime !== '0:0' && newStartTime !== '00:00' &&
+                newSpendTime !== '0:0' && newSpendTime !== '00:00') {
+                const calculatedEndTime = calculateEndTime(newStartTime, newSpendTime);
+                if (calculatedEndTime) {
+                    setTimeLogData((prevState) => ({
+                        ...prevState,
+                        [name]: value,
+                        end_time: calculatedEndTime,
+                    }));
+                    return;
+                }
+            }
+        }
+        
+        // For other fields or when calculation is not needed, use normal update
+        handleDataUpdate(e);
+    }, [timeLogData?.start_time, timeLogData?.spend_time, handleDataUpdate, setTimeLogData]);
 
     const dispatch: any = useDispatch();
     const { data } = useSelector(selectCourseManagement);
@@ -213,7 +273,7 @@ const NewTimeLog = (props) => {
                                     placeholder='HH:MM'
                                     required
                                     fullWidth
-                                    onChange={handleDataUpdate}
+                                    onChange={handleDataUpdateWithCalculation}
                                 />
                             </Grid>
 
@@ -227,7 +287,7 @@ const NewTimeLog = (props) => {
                                     placeholder='HH:MM'
                                     required
                                     fullWidth
-                                    onChange={handleDataUpdate}
+                                    onChange={handleDataUpdateWithCalculation}
                                 />
                             </Grid>
 
@@ -241,6 +301,7 @@ const NewTimeLog = (props) => {
                                     placeholder='HH:MM'
                                     required
                                     fullWidth
+                                    disabled
                                     onChange={handleDataUpdate}
                                 />
                             </Grid>
