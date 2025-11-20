@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
-import { Grid, TextField, Card, Box, Typography, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
+import { Grid, TextField, Card, Box, Typography, Select, MenuItem, Checkbox, ListItemText, IconButton } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { SecondaryButton } from 'src/app/component/Buttons';
 import { useDispatch } from 'react-redux';
 import { useSelector } from 'react-redux';
@@ -139,8 +140,20 @@ const NewTimeLog = (props) => {
             <Card className='rounded-6 items-center ' variant="outlined">
                 <Grid className='h-full flex flex-col'>
                     <Box>
-                        <Grid xs={12} className='p-10 border-b-2 bg-gray-100'>
+                        <Grid xs={12} className='p-10 border-b-2 bg-gray-100' sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <Typography className='font-600 h2'>Add Activity</Typography>
+                            <IconButton
+                                onClick={handleCloseDialog}
+                                sx={{
+                                    color: 'text.secondary',
+                                    '&:hover': {
+                                        backgroundColor: 'action.hover',
+                                    },
+                                }}
+                                aria-label="close"
+                            >
+                                <CloseIcon />
+                            </IconButton>
                         </Grid>
                         <Box className="m-12 flex flex-col justify-between gap-12 sm:flex-col p-10">
                             <Grid className='w-full'>

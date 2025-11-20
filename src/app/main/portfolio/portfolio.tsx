@@ -4,6 +4,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import CloseIcon from '@mui/icons-material/Close'
 import {
   alpha,
   Avatar,
@@ -16,6 +17,7 @@ import {
   DialogTitle,
   Fade,
   Grid,
+  IconButton,
   LinearProgress,
   Paper,
   Slide,
@@ -1514,7 +1516,35 @@ const Portfolio: React.FC = () => {
           },
         }}
       >
-        <Calendar />
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: theme.spacing(2),
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Typography variant='h6' component='div' sx={{ fontWeight: 600 }}>
+            Calendar
+          </Typography>
+          <IconButton
+            aria-label='close'
+            onClick={handleClose}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                color: theme.palette.text.primary,
+                backgroundColor: alpha(theme.palette.action.hover, 0.1),
+              },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ padding: theme.spacing(2) }}>
+          <Calendar />
+        </DialogContent>
       </Dialog>
 
       {/* Email Dialog */}

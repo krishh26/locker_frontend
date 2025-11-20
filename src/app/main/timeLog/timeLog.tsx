@@ -19,7 +19,15 @@ import {
   TableRow,
   TextField,
   Typography,
+  Box,
+  Chip,
+  useMediaQuery,
 } from '@mui/material'
+import { alpha, useTheme } from '@mui/material/styles'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
+import WorkIcon from '@mui/icons-material/Work'
+import EventIcon from '@mui/icons-material/Event'
 import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
@@ -56,6 +64,8 @@ import OffTheJobSummary from './OffTheJobSummary'
 const TimeLog = (props) => {
   const dispatch: any = useDispatch()
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'))
 
   const { currentUser, selectedUser, selected } = useSelector(selectGlobalUser)
   const timeLog = useSelector(selectTimeLog)
@@ -275,19 +285,35 @@ const TimeLog = (props) => {
   }
 
   return (
-    <Grid className='flex flex-col m-10 p-10 gap-20' sx={{ minHeight: 600 }}>
-      <Grid className='flex justify-between items-center'>
+    <Box
+      className='flex flex-col gap-20'
+      sx={{
+        minHeight: 600,
+        width: '100%',
+        px: { xs: 1.5, md: 3, lg: 5 },
+        py: { xs: 1.5, md: 3 },
+        gap: { xs: 3, md: 6 },
+      }}
+    >
+      <Grid
+        className='flex justify-between items-center'
+        sx={{ flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 1.5, md: 0 } }}
+      >
         <Typography className='h3 font-500 '>
           Welcome, {selected ? selectedUser?.user_name : currentUser?.user_name}
         </Typography>
-        <button onClick={handleBack} className='mb-10 text-[#5b718f]'>
+        <button
+          onClick={handleBack}
+          className='text-[#5b718f]'
+          style={{ alignSelf: 'flex-end' }}
+        >
           <KeyboardBackspaceIcon /> Back
         </button>
       </Grid>
 
       <hr style={{ borderBottom: '1px solid #ddd' }} />
 
-      <Grid>
+      <Grid sx={{ width: '100%' }}>
         <Typography className='h2 font-500 '>
           Viewing E-Timelog for All Courses and General Activities
         </Typography>
@@ -295,15 +321,23 @@ const TimeLog = (props) => {
 
       <hr style={{ borderBottom: '1px solid #ddd' }} />
 
-      <Grid className='w-full pb-10 flex flex-row gap-40 '>
+      <Box
+        className='w-full pb-10'
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: { xs: 2, md: 5 },
+          alignItems: { xs: 'flex-start', md: 'center' },
+        }}
+      >
         <Autocomplete
-          className='w-9/12'
           disablePortal
           options={learner?.course}
           getOptionLabel={(option: any) => option.course?.course_name}
           size='small'
           fullWidth
           sx={{
+            flex: 1,
             '.muiltr-hgpioi-MuiSvgIcon-root': {
               color: 'black',
             },
@@ -322,10 +356,17 @@ const TimeLog = (props) => {
           {' '}
           &lt; Change View by Course
         </Typography>
-      </Grid>
-      <Grid className='w-full pb-10 flex flex-row gap-40 '>
+      </Box>
+      <Box
+        className='w-full pb-10'
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: { xs: 2, md: 5 },
+          alignItems: { xs: 'flex-start', md: 'center' },
+        }}
+      >
         <TextField
-          className='w-9/12'
           name='jobType'
           select
           label='Select Job Training'
@@ -348,11 +389,23 @@ const TimeLog = (props) => {
           {' '}
           &lt; Change View by On/Off the Job Training
         </Typography>
-      </Grid>
+      </Box>
 
-      <Grid className='flex justify-center'>
-        <Grid className='flex gap-40 w-[60%]'>
-          <Grid className='w-1/4 rounded-4' sx={{ border: '1px solid #ddd' }}>
+      <Box className='flex' sx={{ width: '100%' }}>
+        <Box
+          className='flex gap-40'
+          sx={{
+            width: '100%',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: { xs: 2, md: 4 },
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box
+            className='rounded-4'
+            sx={{ border: '1px solid #ddd', flex: '1 1 220px', minWidth: 220 }}
+          >
             <Card
               className='rounded-4 p-10 bg-grey-200'
               sx={{ borderBottom: '1px solid #ddd' }}
@@ -369,8 +422,11 @@ const TimeLog = (props) => {
                 </span>
               </Grid>
             </Card>
-          </Grid>
-          <Grid className='w-1/4 rounded-4' sx={{ border: '1px solid #ddd' }}>
+          </Box>
+          <Box
+            className='rounded-4'
+            sx={{ border: '1px solid #ddd', flex: '1 1 220px', minWidth: 220 }}
+          >
             <Card
               className='rounded-4 p-10 bg-grey-200'
               sx={{ borderBottom: '1px solid #ddd' }}
@@ -387,8 +443,11 @@ const TimeLog = (props) => {
                 </span>
               </Grid>
             </Card>
-          </Grid>
-          <Grid className='w-1/4 rounded-4' sx={{ border: '1px solid #ddd' }}>
+          </Box>
+          <Box
+            className='rounded-4'
+            sx={{ border: '1px solid #ddd', flex: '1 1 220px', minWidth: 220 }}
+          >
             <Card
               className='rounded-4 p-10 bg-grey-200'
               sx={{ borderBottom: '1px solid #ddd' }}
@@ -405,96 +464,219 @@ const TimeLog = (props) => {
                 </span>
               </Grid>
             </Card>
-          </Grid>
-        </Grid>
-      </Grid>
+          </Box>
+        </Box>
+      </Box>
       {/* Off the Job Summary Section */}
       <OffTheJobSummary courseId={filterData?.courseId || null} />
-      <Grid className='w-full rounded-4 ' sx={{ border: '1px solid #ddd' }}>
-        <Card className='rounded-4 p-10 bg-grey-200'>
-          <Typography className='h5 font-400'>Recent Activity:</Typography>
+      
+      {/* Recent Activity Section */}
+      <Box className="w-full mb-20">
+        {/* Header Card */}
+        <Card 
+          sx={{ 
+            borderRadius: '8px 8px 0 0',
+            border: '1px solid #ddd',
+            borderBottom: 'none',
+            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.primary.light, 0.04)} 100%)`,
+          }}
+        >
+          <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center' }}>
+            <EventIcon sx={{ color: theme.palette.primary.main, mr: 1.5, fontSize: '24px' }} />
+            <Typography className="h4 font-600" sx={{ color: theme.palette.text.primary, fontSize: '1.333rem' }}>
+              Recent Activity
+            </Typography>
+          </Box>
         </Card>
-        <Grid className='m-10 px-10 pt-10 '>
-          <TableContainer sx={{ maxHeight: 'auto' }}>
-            {/* {dataFetchLoading ? (
-                            <FuseLoading />
-                        ) : formdata.data?.length ? ( */}
-            <Table
-              sx={{ minWidth: 650, heighFaddt: '100%' }}
-              size='small'
-              aria-label='simple table'
+
+        {/* Table Card */}
+        <Card sx={{ borderRadius: '0 0 8px 8px', border: '1px solid #ddd', borderTop: 'none' }}>
+          <Box sx={{ p: 3 }}>
+            <TableContainer 
+              component={Box}
+              sx={{ 
+                borderRadius: 2,
+                overflow: 'hidden',
+                maxHeight: '600px',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: alpha(theme.palette.primary.main, 0.05),
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: alpha(theme.palette.primary.main, 0.2),
+                  borderRadius: '4px',
+                  '&:hover': {
+                    background: alpha(theme.palette.primary.main, 0.3),
+                  },
+                },
+              }}
             >
-              <TableHead sx={{ borderBottom: '3px solid #ddd' }}>
-                <TableRow>
-                  <TableCell>Activity Type</TableCell>
-                  <TableCell align='left'>On/Off the Job Training</TableCell>
-                  <TableCell align='left'>Time Taken</TableCell>
-                  <TableCell align='left'>Date</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {timeLog?.sliceData?.map((row) => (
-                  <TableRow
-                    key={row.activityType}
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                  >
-                    <TableCell
-                      component='th'
-                      scope='row'
-                      className='flex flex-col w-full'
-                      sx={{ borderBottom: '1px solid #ddd', width: '30%' }}
-                    >
-                      {row?.activity_type}
+              <Table
+                size="medium"
+                sx={{
+                  '& .MuiTableCell-root': {
+                    fontSize: '15.33px',
+                  },
+                }}
+              >
+                <TableHead sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.08) }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, py: 2, fontSize: '15.33px' }}>
+                      Activity Type
                     </TableCell>
-                    <TableCell
-                      align='left'
-                      sx={{ borderBottom: '1px solid #ddd', width: '30%' }}
-                    >
-                      {row?.type}
+                    <TableCell sx={{ fontWeight: 600, py: 2, fontSize: '15.33px' }}>
+                      On/Off the Job Training
                     </TableCell>
-                    <TableCell
-                      align='left'
-                      sx={{ borderBottom: '1px solid #ddd', width: '10%' }}
-                    >
-                      {row?.spend_time}
+                    <TableCell sx={{ fontWeight: 600, py: 2, fontSize: '15.33px' }}>
+                      Time Taken
                     </TableCell>
-                    <TableCell
-                      align='left'
-                      sx={{ borderBottom: '1px solid #ddd', width: '10%' }}
-                    >
-                      {formatDate(row?.activity_date)}
+                    <TableCell sx={{ fontWeight: 600, py: 2, fontSize: '15.33px' }}>
+                      Date
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Grid>
-      </Grid>
-      <Grid className='flex justify-between m-10 '>
-        <SecondaryButton
-          name={
-            isCalendarView ? 'Switch to List View' : 'Switch to Calendar View'
-          }
-          onClick={handleToggleView}
-        />
-        <SecondaryButton
-          name='Add New Timelog Entry'
-          onClick={() => handleClickOpen()}
-        />
-      </Grid>
+                </TableHead>
+                <TableBody>
+                  {timeLog?.sliceData?.length > 0 ? (
+                    timeLog.sliceData.map((row, index) => (
+                      <TableRow
+                        key={row.activityType || index}
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                          },
+                          transition: 'background-color 0.2s ease',
+                        }}
+                      >
+                        <TableCell
+                          sx={{
+                            py: 2,
+                            fontSize: '15.33px',
+                            fontWeight: 500,
+                            color: theme.palette.text.primary,
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <WorkIcon sx={{ fontSize: '18px', color: theme.palette.primary.main }} />
+                            <Typography sx={{ fontSize: '15.33px' }}>
+                              {row?.activity_type || '-'}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ py: 2, fontSize: '15.33px' }}>
+                          {row?.type ? (
+                            <Chip
+                              label={row.type}
+                              size="small"
+                              color={
+                                row.type.toLowerCase().includes('off')
+                                  ? 'warning'
+                                  : row.type.toLowerCase().includes('on')
+                                  ? 'success'
+                                  : 'default'
+                              }
+                              sx={{
+                                fontSize: '13.33px',
+                                fontWeight: 500,
+                                height: '28px',
+                              }}
+                            />
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ py: 2, fontSize: '15.33px' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <AccessTimeIcon
+                              sx={{
+                                fontSize: '18px',
+                                color: theme.palette.text.secondary,
+                              }}
+                            />
+                            <Typography sx={{ fontSize: '15.33px', fontWeight: 500 }}>
+                              {row?.spend_time || '-'}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ py: 2, fontSize: '15.33px' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <CalendarTodayIcon
+                              sx={{
+                                fontSize: '18px',
+                                color: theme.palette.text.secondary,
+                              }}
+                            />
+                            <Typography sx={{ fontSize: '15.33px' }}>
+                              {formatDate(row?.activity_date) || '-'}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                        <Typography sx={{ color: theme.palette.text.secondary, fontSize: '15.33px' }}>
+                          No recent activity found
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        </Card>
+      </Box>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          gap: 2,
+          m: { xs: 0, md: 2 },
+          width: '100%',
+        }}
+      >
+        <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
+          <SecondaryButton
+            name={
+              isCalendarView ? 'Switch to List View' : 'Switch to Calendar View'
+            }
+            onClick={handleToggleView}
+          />
+        </Box>
+        <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
+          <SecondaryButton
+            name='Add New Timelog Entry'
+            onClick={() => handleClickOpen()}
+          />
+        </Box>
+      </Box>
 
       {isCalendarView ? (
         <CalendarComponent />
       ) : (
         <>
-          <Grid className='w-full flex justify-end'>
-            <Grid className='w-[50%] flex flex-row gap-20 ml-20'>
+          <Box
+            className='w-full flex justify-end'
+            sx={{ justifyContent: { xs: 'flex-start', md: 'flex-end' } }}
+          >
+            <Box
+              sx={{
+                width: '100%',
+                maxWidth: 600,
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: 2,
+                ml: { xs: 0, md: 5 },
+              }}
+            >
               <Typography className='font-600 flex items-center'>
                 Assessor Approved:
               </Typography>
               <TextField
-                className='w-1/2'
                 name='approved'
                 select
                 label='Select Assessor Approved'
@@ -512,21 +694,26 @@ const TimeLog = (props) => {
                 <MenuItem value={'true'}>Approved</MenuItem>
                 <MenuItem value={'false'}>Not Approved</MenuItem>
               </TextField>
-            </Grid>
-          </Grid>
-          <Grid className='m-10 '>
+            </Box>
+          </Box>
+          <Box sx={{ width: '100%', mt: { xs: 2, md: 4 } }}>
             <TableContainer
               sx={{
                 maxHeight: '100%',
                 marginBottom: '2rem',
-                overflow: 'unset',
+                overflowX: 'auto',
+                borderRadius: 2,
+                border: '1px solid #eee',
               }}
             >
               {timeLog?.dataFetchLoading ? (
                 <FuseLoading />
               ) : timeLog?.data?.length ? (
                 <Table
-                  sx={{ minWidth: 650, height: '100%' }}
+                  sx={{
+                    minWidth: isSmallScreen ? 900 : 650,
+                    height: '100%',
+                  }}
                   size='small'
                   aria-label='simple table'
                 >
@@ -787,7 +974,7 @@ const TimeLog = (props) => {
                 items={timeLog?.meta_data?.items}
               />
             </TableContainer>
-          </Grid>
+          </Box>
         </>
       )}
 
@@ -851,7 +1038,7 @@ const TimeLog = (props) => {
           filterData={filterData}
         />
       </Dialog>
-    </Grid>
+    </Box>
   )
 }
 export default TimeLog
