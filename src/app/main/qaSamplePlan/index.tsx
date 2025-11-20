@@ -9,6 +9,7 @@ import {
   SamplePlanLearner,
   useApplySamplePlanLearnersMutation,
   useUpdateSamplePlanDetailMutation,
+  useLazyGetPlanDetailsQuery,
 } from 'app/store/api/sample-plan-api'
 import { useUserId } from 'src/app/utils/userHelpers'
 import { useDispatch } from 'react-redux'
@@ -106,6 +107,7 @@ const Index: React.FC = () => {
   const [updateSamplePlanDetail, { isLoading: isUpdatingSampleDetail }] =
     useUpdateSamplePlanDetailMutation()
   const [triggerGetSampleQuestions] = useLazyGetSampleQuestionsQuery()
+  const [triggerGetPlanDetails] = useLazyGetPlanDetailsQuery()
   const [createSampleQuestions] = useCreateSampleQuestionsMutation()
   const [updateSampleQuestion] = useUpdateSampleQuestionMutation()
   const [deleteSampleQuestion] = useDeleteSampleQuestionMutation()
@@ -859,19 +861,48 @@ const Index: React.FC = () => {
   const handleOpenLearnerDetailsDialog = (learner: SamplePlanLearner, learnerIndex: number) => {
     // Use learner.id as plan_detail_id (this might need adjustment based on actual API response)
     setPlanDetailId(selectedPlan)
-    setModalFormData({
-      qaName: learner.assessor_name as string ?? '',
-      plannedDate: learner.planned_date ?? '',
-      assessmentMethods: learner.assessment_methods as string[] ?? [],
-      assessmentProcesses: learner.assessment_processes as string ?? '',
-      feedback: learner.feedback as string ?? '',
-      type: learner.type as string ?? '',
-      completedDate: learner.completed_date as string ?? '',
-      sampleType: learner.sample_type as string ?? '',
-      iqaConclusion: learner.iqa_conclusion as string[] ?? [],
-      assessorDecisionCorrect: learner.assessor_decision_correct as 'Yes' | 'No' | '' || '',
-    })
-    setModalOpen(true)
+    
+    // Call API to get plan details
+    if (selectedPlan) {
+      triggerGetPlanDetails(selectedPlan)
+        .unwrap()
+        .then((res: any) => {
+          const data = res?.data || {}
+          console.log("🚀 ~ handleOpenLearnerDetailsDialog ~ data:", data)
+          // setModalFormData({
+          //   qaName: learner.assessor_name as string ?? '',
+          //   plannedDate: data.plannedDate || data.planned_date || learner.planned_date || '',
+          //   assessmentMethods: data.assessmentMethods || data.assessment_methods || learner.assessment_methods || [],
+          //   assessmentProcesses: data.assessmentProcesses || data.assessment_processes || learner.assessment_processes || '',
+          //   feedback: data.feedback || learner.feedback || '',
+          //   type: data.type || learner.type || '',
+          //   completedDate: data.completedDate || data.completed_date || learner.completed_date || '',
+          //   sampleType: data.sampleType || data.sample_type || learner.sample_type || '',
+          //   iqaConclusion: data.iqaConclusion || data.iqa_conclusion || learner.iqa_conclusion || [],
+          //   assessorDecisionCorrect: data.assessorDecisionCorrect || data.assessor_decision_correct || learner.assessor_decision_correct || '',
+          // })
+          // setModalOpen(true)
+        })
+        .catch((error: any) => {
+          console.log("🚀 ~ handleOpenLearnerDetailsDialog ~ error:", error)
+          // Fallback to learner data if API fails
+          // const message = error?.data?.message || error?.error || 'Failed to load plan details.'
+          // dispatch(showMessage({ message, variant: 'error' }))
+          // setModalFormData({
+          //   qaName: learner.assessor_name as string ?? '',
+          //   plannedDate: learner.planned_date ?? '',
+          //   assessmentMethods: learner.assessment_methods as string[] ?? [],
+          //   assessmentProcesses: learner.assessment_processes as string ?? '',
+          //   feedback: learner.feedback as string ?? '',
+          //   type: learner.type as string ?? '',
+          //   completedDate: learner.completed_date as string ?? '',
+          //   sampleType: learner.sample_type as string ?? '',
+          //   iqaConclusion: learner.iqa_conclusion as string[] ?? [],
+          //   assessorDecisionCorrect: learner.assessor_decision_correct as 'Yes' | 'No' | '' || '',
+          // })
+          // setModalOpen(true)
+        })
+    } 
 
     // Load existing questions for this plan detail
     if (selectedPlan) {
