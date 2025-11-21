@@ -48,6 +48,41 @@ export const countSelectedUnits = (units?: SamplePlanLearnerUnit[]) => {
   if (!Array.isArray(units)) {
     return 0
   }
-  return units.filter((unit) => unit?.is_selected).length
+  // Count units that have sample_history (already sampled)
+  return units.filter((unit: any) => {
+    return Array.isArray(unit?.sample_history) && unit.sample_history.length > 0
+  }).length
+}
+
+/**
+ * Get the most recent planned_date from a learner's units' sample_history
+ * Falls back to learner.planned_date if no sample_history exists
+ */
+export const getLearnerPlannedDate = (learner: any): string | null => {
+  // First check if learner has a direct planned_date
+  if (learner?.planned_date) {
+    return learner.planned_date
+  }
+
+  // Extract all planned dates from sample_history across all units
+  const plannedDates: string[] = []
+  if (Array.isArray(learner?.units)) {
+    learner.units.forEach((unit: any) => {
+      if (Array.isArray(unit?.sample_history)) {
+        unit.sample_history.forEach((history: any) => {
+          if (history?.planned_date) {
+            plannedDates.push(history.planned_date)
+          }
+        })
+      }
+    })
+  }
+
+  if (plannedDates.length === 0) {
+    return null
+  }
+
+  // Return the most recent date (latest)
+  return plannedDates[0]
 }
 

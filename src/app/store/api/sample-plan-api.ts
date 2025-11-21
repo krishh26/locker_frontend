@@ -90,6 +90,43 @@ export const samplePlanAPI = createApi({
         }
       },
     }),
+    getPlanDetails: builder.query<
+      {
+        message?: string
+        status?: boolean
+        data?: {
+          qaName?: string
+          assessor_name?: string
+          plannedDate?: string
+          planned_date?: string
+          assessmentMethods?: string[]
+          assessment_methods?: string[]
+          assessmentProcesses?: string
+          assessment_processes?: string
+          feedback?: string
+          type?: string
+          completedDate?: string
+          completed_date?: string
+          sampleType?: string
+          sample_type?: string
+          iqaConclusion?: string[]
+          iqa_conclusion?: string[]
+          assessorDecisionCorrect?: 'Yes' | 'No' | ''
+          assessor_decision_correct?: 'Yes' | 'No' | ''
+          [key: string]: unknown
+        } | null
+        [key: string]: unknown
+      },
+      string | number
+    >({
+      query: (planId) => {
+        const encodedId = encodeURIComponent(String(planId))
+        return {
+          url: `sample-plan/${encodedId}/details`,
+        }
+      },
+    }),
+    
     applySamplePlanLearners: builder.mutation<
       SamplePlanLearnersResponse,
       {
@@ -131,7 +168,7 @@ export const samplePlanAPI = createApi({
       query: ({ plan_id, ...body }) => {
         const encodedId = encodeURIComponent(String(plan_id))
         return {
-          url: `sample-plan/detail/${encodedId}`,
+          url: `sample-plan/deatil/${encodedId}`,
           method: 'PATCH',
           body,
         }
@@ -456,6 +493,7 @@ export interface SampleAllocatedForm {
 export const {
   useGetSamplePlansQuery,
   useLazyGetSamplePlanLearnersQuery,
+  useLazyGetPlanDetailsQuery,
   useApplySamplePlanLearnersMutation,
   useUpdateSamplePlanDetailMutation,
   useGetSampleActionsQuery,
