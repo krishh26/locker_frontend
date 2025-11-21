@@ -83,7 +83,7 @@ interface LearnersTableProps {
   countSelectedUnits: (units?: any[]) => number
   hasPlannedDate?: boolean
   courseName?: string
-  onOpenLearnerDetailsDialog: (learner: SamplePlanLearner, learnerIndex: number, detailId?: string | number) => void
+  onOpenLearnerDetailsDialog: (learner: SamplePlanLearner, learnerIndex: number, detailId?: string | number, unitKey?: string) => void
   onUnitToggle: (learner: SamplePlanLearner, learnerIndex: number, unitKey: string) => void
 }
 
@@ -803,7 +803,8 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                                                         onClick={(e) => {
                                                           e.stopPropagation()
                                                           if (history.detail_id) {
-                                                            onOpenLearnerDetailsDialog(row, index, history.detail_id)
+                                                            const unitKey = unit.unit_code || unit.unit_name || ''
+                                                            onOpenLearnerDetailsDialog(row, index, history.detail_id, unitKey)
                                                           }
                                                         }}
                                                         sx={{

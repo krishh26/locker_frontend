@@ -72,20 +72,28 @@ const Index: React.FC = () => {
   const [modalOpen, setModalOpen] = useState<boolean>(false)
   const [activeTab, setActiveTab] = useState<number>(0)
   const [planDetailId, setPlanDetailId] = useState<string | number | null>(null)
-  const [sampledLearners, setSampledLearners] = useState<Array<{
-    detail_id: number
-    learner_id: number
-    learner_name: string
-    sample_type: string
-    status: string
-    outcome: string | null
-    feedback: string | null
-    planned_date: string
-    completed_date: string | null
-    assessment_methods: Record<string, boolean>
-    iqa_conclusion: Record<string, boolean> | null
-    assessor_decision_correct: string | null
-  }>>([])
+  const [currentModalLearner, setCurrentModalLearner] =
+    useState<SamplePlanLearner | null>(null)
+  const [currentModalUnitKey, setCurrentModalUnitKey] = useState<string | null>(
+    null
+  )
+  const [plannedDates, setPlannedDates] = useState<string[]>([])
+  const [sampledLearners, setSampledLearners] = useState<
+    Array<{
+      detail_id: number
+      learner_id: number
+      learner_name: string
+      sample_type: string
+      status: string
+      outcome: string | null
+      feedback: string | null
+      planned_date: string
+      completed_date: string | null
+      assessment_methods: Record<string, boolean>
+      iqa_conclusion: Record<string, boolean> | null
+      assessor_decision_correct: string | null
+    }>
+  >([])
   const [modalFormData, setModalFormData] = useState<ModalFormData>({
     qaName: '',
     plannedDate: '',
@@ -153,11 +161,11 @@ const Index: React.FC = () => {
         )
         const courseList = Array.isArray(response.data?.data)
           ? response.data.data
-            .map((course: any) => ({
-              id: course?.course_id ? course.course_id.toString() : '',
-              name: course?.course_name || 'Untitled Course',
-            }))
-            .filter((course: { id: string }) => course.id)
+              .map((course: any) => ({
+                id: course?.course_id ? course.course_id.toString() : '',
+                name: course?.course_name || 'Untitled Course',
+              }))
+              .filter((course: { id: string }) => course.id)
           : []
         setCourses(courseList)
         setSelectedCourse((prev) => {
@@ -249,8 +257,8 @@ const Index: React.FC = () => {
           const label = nameCandidate
             ? String(nameCandidate)
             : id
-              ? `Plan ${id}`
-              : ''
+            ? `Plan ${id}`
+            : ''
 
           return {
             id,
@@ -387,7 +395,8 @@ const Index: React.FC = () => {
             const unitIdRaw = unit?.unit_code ?? `${rowIndex}-${unitIndex}`
             const unitRefRaw = unit?.unit_name ?? unitIdRaw
 
-            const unitId = String(unitIdRaw).trim() || `${rowIndex}-${unitIndex}`
+            const unitId =
+              String(unitIdRaw).trim() || `${rowIndex}-${unitIndex}`
             const unitRef = String(unitRefRaw).trim() || unitId
 
             return {
@@ -413,10 +422,10 @@ const Index: React.FC = () => {
         }
       })
       .filter(Boolean) as Array<{
-        learner_id: string | number
-        plannedDate: string | null
-        units: Array<{ id: string | number; unit_ref: string }>
-      }>
+      learner_id: string | number
+      plannedDate: string | null
+      units: Array<{ id: string | number; unit_ref: string }>
+    }>
 
     if (!learnersPayload.length) {
       setFilterError(
@@ -459,7 +468,7 @@ const Index: React.FC = () => {
       )
 
       setFilterError('')
-      
+
       // Refresh the learners table data
       if (selectedPlan) {
         triggerSamplePlanLearners(selectedPlan)
@@ -532,79 +541,52 @@ const Index: React.FC = () => {
     return ''
   }, [planSummary, selectedCourse, courses])
 
-  // Get unique planned dates from sampled_learners for modal tabs
-  const plannedDates = useMemo(() => {
+  // Update planned dates when sampledLearners changes
+  useEffect(() => {
     if (sampledLearners.length > 0) {
-      return sampledLearners.map((entry) => entry.planned_date).filter(Boolean)
+      // Handle both planned_date and plannedDate property names
+      // Keep all dates, including duplicates
+      const dates = sampledLearners
+        .map((entry: any) => entry.planned_date || entry.plannedDate)
+        .filter(Boolean)
+
+      // Update planned dates (keep duplicates, no sorting needed)
+      setPlannedDates(dates)
+    } else {
+      // Fallback: Get unique planned dates from learners' sample_history
+      const dates = new Set<string>()
+      learnersData.forEach((learner) => {
+        // Check learner's direct planned_date
+        if (learner.planned_date) {
+          dates.add(learner.planned_date)
+        }
+        // Check all units' sample_history for planned dates
+        if (Array.isArray(learner.units)) {
+          learner.units.forEach((unit: any) => {
+            if (Array.isArray(unit?.sample_history)) {
+              unit.sample_history.forEach((history: any) => {
+                if (history?.planned_date) {
+                  dates.add(history.planned_date)
+                }
+              })
+            }
+          })
+        }
+      })
+      setPlannedDates(Array.from(dates))
     }
-    
-    // Fallback: Get unique planned dates from learners' sample_history
-    const dates = new Set<string>()
-    learnersData.forEach((learner) => {
-      // Check learner's direct planned_date
-      if (learner.planned_date) {
-        dates.add(learner.planned_date)
-      }
-      // Check all units' sample_history for planned dates
-      if (Array.isArray(learner.units)) {
-        learner.units.forEach((unit: any) => {
-          if (Array.isArray(unit?.sample_history)) {
-            unit.sample_history.forEach((history: any) => {
-              if (history?.planned_date) {
-                dates.add(history.planned_date)
-              }
-            })
-          }
-        })
-      }
-    })
-    return Array.from(dates).sort((a, b) => {
-      const dateA = new Date(a).getTime()
-      const dateB = new Date(b).getTime()
-      return dateA - dateB
-    })
   }, [sampledLearners, learnersData])
 
-  // Initialize selectedUnitsMap from API response
-  // Since units now have sample_history instead of is_selected,
-  // we consider a unit "selected" if it has any sample_history entries
+  // Initialize selectedUnitsMap - start with empty selections
+  // Units will only be selected when user explicitly checks them
   useEffect(() => {
     if (!learnersData.length) {
       return
     }
 
-    const newMap: Record<string, Set<string>> = {}
-    learnersData.forEach((learner, index) => {
-      const learnerKey = `${learner.learner_name ?? ''}-${index}`
-      const selectedSet = new Set<string>()
-
-      if (Array.isArray(learner.units)) {
-        learner.units.forEach((unit: any) => {
-          // A unit is considered "selected" if it has sample_history entries
-          if (Array.isArray(unit?.sample_history) && unit.sample_history.length > 0) {
-            const unitKey = unit.unit_code || unit.unit_name || ''
-            if (unitKey) {
-              selectedSet.add(unitKey)
-            }
-          }
-        })
-      }
-
-      if (selectedSet.size > 0) {
-        newMap[learnerKey] = selectedSet
-      }
-    })
-
-    setSelectedUnitsMap((prev) => {
-      // Merge with existing selections to preserve user changes
-      const merged = { ...prev }
-      Object.keys(newMap).forEach((key) => {
-        if (!merged[key]) {
-          merged[key] = newMap[key]
-        }
-      })
-      return merged
-    })
+    // Reset selectedUnitsMap when learners data changes
+    // This ensures checkboxes start unchecked
+    setSelectedUnitsMap({})
   }, [learnersData])
 
   const visibleRows: SamplePlanLearner[] = useMemo(() => {
@@ -712,31 +694,16 @@ const Index: React.FC = () => {
   ) => {
     setSelectedLearnerForUnits({ learner, learnerIndex })
     const learnerKey = `${learner.learner_name ?? ''}-${learnerIndex}`
-    
-    // If selections don't exist for this learner, initialize with units that have sample_history
-    // If selections already exist, use them (preserves user's unchecked state)
-    if (!selectedUnitsMap[learnerKey]) {
-      const initialSelections = new Set<string>()
-      
-      // Initialize with units that have sample_history (checked by default)
-      if (Array.isArray(learner.units)) {
-        learner.units.forEach((unit: any) => {
-          const hasSampleHistory = Array.isArray(unit?.sample_history) && unit.sample_history.length > 0
-          if (hasSampleHistory) {
-            const unitKey = unit.unit_code || unit.unit_name || ''
-            if (unitKey) {
-              initialSelections.add(unitKey)
-            }
-          }
-        })
-      }
 
+    // Initialize with empty selections if they don't exist
+    // Checkboxes will start unchecked and only be checked when user toggles them
+    if (!selectedUnitsMap[learnerKey]) {
       setSelectedUnitsMap((prev) => ({
         ...prev,
-        [learnerKey]: initialSelections,
+        [learnerKey]: new Set<string>(),
       }))
     }
-    
+
     setUnitSelectionDialogOpen(true)
   }
 
@@ -748,8 +715,9 @@ const Index: React.FC = () => {
   const handleUnitToggle = (unitKey: string) => {
     if (!selectedLearnerForUnits) return
 
-    const learnerKey = `${selectedLearnerForUnits.learner.learner_name ?? ''}-${selectedLearnerForUnits.learnerIndex
-      }`
+    const learnerKey = `${selectedLearnerForUnits.learner.learner_name ?? ''}-${
+      selectedLearnerForUnits.learnerIndex
+    }`
     setSelectedUnitsMap((prev) => {
       const current = prev[learnerKey] || new Set<string>()
       const updated = new Set(current)
@@ -768,7 +736,11 @@ const Index: React.FC = () => {
   }
 
   // Handle unit toggle from expanded table (without opening dialog)
-  const handleUnitToggleFromTable = (learner: SamplePlanLearner, learnerIndex: number, unitKey: string) => {
+  const handleUnitToggleFromTable = (
+    learner: SamplePlanLearner,
+    learnerIndex: number,
+    unitKey: string
+  ) => {
     const learnerKey = `${learner.learner_name ?? ''}-${learnerIndex}`
     setSelectedUnitsMap((prev) => {
       const current = prev[learnerKey] || new Set<string>()
@@ -805,6 +777,343 @@ const Index: React.FC = () => {
 
   const handleCloseModal = () => {
     setModalOpen(false)
+    setCurrentModalLearner(null)
+    setCurrentModalUnitKey(null)
+  }
+
+  const handleCreateNew = async () => {
+    if (!selectedPlan) {
+      dispatch(
+        showMessage({
+          message: 'Please select a plan before creating a new entry.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    if (!iqaId) {
+      dispatch(
+        showMessage({
+          message:
+            'Unable to determine current user. Please re-login and try again.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    if (!currentModalLearner) {
+      dispatch(
+        showMessage({
+          message: 'No learner selected.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    if (!currentModalUnitKey) {
+      dispatch(
+        showMessage({
+          message: 'No unit selected. Please select a unit first.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    // Get the unit from the learner's units
+    const units = Array.isArray(currentModalLearner.units)
+      ? currentModalLearner.units
+      : []
+    const selectedUnit = units.find(
+      (u: any) => (u.unit_code || u.unit_name) === currentModalUnitKey
+    )
+
+    if (!selectedUnit) {
+      dispatch(
+        showMessage({
+          message: 'Selected unit not found.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    // Build unit payload
+    const unitIdRaw = selectedUnit?.unit_code ?? selectedUnit?.unit_name ?? ''
+    const unitRefRaw = selectedUnit?.unit_name ?? unitIdRaw
+    const unitId = String(unitIdRaw).trim() || ''
+    const unitRef = String(unitRefRaw).trim() || unitId
+
+    if (!unitRef) {
+      dispatch(
+        showMessage({
+          message: 'Invalid unit information.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    // Get learner ID
+    const learnerId =
+      currentModalLearner?.learner_id ??
+      currentModalLearner?.learnerId ??
+      currentModalLearner?.id ??
+      null
+    if (!learnerId) {
+      dispatch(
+        showMessage({
+          message: 'Learner ID not found.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    const numericLearnerId = Number(learnerId)
+    const learnerIdForRequest = Number.isFinite(numericLearnerId)
+      ? numericLearnerId
+      : learnerId
+
+    // Get planned date from active tab or form data
+    const plannedDate =
+      plannedDates[activeTab] || modalFormData.plannedDate || null
+
+    // Get sample type from form data or use default
+    const sampleTypeForRequest = modalFormData.sampleType || 'Learner interview'
+
+    // Build assessment methods payload from form data
+    const assessmentMethodsArray = Array.isArray(
+      modalFormData.assessmentMethods
+    )
+      ? modalFormData.assessmentMethods
+      : []
+    const assessmentMethodsPayload = assessmentMethodCodesForPayload.reduce(
+      (accumulator, code) => {
+        accumulator[code] = assessmentMethodsArray.includes(code)
+        return accumulator
+      },
+      {} as Record<string, boolean>
+    )
+
+    // Build learners payload
+    const learnersPayload = [
+      {
+        learner_id: learnerIdForRequest,
+        plannedDate: plannedDate,
+        units: [
+          {
+            id: unitId,
+            unit_ref: unitRef,
+          },
+        ],
+      },
+    ]
+
+    const numericPlanId = Number(selectedPlan)
+    const planIdForRequest = Number.isFinite(numericPlanId)
+      ? numericPlanId
+      : selectedPlan
+
+    const payload = {
+      plan_id: planIdForRequest,
+      sample_type: sampleTypeForRequest,
+      created_by: Number.isFinite(Number(iqaId)) ? Number(iqaId) : iqaId,
+      assessment_methods: assessmentMethodsPayload,
+      learners: learnersPayload,
+    }
+
+    try {
+      const response = await applySamplePlanLearners(payload).unwrap()
+      const successMessage =
+        response?.message || 'New entry created successfully.'
+
+      dispatch(
+        showMessage({
+          message: successMessage,
+          variant: 'success',
+        })
+      )
+
+      // Refresh the learners table data and plan details after successful creation
+      if (selectedPlan) {
+        // First refresh learners to get updated unit sample_history
+        await triggerSamplePlanLearners(selectedPlan)
+          .unwrap()
+          .then(async (learnersResponse: any) => {
+            // Get updated learner data
+            const updatedLearnersData = Array.isArray(learnersResponse?.data)
+              ? learnersResponse.data
+              : Array.isArray(learnersResponse?.data?.learners)
+              ? learnersResponse.data.learners
+              : []
+
+            // Find the updated learner with fresh unit data
+            const learnerId =
+              currentModalLearner?.learner_id ??
+              currentModalLearner?.learnerId ??
+              currentModalLearner?.id
+            const updatedLearner = updatedLearnersData.find(
+              (l: any) => (l.learner_id ?? l.learnerId ?? l.id) === learnerId
+            )
+
+            // Then refresh plan details to get updated sampled_learners
+            return triggerGetPlanDetails(selectedPlan)
+              .unwrap()
+              .then((res: any) => {
+                const data = res?.data || {}
+                const learners = Array.isArray(data.sampled_learners)
+                  ? data.sampled_learners
+                  : []
+
+                // If unitKey is provided, filter to only show entries for that unit
+                const learnerToUse = updatedLearner || currentModalLearner
+                let filteredLearners = learners
+
+                if (currentModalUnitKey && learnerToUse?.units) {
+                  const unit = Array.isArray(learnerToUse.units)
+                    ? learnerToUse.units.find(
+                        (u: any) =>
+                          (u.unit_code || u.unit_name) === currentModalUnitKey
+                      )
+                    : null
+
+                  if (unit && Array.isArray(unit.sample_history)) {
+                    // Get all detail_ids from this unit's updated sample_history
+                    const unitDetailIds = new Set(
+                      unit.sample_history
+                        .map((h: any) => h.detail_id)
+                        .filter((id: any) => id != null)
+                    )
+                    filteredLearners = learners.filter((entry: any) =>
+                      unitDetailIds.has(Number(entry.detail_id))
+                    )
+                  }
+                }
+
+                // Update sampledLearners state - this will trigger plannedDates to update via useEffect
+                setSampledLearners(filteredLearners)
+
+                // Find the newly created entry by matching planned date
+                let newEntryIndex = filteredLearners.findIndex((entry: any) => {
+                  const entryPlannedDate =
+                    entry.planned_date || entry.plannedDate
+                  return entryPlannedDate === plannedDate
+                })
+
+                // If not found in filtered list, check all learners
+                if (newEntryIndex < 0 && learners.length > 0) {
+                  newEntryIndex = learners.findIndex((entry: any) => {
+                    const entryPlannedDate =
+                      entry.planned_date || entry.plannedDate
+                    return entryPlannedDate === plannedDate
+                  })
+
+                  // If found in all learners but not in filtered, add it to filtered list
+                  if (newEntryIndex >= 0) {
+                    const newEntry = learners[newEntryIndex]
+                    filteredLearners = [...filteredLearners, newEntry]
+                    setSampledLearners(filteredLearners)
+                    newEntryIndex = filteredLearners.length - 1
+                  }
+                }
+
+                // Set active tab to new entry
+                if (newEntryIndex >= 0) {
+                  setActiveTab(newEntryIndex)
+                  const newEntry = filteredLearners[newEntryIndex]
+                  populateFormDataFromSampledLearner(newEntry)
+                  setPlanDetailId(newEntry.detail_id)
+
+                  // Load questions for the new entry
+                  if (selectedPlan) {
+                    triggerGetSampleQuestions(selectedPlan)
+                      .unwrap()
+                      .then((questionsRes: any) => {
+                        const list = Array.isArray(questionsRes?.data)
+                          ? questionsRes.data
+                          : []
+                        const mapped = list.map((q: any) => ({
+                          id: String(q.id),
+                          question: q.question_text ?? '',
+                          answer: (q.answer as 'Yes' | 'No' | '') ?? '',
+                        }))
+                        setSampleQuestions(mapped)
+                        const baseline: Record<
+                          string,
+                          { question: string; answer: 'Yes' | 'No' | '' }
+                        > = {}
+                        mapped.forEach((q) => {
+                          baseline[String(q.id)] = {
+                            question: q.question,
+                            answer: (q.answer || '') as any,
+                          }
+                        })
+                        setOriginalQuestionsMap(baseline)
+                      })
+                      .catch(() => {
+                        setSampleQuestions([])
+                        setOriginalQuestionsMap({})
+                      })
+                  }
+                } else if (filteredLearners.length > 0) {
+                  // If not found by date, use the last entry (most likely the new one)
+                  const lastIndex = filteredLearners.length - 1
+                  setActiveTab(lastIndex)
+                  const lastEntry = filteredLearners[lastIndex]
+                  populateFormDataFromSampledLearner(lastEntry)
+                  setPlanDetailId(lastEntry.detail_id)
+                }
+              })
+              .catch(() => {
+                setSampledLearners([])
+                setPlannedDates([])
+              })
+          })
+          .catch(() => {
+            // If learners refresh fails, still try to refresh plan details
+            triggerGetPlanDetails(selectedPlan)
+              .unwrap()
+              .then((res: any) => {
+                const data = res?.data || {}
+                const learners = Array.isArray(data.sampled_learners)
+                  ? data.sampled_learners
+                  : []
+                setSampledLearners(learners)
+
+                // Try to find new entry and set active tab
+                const newEntryIndex = learners.findIndex((entry: any) => {
+                  const entryPlannedDate =
+                    entry.planned_date || entry.plannedDate
+                  return entryPlannedDate === plannedDate
+                })
+
+                if (newEntryIndex >= 0) {
+                  setActiveTab(newEntryIndex)
+                  const newEntry = learners[newEntryIndex]
+                  populateFormDataFromSampledLearner(newEntry)
+                  setPlanDetailId(newEntry.detail_id)
+                }
+              })
+              .catch(() => {
+                setSampledLearners([])
+                setPlannedDates([])
+              })
+          })
+      }
+    } catch (error: any) {
+      const message =
+        error?.data?.message || error?.error || 'Failed to create new entry.'
+      dispatch(
+        showMessage({
+          message,
+          variant: 'error',
+        })
+      )
+    }
   }
 
   const handleModalFormChange = (field: string, value: any) => {
@@ -855,7 +1164,10 @@ const Index: React.FC = () => {
       try {
         await deleteSampleQuestion(id).unwrap()
         dispatch(
-          showMessage({ message: 'Question deleted successfully.', variant: 'success' })
+          showMessage({
+            message: 'Question deleted successfully.',
+            variant: 'success',
+          })
         )
       } catch (error: any) {
         const message = error?.data?.message || 'Failed to delete question.'
@@ -878,8 +1190,12 @@ const Index: React.FC = () => {
     }
 
     try {
-      const newQuestions = sampleQuestions.filter((q) => String(q.id).startsWith('new-'))
-      const existingQuestions = sampleQuestions.filter((q) => !String(q.id).startsWith('new-'))
+      const newQuestions = sampleQuestions.filter((q) =>
+        String(q.id).startsWith('new-')
+      )
+      const existingQuestions = sampleQuestions.filter(
+        (q) => !String(q.id).startsWith('new-')
+      )
 
       if (newQuestions.length > 0) {
         await createSampleQuestions({
@@ -923,18 +1239,28 @@ const Index: React.FC = () => {
         }))
         setSampleQuestions(mapped)
         // Reset baseline
-        const baseline: Record<string, { question: string; answer: 'Yes' | 'No' | '' }> = {}
+        const baseline: Record<
+          string,
+          { question: string; answer: 'Yes' | 'No' | '' }
+        > = {}
         mapped.forEach((q) => {
-          baseline[String(q.id)] = { question: q.question, answer: (q.answer || '') as any }
+          baseline[String(q.id)] = {
+            question: q.question,
+            answer: (q.answer || '') as any,
+          }
         })
         setOriginalQuestionsMap(baseline)
       }
 
       dispatch(
-        showMessage({ message: 'Sample questions saved successfully.', variant: 'success' })
+        showMessage({
+          message: 'Sample questions saved successfully.',
+          variant: 'success',
+        })
       )
     } catch (error: any) {
-      const message = error?.data?.message || error?.error || 'Failed to save questions.'
+      const message =
+        error?.data?.message || error?.error || 'Failed to save questions.'
       dispatch(showMessage({ message, variant: 'error' }))
     }
   }
@@ -943,17 +1269,25 @@ const Index: React.FC = () => {
   const populateFormDataFromSampledLearner = (sampledLearner: any) => {
     // Convert assessment_methods object to array of codes
     const assessmentMethodsArray: string[] = []
-    if (sampledLearner.assessment_methods && typeof sampledLearner.assessment_methods === 'object') {
-      Object.entries(sampledLearner.assessment_methods).forEach(([code, value]) => {
-        if (value === true) {
-          assessmentMethodsArray.push(code)
+    if (
+      sampledLearner.assessment_methods &&
+      typeof sampledLearner.assessment_methods === 'object'
+    ) {
+      Object.entries(sampledLearner.assessment_methods).forEach(
+        ([code, value]) => {
+          if (value === true) {
+            assessmentMethodsArray.push(code)
+          }
         }
-      })
+      )
     }
 
     // Convert iqa_conclusion object to array
     const iqaConclusionArray: string[] = []
-    if (sampledLearner.iqa_conclusion && typeof sampledLearner.iqa_conclusion === 'object') {
+    if (
+      sampledLearner.iqa_conclusion &&
+      typeof sampledLearner.iqa_conclusion === 'object'
+    ) {
       Object.entries(sampledLearner.iqa_conclusion).forEach(([key, value]) => {
         if (value === true) {
           iqaConclusionArray.push(key)
@@ -978,31 +1312,70 @@ const Index: React.FC = () => {
     setPlanDetailId(sampledLearner.detail_id)
   }
 
-  const handleOpenLearnerDetailsDialog = (learner: SamplePlanLearner, learnerIndex: number, detailId?: string | number) => {
+  const handleOpenLearnerDetailsDialog = (
+    learner: SamplePlanLearner,
+    learnerIndex: number,
+    detailId?: string | number,
+    unitKey?: string
+  ) => {
+    // Store current learner and unit for Create New functionality
+    setCurrentModalLearner(learner)
+    setCurrentModalUnitKey(unitKey || null)
+
     // Call API to get plan details - always use selectedPlan
     if (selectedPlan) {
       triggerGetPlanDetails(selectedPlan)
         .unwrap()
         .then((res: any) => {
           const data = res?.data || {}
-          
+
           // Store sampled_learners array
-          const learners = Array.isArray(data.sampled_learners) ? data.sampled_learners : []
+          let learners = Array.isArray(data.sampled_learners)
+            ? data.sampled_learners
+            : []
+
+          // If unitKey is provided, filter to only show entries for that unit
+          if (unitKey && learner.units) {
+            const unit = Array.isArray(learner.units)
+              ? learner.units.find(
+                  (u: any) => (u.unit_code || u.unit_name) === unitKey
+                )
+              : null
+
+            if (unit && Array.isArray(unit.sample_history)) {
+              // Get all detail_ids from this unit's sample_history
+              const unitDetailIds = new Set(
+                unit.sample_history
+                  .map((h: any) => h.detail_id)
+                  .filter((id: any) => id != null)
+              )
+
+              // Filter sampled_learners to only include entries with detail_ids from this unit
+              learners = learners.filter((entry: any) =>
+                unitDetailIds.has(Number(entry.detail_id))
+              )
+            }
+          }
+
           setSampledLearners(learners)
 
           // Find the specific entry by detail_id if provided, otherwise use first entry
           let selectedEntry = null
           if (detailId) {
-            selectedEntry = learners.find((entry: any) => entry.detail_id === Number(detailId))
+            selectedEntry = learners.find(
+              (entry: any) => entry.detail_id === Number(detailId)
+            )
           }
-          
+
           // If no match found or no detailId provided, use first entry
           if (!selectedEntry && learners.length > 0) {
             selectedEntry = learners[0]
             setActiveTab(0)
           } else if (selectedEntry) {
             // Find the index of the selected entry for tab
-            const tabIndex = learners.findIndex((entry: any) => entry.detail_id === selectedEntry.detail_id)
+            const tabIndex = learners.findIndex(
+              (entry: any) => entry.detail_id === selectedEntry.detail_id
+            )
             setActiveTab(tabIndex >= 0 ? tabIndex : 0)
           }
 
@@ -1028,7 +1401,10 @@ const Index: React.FC = () => {
           setModalOpen(true)
         })
         .catch((error: any) => {
-          const message = error?.data?.message || error?.error || 'Failed to load plan details.'
+          const message =
+            error?.data?.message ||
+            error?.error ||
+            'Failed to load plan details.'
           dispatch(showMessage({ message, variant: 'error' }))
           // Fallback to learner data if API fails
           setModalFormData({
@@ -1045,7 +1421,7 @@ const Index: React.FC = () => {
           })
           setModalOpen(true)
         })
-    } 
+    }
 
     // Load existing questions for this plan detail - always use selectedPlan
     if (selectedPlan) {
@@ -1060,9 +1436,15 @@ const Index: React.FC = () => {
           }))
           setSampleQuestions(mapped)
           // Capture baseline for change detection
-          const baseline: Record<string, { question: string; answer: 'Yes' | 'No' | '' }> = {}
+          const baseline: Record<
+            string,
+            { question: string; answer: 'Yes' | 'No' | '' }
+          > = {}
           mapped.forEach((q) => {
-            baseline[String(q.id)] = { question: q.question, answer: (q.answer || '') as any }
+            baseline[String(q.id)] = {
+              question: q.question,
+              answer: (q.answer || '') as any,
+            }
           })
           setOriginalQuestionsMap(baseline)
         })
@@ -1076,11 +1458,11 @@ const Index: React.FC = () => {
   // Handle tab change - update form data based on selected tab
   const handleTabChange = (newTabIndex: number) => {
     setActiveTab(newTabIndex)
-    
+
     if (sampledLearners.length > 0 && sampledLearners[newTabIndex]) {
       const selectedEntry = sampledLearners[newTabIndex]
       populateFormDataFromSampledLearner(selectedEntry)
-      
+
       // Load questions - always use selectedPlan for API call
       if (selectedPlan) {
         triggerGetSampleQuestions(selectedPlan)
@@ -1094,9 +1476,15 @@ const Index: React.FC = () => {
             }))
             setSampleQuestions(mapped)
             // Capture baseline for change detection
-            const baseline: Record<string, { question: string; answer: 'Yes' | 'No' | '' }> = {}
+            const baseline: Record<
+              string,
+              { question: string; answer: 'Yes' | 'No' | '' }
+            > = {}
             mapped.forEach((q) => {
-              baseline[String(q.id)] = { question: q.question, answer: (q.answer || '') as any }
+              baseline[String(q.id)] = {
+                question: q.question,
+                answer: (q.answer || '') as any,
+              }
             })
             setOriginalQuestionsMap(baseline)
           })
@@ -1139,11 +1527,13 @@ const Index: React.FC = () => {
       // Convert iqaConclusion array to object format
       const iqaConclusionObj: Record<string, any> = {}
       iqaConclusionOptions.forEach((conclusion) => {
-        iqaConclusionObj[conclusion] = modalFormData.iqaConclusion.includes(conclusion)
+        iqaConclusionObj[conclusion] =
+          modalFormData.iqaConclusion.includes(conclusion)
       })
 
       // Convert assessorDecisionCorrect string to boolean
-      const assessorDecisionCorrect = modalFormData.assessorDecisionCorrect === 'Yes'
+      const assessorDecisionCorrect =
+        modalFormData.assessorDecisionCorrect === 'Yes'
 
       const payload = {
         plan_id: selectedPlan,
@@ -1151,16 +1541,23 @@ const Index: React.FC = () => {
         completedDate: modalFormData.completedDate || undefined,
         feedback: modalFormData.feedback || undefined,
         status: modalFormData.type || undefined,
-        assessment_methods: Object.keys(assessmentMethodsObj).length > 0 ? assessmentMethodsObj : undefined,
-        iqa_conclusion: Object.keys(iqaConclusionObj).length > 0 ? iqaConclusionObj : undefined,
+        assessment_methods:
+          Object.keys(assessmentMethodsObj).length > 0
+            ? assessmentMethodsObj
+            : undefined,
+        iqa_conclusion:
+          Object.keys(iqaConclusionObj).length > 0
+            ? iqaConclusionObj
+            : undefined,
         assessor_decision_correct: assessorDecisionCorrect,
         sample_type: modalFormData.sampleType || undefined,
         plannedDate: modalFormData.plannedDate || undefined,
-        type: modalFormData.type || undefined
+        type: modalFormData.type || undefined,
       }
 
       const response = await updateSamplePlanDetail(payload).unwrap()
-      const successMessage = response?.message || 'Sample plan detail saved successfully.'
+      const successMessage =
+        response?.message || 'Sample plan detail saved successfully.'
 
       dispatch(
         showMessage({
@@ -1175,9 +1572,11 @@ const Index: React.FC = () => {
           .unwrap()
           .then((res: any) => {
             const data = res?.data || {}
-            const learners = Array.isArray(data.sampled_learners) ? data.sampled_learners : []
+            const learners = Array.isArray(data.sampled_learners)
+              ? data.sampled_learners
+              : []
             setSampledLearners(learners)
-            
+
             // Update current tab's data
             if (learners[activeTab]) {
               populateFormDataFromSampledLearner(learners[activeTab])
@@ -1186,14 +1585,16 @@ const Index: React.FC = () => {
           .catch(() => {
             // Silently fail refresh
           })
-        
+
         triggerSamplePlanLearners(selectedPlan, true)
       }
 
       // Don't close modal, just refresh data
     } catch (error: any) {
       const message =
-        error?.data?.message || error?.error || 'Failed to save sample plan detail.'
+        error?.data?.message ||
+        error?.error ||
+        'Failed to save sample plan detail.'
       dispatch(
         showMessage({
           message,
@@ -1316,6 +1717,8 @@ const Index: React.FC = () => {
         onSave={handleSaveSampleDetail}
         isSaving={isUpdatingSampleDetail}
         planDetailId={planDetailId}
+        onCreateNew={handleCreateNew}
+        isCreating={isApplySamplesLoading}
       />
     </Box>
   )

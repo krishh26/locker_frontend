@@ -77,6 +77,8 @@ interface EditSampleModalProps {
   onSave?: () => void
   isSaving?: boolean
   planDetailId?: string | number | null
+  onCreateNew?: () => void
+  isCreating?: boolean
 }
 
 export const EditSampleModal: React.FC<EditSampleModalProps> = ({
@@ -98,6 +100,8 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   onSave,
   isSaving = false,
   planDetailId = null,
+  onCreateNew,
+  isCreating = false,
 }) => {
   const dispatch = useDispatch()
   const iqaId = useUserId()
@@ -485,8 +489,8 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
             {plannedDates.length > 0 ? (
               plannedDates.map((date, index) => (
                 <Tab
-                  key={date}
-                  label={`FS ${index + 1} - (${formatDate(date)})`}
+                  key={`planned-date-${index}-${date || 'no-date'}`}
+                  label={`FS ${index + 1} - (${date ? formatDate(date) : 'No Date'})`}
                   sx={{
                     '&.Mui-selected': {
                       color: getTabColor(index),
@@ -511,6 +515,8 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
           <Button
             variant='contained'
             startIcon={<AddIcon />}
+            onClick={onCreateNew}
+            disabled={isCreating || !onCreateNew}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
@@ -520,7 +526,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
               },
             }}
           >
-            Create New
+            {isCreating ? 'Creating...' : 'Create New'}
           </Button>
         </Box>
 
