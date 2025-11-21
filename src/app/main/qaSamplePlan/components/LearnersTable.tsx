@@ -5,6 +5,7 @@ import {
   Card,
   Checkbox,
   Chip,
+  Collapse,
   FormControl,
   FormControlLabel,
   Grid,
@@ -23,6 +24,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -35,13 +38,16 @@ import FilterListOutlinedIcon from '@mui/icons-material/FilterListOutlined'
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import type { SamplePlanLearner } from 'app/store/api/sample-plan-api'
-import { sanitizeText, formatDisplayDate, getRiskChipColor } from '../utils'
-import { qaStatuses } from '../constants'
+import { sanitizeText, formatDisplayDate, getRiskChipColor, getLearnerPlannedDate } from '../utils'
+import { qaStatuses, assessmentMethods, getAssessmentMethodByCode, sampleTypes } from '../constants'
 import axios from 'axios'
 import jsonData from 'src/url.json'
 import { useUserId } from 'src/app/utils/userHelpers'
 import { useDispatch } from 'react-redux'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import { downloadCSV, generateFilename } from 'src/utils/csvExport'
+import { useNavigate } from 'react-router-dom'
+import Tooltip from '@mui/material/Tooltip'
 
 interface LearnersTableProps {
   courses: Array<{ id: string; name: string }>
@@ -77,7 +83,8 @@ interface LearnersTableProps {
   countSelectedUnits: (units?: any[]) => number
   hasPlannedDate?: boolean
   courseName?: string
-  onOpenLearnerDetailsDialog: (learner: SamplePlanLearner, learnerIndex: number) => void
+  onOpenLearnerDetailsDialog: (learner: SamplePlanLearner, learnerIndex: number, detailId?: string | number) => void
+  onUnitToggle: (learner: SamplePlanLearner, learnerIndex: number, unitKey: string) => void
 }
 
 export const LearnersTable: React.FC<LearnersTableProps> = ({
@@ -115,11 +122,15 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
   hasPlannedDate = false,
   courseName = '',
   onOpenLearnerDetailsDialog,
+  onUnitToggle,
 }) => {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const iqaId = useUserId()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingRow, setPendingRow] = useState<SamplePlanLearner | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
 
   const URL_BASE_LINK = (jsonData as any).API_LOCAL_URL
 
@@ -157,6 +168,154 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
       setConfirmOpen(false)
       setPendingRow(null)
     }
+  }
+
+  // Export learners data to CSV
+  const handleExportToCSV = () => {
+    if (!visibleRows.length) {
+      dispatch(
+        showMessage({
+          message: 'No data available to export.',
+          variant: 'warning',
+        })
+      )
+      return
+    }
+
+    try {
+      setExporting(true)
+
+      // Define CSV headers
+      const headers = [
+        'Assessor Name',
+        'Learner Name',
+        'Learner ID',
+        'Employer',
+        'Risk Level',
+        'Risk Percentage',
+        'QA Approved',
+        'Total Samples',
+        'Selected Units',
+        'Total Units',
+        'Planned Date',
+        'Course Name',
+      ]
+
+      // Convert data to CSV rows
+      const csvRows = visibleRows.map((row) => {
+        const units = Array.isArray(row.units) ? row.units : []
+        const selectedUnitsSet = getSelectedUnitsForLearner(row, visibleRows.indexOf(row))
+        const selectedUnits = selectedUnitsSet.size || countSelectedUnits(units)
+        const totalUnits = units.length
+        const plannedDate = getLearnerPlannedDate(row)
+
+        return [
+          sanitizeText(row.assessor_name),
+          sanitizeText(row.learner_name),
+          row.learner_id || row.learnerId || row.id || '-',
+          sanitizeText((row as any).employer) || '-',
+          sanitizeText(row.risk_level),
+          (row as any).risk_percentage || '-',
+          row.qa_approved ? 'Yes' : 'No',
+          (row as any).total_samples || '0',
+          selectedUnits.toString(),
+          totalUnits.toString(),
+          plannedDate ? formatDisplayDate(plannedDate) : '-',
+          courseName || '-',
+        ]
+      })
+
+      // Combine headers and rows
+      const csvContent = [headers, ...csvRows]
+        .map((row) => row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(','))
+        .join('\n')
+
+      // Generate filename with date
+      const filename = generateFilename('qa-sample-plan-learners')
+
+      // Download CSV
+      downloadCSV(csvContent, filename)
+
+      dispatch(
+        showMessage({
+          message: 'Data exported successfully.',
+          variant: 'success',
+        })
+      )
+    } catch (error: any) {
+      dispatch(
+        showMessage({
+          message: 'Failed to export data. Please try again.',
+          variant: 'error',
+        })
+      )
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // Handle view documents/evidence
+  const handleViewDocuments = (learner: SamplePlanLearner) => {
+    const learnerId = learner.learner_id || learner.learnerId || learner.id
+    if (learnerId) {
+      // Navigate to evidence library or documents page for this learner
+      navigate(`/evidence-library?learner_id=${learnerId}`)
+    } else {
+      dispatch(
+        showMessage({
+          message: 'Unable to open documents. Learner ID not found.',
+          variant: 'warning',
+        })
+      )
+    }
+  }
+
+  // Handle view portfolio
+  const handleViewPortfolio = (learner: SamplePlanLearner) => {
+    const learnerId = learner.learner_id || learner.learnerId || learner.id
+    if (learnerId) {
+      // Navigate to learner portfolio page
+      navigate(`/portfolio?learner_id=${learnerId}`)
+    } else {
+      dispatch(
+        showMessage({
+          message: 'Unable to open portfolio. Learner ID not found.',
+          variant: 'warning',
+        })
+      )
+    }
+  }
+
+  // Toggle row expansion
+  const toggleRowExpansion = (index: number) => {
+    setExpandedRows((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(index)) {
+        newSet.delete(index)
+      } else {
+        newSet.add(index)
+      }
+      return newSet
+    })
+  }
+
+  // Get sample type label
+  const getSampleTypeLabel = (sampleType: string) => {
+    const type = sampleTypes.find((t) => t.value === sampleType)
+    return type?.label || sampleType
+  }
+
+  // Get assessment method names that are true
+  const getTrueAssessmentMethods = (assessmentMethodsObj: Record<string, boolean>) => {
+    if (!assessmentMethodsObj || typeof assessmentMethodsObj !== 'object') {
+      return []
+    }
+    return Object.entries(assessmentMethodsObj)
+      .filter(([_, value]) => value === true)
+      .map(([code]) => {
+        const method = getAssessmentMethodByCode(code)
+        return method ? `${method.code} - ${method.title}` : code
+      })
   }
 
   return (
@@ -295,9 +454,10 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
             color='secondary'
             startIcon={<DownloadOutlinedIcon />}
             sx={{ textTransform: 'none', fontWeight: 600 }}
-            disabled={!filterApplied || !visibleRows.length || isLearnersInFlight}
+            disabled={!filterApplied || !visibleRows.length || isLearnersInFlight || exporting}
+            onClick={handleExportToCSV}
           >
-            Export
+            {exporting ? 'Exporting...' : 'Export'}
           </Button>
           <Button
             variant='outlined'
@@ -392,20 +552,19 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
           <Table stickyHeader>
             <TableHead>
               <TableRow>
+                <TableCell width={50}></TableCell>
                 <TableCell>Assessor</TableCell>
                 <TableCell>Risk Level</TableCell>
                 <TableCell>QA Approved</TableCell>
                 <TableCell>Learner</TableCell>
                 <TableCell>Employer</TableCell>
                 <TableCell align='center'>Actions</TableCell>
-                <TableCell>Units</TableCell>
-                {hasPlannedDate && <TableCell> {sanitizeText(courseName)}</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {!filterApplied ? (
                 <TableRow>
-                  <TableCell colSpan={hasPlannedDate ? 8 : 7} align='center' sx={{ py: 6 }}>
+                  <TableCell colSpan={7} align='center' sx={{ py: 6 }}>
                     <Typography variant='body2' color='text.secondary'>
                       Select a course and plan, then choose Filter to load learners.
                     </Typography>
@@ -413,7 +572,7 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                 </TableRow>
               ) : isLearnersInFlight ? (
                 <TableRow>
-                  <TableCell colSpan={hasPlannedDate ? 8 : 7} align='center' sx={{ py: 6 }}>
+                  <TableCell colSpan={7} align='center' sx={{ py: 6 }}>
                     <Stack
                       direction='row'
                       spacing={1}
@@ -429,7 +588,7 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                 </TableRow>
               ) : isLearnersError ? (
                 <TableRow>
-                  <TableCell colSpan={hasPlannedDate ? 8 : 7} align='center' sx={{ py: 6 }}>
+                  <TableCell colSpan={7} align='center' sx={{ py: 6 }}>
                     <Typography variant='body2' color='error'>
                       {filterError ||
                         'Something went wrong while fetching learners for this plan.'}
@@ -443,88 +602,263 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                   const selectedUnits =
                     selectedUnitsSet.size || countSelectedUnits(units)
                   const totalUnits = units.length
+                  const isExpanded = expandedRows.has(index)
 
                   return (
-                    <TableRow
-                      key={`${row.assessor_name ?? 'assessor'}-${row.learner_name ?? index}`}
-                      hover
-                      sx={{
-                        '&:last-child td, &:last-child th': { border: 0 },
-                      }}
-                    >
-                      <TableCell sx={{ minWidth: 160 }}>
-                        <Stack spacing={0.5}>
-                          <Typography variant='body2' fontWeight={600}>
-                            {sanitizeText(row.assessor_name)}
+                    <React.Fragment key={`${row.assessor_name ?? 'assessor'}-${row.learner_name ?? index}`}>
+                      <TableRow
+                        hover
+                        sx={{
+                          '&:last-child td, &:last-child th': { border: 0 },
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => toggleRowExpansion(index)}
+                      >
+                        <TableCell>
+                          <IconButton
+                            size='small'
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleRowExpansion(index)
+                            }}
+                          >
+                            {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                          </IconButton>
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 160 }}>
+                          <Stack spacing={0.5}>
+                            <Typography variant='body2' fontWeight={600}>
+                              {sanitizeText(row.assessor_name)}
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            size='small'
+                            label={sanitizeText(row.risk_level)}
+                            color={getRiskChipColor(row.risk_level)}
+                            variant='outlined'
+                            sx={{ fontWeight: 600 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Checkbox
+                            color='primary'
+                            checked={Boolean(row.qa_approved)}
+                            onChange={(e) => {
+                              e.stopPropagation()
+                              setPendingRow(row)
+                              setConfirmOpen(true)
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 180 }}>
+                          <Typography variant='body2'>
+                            {sanitizeText(row.learner_name)}
                           </Typography>
-                        </Stack>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          size='small'
-                          label={sanitizeText(row.risk_level)}
-                          color={getRiskChipColor(row.risk_level)}
-                          variant='outlined'
-                          sx={{ fontWeight: 600 }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Checkbox
-                          color='primary'
-                          checked={Boolean(row.qa_approved)}
-                          onChange={() => {
-                            setPendingRow(row)
-                            setConfirmOpen(true)
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ minWidth: 180 }}>
-                        <Typography variant='body2'>
-                          {sanitizeText(row.learner_name)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell sx={{ minWidth: 180 }}>
-                        <Typography variant='body2'>
-                          -
-                        </Typography>
-                      </TableCell>
-                      <TableCell align='center'>
-                        <Stack direction='row' spacing={1} justifyContent='center'>
-                          <IconButton size='small' color='primary'>
-                            <InsertDriveFileOutlinedIcon fontSize='small' />
-                          </IconButton>
-                          <IconButton size='small' color='primary'>
-                            <FolderSharedOutlinedIcon fontSize='small' />
-                          </IconButton>
-                        </Stack>
-                      </TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>
-                        <Typography
-                          variant='body2'
-                          onClick={() => onOpenUnitSelectionDialog(row, index)}
-                          sx={{
-                            cursor: 'pointer',
-                            color: 'primary.main',
-                            textDecoration: 'underline',
-                            '&:hover': {
-                              color: 'primary.dark',
-                            },
-                          }}
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 180 }}>
+                          <Typography variant='body2'>
+                            {sanitizeText((row as any).employer)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align='center' onClick={(e) => e.stopPropagation()}>
+                          <Stack direction='row' spacing={1} justifyContent='center'>
+                            <Tooltip title='View Documents / Evidence' arrow>
+                              <IconButton
+                                size='small'
+                                color='primary'
+                                onClick={() => handleViewDocuments(row)}
+                              >
+                                <InsertDriveFileOutlinedIcon fontSize='small' />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title='View Portfolio' arrow>
+                              <IconButton
+                                size='small'
+                                color='primary'
+                                onClick={() => handleViewPortfolio(row)}
+                              >
+                                <FolderSharedOutlinedIcon fontSize='small' />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell
+                          style={{ paddingBottom: 0, paddingTop: 0 }}
+                          colSpan={7}
                         >
-                          {selectedUnits}/{totalUnits} units
-                        </Typography>
-                      </TableCell>
-                      <TableCell sx={{ minWidth: hasPlannedDate ? 160 : 140 }} className='cursor-pointer' onClick={() => onOpenLearnerDetailsDialog(row, index)}>
-                        <Typography variant='body2'>
-                          {formatDisplayDate(row.planned_date)}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
+                          <Collapse in={isExpanded} timeout='auto' unmountOnExit>
+                            <Box sx={{ margin: 1 }}>
+                              {units.length > 0 ? (
+                                (() => {
+                                  // Show all units, not just those with sample_history
+                                  const allUnits = units
+                                  
+                                  // Filter units that have sample_history for display
+                                  const unitsWithHistory = allUnits.filter((unit: any) => 
+                                    Array.isArray(unit?.sample_history) && unit.sample_history.length > 0
+                                  )
+
+                                  // Find the maximum number of sample_history entries across all units
+                                  const maxHistoryCount = unitsWithHistory.length > 0
+                                    ? Math.max(...unitsWithHistory.map((unit: any) => unit.sample_history.length))
+                                    : 0
+
+                                  return (
+                                    <Table size='small' sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                                      <TableHead>
+                                        <TableRow>
+                                          {allUnits.map((unit: any, unitIndex: number) => {
+                                            const unitKey = unit.unit_code || unit.unit_name || ''
+                                            const selectedUnitsSet = getSelectedUnitsForLearner(row, index)
+                                            const isUnitSelected = unitKey ? selectedUnitsSet.has(unitKey) : false
+                                            
+                                            return (
+                                              <TableCell
+                                                key={`unit-header-${unit.unit_code || unitIndex}`}
+                                                sx={{
+                                                  backgroundColor: 'grey.100',
+                                                  fontWeight: 600,
+                                                  textAlign: 'left',
+                                                  borderRight: 1,
+                                                  borderColor: 'divider',
+                                                  '&:last-child': {
+                                                    borderRight: 0,
+                                                  },
+                                                }}
+                                              >
+                                                <Stack direction='row' spacing={1} alignItems='center'>
+                                                  <Checkbox
+                                                    size='small'
+                                                    checked={isUnitSelected}
+                                                    onChange={(e) => {
+                                                      e.stopPropagation()
+                                                      if (unitKey) {
+                                                        onUnitToggle(row, index, unitKey)
+                                                      }
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    sx={{ p: 0.5 }}
+                                                    color='primary'
+                                                  />
+                                                  <Box sx={{ flex: 1 }}>
+                                                    <Typography variant='body2' fontWeight={600}>
+                                                      {sanitizeText(unit.unit_name) || `Unit ${unitIndex + 1}`}
+                                                    </Typography>
+                                                  </Box>
+                                                </Stack>
+                                              </TableCell>
+                                            )
+                                          })}
+                                        </TableRow>
+                                      </TableHead>
+                                      {maxHistoryCount > 0 && (
+                                        <TableBody>
+                                          {Array.from({ length: maxHistoryCount }).map((_, rowIndex) => (
+                                            <TableRow key={`history-row-${rowIndex}`}>
+                                              {allUnits.map((unit: any, unitIndex: number) => {
+                                                const hasSampleHistory = Array.isArray(unit?.sample_history) && unit.sample_history.length > 0
+                                                const history = hasSampleHistory ? unit.sample_history[rowIndex] : null
+
+                                                if (!history) {
+                                                  return (
+                                                    <TableCell
+                                                      key={`unit-${unit.unit_code || unitIndex}-row-${rowIndex}`}
+                                                      sx={{
+                                                        borderRight: 1,
+                                                        borderColor: 'divider',
+                                                        '&:last-child': {
+                                                          borderRight: 0,
+                                                        },
+                                                      }}
+                                                    >
+                                                      {/* Empty cell if no entry */}
+                                                    </TableCell>
+                                                  )
+                                                }
+
+                                                const assessmentMethodCodes = history.assessment_methods
+                                                  ? Object.entries(history.assessment_methods)
+                                                      .filter(([_, value]) => value === true)
+                                                      .map(([code]) => code)
+                                                  : []
+
+                                                return (
+                                                  <TableCell
+                                                    key={`unit-${unit.unit_code || unitIndex}-row-${rowIndex}`}
+                                                    sx={{
+                                                      borderRight: 1,
+                                                      borderColor: 'divider',
+                                                      '&:last-child': {
+                                                        borderRight: 0,
+                                                      },
+                                                    }}
+                                                  >
+                                                    <Box>
+                                                      <Typography
+                                                        variant='body2'
+                                                        onClick={(e) => {
+                                                          e.stopPropagation()
+                                                          if (history.detail_id) {
+                                                            onOpenLearnerDetailsDialog(row, index, history.detail_id)
+                                                          }
+                                                        }}
+                                                        sx={{
+                                                          cursor: history.detail_id ? 'pointer' : 'default',
+                                                          color: history.detail_id ? 'primary.main' : 'inherit',
+                                                          textDecoration: history.detail_id ? 'underline' : 'none',
+                                                          fontWeight: 500,
+                                                          '&:hover': history.detail_id
+                                                            ? {
+                                                                color: 'primary.dark',
+                                                              }
+                                                            : {},
+                                                        }}
+                                                      >
+                                                        {formatDisplayDate(history.planned_date)}
+                                                      </Typography>
+                                                      {assessmentMethodCodes.length > 0 && (
+                                                        <Typography
+                                                          variant='body2'
+                                                          sx={{
+                                                            fontSize: '0.875rem',
+                                                            mt: 0.5,
+                                                            color: 'text.secondary',
+                                                            fontFamily: 'monospace',
+                                                          }}
+                                                        >
+                                                          {assessmentMethodCodes.join(' ')}
+                                                        </Typography>
+                                                      )}
+                                                    </Box>
+                                                  </TableCell>
+                                                )
+                                              })}
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      )}
+                                    </Table>
+                                  )
+                                })()
+                              ) : (
+                                <Typography variant='body2' color='text.secondary' sx={{ py: 2, px: 2 }}>
+                                  No units available for this learner.
+                                </Typography>
+                              )}
+                            </Box>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
                   )
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={hasPlannedDate ? 8 : 7} align='center' sx={{ py: 6 }}>
+                  <TableCell colSpan={7} align='center' sx={{ py: 6 }}>
                     <Typography variant='body2' color='text.secondary'>
                       No learners match the current filters.
                     </Typography>

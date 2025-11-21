@@ -72,6 +72,20 @@ const Index: React.FC = () => {
   const [modalOpen, setModalOpen] = useState<boolean>(false)
   const [activeTab, setActiveTab] = useState<number>(0)
   const [planDetailId, setPlanDetailId] = useState<string | number | null>(null)
+  const [sampledLearners, setSampledLearners] = useState<Array<{
+    detail_id: number
+    learner_id: number
+    learner_name: string
+    sample_type: string
+    status: string
+    outcome: string | null
+    feedback: string | null
+    planned_date: string
+    completed_date: string | null
+    assessment_methods: Record<string, boolean>
+    iqa_conclusion: Record<string, boolean> | null
+    assessor_decision_correct: string | null
+  }>>([])
   const [modalFormData, setModalFormData] = useState<ModalFormData>({
     qaName: '',
     plannedDate: '',
@@ -274,6 +288,7 @@ const Index: React.FC = () => {
       return
     }
 
+    // API response structure: { message, status, data: { plan_id, course_name, learners: [...] } }
     const responseData = (learnersResponse as any)?.data ?? learnersResponse
 
     if (
@@ -361,14 +376,12 @@ const Index: React.FC = () => {
           selectedUnitsMap[learnerKey] || new Set<string>()
 
         const selectedUnits = units
-          .filter((unit) => {
+          .filter((unit: any) => {
             if (!unit) return false
-            // Check both the original is_selected flag and the selectedUnitsMap
+            // Only include units that are explicitly selected via checkbox
+            // User must select units via checkboxes in the expanded table
             const unitKey = unit.unit_code || unit.unit_name || ''
-            return (
-              unit.is_selected === true ||
-              (unitKey && selectedUnitsSet.has(unitKey))
-            )
+            return unitKey && selectedUnitsSet.has(unitKey)
           })
           .map((unit, unitIndex) => {
             const unitIdRaw = unit?.unit_code ?? `${rowIndex}-${unitIndex}`
@@ -446,8 +459,10 @@ const Index: React.FC = () => {
       )
 
       setFilterError('')
+      
+      // Refresh the learners table data
       if (selectedPlan) {
-        triggerSamplePlanLearners(selectedPlan, true)
+        triggerSamplePlanLearners(selectedPlan)
       }
     } catch (error: any) {
       const message =
@@ -469,6 +484,7 @@ const Index: React.FC = () => {
       return []
     }
 
+    // API response structure: { message, status, data: { plan_id, course_name, learners: [...] } }
     const responseData = (learnersResponse as any)?.data ?? learnersResponse
 
     if (Array.isArray(responseData?.learners)) {
@@ -482,9 +498,26 @@ const Index: React.FC = () => {
     return []
   }, [learnersResponse])
 
-  // Check if planned_date exists in any learner
+  // Check if planned_date exists in any learner's sample_history
   const hasPlannedDate = useMemo(() => {
-    return learnersData.some((learner) => learner.planned_date != null)
+    return learnersData.some((learner) => {
+      // Check if learner has planned_date directly
+      if (learner.planned_date != null) {
+        return true
+      }
+      // Check if any unit has sample_history with planned_date
+      if (Array.isArray(learner.units)) {
+        return learner.units.some((unit: any) => {
+          if (Array.isArray(unit?.sample_history)) {
+            return unit.sample_history.some(
+              (history: any) => history?.planned_date != null
+            )
+          }
+          return false
+        })
+      }
+      return false
+    })
   }, [learnersData])
 
   // Get course name from planSummary or courses array
@@ -499,12 +532,30 @@ const Index: React.FC = () => {
     return ''
   }, [planSummary, selectedCourse, courses])
 
-  // Get unique planned dates from learners
+  // Get unique planned dates from sampled_learners for modal tabs
   const plannedDates = useMemo(() => {
+    if (sampledLearners.length > 0) {
+      return sampledLearners.map((entry) => entry.planned_date).filter(Boolean)
+    }
+    
+    // Fallback: Get unique planned dates from learners' sample_history
     const dates = new Set<string>()
     learnersData.forEach((learner) => {
+      // Check learner's direct planned_date
       if (learner.planned_date) {
         dates.add(learner.planned_date)
+      }
+      // Check all units' sample_history for planned dates
+      if (Array.isArray(learner.units)) {
+        learner.units.forEach((unit: any) => {
+          if (Array.isArray(unit?.sample_history)) {
+            unit.sample_history.forEach((history: any) => {
+              if (history?.planned_date) {
+                dates.add(history.planned_date)
+              }
+            })
+          }
+        })
       }
     })
     return Array.from(dates).sort((a, b) => {
@@ -512,9 +563,11 @@ const Index: React.FC = () => {
       const dateB = new Date(b).getTime()
       return dateA - dateB
     })
-  }, [learnersData])
+  }, [sampledLearners, learnersData])
 
   // Initialize selectedUnitsMap from API response
+  // Since units now have sample_history instead of is_selected,
+  // we consider a unit "selected" if it has any sample_history entries
   useEffect(() => {
     if (!learnersData.length) {
       return
@@ -526,8 +579,9 @@ const Index: React.FC = () => {
       const selectedSet = new Set<string>()
 
       if (Array.isArray(learner.units)) {
-        learner.units.forEach((unit) => {
-          if (unit?.is_selected) {
+        learner.units.forEach((unit: any) => {
+          // A unit is considered "selected" if it has sample_history entries
+          if (Array.isArray(unit?.sample_history) && unit.sample_history.length > 0) {
             const unitKey = unit.unit_code || unit.unit_name || ''
             if (unitKey) {
               selectedSet.add(unitKey)
@@ -658,24 +712,31 @@ const Index: React.FC = () => {
   ) => {
     setSelectedLearnerForUnits({ learner, learnerIndex })
     const learnerKey = `${learner.learner_name ?? ''}-${learnerIndex}`
-    const existingSelections = selectedUnitsMap[learnerKey] || new Set<string>()
-
-    // Initialize with current selections from the learner's units
-    if (Array.isArray(learner.units)) {
-      learner.units.forEach((unit) => {
-        if (unit?.is_selected) {
-          const unitKey = unit.unit_code || unit.unit_name || ''
-          if (unitKey) {
-            existingSelections.add(unitKey)
+    
+    // If selections don't exist for this learner, initialize with units that have sample_history
+    // If selections already exist, use them (preserves user's unchecked state)
+    if (!selectedUnitsMap[learnerKey]) {
+      const initialSelections = new Set<string>()
+      
+      // Initialize with units that have sample_history (checked by default)
+      if (Array.isArray(learner.units)) {
+        learner.units.forEach((unit: any) => {
+          const hasSampleHistory = Array.isArray(unit?.sample_history) && unit.sample_history.length > 0
+          if (hasSampleHistory) {
+            const unitKey = unit.unit_code || unit.unit_name || ''
+            if (unitKey) {
+              initialSelections.add(unitKey)
+            }
           }
-        }
-      })
-    }
+        })
+      }
 
-    setSelectedUnitsMap((prev) => ({
-      ...prev,
-      [learnerKey]: existingSelections,
-    }))
+      setSelectedUnitsMap((prev) => ({
+        ...prev,
+        [learnerKey]: initialSelections,
+      }))
+    }
+    
     setUnitSelectionDialogOpen(true)
   }
 
@@ -689,6 +750,26 @@ const Index: React.FC = () => {
 
     const learnerKey = `${selectedLearnerForUnits.learner.learner_name ?? ''}-${selectedLearnerForUnits.learnerIndex
       }`
+    setSelectedUnitsMap((prev) => {
+      const current = prev[learnerKey] || new Set<string>()
+      const updated = new Set(current)
+
+      if (updated.has(unitKey)) {
+        updated.delete(unitKey)
+      } else {
+        updated.add(unitKey)
+      }
+
+      return {
+        ...prev,
+        [learnerKey]: updated,
+      }
+    })
+  }
+
+  // Handle unit toggle from expanded table (without opening dialog)
+  const handleUnitToggleFromTable = (learner: SamplePlanLearner, learnerIndex: number, unitKey: string) => {
+    const learnerKey = `${learner.learner_name ?? ''}-${learnerIndex}`
     setSelectedUnitsMap((prev) => {
       const current = prev[learnerKey] || new Set<string>()
       const updated = new Set(current)
@@ -858,53 +939,115 @@ const Index: React.FC = () => {
     }
   }
 
-  const handleOpenLearnerDetailsDialog = (learner: SamplePlanLearner, learnerIndex: number) => {
-    // Use learner.id as plan_detail_id (this might need adjustment based on actual API response)
-    setPlanDetailId(selectedPlan)
-    
-    // Call API to get plan details
+  // Helper function to populate form data from sampled_learners entry
+  const populateFormDataFromSampledLearner = (sampledLearner: any) => {
+    // Convert assessment_methods object to array of codes
+    const assessmentMethodsArray: string[] = []
+    if (sampledLearner.assessment_methods && typeof sampledLearner.assessment_methods === 'object') {
+      Object.entries(sampledLearner.assessment_methods).forEach(([code, value]) => {
+        if (value === true) {
+          assessmentMethodsArray.push(code)
+        }
+      })
+    }
+
+    // Convert iqa_conclusion object to array
+    const iqaConclusionArray: string[] = []
+    if (sampledLearner.iqa_conclusion && typeof sampledLearner.iqa_conclusion === 'object') {
+      Object.entries(sampledLearner.iqa_conclusion).forEach(([key, value]) => {
+        if (value === true) {
+          iqaConclusionArray.push(key)
+        }
+      })
+    }
+
+    setModalFormData({
+      qaName: sampledLearner.learner_name || '',
+      plannedDate: sampledLearner.planned_date || '',
+      assessmentMethods: assessmentMethodsArray,
+      assessmentProcesses: '',
+      feedback: sampledLearner.feedback || '',
+      type: sampledLearner.status || 'Formative',
+      completedDate: sampledLearner.completed_date || '',
+      sampleType: sampledLearner.sample_type || '',
+      iqaConclusion: iqaConclusionArray,
+      assessorDecisionCorrect: sampledLearner.assessor_decision_correct || 'No',
+    })
+
+    // Set planDetailId to detail_id for this entry
+    setPlanDetailId(sampledLearner.detail_id)
+  }
+
+  const handleOpenLearnerDetailsDialog = (learner: SamplePlanLearner, learnerIndex: number, detailId?: string | number) => {
+    // Call API to get plan details - always use selectedPlan
     if (selectedPlan) {
       triggerGetPlanDetails(selectedPlan)
         .unwrap()
         .then((res: any) => {
           const data = res?.data || {}
-          console.log("🚀 ~ handleOpenLearnerDetailsDialog ~ data:", data)
-          // setModalFormData({
-          //   qaName: learner.assessor_name as string ?? '',
-          //   plannedDate: data.plannedDate || data.planned_date || learner.planned_date || '',
-          //   assessmentMethods: data.assessmentMethods || data.assessment_methods || learner.assessment_methods || [],
-          //   assessmentProcesses: data.assessmentProcesses || data.assessment_processes || learner.assessment_processes || '',
-          //   feedback: data.feedback || learner.feedback || '',
-          //   type: data.type || learner.type || '',
-          //   completedDate: data.completedDate || data.completed_date || learner.completed_date || '',
-          //   sampleType: data.sampleType || data.sample_type || learner.sample_type || '',
-          //   iqaConclusion: data.iqaConclusion || data.iqa_conclusion || learner.iqa_conclusion || [],
-          //   assessorDecisionCorrect: data.assessorDecisionCorrect || data.assessor_decision_correct || learner.assessor_decision_correct || '',
-          // })
-          // setModalOpen(true)
+          
+          // Store sampled_learners array
+          const learners = Array.isArray(data.sampled_learners) ? data.sampled_learners : []
+          setSampledLearners(learners)
+
+          // Find the specific entry by detail_id if provided, otherwise use first entry
+          let selectedEntry = null
+          if (detailId) {
+            selectedEntry = learners.find((entry: any) => entry.detail_id === Number(detailId))
+          }
+          
+          // If no match found or no detailId provided, use first entry
+          if (!selectedEntry && learners.length > 0) {
+            selectedEntry = learners[0]
+            setActiveTab(0)
+          } else if (selectedEntry) {
+            // Find the index of the selected entry for tab
+            const tabIndex = learners.findIndex((entry: any) => entry.detail_id === selectedEntry.detail_id)
+            setActiveTab(tabIndex >= 0 ? tabIndex : 0)
+          }
+
+          // Populate form data from selected entry
+          if (selectedEntry) {
+            populateFormDataFromSampledLearner(selectedEntry)
+          } else {
+            // Fallback if no entries
+            setModalFormData({
+              qaName: learner.assessor_name || '',
+              plannedDate: '',
+              assessmentMethods: [],
+              assessmentProcesses: '',
+              feedback: '',
+              type: 'Formative',
+              completedDate: '',
+              sampleType: '',
+              iqaConclusion: [],
+              assessorDecisionCorrect: 'No',
+            })
+          }
+
+          setModalOpen(true)
         })
         .catch((error: any) => {
-          console.log("🚀 ~ handleOpenLearnerDetailsDialog ~ error:", error)
+          const message = error?.data?.message || error?.error || 'Failed to load plan details.'
+          dispatch(showMessage({ message, variant: 'error' }))
           // Fallback to learner data if API fails
-          // const message = error?.data?.message || error?.error || 'Failed to load plan details.'
-          // dispatch(showMessage({ message, variant: 'error' }))
-          // setModalFormData({
-          //   qaName: learner.assessor_name as string ?? '',
-          //   plannedDate: learner.planned_date ?? '',
-          //   assessmentMethods: learner.assessment_methods as string[] ?? [],
-          //   assessmentProcesses: learner.assessment_processes as string ?? '',
-          //   feedback: learner.feedback as string ?? '',
-          //   type: learner.type as string ?? '',
-          //   completedDate: learner.completed_date as string ?? '',
-          //   sampleType: learner.sample_type as string ?? '',
-          //   iqaConclusion: learner.iqa_conclusion as string[] ?? [],
-          //   assessorDecisionCorrect: learner.assessor_decision_correct as 'Yes' | 'No' | '' || '',
-          // })
-          // setModalOpen(true)
+          setModalFormData({
+            qaName: learner.assessor_name || '',
+            plannedDate: '',
+            assessmentMethods: [],
+            assessmentProcesses: '',
+            feedback: '',
+            type: 'Formative',
+            completedDate: '',
+            sampleType: '',
+            iqaConclusion: [],
+            assessorDecisionCorrect: 'No',
+          })
+          setModalOpen(true)
         })
     } 
 
-    // Load existing questions for this plan detail
+    // Load existing questions for this plan detail - always use selectedPlan
     if (selectedPlan) {
       triggerGetSampleQuestions(selectedPlan)
         .unwrap()
@@ -930,11 +1073,46 @@ const Index: React.FC = () => {
     }
   }
 
+  // Handle tab change - update form data based on selected tab
+  const handleTabChange = (newTabIndex: number) => {
+    setActiveTab(newTabIndex)
+    
+    if (sampledLearners.length > 0 && sampledLearners[newTabIndex]) {
+      const selectedEntry = sampledLearners[newTabIndex]
+      populateFormDataFromSampledLearner(selectedEntry)
+      
+      // Load questions - always use selectedPlan for API call
+      if (selectedPlan) {
+        triggerGetSampleQuestions(selectedPlan)
+          .unwrap()
+          .then((res: any) => {
+            const list = Array.isArray(res?.data) ? res.data : []
+            const mapped = list.map((q: any) => ({
+              id: String(q.id),
+              question: q.question_text ?? '',
+              answer: (q.answer as 'Yes' | 'No' | '') ?? '',
+            }))
+            setSampleQuestions(mapped)
+            // Capture baseline for change detection
+            const baseline: Record<string, { question: string; answer: 'Yes' | 'No' | '' }> = {}
+            mapped.forEach((q) => {
+              baseline[String(q.id)] = { question: q.question, answer: (q.answer || '') as any }
+            })
+            setOriginalQuestionsMap(baseline)
+          })
+          .catch(() => {
+            setSampleQuestions([])
+            setOriginalQuestionsMap({})
+          })
+      }
+    }
+  }
+
   const handleSaveSampleDetail = async () => {
-    if (!selectedPlan) {
+    if (!selectedPlan || !planDetailId) {
       dispatch(
         showMessage({
-          message: 'Please select a plan before saving.',
+          message: 'Please select a plan and detail before saving.',
           variant: 'error',
         })
       )
@@ -969,6 +1147,7 @@ const Index: React.FC = () => {
 
       const payload = {
         plan_id: selectedPlan,
+        detail_id: planDetailId,
         completedDate: modalFormData.completedDate || undefined,
         feedback: modalFormData.feedback || undefined,
         status: modalFormData.type || undefined,
@@ -990,11 +1169,28 @@ const Index: React.FC = () => {
         })
       )
 
+      // Refresh the plan details to get updated sampled_learners
       if (selectedPlan) {
+        triggerGetPlanDetails(selectedPlan)
+          .unwrap()
+          .then((res: any) => {
+            const data = res?.data || {}
+            const learners = Array.isArray(data.sampled_learners) ? data.sampled_learners : []
+            setSampledLearners(learners)
+            
+            // Update current tab's data
+            if (learners[activeTab]) {
+              populateFormDataFromSampledLearner(learners[activeTab])
+            }
+          })
+          .catch(() => {
+            // Silently fail refresh
+          })
+        
         triggerSamplePlanLearners(selectedPlan, true)
       }
 
-      setModalOpen(false)
+      // Don't close modal, just refresh data
     } catch (error: any) {
       const message =
         error?.data?.message || error?.error || 'Failed to save sample plan detail.'
@@ -1087,6 +1283,7 @@ const Index: React.FC = () => {
             hasPlannedDate={hasPlannedDate}
             courseName={courseName}
             onOpenLearnerDetailsDialog={handleOpenLearnerDetailsDialog}
+            onUnitToggle={handleUnitToggleFromTable}
           />
         </Grid>
       </Grid>
@@ -1104,7 +1301,7 @@ const Index: React.FC = () => {
         open={modalOpen}
         onClose={handleCloseModal}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         modalFormData={modalFormData}
         onFormDataChange={handleModalFormChange}
         onAssessmentMethodToggle={handleAssessmentMethodToggle}
