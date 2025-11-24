@@ -885,15 +885,10 @@ const Index: React.FC = () => {
     // Get sample type from form data or use default
     const sampleTypeForRequest = modalFormData.sampleType || 'Learner interview'
 
-    // Build assessment methods payload from form data
-    const assessmentMethodsArray = Array.isArray(
-      modalFormData.assessmentMethods
-    )
-      ? modalFormData.assessmentMethods
-      : []
+
     const assessmentMethodsPayload = assessmentMethodCodesForPayload.reduce(
       (accumulator, code) => {
-        accumulator[code] = assessmentMethodsArray.includes(code)
+        accumulator[code] = false
         return accumulator
       },
       {} as Record<string, boolean>
@@ -926,194 +921,17 @@ const Index: React.FC = () => {
       learners: learnersPayload,
     }
 
-    try {
-      const response = await applySamplePlanLearners(payload).unwrap()
-      const successMessage =
-        response?.message || 'New entry created successfully.'
-
-      dispatch(
-        showMessage({
-          message: successMessage,
-          variant: 'success',
-        })
-      )
-
-      // Refresh the learners table data and plan details after successful creation
+    applySamplePlanLearners(payload).then((result) => {
+      dispatch(showMessage({ message: 'New entry created successfully.', variant: 'success' }))
       if (selectedPlan) {
         // First refresh learners to get updated unit sample_history
-        await triggerSamplePlanLearners(selectedPlan)
-          .unwrap()
-          .then(async (learnersResponse: any) => {
-            // Get updated learner data
-            const updatedLearnersData = Array.isArray(learnersResponse?.data)
-              ? learnersResponse.data
-              : Array.isArray(learnersResponse?.data?.learners)
-              ? learnersResponse.data.learners
-              : []
-
-            // Find the updated learner with fresh unit data
-            const learnerId =
-              currentModalLearner?.learner_id ??
-              currentModalLearner?.learnerId ??
-              currentModalLearner?.id
-            const updatedLearner = updatedLearnersData.find(
-              (l: any) => (l.learner_id ?? l.learnerId ?? l.id) === learnerId
-            )
-
-            // Then refresh plan details to get updated sampled_learners
-            return triggerGetPlanDetails(selectedPlan)
-              .unwrap()
-              .then((res: any) => {
-                const data = res?.data || {}
-                const learners = Array.isArray(data.sampled_learners)
-                  ? data.sampled_learners
-                  : []
-
-                // If unitKey is provided, filter to only show entries for that unit
-                const learnerToUse = updatedLearner || currentModalLearner
-                let filteredLearners = learners
-
-                if (currentModalUnitKey && learnerToUse?.units) {
-                  const unit = Array.isArray(learnerToUse.units)
-                    ? learnerToUse.units.find(
-                        (u: any) =>
-                          (u.unit_code || u.unit_name) === currentModalUnitKey
-                      )
-                    : null
-
-                  if (unit && Array.isArray(unit.sample_history)) {
-                    // Get all detail_ids from this unit's updated sample_history
-                    const unitDetailIds = new Set(
-                      unit.sample_history
-                        .map((h: any) => h.detail_id)
-                        .filter((id: any) => id != null)
-                    )
-                    filteredLearners = learners.filter((entry: any) =>
-                      unitDetailIds.has(Number(entry.detail_id))
-                    )
-                  }
-                }
-
-                // Update sampledLearners state - this will trigger plannedDates to update via useEffect
-                setSampledLearners(filteredLearners)
-
-                // Find the newly created entry by matching planned date
-                let newEntryIndex = filteredLearners.findIndex((entry: any) => {
-                  const entryPlannedDate =
-                    entry.planned_date || entry.plannedDate
-                  return entryPlannedDate === plannedDate
-                })
-
-                // If not found in filtered list, check all learners
-                if (newEntryIndex < 0 && learners.length > 0) {
-                  newEntryIndex = learners.findIndex((entry: any) => {
-                    const entryPlannedDate =
-                      entry.planned_date || entry.plannedDate
-                    return entryPlannedDate === plannedDate
-                  })
-
-                  // If found in all learners but not in filtered, add it to filtered list
-                  if (newEntryIndex >= 0) {
-                    const newEntry = learners[newEntryIndex]
-                    filteredLearners = [...filteredLearners, newEntry]
-                    setSampledLearners(filteredLearners)
-                    newEntryIndex = filteredLearners.length - 1
-                  }
-                }
-
-                // Set active tab to new entry
-                if (newEntryIndex >= 0) {
-                  setActiveTab(newEntryIndex)
-                  const newEntry = filteredLearners[newEntryIndex]
-                  populateFormDataFromSampledLearner(newEntry)
-                  setPlanDetailId(newEntry.detail_id)
-
-                  // Load questions for the new entry
-                  if (selectedPlan) {
-                    triggerGetSampleQuestions(selectedPlan)
-                      .unwrap()
-                      .then((questionsRes: any) => {
-                        const list = Array.isArray(questionsRes?.data)
-                          ? questionsRes.data
-                          : []
-                        const mapped = list.map((q: any) => ({
-                          id: String(q.id),
-                          question: q.question_text ?? '',
-                          answer: (q.answer as 'Yes' | 'No' | '') ?? '',
-                        }))
-                        setSampleQuestions(mapped)
-                        const baseline: Record<
-                          string,
-                          { question: string; answer: 'Yes' | 'No' | '' }
-                        > = {}
-                        mapped.forEach((q) => {
-                          baseline[String(q.id)] = {
-                            question: q.question,
-                            answer: (q.answer || '') as any,
-                          }
-                        })
-                        setOriginalQuestionsMap(baseline)
-                      })
-                      .catch(() => {
-                        setSampleQuestions([])
-                        setOriginalQuestionsMap({})
-                      })
-                  }
-                } else if (filteredLearners.length > 0) {
-                  // If not found by date, use the last entry (most likely the new one)
-                  const lastIndex = filteredLearners.length - 1
-                  setActiveTab(lastIndex)
-                  const lastEntry = filteredLearners[lastIndex]
-                  populateFormDataFromSampledLearner(lastEntry)
-                  setPlanDetailId(lastEntry.detail_id)
-                }
-              })
-              .catch(() => {
-                setSampledLearners([])
-                setPlannedDates([])
-              })
-          })
-          .catch(() => {
-            // If learners refresh fails, still try to refresh plan details
-            triggerGetPlanDetails(selectedPlan)
-              .unwrap()
-              .then((res: any) => {
-                const data = res?.data || {}
-                const learners = Array.isArray(data.sampled_learners)
-                  ? data.sampled_learners
-                  : []
-                setSampledLearners(learners)
-
-                // Try to find new entry and set active tab
-                const newEntryIndex = learners.findIndex((entry: any) => {
-                  const entryPlannedDate =
-                    entry.planned_date || entry.plannedDate
-                  return entryPlannedDate === plannedDate
-                })
-
-                if (newEntryIndex >= 0) {
-                  setActiveTab(newEntryIndex)
-                  const newEntry = learners[newEntryIndex]
-                  populateFormDataFromSampledLearner(newEntry)
-                  setPlanDetailId(newEntry.detail_id)
-                }
-              })
-              .catch(() => {
-                setSampledLearners([])
-                setPlannedDates([])
-              })
-          })
+        triggerSamplePlanLearners(selectedPlan)
+        handleCloseModal()
+          
       }
-    } catch (error: any) {
-      const message =
-        error?.data?.message || error?.error || 'Failed to create new entry.'
-      dispatch(
-        showMessage({
-          message,
-          variant: 'error',
-        })
-      )
-    }
+    }).catch((error: any) => {
+      dispatch(showMessage({ message: error?.data?.message || error?.error || 'Failed to create new entry.', variant: 'error' }))
+    })
   }
 
   const handleModalFormChange = (field: string, value: any) => {
@@ -1301,7 +1119,7 @@ const Index: React.FC = () => {
       assessmentMethods: assessmentMethodsArray,
       assessmentProcesses: '',
       feedback: sampledLearner.feedback || '',
-      type: sampledLearner.status || 'Formative',
+      type: '',
       completedDate: sampledLearner.completed_date || '',
       sampleType: sampledLearner.sample_type || '',
       iqaConclusion: iqaConclusionArray,
@@ -1390,7 +1208,7 @@ const Index: React.FC = () => {
               assessmentMethods: [],
               assessmentProcesses: '',
               feedback: '',
-              type: 'Formative',
+              type: '',
               completedDate: '',
               sampleType: '',
               iqaConclusion: [],
@@ -1413,7 +1231,7 @@ const Index: React.FC = () => {
             assessmentMethods: [],
             assessmentProcesses: '',
             feedback: '',
-            type: 'Formative',
+            type: '',
             completedDate: '',
             sampleType: '',
             iqaConclusion: [],
@@ -1534,10 +1352,8 @@ const Index: React.FC = () => {
       // Convert assessorDecisionCorrect string to boolean
       const assessorDecisionCorrect =
         modalFormData.assessorDecisionCorrect === 'Yes'
-
       const payload = {
-        plan_id: selectedPlan,
-        detail_id: planDetailId,
+        plan_id: planDetailId,
         completedDate: modalFormData.completedDate || undefined,
         feedback: modalFormData.feedback || undefined,
         status: modalFormData.type || undefined,
@@ -1719,6 +1535,11 @@ const Index: React.FC = () => {
         planDetailId={planDetailId}
         onCreateNew={handleCreateNew}
         isCreating={isApplySamplesLoading}
+        onDeleteSuccess={() => {
+          if (selectedPlan) {
+            triggerSamplePlanLearners(selectedPlan)
+          }
+        }}
       />
     </Box>
   )
