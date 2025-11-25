@@ -49,6 +49,7 @@ import {
   useLazyGetSampleDocumentsQuery,
   useUploadSampleDocumentMutation,
   useDeleteSampleDocumentMutation,
+  useRemoveSampledLearnerMutation,
   type SampleAction,
   type SampleDocument,
   type SampleAllocatedForm,
@@ -79,6 +80,7 @@ interface EditSampleModalProps {
   planDetailId?: string | number | null
   onCreateNew?: () => void
   isCreating?: boolean
+  onDeleteSuccess?: () => void
 }
 
 export const EditSampleModal: React.FC<EditSampleModalProps> = ({
@@ -102,6 +104,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   planDetailId = null,
   onCreateNew,
   isCreating = false,
+  onDeleteSuccess,
 }) => {
   const dispatch = useDispatch()
   const iqaId = useUserId()
@@ -115,6 +118,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   const [deleteFormId, setDeleteFormId] = useState<number | null>(null)
   const [documents, setDocuments] = useState<SampleDocument[]>([])
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null)
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const [triggerGetActions, { isLoading: isLoadingActions }] = useLazyGetSampleActionsQuery()
@@ -128,6 +132,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   const [triggerGetDocuments, { isLoading: isLoadingDocuments }] = useLazyGetSampleDocumentsQuery()
   const [uploadDocument, { isLoading: isUploadingDocument }] = useUploadSampleDocumentMutation()
   const [deleteDocument, { isLoading: isDeletingDocument }] = useDeleteSampleDocumentMutation()
+  const [removeSampledLearner, { isLoading: isDeletingLearner }] = useRemoveSampledLearnerMutation()
   const { data: allFormsResponse } = useGetAllFormsQuery({ page: 1, page_size: 500 }, { refetchOnMountOrArgChange: false })
 
   useEffect(() => {
@@ -426,6 +431,36 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
     }
   }
 
+  const handleDeleteLearner = async () => {
+    if (!planDetailId) {
+      dispatch(
+        showMessage({
+          message: 'Missing plan detail ID',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+      removeSampledLearner(planDetailId).then((result) => {
+        dispatch(
+          showMessage({
+            message: 'Sampled learner removed successfully',
+            variant: 'success',
+          })
+        )
+        setShowDeleteConfirmation(false)
+        onClose()
+        // Trigger refetch after successful deletion
+        if (onDeleteSuccess) {
+          onDeleteSuccess()
+        }
+      }).catch((error: any) => {
+        dispatch(showMessage({ message: error?.data?.message || 'Failed to remove sampled learner', variant: 'error' }))
+        setShowDeleteConfirmation(false)
+      })
+  }
+
   return (
     <Dialog
       open={open}
@@ -560,6 +595,8 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
           </Button>
           <Button
             variant='outlined'
+            onClick={() => setShowDeleteConfirmation(true)}
+            disabled={!planDetailId || isDeletingLearner}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
@@ -673,7 +710,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                 size='small'
                 label='Completed Date'
                 type='date'
-                value={modalFormData.completedDate}
+                value={formatDateForInput(modalFormData.completedDate)}
                 onChange={(e) => onFormDataChange('completedDate', e.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
@@ -1449,6 +1486,42 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
               sx={{ textTransform: 'none' }}
             >
               {isUnlinkingForm ? 'Removing...' : 'Remove'}
+            </Button>
+          </Stack>
+        </Box>
+      </Dialog>
+
+      {/* Delete Sampled Learner Confirmation Dialog */}
+      <Dialog
+        open={showDeleteConfirmation}
+        onClose={() => !isDeletingLearner && setShowDeleteConfirmation(false)}
+        maxWidth='xs'
+        fullWidth
+      >
+        <Box sx={{ p: 3 }}>
+          <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
+            Delete Sampled Learner?
+          </Typography>
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 3 }}>
+            Are you sure you want to remove this sampled learner? This action cannot be undone.
+          </Typography>
+          <Stack direction='row' spacing={2} justifyContent='flex-end'>
+            <Button
+              variant='outlined'
+              onClick={() => setShowDeleteConfirmation(false)}
+              disabled={isDeletingLearner}
+              sx={{ textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant='contained'
+              color='error'
+              onClick={handleDeleteLearner}
+              disabled={isDeletingLearner}
+              sx={{ textTransform: 'none' }}
+            >
+              {isDeletingLearner ? 'Deleting...' : 'Delete'}
             </Button>
           </Stack>
         </Box>

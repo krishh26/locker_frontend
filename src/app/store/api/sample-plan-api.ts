@@ -440,6 +440,21 @@ export const samplePlanAPI = createApi({
         }
       },
     }),
+    removeSampledLearner: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+      },
+      string | number
+    >({
+      query: (detailId) => {
+        const encodedId = encodeURIComponent(String(detailId))
+        return {
+          url: `sample-plan/remove-sampled-learner/${encodedId}`,
+          method: 'DELETE',
+        }
+      },
+    }),
   }),
 })
 
@@ -515,6 +530,7 @@ export const {
   useCreateSampleFormMutation,
   useDeleteSampleFormMutation,
   useCompleteSampleFormMutation,
+  useRemoveSampledLearnerMutation,
 } = samplePlanAPI
 
 
