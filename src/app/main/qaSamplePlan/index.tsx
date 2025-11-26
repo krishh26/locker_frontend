@@ -488,6 +488,195 @@ const Index: React.FC = () => {
     }
   }
 
+  const handleApplyRandomSamples = async () => {
+    if (!selectedPlan) {
+      setFilterError('Please select a plan before applying samples.')
+      return
+    }
+
+    if (!sampleType) {
+      setFilterError('Please select a sample type before applying samples.')
+      return
+    }
+
+    if (!iqaId) {
+      setFilterError(
+        'Unable to determine current user. Please re-login and try again.'
+      )
+      return
+    }
+
+    if (isApplySamplesDisabled) {
+      return
+    }
+
+    if (!dateFrom.trim()) {
+      setFilterError('Planned Sample Date is required')
+      return
+    }
+
+    if (!learnersData.length) {
+      setFilterError('No learners available to apply random samples.')
+      return
+    }
+
+    // Randomly select units for all learners based on risk_percentage
+    const updatedSelectedUnitsMap: Record<string, Set<string>> = {}
+
+    learnersData.forEach((row, rowIndex) => {
+      const units = Array.isArray(row.units) ? row.units : []
+      if (units.length === 0) {
+        return
+      }
+
+      // Get risk_percentage (e.g., "50.00" or 50)
+      const riskPercentageRaw = (row as any).risk_percentage
+      const riskPercentage = riskPercentageRaw
+        ? parseFloat(String(riskPercentageRaw))
+        : 0
+
+      // Calculate number of units to select based on risk percentage
+      // If risk_percentage is 50, select 50% of units
+      const totalUnits = units.length
+      const unitsToSelect = Math.max(
+        1,
+        Math.round((riskPercentage / 100) * totalUnits)
+      )
+
+      // Get all unit keys
+      const unitKeys = units
+        .map((unit: any) => {
+          const unitKey = unit.unit_code || unit.unit_name || ''
+          return unitKey
+        })
+        .filter((key: string) => key)
+
+      // Randomly shuffle and select the required number
+      const shuffled = [...unitKeys].sort(() => Math.random() - 0.5)
+      const selectedUnitKeys = shuffled.slice(0, unitsToSelect)
+
+      // Store in the map
+      const learnerKey = `${row.learner_name ?? ''}-${rowIndex}`
+      updatedSelectedUnitsMap[learnerKey] = new Set(selectedUnitKeys)
+    })
+
+    // Update the selectedUnitsMap state
+    setSelectedUnitsMap(updatedSelectedUnitsMap)
+
+    // Now apply samples using the same logic as handleApplySamples
+    const learnersPayload = learnersData
+      .map((row, rowIndex) => {
+        const learnerId = row?.learner_id ?? row?.learnerId ?? row?.id ?? null
+        const units = Array.isArray(row.units) ? row.units : []
+
+        // Get selected units from updated map
+        const learnerKey = `${row.learner_name ?? ''}-${rowIndex}`
+        const selectedUnitsSet =
+          updatedSelectedUnitsMap[learnerKey] || new Set<string>()
+
+        const selectedUnits = units
+          .filter((unit: any) => {
+            if (!unit) return false
+            const unitKey = unit.unit_code || unit.unit_name || ''
+            return unitKey && selectedUnitsSet.has(unitKey)
+          })
+          .map((unit, unitIndex) => {
+            const unitIdRaw = unit?.unit_code ?? `${rowIndex}-${unitIndex}`
+            const unitRefRaw = unit?.unit_name ?? unitIdRaw
+
+            const unitId =
+              String(unitIdRaw).trim() || `${rowIndex}-${unitIndex}`
+            const unitRef = String(unitRefRaw).trim() || unitId
+
+            return {
+              id: unitId,
+              unit_ref: unitRef,
+            }
+          })
+          .filter((unit) => unit.unit_ref)
+
+        if (!learnerId || !selectedUnits.length) {
+          return null
+        }
+
+        const numericLearnerId = Number(learnerId)
+        const learnerIdForRequest = Number.isFinite(numericLearnerId)
+          ? numericLearnerId
+          : learnerId
+
+        return {
+          learner_id: learnerIdForRequest,
+          plannedDate: dateFrom ?? null,
+          units: selectedUnits,
+        }
+      })
+      .filter(Boolean) as Array<{
+      learner_id: string | number
+      plannedDate: string | null
+      units: Array<{ id: string | number; unit_ref: string }>
+    }>
+
+    if (!learnersPayload.length) {
+      setFilterError(
+        'No learners with units available to apply random samples.'
+      )
+      return
+    }
+
+    const assessmentMethodsPayload = assessmentMethodCodesForPayload.reduce(
+      (accumulator, code) => {
+        accumulator[code] = selectedMethods.includes(code)
+        return accumulator
+      },
+      {} as Record<string, boolean>
+    )
+
+    const numericPlanId = Number(selectedPlan)
+    const planIdForRequest = Number.isFinite(numericPlanId)
+      ? numericPlanId
+      : selectedPlan
+
+    const payload = {
+      plan_id: planIdForRequest,
+      sample_type: sampleType,
+      created_by: Number.isFinite(Number(iqaId)) ? Number(iqaId) : iqaId,
+      assessment_methods: assessmentMethodsPayload,
+      learners: learnersPayload,
+    }
+
+    try {
+      const response = await applySamplePlanLearners(payload).unwrap()
+      const successMessage =
+        response?.message || 'Random sampled learners added successfully.'
+
+      dispatch(
+        showMessage({
+          message: successMessage,
+          variant: 'success',
+        })
+      )
+
+      setFilterError('')
+
+      // Refresh the learners table data
+      if (selectedPlan) {
+        triggerSamplePlanLearners(selectedPlan)
+      }
+    } catch (error: any) {
+      const message =
+        error?.data?.message ||
+        error?.error ||
+        'Failed to apply random sampled learners.'
+      setFilterError(message)
+      dispatch(
+        showMessage({
+          message,
+          variant: 'error',
+        })
+      )
+    }
+  }
+
   const learnersData: SamplePlanLearner[] = useMemo(() => {
     if (!learnersResponse) {
       return []
@@ -879,8 +1068,7 @@ const Index: React.FC = () => {
       : learnerId
 
     // Get planned date from active tab or form data
-    const plannedDate =
-      plannedDates[activeTab] || modalFormData.plannedDate || null
+    const plannedDate = new Date().toISOString()
 
     // Get sample type from form data or use default
     const sampleTypeForRequest = modalFormData.sampleType || 'Learner interview'
@@ -1449,6 +1637,8 @@ const Index: React.FC = () => {
             onApplySamples={handleApplySamples}
             isApplySamplesDisabled={isApplySamplesDisabled}
             isApplySamplesLoading={isApplySamplesLoading}
+            onApplyRandomSamples={handleApplyRandomSamples}
+            isApplyRandomSamplesLoading={isApplySamplesLoading}
           />
         </Grid>
 

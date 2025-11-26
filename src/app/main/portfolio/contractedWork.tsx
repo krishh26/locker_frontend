@@ -41,7 +41,6 @@ const ContractedWorkHours = () => {
         contract_start: "",
         contract_end: "",
         contracted_work_hours_per_week: "",
-        yearly_holiday_entitlement_in_hours: "",
     });
 
     const handleInputChange = (e) => {
@@ -76,7 +75,6 @@ const ContractedWorkHours = () => {
             contract_start: formatDate(row?.contract_start),
             contract_end: formatDate(row?.contract_end),
             contracted_work_hours_per_week: row?.contracted_work_hours_per_week,
-            yearly_holiday_entitlement_in_hours: row?.yearly_holiday_entitlement_in_hours,
         });
         setHoursDialog(true);
     };
@@ -92,7 +90,6 @@ const ContractedWorkHours = () => {
             contract_start: "",
             contract_end: "",
             contracted_work_hours_per_week: "",
-            yearly_holiday_entitlement_in_hours: "",
         })
     };
 
@@ -370,23 +367,6 @@ const ContractedWorkHours = () => {
                             <TextField
                                 name="contracted_work_hours_per_week"
                                 value={hoursData?.contracted_work_hours_per_week}
-                                size="small"
-                                type="number"
-                                placeholder="0"
-                                required
-                                fullWidth
-                                onChange={handleInputChange}
-                            />
-                        </div>
-                    </Box>
-                    <Box className="m-4 flex flex-col justify-between gap-12 sm:flex-row">
-                        <div className="w-full">
-                            <Typography sx={{ fontSize: "0.9vw", marginBottom: "0.5rem" }}>
-                                Yearly Holiday Entitlement in Hours
-                            </Typography>
-                            <TextField
-                                name="yearly_holiday_entitlement_in_hours"
-                                value={hoursData?.yearly_holiday_entitlement_in_hours}
                                 size="small"
                                 type="number"
                                 placeholder="0"
