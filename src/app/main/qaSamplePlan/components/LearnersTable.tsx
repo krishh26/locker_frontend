@@ -26,6 +26,8 @@ import {
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'
+import UnfoldLessIcon from '@mui/icons-material/UnfoldLess'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -299,6 +301,18 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
     })
   }
 
+  // Toggle all rows expansion
+  const toggleAllRowsExpansion = () => {
+    if (expandedRows.size === visibleRows.length && visibleRows.length > 0) {
+      // All rows are expanded, collapse all
+      setExpandedRows(new Set())
+    } else {
+      // Expand all rows
+      const allIndices = new Set(visibleRows.map((_, index) => index))
+      setExpandedRows(allIndices)
+    }
+  }
+
   // Get sample type label
   const getSampleTypeLabel = (sampleType: string) => {
     const type = sampleTypes.find((t) => t.value === sampleType)
@@ -538,14 +552,34 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
             </Typography>
           </Stack>
 
-          <TextField
-            size='small'
-            placeholder='Search learners...'
-            value={searchText}
-            onChange={(event) => onSearchTextChange(event.target.value)}
-            sx={{ width: { xs: '100%', sm: 260 } }}
-            disabled={!filterApplied || isLearnersInFlight}
-          />
+          <Stack direction='row' spacing={1} alignItems='center'>
+            <Button
+              variant='outlined'
+              size='small'
+              startIcon={
+                expandedRows.size === visibleRows.length && visibleRows.length > 0 ? (
+                  <UnfoldLessIcon />
+                ) : (
+                  <UnfoldMoreIcon />
+                )
+              }
+              onClick={toggleAllRowsExpansion}
+              disabled={!filterApplied || isLearnersInFlight || visibleRows.length === 0}
+              sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
+            >
+              {expandedRows.size === visibleRows.length && visibleRows.length > 0
+                ? 'Collapse All'
+                : 'Expand All'}
+            </Button>
+            <TextField
+              size='small'
+              placeholder='Search learners...'
+              value={searchText}
+              onChange={(event) => onSearchTextChange(event.target.value)}
+              sx={{ width: { xs: '100%', sm: 260 } }}
+              disabled={!filterApplied || isLearnersInFlight}
+            />
+          </Stack>
         </Box>
 
         <TableContainer sx={{ maxHeight: 520 }}>

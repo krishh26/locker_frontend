@@ -33,6 +33,8 @@ interface FilterPanelProps {
   onApplySamples: () => void
   isApplySamplesDisabled: boolean
   isApplySamplesLoading: boolean
+  onApplyRandomSamples: () => void
+  isApplyRandomSamplesLoading: boolean
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
@@ -49,6 +51,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onApplySamples,
   isApplySamplesDisabled,
   isApplySamplesLoading,
+  onApplyRandomSamples,
+  isApplyRandomSamplesLoading,
 }) => {
   const [dateError, setDateError] = React.useState<string>('')
   const allSelected = selectedMethods.length === assessmentMethods.length
@@ -71,6 +75,15 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     }
     setDateError('')
     onApplySamples()
+  }
+
+  const handleApplyRandomSamplesClick = () => {
+    if (!dateFrom.trim()) {
+      setDateError('Planned Sample Date is required')
+      return
+    }
+    setDateError('')
+    onApplyRandomSamples()
   }
 
   return (
@@ -197,8 +210,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           variant='outlined'
           size='large'
           sx={{ textTransform: 'none', fontWeight: 600 }}
+          onClick={handleApplyRandomSamplesClick}
+          disabled={isApplySamplesDisabled || isApplyRandomSamplesLoading}
         >
-          Apply Random Samples
+          {isApplyRandomSamplesLoading ? 'Applying...' : 'Apply Random Samples'}
         </Button>
         <Button
           variant='outlined'

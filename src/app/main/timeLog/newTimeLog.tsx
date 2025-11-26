@@ -130,7 +130,6 @@ const NewTimeLog = (props) => {
                       timeLogData?.start_time && 
                       timeLogData?.end_time && 
                       timeLogData?.impact_on_learner && 
-                      timeLogData?.evidence_link &&
                       timeLogData?.unit && 
                       Array.isArray(timeLogData?.unit) && 
                       timeLogData?.unit.length > 0;

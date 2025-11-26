@@ -363,6 +363,15 @@ const TrainerRiskRating = () => {
       setCourseRatings(updated)
       setComments(commentsUpdated)
     }
+
+    if(trainerDetails?.data?.risk_rating_info?.high_percentage) {
+      setRiskSettings({
+        high: trainerDetails?.data?.risk_rating_info?.high_percentage || '',
+        medium: trainerDetails?.data?.risk_rating_info?.medium_percentage || '',
+        low: trainerDetails?.data?.risk_rating_info?.low_percentage || '',
+      })
+    }
+
   }, [trainerDetails])
 
   const handleRatingChange = (courseId: number, value: string) => {
