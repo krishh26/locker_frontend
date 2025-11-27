@@ -345,5 +345,13 @@ const navigationConfig = [
     url: '/progress-exclusion',
     visible: [UserRole.Admin],
   },
+  {
+    id: 'dashboards.iqaQuestions',
+    title: 'IQA Questions',
+    type: 'item',
+    icon: 'heroicons-outline:question-mark-circle',
+    url: '/iqa-questions',
+    visible: [UserRole.Admin],
+  },
 ]
 export default navigationConfig
