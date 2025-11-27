@@ -43,6 +43,7 @@ import { awaitingSignatureAPI } from './api/awaiting-signature-api'
 import { gatewayReportAPI } from './api/gateway-report-api'
 import { timelogExportAPI } from './api/timelog-export-api'
 import { samplePlanAPI } from './api/sample-plan-api'
+import { iqaQuestionsAPI } from './api/iqa-questions-api'
 
 const createReducer = (asyncReducers) => (state, action) => {
   const combinedReducer = combineReducers({
@@ -92,6 +93,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     [gatewayReportAPI.reducerPath]: gatewayReportAPI.reducer,
     [timelogExportAPI.reducerPath]: timelogExportAPI.reducer,
     [samplePlanAPI.reducerPath]: samplePlanAPI.reducer,
+    [iqaQuestionsAPI.reducerPath]: iqaQuestionsAPI.reducer,
     ...asyncReducers,
   })
 
@@ -119,6 +121,7 @@ export const concatMiddleware = [
   gatewayReportAPI.middleware,
   timelogExportAPI.middleware,
   samplePlanAPI.middleware,
+  iqaQuestionsAPI.middleware,
 ]
 
 export default createReducer

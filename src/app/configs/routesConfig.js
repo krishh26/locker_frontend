@@ -45,6 +45,7 @@ import learnerDashboardConfig from '../main/learner-dashboard/learnerDashboardCo
 import DocsToSignConfig from '../main/docsToSign/docsToSignConfig'
 import ProgressExclusionConfig from '../main/progressExclusion/progressExclusionConfig'
 import QASamplePlanConfig from '../main/qaSamplePlan/qaSamplePlanConfig'
+import IQAQuestionConfig from '../main/iqaQuestions/iqaQuestionConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -89,7 +90,8 @@ const routeConfigs = [
   learnerDashboardConfig,
   DocsToSignConfig,
   ProgressExclusionConfig,
-  QASamplePlanConfig
+  QASamplePlanConfig,
+  IQAQuestionConfig
 ]
 
 const routes = [
