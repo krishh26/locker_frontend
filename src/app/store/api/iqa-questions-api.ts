@@ -53,7 +53,7 @@ export const iqaQuestionsAPI = createApi({
     // Get all IQA questions by type
     getIQAQuestions: builder.query<IQAQuestionListResponse, { questionType?: string }>({
       query: ({ questionType }) => {
-        const params = questionType ? `?type=${questionType}` : ''
+        const params = questionType ? `?questionType=${questionType}` : ''
         return {
           url: `/iqa-questions/admin/questions${params}`,
           method: 'GET',

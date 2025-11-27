@@ -58,6 +58,7 @@ import { useGetAllFormsQuery } from 'app/store/api/form-api'
 import { useUserId } from 'src/app/utils/userHelpers'
 import { useDispatch } from 'react-redux'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import { useGetIQAQuestionsQuery } from 'src/app/store/api/iqa-questions-api'
 
 interface EditSampleModalProps {
   open: boolean
@@ -120,6 +121,10 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null)
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const [pendingQuestionUpdate, setPendingQuestionUpdate] = useState<{
+    questionText: string
+    answer: 'Yes' | 'No'
+  } | null>(null)
 
   const [triggerGetActions, { isLoading: isLoadingActions }] = useLazyGetSampleActionsQuery()
   const [createAction, { isLoading: isCreatingAction }] = useCreateSampleActionMutation()
@@ -134,6 +139,31 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   const [deleteDocument, { isLoading: isDeletingDocument }] = useDeleteSampleDocumentMutation()
   const [removeSampledLearner, { isLoading: isDeletingLearner }] = useRemoveSampledLearnerMutation()
   const { data: allFormsResponse } = useGetAllFormsQuery({ page: 1, page_size: 500 }, { refetchOnMountOrArgChange: false })
+
+  // Map sampleType to IQA question type
+  const getIQAQuestionType = (sampleType: string): string => {
+    const typeMap: Record<string, string> = {
+      'ObserveAssessor': 'Observe Assessor',
+      'LearnerInterview': 'Learner Interview',
+      'EmployerInterview': 'Employer Interview',
+      'Final': 'Final Check',
+      'Observation': 'Observe Assessor',
+      'Learner interview': 'Learner Interview',
+      'Employer interview': 'Employer Interview',
+      'Final Check': 'Final Check',
+    }
+    return typeMap[sampleType] || ''
+  }
+
+  const iqaQuestionType = getIQAQuestionType(modalFormData.sampleType)
+  
+  // Fetch IQA questions based on sample type
+  const { data: iqaQuestionsData, isLoading: isLoadingIQAQuestions } = useGetIQAQuestionsQuery(
+    { questionType: iqaQuestionType },
+    { skip: !iqaQuestionType || !open }
+  )
+
+  const iqaQuestions = iqaQuestionsData?.data || []
 
   useEffect(() => {
     if (open && planDetailId) {
@@ -163,6 +193,24 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
     setActionModalOpen(false)
     setEditingAction(null)
   }
+
+  // Handle pending question updates after a new question is added
+  useEffect(() => {
+    if (pendingQuestionUpdate && sampleQuestions.length > 0) {
+      // Find the most recently added question (should be the last one with empty question)
+      // Look for questions that start with 'new-' and have empty question text
+      const emptyQuestions = sampleQuestions.filter(
+        (q) => String(q.id).startsWith('new-') && !q.question && q.answer === ''
+      )
+      if (emptyQuestions.length > 0) {
+        // Update the most recent empty question
+        const questionToUpdate = emptyQuestions[emptyQuestions.length - 1]
+        onQuestionChange(questionToUpdate.id, pendingQuestionUpdate.questionText)
+        onAnswerChange(questionToUpdate.id, pendingQuestionUpdate.answer)
+        setPendingQuestionUpdate(null)
+      }
+    }
+  }, [sampleQuestions, pendingQuestionUpdate, onQuestionChange, onAnswerChange])
 
   const handleEditAction = (action: SampleAction) => {
     setEditingAction(action)
@@ -991,7 +1039,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
             </Box>
           </Box>
 
-          {/* Sample Questions Section */}
+          {/* IQA Questions Section */}
           <Box sx={{ mt: 3 }}>
             <Box
               sx={{
@@ -1009,7 +1057,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                     color: '#e91e63',
                   }}
                 >
-                  Sample Questions
+                  IQA Questions
                 </Typography>
               </Box>
               <Button
@@ -1066,84 +1114,78 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {sampleQuestions.length === 0 ? (
+                    {isLoadingIQAQuestions ? (
                       <TableRow>
                         <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
                           <Typography variant='body2' color='text.secondary'>
-                            No questions added yet. Click "Add Question" to get started.
+                            Loading questions...
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : iqaQuestions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} align='center' sx={{ py: 4 }}>
+                          <Typography variant='body2' color='text.secondary'>
+                            No IQA questions available for this sample type.
                           </Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      sampleQuestions.map((question, index) => (
-                        <TableRow key={question.id} hover>
-                          <TableCell>
-                            <TextField
-                              fullWidth
-                              size='small'
-                              value={question.question}
-                              onChange={(e) => onQuestionChange(question.id, e.target.value)}
-                              placeholder={`Question ${index + 1}`}
-                              sx={{
-                                '& .MuiOutlinedInput-root': {
-                                  backgroundColor: 'background.paper',
-                                },
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell align='center'>
-                            <Radio
-                              size='small'
-                              checked={question.answer === 'Yes'}
-                              onChange={() => onAnswerChange(question.id, 'Yes')}
-                              value='Yes'
-                            />
-                          </TableCell>
-                          <TableCell align='center'>
-                            <Radio
-                              size='small'
-                              checked={question.answer === 'No'}
-                              onChange={() => onAnswerChange(question.id, 'No')}
-                              value='No'
-                            />
-                          </TableCell>
-                          <TableCell align='center'>
-                            <IconButton
-                              size='small'
-                              onClick={() => onDeleteQuestion(question.id)}
-                              sx={{
-                                color: 'error.main',
-                                '&:hover': {
-                                  bgcolor: 'error.light',
-                                  color: 'error.dark',
-                                },
-                              }}
-                            >
-                              <DeleteIcon fontSize='small' />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      iqaQuestions.map((iqaQuestion, index) => {
+                        // Find corresponding sample question answer if exists
+                        const sampleQuestion = sampleQuestions.find(
+                          (sq) => sq.question === iqaQuestion.question || sq.id === `iqa-${iqaQuestion.id}`
+                        )
+                        const answer = sampleQuestion?.answer || ''
+                        
+                        const handleAnswerSelect = (selectedAnswer: 'Yes' | 'No') => {
+                          if (sampleQuestion) {
+                            // Update existing question answer
+                            onAnswerChange(sampleQuestion.id, selectedAnswer)
+                          } else {
+                            // Set pending update and add question
+                            // The useEffect will handle updating it once it's added
+                            setPendingQuestionUpdate({
+                              questionText: iqaQuestion.question,
+                              answer: selectedAnswer,
+                            })
+                            onAddQuestion()
+                          }
+                        }
+                        
+                        return (
+                          <TableRow key={iqaQuestion.id} hover>
+                            <TableCell>
+                              <Typography variant='body2' sx={{ py: 1 }}>
+                                {iqaQuestion.question}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align='center'>
+                              <Radio
+                                size='small'
+                                checked={answer === 'Yes'}
+                                onChange={() => handleAnswerSelect('Yes')}
+                                value='Yes'
+                              />
+                            </TableCell>
+                            <TableCell align='center'>
+                              <Radio
+                                size='small'
+                                checked={answer === 'No'}
+                                onChange={() => handleAnswerSelect('No')}
+                                value='No'
+                              />
+                            </TableCell>
+                            <TableCell align='center'>
+                              {/* No delete action for IQA questions */}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
                     )}
                   </TableBody>
                 </Table>
               </TableContainer>
-
-              {/* Add Question Button */}
-              <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
-                <Button
-                  variant='outlined'
-                  size='small'
-                  startIcon={<AddIcon />}
-                  onClick={onAddQuestion}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                  }}
-                >
-                  Add Question
-                </Button>
-              </Box>
             </Paper>
           </Box>
         </Box>

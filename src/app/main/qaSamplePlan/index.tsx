@@ -1196,13 +1196,31 @@ const Index: React.FC = () => {
     }
 
     try {
-      const newQuestions = sampleQuestions.filter((q) =>
+      // Filter out questions without answers (empty answers)
+      const questionsWithAnswers = sampleQuestions.filter(
+        (q) => q.answer && (q.answer === 'Yes' || q.answer === 'No')
+      )
+
+      if (questionsWithAnswers.length === 0) {
+        dispatch(
+          showMessage({
+            message: 'Please answer at least one question before saving.',
+            variant: 'warning',
+          })
+        )
+        return
+      }
+
+      // Separate new questions (those starting with 'new-') from existing ones
+      const newQuestions = questionsWithAnswers.filter((q) =>
         String(q.id).startsWith('new-')
       )
-      const existingQuestions = sampleQuestions.filter(
+
+      const existingQuestions = questionsWithAnswers.filter(
         (q) => !String(q.id).startsWith('new-')
       )
 
+      // Create new questions (including IQA-based questions that were added)
       if (newQuestions.length > 0) {
         await createSampleQuestions({
           plan_detail_id: planDetailId,
@@ -1214,8 +1232,8 @@ const Index: React.FC = () => {
         }).unwrap()
       }
 
+      // Update existing questions (only if they changed)
       if (existingQuestions.length > 0) {
-        // Update ONLY changed questions
         const changed = existingQuestions.filter((q) => {
           const baseline = originalQuestionsMap[String(q.id)]
           if (!baseline) return true
@@ -1235,6 +1253,7 @@ const Index: React.FC = () => {
         }
       }
 
+      // Refresh questions from server to get updated IDs
       if (planDetailId) {
         const res = await triggerGetSampleQuestions(planDetailId).unwrap()
         const list = Array.isArray(res?.data) ? res.data : []
