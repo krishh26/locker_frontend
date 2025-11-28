@@ -778,10 +778,21 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                                                     sx={{ p: 0.5 }}
                                                     color='primary'
                                                   />
-                                                  <Box sx={{ flex: 1 }}>
+                                                  <Box sx={{ flex: 1 , display: 'flex', alignItems: 'center', gap: 2}}>
                                                     <Typography variant='body2' fontWeight={600}>
                                                       {sanitizeText(unit.unit_name) || `Unit ${unitIndex + 1}`}
                                                     </Typography>
+                                                      <Chip
+                                                        size='small'
+                                                        label={unit.completed ? 'Completed' : 'Incomplete'}
+                                                        color={unit.completed ? 'success' : 'error'}
+                                                        sx={{
+                                                          mt: 0.5,
+                                                          height: 20,
+                                                          fontSize: '0.7rem',
+                                                          fontWeight: 600,
+                                                        }}
+                                                      />
                                                   </Box>
                                                 </Stack>
                                               </TableCell>
@@ -813,12 +824,6 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                                                     </TableCell>
                                                   )
                                                 }
-
-                                                const assessmentMethodCodes = history.assessment_methods
-                                                  ? Object.entries(history.assessment_methods)
-                                                      .filter(([_, value]) => value === true)
-                                                      .map(([code]) => code)
-                                                  : []
 
                                                 return (
                                                   <TableCell
@@ -855,18 +860,18 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                                                       >
                                                         {formatDisplayDate(history.planned_date)}
                                                       </Typography>
-                                                      {assessmentMethodCodes.length > 0 && (
-                                                        <Typography
-                                                          variant='body2'
+                                                      {typeof unit.completed === 'boolean' && (
+                                                        <Chip
+                                                          size='small'
+                                                          label={unit.completed ? 'Completed' : 'Incomplete'}
+                                                          color={unit.completed ? 'success' : 'error'}
                                                           sx={{
-                                                            fontSize: '0.875rem',
                                                             mt: 0.5,
-                                                            color: 'text.secondary',
-                                                            fontFamily: 'monospace',
+                                                            height: 20,
+                                                            fontSize: '0.7rem',
+                                                            fontWeight: 600,
                                                           }}
-                                                        >
-                                                          {assessmentMethodCodes.join(' ')}
-                                                        </Typography>
+                                                        />
                                                       )}
                                                     </Box>
                                                   </TableCell>

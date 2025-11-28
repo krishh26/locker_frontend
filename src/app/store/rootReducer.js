@@ -44,6 +44,7 @@ import { gatewayReportAPI } from './api/gateway-report-api'
 import { timelogExportAPI } from './api/timelog-export-api'
 import { samplePlanAPI } from './api/sample-plan-api'
 import { iqaQuestionsAPI } from './api/iqa-questions-api'
+import { sessionTypeApi } from './api/session-type-api'
 
 const createReducer = (asyncReducers) => (state, action) => {
   const combinedReducer = combineReducers({
@@ -94,6 +95,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     [timelogExportAPI.reducerPath]: timelogExportAPI.reducer,
     [samplePlanAPI.reducerPath]: samplePlanAPI.reducer,
     [iqaQuestionsAPI.reducerPath]: iqaQuestionsAPI.reducer,
+    [sessionTypeApi.reducerPath]: sessionTypeApi.reducer,
     ...asyncReducers,
   })
 
@@ -122,6 +124,7 @@ export const concatMiddleware = [
   timelogExportAPI.middleware,
   samplePlanAPI.middleware,
   iqaQuestionsAPI.middleware,
+  sessionTypeApi.middleware,
 ]
 
 export default createReducer
