@@ -682,18 +682,82 @@ const Index: React.FC = () => {
       return []
     }
 
-    // API response structure: { message, status, data: { plan_id, course_name, learners: [...] } }
+    // API response structure: { message, status, data: { plan_id, course_name, units: [...], learners: [...] } }
     const responseData = (learnersResponse as any)?.data ?? learnersResponse
 
+    // Extract all units from data.units (master list of all available units)
+    // Remove duplicates based on unit_code
+    const rawUnits = Array.isArray(responseData?.units)
+      ? responseData.units
+      : []
+    
+    const allUnitsMap = new Map<string, any>()
+    rawUnits.forEach((unit: any) => {
+      const unitCode = unit?.unit_code || ''
+      if (unitCode && !allUnitsMap.has(unitCode)) {
+        allUnitsMap.set(unitCode, unit)
+      }
+    })
+    const allUnits = Array.from(allUnitsMap.values())
+
+    // Extract learners array
+    let learners: SamplePlanLearner[] = []
     if (Array.isArray(responseData?.learners)) {
-      return (responseData.learners as SamplePlanLearner[]).filter(Boolean)
+      learners = responseData.learners as SamplePlanLearner[]
+    } else if (Array.isArray(responseData)) {
+      learners = responseData as SamplePlanLearner[]
     }
 
-    if (Array.isArray(responseData)) {
-      return (responseData as SamplePlanLearner[]).filter(Boolean)
+    if (!learners.length || !allUnits.length) {
+      return learners.filter(Boolean)
     }
 
-    return []
+    // For each learner, merge all units from master list with their existing units
+    return learners
+      .filter(Boolean)
+      .map((learner) => {
+        const learnerUnits = Array.isArray(learner.units) ? learner.units : []
+        
+        // Create a map of learner's existing units by unit_code for quick lookup
+        // Remove duplicates based on unit_code
+        const learnerUnitsMap = new Map<string, any>()
+        learnerUnits.forEach((unit: any) => {
+          const unitCode = unit?.unit_code || ''
+          if (unitCode && !learnerUnitsMap.has(unitCode)) {
+            learnerUnitsMap.set(unitCode, unit)
+          }
+        })
+
+        // Merge: use all units from master list, and if learner has that unit, use learner's data
+        const mergedUnitsMap = new Map<string, any>()
+        allUnits.forEach((masterUnit: any) => {
+          const unitCode = masterUnit?.unit_code || ''
+          if (!unitCode) return
+
+          const learnerUnit = learnerUnitsMap.get(unitCode)
+
+          if (learnerUnit) {
+            // Learner has this unit - keep their data (including sample_history if it exists)
+            mergedUnitsMap.set(unitCode, learnerUnit)
+          } else {
+            // Learner doesn't have this unit - add it with empty sample_history
+            mergedUnitsMap.set(unitCode, {
+              unit_code: masterUnit?.unit_code || '',
+              unit_name: masterUnit?.unit_name || '',
+              sample_history: [],
+              ...masterUnit,
+            })
+          }
+        })
+
+        // Convert map back to array to maintain order and remove duplicates
+        const mergedUnits = Array.from(mergedUnitsMap.values())
+
+        return {
+          ...learner,
+          units: mergedUnits,
+        }
+      })
   }, [learnersResponse])
 
   // Check if planned_date exists in any learner's sample_history

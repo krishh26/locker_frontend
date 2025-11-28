@@ -778,11 +778,10 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                                                     sx={{ p: 0.5 }}
                                                     color='primary'
                                                   />
-                                                  <Box sx={{ flex: 1 }}>
+                                                  <Box sx={{ flex: 1 , display: 'flex', alignItems: 'center', gap: 2}}>
                                                     <Typography variant='body2' fontWeight={600}>
                                                       {sanitizeText(unit.unit_name) || `Unit ${unitIndex + 1}`}
                                                     </Typography>
-                                                    {typeof unit.completed === 'boolean' && (
                                                       <Chip
                                                         size='small'
                                                         label={unit.completed ? 'Completed' : 'Incomplete'}
@@ -794,7 +793,6 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                                                           fontWeight: 600,
                                                         }}
                                                       />
-                                                    )}
                                                   </Box>
                                                 </Stack>
                                               </TableCell>
