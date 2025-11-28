@@ -46,6 +46,7 @@ import DocsToSignConfig from '../main/docsToSign/docsToSignConfig'
 import ProgressExclusionConfig from '../main/progressExclusion/progressExclusionConfig'
 import QASamplePlanConfig from '../main/qaSamplePlan/qaSamplePlanConfig'
 import IQAQuestionConfig from '../main/iqaQuestions/iqaQuestionConfig'
+import SessionTypeConfig from '../main/sessionType/sessionTypeConfig'
 
 const routeConfigs = [
   LandingConfig,
@@ -91,7 +92,8 @@ const routeConfigs = [
   DocsToSignConfig,
   ProgressExclusionConfig,
   QASamplePlanConfig,
-  IQAQuestionConfig
+  IQAQuestionConfig,
+  SessionTypeConfig
 ]
 
 const routes = [

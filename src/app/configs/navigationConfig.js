@@ -353,5 +353,13 @@ const navigationConfig = [
     url: '/iqa-questions',
     visible: [UserRole.Admin],
   },
+  {
+    id: 'dashboards.sessionType',
+    title: 'Session Type',
+    type: 'item',
+    icon: 'heroicons-outline:user-add',
+    url: '/session-type',
+    visible: [UserRole.Admin],
+  },
 ]
 export default navigationConfig
