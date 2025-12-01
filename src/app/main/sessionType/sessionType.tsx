@@ -55,7 +55,7 @@ import {
   useCreateSessionTypeMutation,
   useUpdateSessionTypeMutation,
   useToggleSessionTypeMutation,
-  useUpdateSessionTypesOrderMutation,
+  useReorderSessionTypeMutation,
   useDeleteSessionTypeMutation,
   type SessionType,
   type CreateSessionTypePayload,
@@ -245,7 +245,7 @@ const SessionTypePage: React.FC = () => {
   const [updateSessionType, { isLoading: isUpdating }] =
     useUpdateSessionTypeMutation()
   const [toggleSessionType] = useToggleSessionTypeMutation()
-  const [updateOrder] = useUpdateSessionTypesOrderMutation()
+  const [reorderSessionType] = useReorderSessionTypeMutation()
   const [deleteSessionType, { isLoading: isDeleting }] =
     useDeleteSessionTypeMutation()
 
@@ -321,8 +321,8 @@ const SessionTypePage: React.FC = () => {
       if (isEditMode && editingId) {
         const payload: UpdateSessionTypePayload = {
           name: data.name,
-          isOffTheJob: data.isOffTheJob,
-          isActive: data.isActive,
+          is_off_the_job: data.isOffTheJob,
+          active: data.isActive,
         }
         await updateSessionType({ id: editingId, payload }).unwrap()
         dispatch(
@@ -334,8 +334,8 @@ const SessionTypePage: React.FC = () => {
       } else {
         const payload: CreateSessionTypePayload = {
           name: data.name,
-          isOffTheJob: data.isOffTheJob,
-          isActive: data.isActive,
+          is_off_the_job: data.isOffTheJob,
+          active: data.isActive,
         }
         await createSessionType(payload).unwrap()
         dispatch(
@@ -422,16 +422,16 @@ const SessionTypePage: React.FC = () => {
       return
     }
 
+    // Optimistically update UI
     const newOrder = arrayMove(sessionTypes, oldIndex, newIndex)
     setSessionTypes(newOrder)
 
-    // Update order in backend
+    // Determine direction and call API
+    const direction = newIndex < oldIndex ? 'UP' : 'DOWN'
+    const itemId = active.id as number
+
     try {
-      const orderPayload = newOrder.map((st, index) => ({
-        id: st.id,
-        order: index + 1,
-      }))
-      await updateOrder({ sessionTypes: orderPayload }).unwrap()
+      await reorderSessionType({ id: itemId, direction }).unwrap()
       dispatch(
         showMessage({
           message: 'Order updated successfully',

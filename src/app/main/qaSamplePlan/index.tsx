@@ -682,23 +682,8 @@ const Index: React.FC = () => {
       return []
     }
 
-    // API response structure: { message, status, data: { plan_id, course_name, units: [...], learners: [...] } }
+    // API response structure: { message, status, data: { plan_id, course_name, learners: [...] } }
     const responseData = (learnersResponse as any)?.data ?? learnersResponse
-
-    // Extract all units from data.units (master list of all available units)
-    // Remove duplicates based on unit_code
-    const rawUnits = Array.isArray(responseData?.units)
-      ? responseData.units
-      : []
-    
-    const allUnitsMap = new Map<string, any>()
-    rawUnits.forEach((unit: any) => {
-      const unitCode = unit?.unit_code || ''
-      if (unitCode && !allUnitsMap.has(unitCode)) {
-        allUnitsMap.set(unitCode, unit)
-      }
-    })
-    const allUnits = Array.from(allUnitsMap.values())
 
     // Extract learners array
     let learners: SamplePlanLearner[] = []
@@ -708,18 +693,17 @@ const Index: React.FC = () => {
       learners = responseData as SamplePlanLearner[]
     }
 
-    if (!learners.length || !allUnits.length) {
-      return learners.filter(Boolean)
+    if (!learners.length) {
+      return []
     }
 
-    // For each learner, merge all units from master list with their existing units
+    // For each learner, deduplicate their units by unit_code
     return learners
       .filter(Boolean)
       .map((learner) => {
         const learnerUnits = Array.isArray(learner.units) ? learner.units : []
         
-        // Create a map of learner's existing units by unit_code for quick lookup
-        // Remove duplicates based on unit_code
+        // Remove duplicates based on unit_code, keeping the first occurrence
         const learnerUnitsMap = new Map<string, any>()
         learnerUnits.forEach((unit: any) => {
           const unitCode = unit?.unit_code || ''
@@ -728,34 +712,12 @@ const Index: React.FC = () => {
           }
         })
 
-        // Merge: use all units from master list, and if learner has that unit, use learner's data
-        const mergedUnitsMap = new Map<string, any>()
-        allUnits.forEach((masterUnit: any) => {
-          const unitCode = masterUnit?.unit_code || ''
-          if (!unitCode) return
-
-          const learnerUnit = learnerUnitsMap.get(unitCode)
-
-          if (learnerUnit) {
-            // Learner has this unit - keep their data (including sample_history if it exists)
-            mergedUnitsMap.set(unitCode, learnerUnit)
-          } else {
-            // Learner doesn't have this unit - add it with empty sample_history
-            mergedUnitsMap.set(unitCode, {
-              unit_code: masterUnit?.unit_code || '',
-              unit_name: masterUnit?.unit_name || '',
-              sample_history: [],
-              ...masterUnit,
-            })
-          }
-        })
-
-        // Convert map back to array to maintain order and remove duplicates
-        const mergedUnits = Array.from(mergedUnitsMap.values())
+        // Convert map back to array to maintain order
+        const deduplicatedUnits = Array.from(learnerUnitsMap.values())
 
         return {
           ...learner,
-          units: mergedUnits,
+          units: deduplicatedUnits,
         }
       })
   }, [learnersResponse])
