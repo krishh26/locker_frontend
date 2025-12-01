@@ -59,6 +59,7 @@ import { useUserId } from 'src/app/utils/userHelpers'
 import { useDispatch } from 'react-redux'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { useGetIQAQuestionsQuery } from 'src/app/store/api/iqa-questions-api'
+import { useNavigate } from 'react-router-dom'
 
 interface EditSampleModalProps {
   open: boolean
@@ -108,6 +109,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   onDeleteSuccess,
 }) => {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const iqaId = useUserId()
   const [actionModalOpen, setActionModalOpen] = useState(false)
   const [editingAction, setEditingAction] = useState<SampleAction | null>(null)
@@ -864,6 +866,15 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
           </Grid>
           <Button
             variant='contained'
+            onClick={() => {
+              // Navigate to examine evidence page with query parameters
+              const params = new URLSearchParams()
+              if (planDetailId) {
+                params.append('sampleResultsId', String(planDetailId))
+              }
+              // Add other parameters if available from modalFormData or currentModalLearner
+              navigate(`/qa-sample-plan/examine-evidence?${params.toString()}`)
+            }}
             sx={{
               textTransform: 'none',
               mt: 3,

@@ -2,6 +2,7 @@ import { lazy } from 'react'
 import authRoles from 'src/app/auth/authRoles'
 
 const QASamplePlanPage = lazy(() => import('./index'))
+const ExamineEvidencePage = lazy(() => import('./components/ExamineEvidencePage'))
 
 const QASamplePlanConfig = {
   settings: {
@@ -30,6 +31,10 @@ const QASamplePlanConfig = {
     {
       path: '/qa-sample-plan',
       element: <QASamplePlanPage />,
+    },
+    {
+      path: '/qa-sample-plan/examine-evidence',
+      element: <ExamineEvidencePage />,
     },
   ],
 }
