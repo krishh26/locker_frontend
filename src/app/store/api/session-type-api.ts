@@ -12,26 +12,22 @@ export interface SessionType {
   updatedAt?: string
 }
 
-// Types for API requests
+// Types for API requests (snake_case for backend)
 export interface CreateSessionTypePayload {
   name: string
-  isOffTheJob: boolean
-  isActive?: boolean
-  order?: number
+  is_off_the_job: boolean
+  active: boolean
 }
 
 export interface UpdateSessionTypePayload {
-  name?: string
-  isOffTheJob?: boolean
-  isActive?: boolean
-  order?: number
+  name: string
+  is_off_the_job: boolean
+  active: boolean
 }
 
-export interface UpdateOrderPayload {
-  sessionTypes: Array<{
-    id: number
-    order: number
-  }>
+export interface ReorderSessionTypePayload {
+  id: number
+  direction: 'UP' | 'DOWN'
 }
 
 // API Response types
@@ -58,10 +54,28 @@ export const sessionTypeApi = createApi({
      */
     getSessionTypes: builder.query<SessionTypesResponse, void>({
       query: () => ({
-        url: '/user-defined-lists/session-types',
+        url: 'sessionType/list',
         method: 'GET',
       }),
       providesTags: ['SessionType'],
+      transformResponse: (response: any) => {
+        // Transform snake_case to camelCase
+        if (response?.data && Array.isArray(response.data)) {
+          return {
+            ...response,
+            data: response.data.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              isOffTheJob: item.is_off_the_job ?? item.isOffTheJob,
+              isActive: item.active ?? item.isActive,
+              order: item.order,
+              createdAt: item.created_at ?? item.createdAt,
+              updatedAt: item.updated_at ?? item.updatedAt,
+            })),
+          }
+        }
+        return response
+      },
       transformErrorResponse: (response: any) => {
         throw new Error(
           `Failed to fetch session types: ${response?.data?.message || response?.statusText || 'Unknown error'}`
@@ -90,11 +104,29 @@ export const sessionTypeApi = createApi({
      */
     createSessionType: builder.mutation<SessionTypeResponse, CreateSessionTypePayload>({
       query: (payload) => ({
-        url: '/user-defined-lists/session-types',
+        url: 'sessionType/create',
         method: 'POST',
         body: payload,
       }),
       invalidatesTags: ['SessionType'],
+      transformResponse: (response: any) => {
+        // Transform snake_case to camelCase
+        if (response?.data) {
+          return {
+            ...response,
+            data: {
+              id: response.data.id,
+              name: response.data.name,
+              isOffTheJob: response.data.is_off_the_job ?? response.data.isOffTheJob,
+              isActive: response.data.active ?? response.data.isActive,
+              order: response.data.order,
+              createdAt: response.data.created_at ?? response.data.createdAt,
+              updatedAt: response.data.updated_at ?? response.data.updatedAt,
+            },
+          }
+        }
+        return response
+      },
       transformErrorResponse: (response: any) => {
         throw new Error(
           `Failed to create session type: ${response?.data?.message || response?.statusText || 'Unknown error'}`
@@ -110,11 +142,29 @@ export const sessionTypeApi = createApi({
       { id: number; payload: UpdateSessionTypePayload }
     >({
       query: ({ id, payload }) => ({
-        url: `/user-defined-lists/session-types/${id}`,
+        url: `sessionType/update/${id}`,
         method: 'PUT',
         body: payload,
       }),
       invalidatesTags: ['SessionType'],
+      transformResponse: (response: any) => {
+        // Transform snake_case to camelCase
+        if (response?.data) {
+          return {
+            ...response,
+            data: {
+              id: response.data.id,
+              name: response.data.name,
+              isOffTheJob: response.data.is_off_the_job ?? response.data.isOffTheJob,
+              isActive: response.data.active ?? response.data.isActive,
+              order: response.data.order,
+              createdAt: response.data.created_at ?? response.data.createdAt,
+              updatedAt: response.data.updated_at ?? response.data.updatedAt,
+            },
+          }
+        }
+        return response
+      },
       transformErrorResponse: (response: any) => {
         throw new Error(
           `Failed to update session type: ${response?.data?.message || response?.statusText || 'Unknown error'}`
@@ -140,18 +190,36 @@ export const sessionTypeApi = createApi({
     }),
 
     /**
-     * Update session types order
+     * Reorder session type (move up or down)
      */
-    updateSessionTypesOrder: builder.mutation<SessionTypesResponse, UpdateOrderPayload>({
+    reorderSessionType: builder.mutation<SessionTypesResponse, ReorderSessionTypePayload>({
       query: (payload) => ({
-        url: '/user-defined-lists/session-types/order',
-        method: 'PUT',
+        url: 'sessionType/reorder',
+        method: 'PATCH',
         body: payload,
       }),
       invalidatesTags: ['SessionType'],
+      transformResponse: (response: any) => {
+        // Transform snake_case to camelCase
+        if (response?.data && Array.isArray(response.data)) {
+          return {
+            ...response,
+            data: response.data.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              isOffTheJob: item.is_off_the_job ?? item.isOffTheJob,
+              isActive: item.active ?? item.isActive,
+              order: item.order,
+              createdAt: item.created_at ?? item.createdAt,
+              updatedAt: item.updated_at ?? item.updatedAt,
+            })),
+          }
+        }
+        return response
+      },
       transformErrorResponse: (response: any) => {
         throw new Error(
-          `Failed to update session types order: ${response?.data?.message || response?.statusText || 'Unknown error'}`
+          `Failed to reorder session type: ${response?.data?.message || response?.statusText || 'Unknown error'}`
         )
       },
     }),
@@ -181,7 +249,7 @@ export const {
   useCreateSessionTypeMutation,
   useUpdateSessionTypeMutation,
   useToggleSessionTypeMutation,
-  useUpdateSessionTypesOrderMutation,
+  useReorderSessionTypeMutation,
   useDeleteSessionTypeMutation,
 } = sessionTypeApi
 
