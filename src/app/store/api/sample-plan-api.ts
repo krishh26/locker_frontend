@@ -455,6 +455,66 @@ export const samplePlanAPI = createApi({
         }
       },
     }),
+    getEvidenceList: builder.query<
+      {
+        message?: string
+        status?: boolean
+        data?: Array<{
+          assignment_id: number
+          title: string
+          description: string | null
+          file: {
+            name: string
+            size: number
+            key: string
+            url: string
+          }
+          grade: string | null
+          assessment_method: string[]
+          created_at: string
+          unit: {
+            unit_ref: string
+            title: string
+          }
+          mappedSubUnits: Array<{
+            id: number
+            subTitle: string
+          }>
+          reviews: Record<string, unknown>
+        }>
+      },
+      { planDetailId: string | number; unitCode: string }
+    >({
+      query: ({ planDetailId, unitCode }) => {
+        const encodedId = encodeURIComponent(String(planDetailId))
+        const params = new URLSearchParams()
+        if (unitCode) {
+          params.append('unit_code', unitCode)
+        }
+        return {
+          url: `sample-plan/${encodedId}/evidence${params.toString() ? `?${params.toString()}` : ''}`,
+        }
+      },
+    }),
+    addAssignmentReview: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+      },
+      {
+        assignment_id: number
+        sampling_plan_detail_id: number
+        role: string
+        comment: string
+        unit_code: string
+      }
+    >({
+      query: (body) => ({
+        url: 'sample-plan/assignment-review',
+        method: 'POST',
+        body,
+      }),
+    }),
   }),
 })
 
@@ -531,6 +591,9 @@ export const {
   useDeleteSampleFormMutation,
   useCompleteSampleFormMutation,
   useRemoveSampledLearnerMutation,
+  useGetEvidenceListQuery,
+  useLazyGetEvidenceListQuery,
+  useAddAssignmentReviewMutation,
 } = samplePlanAPI
 
 

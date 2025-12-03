@@ -36,6 +36,10 @@ const QASamplePlanConfig = {
       path: '/qa-sample-plan/examine-evidence',
       element: <ExamineEvidencePage />,
     },
+    {
+      path: '/sample-plan/:planDetailId/evidence',
+      element: <ExamineEvidencePage />,
+    },
   ],
 }
 
