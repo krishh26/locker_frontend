@@ -1,9 +1,14 @@
-import React, { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import {
   Box,
   Button,
   Checkbox,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Paper,
   Stack,
@@ -14,10 +19,17 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
+import CloseIcon from '@mui/icons-material/Close'
+import { useGetEvidenceListQuery, useAddAssignmentReviewMutation } from 'app/store/api/sample-plan-api'
+import FuseLoading from '@fuse/core/FuseLoading'
+import { useCurrentUser } from 'src/app/utils/userHelpers'
+import { useDispatch } from 'react-redux'
+import { showMessage } from 'app/store/fuse/messageSlice'
 
 interface EvidenceRow {
   refNo: string
@@ -29,6 +41,37 @@ interface EvidenceRow {
   dateSet: string
   dateDue: string
   dateUploaded: string
+}
+
+interface EvidenceData {
+  assignment_id: number
+  title: string
+  description: string | null
+  file: {
+    name: string
+    size: number
+    key: string
+    url: string
+  }
+  grade: string | null
+  assessment_method: string[]
+  created_at: string
+  unit: {
+    unit_ref: string
+    title: string
+  }
+  mappedSubUnits: Array<{
+    id: number
+    subTitle: string
+  }>
+  reviews: {
+    [role: string]: {
+      completed: boolean
+      comment: string
+      signed_off_at: string | null
+      signed_off_by: string | null
+    }
+  } | Record<string, unknown>
 }
 
 interface ConfirmationRow {
@@ -43,15 +86,38 @@ interface ConfirmationRow {
 
 const ExamineEvidencePage: React.FC = () => {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [searchParams] = useSearchParams()
+  const params = useParams<{ planDetailId: string }>()
+  const currentUser = useCurrentUser()
   
+  // Get planDetailId from URL params (new route) or search params (old route)
+  const planDetailId = params.planDetailId || searchParams.get('sampleResultsId') || searchParams.get('SampleResultsID') || ''
+  const unitCode = searchParams.get('unit_code') || ''
+  
+  // Get unit name from search params or default
   const unitName = searchParams.get('unitName') || 'Unit 1'
   const moduleId = searchParams.get('module') || '2776'
   const unitId = searchParams.get('unitId') || searchParams.get('UnitID') || ''
-  const sampleResultsId = searchParams.get('sampleResultsId') || searchParams.get('SampleResultsID') || ''
+
+  // Call API to fetch evidence list
+  const { data: evidenceResponse, isLoading: isLoadingEvidence, isError: isErrorEvidence, refetch: refetchEvidence } = useGetEvidenceListQuery(
+    { planDetailId: planDetailId as string | number, unitCode },
+    { skip: !planDetailId || !unitCode }
+  )
+
+  // Add assignment review mutation
+  const [addAssignmentReview, { isLoading: isSubmittingReview }] = useAddAssignmentReviewMutation()
 
   // Evidence data state
   const [evidenceRows, setEvidenceRows] = useState<EvidenceRow[]>([])
+  const [evidenceData, setEvidenceData] = useState<EvidenceData[]>([])
+  const [displayUnitName, setDisplayUnitName] = useState<string>(unitName)
+  
+  // Comment modal state
+  const [commentModalOpen, setCommentModalOpen] = useState(false)
+  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceData | null>(null)
+  const [comment, setComment] = useState('')
   
   // Criteria sign-off state
   const [criteriaSignOff, setCriteriaSignOff] = useState<Record<string, boolean>>({
@@ -119,6 +185,128 @@ const ExamineEvidencePage: React.FC = () => {
 
   const [unitLocked, setUnitLocked] = useState(false)
 
+  // Handle opening comment modal
+  const handleOpenCommentModal = (evidence: EvidenceData) => {
+    setSelectedEvidence(evidence)
+    // Pre-fill comment if there's already a review for current user's role
+    const userRole = currentUser?.role || 'IQA'
+    const existingReview = evidence.reviews && typeof evidence.reviews === 'object' && !Array.isArray(evidence.reviews)
+      ? (evidence.reviews as { [role: string]: { comment: string } })[userRole]
+      : null
+    setComment(existingReview?.comment || '')
+    setCommentModalOpen(true)
+  }
+
+  // Get reviews for display
+  const getReviewsForEvidence = (evidence: EvidenceData) => {
+    if (!evidence.reviews || typeof evidence.reviews !== 'object' || Array.isArray(evidence.reviews)) {
+      return null
+    }
+    return evidence.reviews as { [role: string]: { completed: boolean; comment: string; signed_off_at: string | null; signed_off_by: string | null } }
+  }
+
+  // Get color for role chip
+  const getRoleColor = (role: string, completed: boolean): 'default' | 'primary' | 'success' | 'warning' | 'info' | 'error' => {
+    if (completed) {
+      return 'success'
+    }
+    switch (role) {
+      case 'IQA':
+        return 'primary'
+      case 'Admin':
+        return 'info'
+      case 'Trainer':
+        return 'warning'
+      case 'EQA':
+        return 'error'
+      case 'LIQA':
+        return 'primary'
+      case 'Employer':
+        return 'warning'
+      case 'Learner':
+        return 'default'
+      default:
+        return 'default'
+    }
+  }
+
+  // Handle closing comment modal
+  const handleCloseCommentModal = () => {
+    setCommentModalOpen(false)
+    setSelectedEvidence(null)
+    setComment('')
+  }
+
+  // Handle submitting comment
+  const handleSubmitComment = async () => {
+    if (!selectedEvidence || !comment.trim() || !planDetailId || !unitCode) {
+      dispatch(
+        showMessage({
+          message: 'Please fill in all required fields.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    try {
+      const userRole = currentUser?.role || 'IQA'
+      await addAssignmentReview({
+        assignment_id: selectedEvidence.assignment_id,
+        sampling_plan_detail_id: Number(planDetailId),
+        role: userRole,
+        comment: comment.trim(),
+        unit_code: unitCode,
+      }).unwrap()
+
+      dispatch(
+        showMessage({
+          message: 'Comment added successfully.',
+          variant: 'success',
+        })
+      )
+      
+      handleCloseCommentModal()
+      // Refetch evidence list to get updated data
+      refetchEvidence()
+    } catch (error: any) {
+      const message = error?.data?.message || error?.error || 'Failed to add comment.'
+      dispatch(
+        showMessage({
+          message,
+          variant: 'error',
+        })
+      )
+    }
+  }
+
+  // Update evidence rows when API response is received
+  useEffect(() => {
+    if (evidenceResponse?.data && Array.isArray(evidenceResponse.data)) {
+      setEvidenceData(evidenceResponse.data)
+      const mappedRows: EvidenceRow[] = evidenceResponse.data.map((evidence: EvidenceData) => ({
+        refNo: String(evidence.assignment_id),
+        evidenceDocuments: evidence.file?.name || '-',
+        evidenceName: evidence.title || '-',
+        evidenceDescription: evidence.description || '-',
+        assessmentMethod: evidence.assessment_method?.join(', ') || '-',
+        grade: evidence.grade || '-',
+        dateSet: '-', // Not available in API response
+        dateDue: '-', // Not available in API response
+        dateUploaded: evidence.created_at ? new Date(evidence.created_at).toLocaleDateString() : '-',
+      }))
+      setEvidenceRows(mappedRows)
+      
+      // Update unit name from API response if available
+      if (evidenceResponse.data.length > 0 && evidenceResponse.data[0].unit?.title) {
+        setDisplayUnitName(evidenceResponse.data[0].unit.title)
+      }
+    } else if (evidenceResponse?.data && evidenceResponse.data.length === 0) {
+      setEvidenceRows([])
+      setEvidenceData([])
+    }
+  }, [evidenceResponse])
+
   const handleCriteriaToggle = (key: string) => {
     setCriteriaSignOff((prev) => ({
       ...prev,
@@ -145,6 +333,20 @@ const ExamineEvidencePage: React.FC = () => {
   const handleAddFile = (index: number) => {
     // Handle add file logic
     console.log('Add file for', confirmationRows[index].role)
+  }
+
+  // Show loading state
+  if (isLoadingEvidence) {
+    return <FuseLoading />
+  }
+
+  // Show error state
+  if (isErrorEvidence) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="error">Failed to load evidence list. Please try again.</Typography>
+      </Box>
+    )
   }
 
   return (
@@ -191,7 +393,7 @@ const ExamineEvidencePage: React.FC = () => {
               color: '#333333',
             }}
           >
-            {unitName}
+            {displayUnitName}
           </Typography>
         </Stack>
       </Paper>
@@ -248,13 +450,21 @@ const ExamineEvidencePage: React.FC = () => {
                     >
                       Sign off all criteria
                     </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        textAlign: 'center',
+                      }}
+                    >
+                      Action
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {evidenceRows.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={10}
+                        colSpan={11}
                         align='center'
                         sx={{ py: 4, color: '#666666' }}
                       >
@@ -262,13 +472,27 @@ const ExamineEvidencePage: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    evidenceRows.map((row, index) => (
+                    evidenceRows.map((row, index) => {
+                      const evidence = evidenceData[index]
+                      const fileUrl = evidence?.file?.url
+                      return (
                       <TableRow key={index} hover>
                         <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
                           {row.refNo}
                         </TableCell>
                         <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {row.evidenceDocuments}
+                          {fileUrl ? (
+                            <a
+                              href={fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#1976d2', textDecoration: 'none' }}
+                            >
+                              {row.evidenceDocuments}
+                            </a>
+                          ) : (
+                            row.evidenceDocuments
+                          )}
                         </TableCell>
                         <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
                           {row.evidenceName}
@@ -292,8 +516,87 @@ const ExamineEvidencePage: React.FC = () => {
                           {row.dateUploaded}
                         </TableCell>
                         <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}></TableCell>
+                        <TableCell sx={{ textAlign: 'center' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                            {(() => {
+                              const reviews = getReviewsForEvidence(evidence)
+                              if (reviews && Object.keys(reviews).length > 0) {
+                                // Sort reviews by role priority for consistent display
+                                const rolePriority: { [key: string]: number } = {
+                                  'IQA': 1,
+                                  'LIQA': 2,
+                                  'EQA': 3,
+                                  'Admin': 4,
+                                  'Trainer': 5,
+                                  'Employer': 6,
+                                  'Learner': 7,
+                                }
+                                const sortedReviews = Object.entries(reviews).sort(([roleA], [roleB]) => {
+                                  const priorityA = rolePriority[roleA] || 99
+                                  const priorityB = rolePriority[roleB] || 99
+                                  return priorityA - priorityB
+                                })
+                                
+                                return sortedReviews.map(([role, reviewData]) => (
+                                  <Tooltip
+                                    key={role}
+                                    title={
+                                      <Box>
+                                        <Typography variant='body2' sx={{ fontWeight: 600, mb: 0.5 }}>
+                                          {role} Review:
+                                        </Typography>
+                                        <Typography variant='body2' sx={{ mb: 0.5 }}>
+                                          {reviewData.comment || 'No comment'}
+                                        </Typography>
+                                        <Typography variant='caption' sx={{ display: 'block', color: reviewData.completed ? '#4caf50' : '#666666' }}>
+                                          Status: {reviewData.completed ? 'Completed' : 'Pending'}
+                                        </Typography>
+                                        {reviewData.signed_off_at && (
+                                          <Typography variant='caption' sx={{ display: 'block', mt: 0.5 }}>
+                                            Signed off: {new Date(reviewData.signed_off_at).toLocaleDateString()}
+                                            {reviewData.signed_off_by && ` by ${reviewData.signed_off_by}`}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                    }
+                                    arrow
+                                  >
+                                    <Chip
+                                      label={role}
+                                      size='small'
+                                      color={getRoleColor(role, reviewData.completed)}
+                                      variant={reviewData.completed ? 'filled' : 'outlined'}
+                                      sx={{
+                                        fontSize: '0.7rem',
+                                        height: 22,
+                                        fontWeight: reviewData.completed ? 600 : 500,
+                                        '& .MuiChip-label': {
+                                          px: 0.75,
+                                        },
+                                      }}
+                                    />
+                                  </Tooltip>
+                                ))
+                              }
+                              return null
+                            })()}
+                            <IconButton
+                              size='small'
+                              onClick={() => handleOpenCommentModal(evidence)}
+                              sx={{
+                                color: '#1976d2',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                                },
+                              }}
+                            >
+                              <AddIcon fontSize='small' />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
                       </TableRow>
-                    ))
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -503,6 +806,178 @@ const ExamineEvidencePage: React.FC = () => {
           </Paper>
         </Stack>
       </Box>
+
+      {/* Comment Modal */}
+      <Dialog
+        open={commentModalOpen}
+        onClose={handleCloseCommentModal}
+        maxWidth='sm'
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          {/* Header */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              p: 2.5,
+              borderBottom: 1,
+              borderColor: 'divider',
+            }}
+          >
+            <Typography variant='h6' sx={{ fontWeight: 600, color: '#1976d2' }}>
+              Add Comment
+            </Typography>
+            <IconButton onClick={handleCloseCommentModal} size='small'>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {/* Content */}
+          <DialogContent sx={{ p: 2.5 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {selectedEvidence && (
+                <>
+                  <Box>
+                    <Typography variant='body2' sx={{ color: '#666666', mb: 1 }}>
+                      Evidence: <strong>{selectedEvidence.title}</strong>
+                    </Typography>
+                    <Typography variant='body2' sx={{ color: '#666666' }}>
+                      Assignment ID: {selectedEvidence.assignment_id}
+                    </Typography>
+                  </Box>
+                  
+                  {/* Existing Reviews */}
+                  {(() => {
+                    const reviews = getReviewsForEvidence(selectedEvidence)
+                    if (reviews && Object.keys(reviews).length > 0) {
+                      return (
+                        <Box
+                          sx={{
+                            p: 2,
+                            backgroundColor: '#f5f5f5',
+                            borderRadius: 1,
+                            border: '1px solid #e0e0e0',
+                          }}
+                        >
+                          <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 1.5 }}>
+                            Existing Reviews:
+                          </Typography>
+                          <Stack spacing={1.5}>
+                            {(() => {
+                              // Sort reviews by role priority for consistent display
+                              const rolePriority: { [key: string]: number } = {
+                                'IQA': 1,
+                                'LIQA': 2,
+                                'EQA': 3,
+                                'Admin': 4,
+                                'Trainer': 5,
+                                'Employer': 6,
+                                'Learner': 7,
+                              }
+                              const sortedReviews = Object.entries(reviews).sort(([roleA], [roleB]) => {
+                                const priorityA = rolePriority[roleA] || 99
+                                const priorityB = rolePriority[roleB] || 99
+                                return priorityA - priorityB
+                              })
+                              
+                              return sortedReviews.map(([role, reviewData]) => (
+                                <Box
+                                  key={role}
+                                  sx={{
+                                    p: 1.5,
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: 1,
+                                    border: '1px solid #e0e0e0',
+                                  }}
+                                >
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                    <Chip
+                                      label={role}
+                                      size='small'
+                                      color={getRoleColor(role, reviewData.completed)}
+                                      variant={reviewData.completed ? 'filled' : 'outlined'}
+                                      sx={{ 
+                                        fontSize: '0.75rem',
+                                        fontWeight: reviewData.completed ? 600 : 500,
+                                      }}
+                                    />
+                                    <Typography 
+                                      variant='caption' 
+                                      sx={{ 
+                                        color: reviewData.completed ? '#4caf50' : '#666666',
+                                        fontWeight: reviewData.completed ? 600 : 400,
+                                      }}
+                                    >
+                                      {reviewData.completed ? 'Completed' : 'Pending'}
+                                    </Typography>
+                                  </Box>
+                                  <Typography variant='body2' sx={{ color: '#333333', mb: 0.5 }}>
+                                    {reviewData.comment || 'No comment'}
+                                  </Typography>
+                                  {reviewData.signed_off_at && (
+                                    <Typography variant='caption' sx={{ color: '#666666', display: 'block' }}>
+                                      Signed off: {new Date(reviewData.signed_off_at).toLocaleString()}
+                                      {reviewData.signed_off_by && ` by ${reviewData.signed_off_by}`}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              ))
+                            })()}
+                          </Stack>
+                        </Box>
+                      )
+                    }
+                    return null
+                  })()}
+                </>
+              )}
+              
+              <TextField
+                label={`Comment (${currentUser?.role || 'IQA'})`}
+                fullWidth
+                multiline
+                rows={4}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder='Enter your comment here...'
+                required
+                sx={{ mt: 1 }}
+              />
+            </Box>
+          </DialogContent>
+
+          {/* Actions */}
+          <DialogActions sx={{ p: 2.5, borderTop: 1, borderColor: 'divider' }}>
+            <Button
+              onClick={handleCloseCommentModal}
+              variant='outlined'
+              disabled={isSubmittingReview}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitComment}
+              variant='contained'
+              disabled={isSubmittingReview || !comment.trim()}
+              sx={{
+                bgcolor: '#1976d2',
+                '&:hover': {
+                  bgcolor: '#1565c0',
+                },
+              }}
+            >
+              {isSubmittingReview ? 'Submitting...' : 'Submit'}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
     </Box>
   )
 }

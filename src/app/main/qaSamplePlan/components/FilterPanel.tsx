@@ -215,17 +215,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         >
           {isApplyRandomSamplesLoading ? 'Applying...' : 'Apply Random Samples'}
         </Button>
-        <Button
-          variant='outlined'
-          size='large'
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            borderStyle: 'dashed',
-          }}
-        >
-          Plan Management
-        </Button>
       </Stack>
     </Card>
   )

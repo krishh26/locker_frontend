@@ -5,6 +5,7 @@ import {
   Card,
   Checkbox,
   Chip,
+  ChipProps,
   Collapse,
   FormControl,
   FormControlLabel,
@@ -330,6 +331,49 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
         const method = getAssessmentMethodByCode(code)
         return method ? `${method.code} - ${method.title}` : code
       })
+  }
+
+  // Get unit status label and color
+  const getUnitStatus = (status: string | boolean | undefined) => {
+    // Handle legacy boolean format
+    if (typeof status === 'boolean') {
+      return {
+        label: status ? 'Completed' : 'Incomplete',
+        color: status ? 'success' : 'error' as const,
+      }
+    }
+    
+    // Handle new string status format
+    if (typeof status === 'string') {
+      switch (status.trim()) {
+        case 'Fully Completed':
+          return {
+            label: 'Fully Completed',
+            color: 'success' as const,
+          }
+        case 'Partially Completed':
+          return {
+            label: 'Partially Completed',
+            color: 'warning' as const,
+          }
+        case 'Not Started':
+          return {
+            label: 'Not Started',
+            color: 'error' as const,
+          }
+        default:
+          return {
+            label: status,
+            color: 'default' as const,
+          }
+      }
+    }
+    
+    // Default fallback
+    return {
+      label: 'Unknown',
+      color: 'default' as const,
+    }
   }
 
   return (
@@ -782,17 +826,22 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                                                     <Typography variant='body2' fontWeight={600}>
                                                       {sanitizeText(unit.unit_name) || `Unit ${unitIndex + 1}`}
                                                     </Typography>
-                                                      <Chip
-                                                        size='small'
-                                                        label={unit.completed ? 'Completed' : 'Incomplete'}
-                                                        color={unit.completed ? 'success' : 'error'}
-                                                        sx={{
-                                                          mt: 0.5,
-                                                          height: 20,
-                                                          fontSize: '0.7rem',
-                                                          fontWeight: 600,
-                                                        }}
-                                                      />
+                                                      {(() => {
+                                                        const status = getUnitStatus(unit.status)
+                                                        return (
+                                                          <Chip
+                                                            size='small'
+                                                            label={status.label}
+                                                            color={status.color as ChipProps['color']}
+                                                            sx={{
+                                                              mt: 0.5,
+                                                              height: 20,
+                                                              fontSize: '0.7rem',
+                                                              fontWeight: 600,
+                                                            }}
+                                                          />
+                                                        )
+                                                      })()}
                                                   </Box>
                                                 </Stack>
                                               </TableCell>
@@ -860,19 +909,6 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                                                       >
                                                         {formatDisplayDate(history.planned_date)}
                                                       </Typography>
-                                                      {typeof unit.completed === 'boolean' && (
-                                                        <Chip
-                                                          size='small'
-                                                          label={unit.completed ? 'Completed' : 'Incomplete'}
-                                                          color={unit.completed ? 'success' : 'error'}
-                                                          sx={{
-                                                            mt: 0.5,
-                                                            height: 20,
-                                                            fontSize: '0.7rem',
-                                                            fontWeight: 600,
-                                                          }}
-                                                        />
-                                                      )}
                                                     </Box>
                                                   </TableCell>
                                                 )

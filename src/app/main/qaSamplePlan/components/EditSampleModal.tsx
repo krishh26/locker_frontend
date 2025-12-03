@@ -80,6 +80,7 @@ interface EditSampleModalProps {
   onSave?: () => void
   isSaving?: boolean
   planDetailId?: string | number | null
+  unitCode?: string | null
   onCreateNew?: () => void
   isCreating?: boolean
   onDeleteSuccess?: () => void
@@ -104,6 +105,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   onSave,
   isSaving = false,
   planDetailId = null,
+  unitCode = null,
   onCreateNew,
   isCreating = false,
   onDeleteSuccess,
@@ -867,13 +869,14 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
           <Button
             variant='contained'
             onClick={() => {
-              // Navigate to examine evidence page with query parameters
-              const params = new URLSearchParams()
+              // Navigate to examine evidence page with new URL format
               if (planDetailId) {
-                params.append('sampleResultsId', String(planDetailId))
+                const params = new URLSearchParams()
+                if (unitCode) {
+                  params.append('unit_code', unitCode)
+                }
+                navigate(`/sample-plan/${planDetailId}/evidence${params.toString() ? `?${params.toString()}` : ''}`)
               }
-              // Add other parameters if available from modalFormData or currentModalLearner
-              navigate(`/qa-sample-plan/examine-evidence?${params.toString()}`)
             }}
             sx={{
               textTransform: 'none',

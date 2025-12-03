@@ -1768,6 +1768,7 @@ const Index: React.FC = () => {
         onSave={handleSaveSampleDetail}
         isSaving={isUpdatingSampleDetail}
         planDetailId={planDetailId}
+        unitCode={currentModalUnitKey}
         onCreateNew={handleCreateNew}
         isCreating={isApplySamplesLoading}
         onDeleteSuccess={() => {
