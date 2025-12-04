@@ -81,6 +81,7 @@ interface EditSampleModalProps {
   isSaving?: boolean
   planDetailId?: string | number | null
   unitCode?: string | null
+  unitName?: string | null
   onCreateNew?: () => void
   isCreating?: boolean
   onDeleteSuccess?: () => void
@@ -106,6 +107,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   isSaving = false,
   planDetailId = null,
   unitCode = null,
+  unitName = null,
   onCreateNew,
   isCreating = false,
   onDeleteSuccess,
@@ -874,6 +876,9 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
                 const params = new URLSearchParams()
                 if (unitCode) {
                   params.append('unit_code', unitCode)
+                }
+                if (unitName) {
+                  params.append('unitName', unitName)
                 }
                 navigate(`/sample-plan/${planDetailId}/evidence${params.toString() ? `?${params.toString()}` : ''}`)
               }

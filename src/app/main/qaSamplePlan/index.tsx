@@ -745,6 +745,20 @@ const Index: React.FC = () => {
   }, [learnersData])
 
   // Get course name from planSummary or courses array
+  // Compute current modal unit name
+  const currentModalUnitName = useMemo(() => {
+    if (!currentModalLearner || !currentModalUnitKey) {
+      return null
+    }
+    const units = Array.isArray(currentModalLearner.units)
+      ? currentModalLearner.units
+      : []
+    const selectedUnit = units.find(
+      (u: any) => (u.unit_code || u.unit_name) === currentModalUnitKey
+    )
+    return selectedUnit?.unit_name || null
+  }, [currentModalLearner, currentModalUnitKey])
+
   const courseName = useMemo(() => {
     if (planSummary?.courseName) {
       return planSummary.courseName
@@ -1769,6 +1783,7 @@ const Index: React.FC = () => {
         isSaving={isUpdatingSampleDetail}
         planDetailId={planDetailId}
         unitCode={currentModalUnitKey}
+        unitName={currentModalUnitName}
         onCreateNew={handleCreateNew}
         isCreating={isApplySamplesLoading}
         onDeleteSuccess={() => {
