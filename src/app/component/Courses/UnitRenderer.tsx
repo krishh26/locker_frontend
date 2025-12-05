@@ -1,7 +1,9 @@
 import React from 'react';
 import QualificationUnitForm from './QualificationUnitForm';
-import { Box, TextField, Tooltip, Typography } from '@mui/material';
+import QualificationCriteriaTable from './QualificationCriteriaTable';
+import { Box, TextField, Tooltip, Typography, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { SecondaryButton } from '../Buttons';
 
 import { UnitRendererProps } from './componentTypes';
@@ -62,6 +64,16 @@ const UnitRenderer: React.FC<UnitRendererProps> = ({
       unitId
     });
   });
+
+  // Handle learning outcomes changes
+  const handleLearningOutcomesChange = (unitId: string | number, field: string, value: any) => {
+    courseDispatch({
+      type: 'UPDATE_MANDATORY_UNIT',
+      unitId,
+      field,
+      value
+    });
+  };
 
   const addUnitHandler = () => {
     if (courseType === 'Gateway') {
@@ -261,6 +273,26 @@ const UnitRenderer: React.FC<UnitRendererProps> = ({
               edit={edit}
             />
 
+            {/* Assessment Criteria Section */}
+            <Accordion sx={{ mb: 2, backgroundColor: '#f5f5f5' }}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Assessment Criteria
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box sx={{ width: '100%' }}>
+                  <QualificationCriteriaTable
+                    unitId={unit.id}
+                    learningOutcomes={unit.learning_outcomes || []}
+                    onChange={handleLearningOutcomesChange}
+                    readOnly={edit === "view"}
+                    renderUpdateButton={false}
+                  />
+                </Box>
+              </AccordionDetails>
+            </Accordion>
+
             {unit?.subUnit?.length > 0 &&
               unit?.subUnit.map((subItem: any) => (
                 <React.Fragment key={subItem.id}>
@@ -364,10 +396,10 @@ const UnitRenderer: React.FC<UnitRendererProps> = ({
       ) : (
         <Box className="p-6 border border-gray-200 rounded-md bg-gray-50 text-center">
           <Typography className="opacity-50 mb-4">
-            No Outcomes have been added yet. Click "Add New Outcomes" to get started.
+            No Units have been added yet. Click "Add New Unit" to get started.
           </Typography>
           <SecondaryButton
-            name="Add New Outcomes"
+            name="Add New Unit"
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.preventDefault();
               e.stopPropagation();
@@ -383,7 +415,7 @@ const UnitRenderer: React.FC<UnitRendererProps> = ({
       {units.length > 0 && edit !== "view" && !areAllUnitsSaved && (
         <Box className="flex justify-end mt-4">
           <SecondaryButton
-            name="Save Outcomes"
+            name="Save Units"
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.preventDefault();
               e.stopPropagation();

@@ -44,11 +44,11 @@ const CriteriaTable = ({
 }) => {
   // Function to add a new criterion
   const addCriterion = () => {
-    // Check if there''s at least one learning outcome
+    // Check if there's at least one learning outcome
     if (learningOutcomes.length === 0) {
       // Create a new learning outcome with a default criterion
       const newLearningOutcome = {
-        id: `lo_$\{uuidv4\(\)\}`,
+        id: `lo_${uuidv4()}`,
         number: '1',
         description: 'Learning Outcome',
         assessment_criteria: []
@@ -56,8 +56,8 @@ const CriteriaTable = ({
 
       // Create a criterion
       const newCriterion = {
-        id: `ac_$\{uuidv4\(\)\}`,
-        number: `$\{newLearningOutcome.number\}.1`,
+        id: `ac_${uuidv4()}`,
+        number: `${newLearningOutcome.number}.1`,
         title: '',
         description: '',
         type: 'to-do',
@@ -71,12 +71,12 @@ const CriteriaTable = ({
       // Update with the new learning outcome that already has a criterion
       onChange(unitId, 'learning_outcomes', [...learningOutcomes, newLearningOutcome]);
     } else {
-      // If there''s already a learning outcome, just add a criterion to the first one
+      // If there's already a learning outcome, just add a criterion to the first one
       const learningOutcome = learningOutcomes[0];
 
       const newCriterion = {
-        id: `ac_$\{uuidv4\(\)\}`,
-        number: `$\{learningOutcome.number\}.$\{learningOutcome.assessment_criteria.length + 1\}`,
+        id: `ac_${uuidv4()}`,
+        number: `${learningOutcome.number}.${learningOutcome.assessment_criteria.length + 1}`,
         title: '',
         description: '',
         type: 'to-do',
@@ -129,7 +129,7 @@ const CriteriaTable = ({
         // Renumber the remaining criteria
         const renumberedCriteria = filteredCriteria.map((ac, index) => ({
           ...ac,
-          number: `$\{lo.number\}.$\{index + 1\}`
+          number: `${lo.number}.${index + 1}`
         }));
 
         return {
