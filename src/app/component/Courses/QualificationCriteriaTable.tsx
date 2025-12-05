@@ -7,12 +7,6 @@ import TableCriteriaEditor from './TableCriteriaEditor';
 import { useDispatch } from 'react-redux';
 import { showMessage } from 'app/store/fuse/messageSlice';
 
-interface AssessmentMethod {
-  value: string;
-  label: string;
-  fullName: string;
-}
-
 interface TableCriterion {
   id: string;
   number: string;
@@ -20,7 +14,6 @@ interface TableCriterion {
   description: string;
   type: 'to-do' | 'to-know' | 'req';
   showOrder: number;
-  assessmentMethods: Record<string, string>;
   timesMet: number;
 }
 
@@ -31,34 +24,16 @@ interface AssessmentCriterion {
   description: string;
   type: string;
   showOrder: number;
-  assessmentMethods?: Record<string, any>;
   timesMet?: number;
   [key: string]: any;
 }
 
-// Assessment methods for qualification criteria
-const assessmentMethods: AssessmentMethod[] = [
-  { value: 'pe', label: 'PE', fullName: 'Professional Discussion' },
-  { value: 'do', label: 'DO', fullName: 'Direct Observation' },
-  { value: 'wt', label: 'WT', fullName: 'Witness Testimony' },
-  { value: 'qa', label: 'QA', fullName: 'Question and Answer' },
-  { value: 'ps', label: 'PS', fullName: 'Product Sample' },
-  { value: 'di', label: 'DI', fullName: 'Discussion' },
-  { value: 'si', label: 'SI', fullName: 'Simulation' },
-  { value: 'ee', label: 'ET', fullName: 'Expert Evidence' },
-  { value: 'ba', label: 'RA', fullName: 'Basic Assessment' },
-  { value: 'ot', label: 'OT', fullName: 'Other' },
-  { value: 'ipl', label: 'RPL', fullName: 'Individual Personal Log' },
-  { value: 'lo', label: 'LO', fullName: 'Learning Outcome' }
-];
+// Removed assessment methods handling
+
 
 // Helper function to convert AssessmentCriterion to TableCriterion
 const convertToTableCriterion = (criterion: AssessmentCriterion): TableCriterion => {
-  // Initialize assessment methods
-  const methodsObj: Record<string, string> = {};
-  assessmentMethods.forEach((method: AssessmentMethod) => {
-    methodsObj[method.value] = criterion.assessmentMethods?.[method.value] || '';
-  });
+
 
   // Map the type to one of the allowed values
   let criterionType: 'to-do' | 'to-know' | 'req' = 'to-do';
@@ -75,7 +50,6 @@ const convertToTableCriterion = (criterion: AssessmentCriterion): TableCriterion
     description: criterion.description || '',
     type: criterionType,
     showOrder: criterion.showOrder || 0,
-    assessmentMethods: methodsObj,
     timesMet: criterion.timesMet || 0
   };
 };
@@ -167,7 +141,6 @@ const QualificationCriteriaTable: React.FC<QualificationCriteriaTableProps> = ({
       description: tableCriterion.description,
       type: tableCriterion.type,
       showOrder: tableCriterion.showOrder,
-      assessmentMethods: tableCriterion.assessmentMethods,
       timesMet: tableCriterion.timesMet
     };
   };

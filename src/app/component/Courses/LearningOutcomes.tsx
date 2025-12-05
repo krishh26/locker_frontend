@@ -39,21 +39,7 @@ const criterionTypes = [
   { value: 'other', label: 'Other' }
 ];
 
-// Assessment method options
-const assessmentMethods = [
-  { value: 'pe', label: 'PE', tooltip: 'Professional discussion' },
-  { value: 'do', label: 'DO', tooltip: 'Direct observation' },
-  { value: 'wt', label: 'WT', tooltip: 'Witness testimony' },
-  { value: 'qa', label: 'QA', tooltip: 'Question and answer' },
-  { value: 'ps', label: 'PS', tooltip: 'Product sample' },
-  { value: 'di', label: 'DI', tooltip: 'Discussion' },
-  { value: 'si', label: 'SI', tooltip: 'Simulation' },
-  { value: 'ee', label: 'EE', tooltip: 'Expert evidence' },
-  { value: 'ba', label: 'BA', tooltip: 'Basic assessment' },
-  { value: 'ot', label: 'OT', tooltip: 'Other' },
-  { value: 'ipl', label: 'IPL', tooltip: 'Individual personal log' },
-  { value: 'lo', label: 'LO', tooltip: 'Learning outcome' }
-];
+// Assessment methods removed
 
 // Styles are imported from the CSS module
 
@@ -61,7 +47,8 @@ const LearningOutcomes = ({
   unitId,
   learningOutcomes = [],
   onChange,
-  readOnly = false
+  readOnly = false,
+  courseType = 'Standard'
 }) => {
   const [expandedAccordion, setExpandedAccordion] = useState(null);
   const addLearningOutcome = () => {
@@ -75,12 +62,6 @@ const LearningOutcomes = ({
         assessment_criteria: []
       };
 
-      // Create empty assessment methods object
-      const assessmentMethodsObj = {};
-      assessmentMethods.forEach(method => {
-        assessmentMethodsObj[method.value] = false;
-      });
-
       // Create a criterion
       const newCriterion = {
         id: `ac_${uuidv4()}`,
@@ -89,7 +70,6 @@ const LearningOutcomes = ({
         description: '',
         type: 'to-do',
         showOrder: 1,
-        assessmentMethods: assessmentMethodsObj,
         timesMet: 0
       };
 
@@ -145,12 +125,6 @@ const LearningOutcomes = ({
 
     if (!learningOutcome) return;
 
-    // Create empty assessment methods object
-    const assessmentMethodsObj: { [key: string]: boolean } = {};
-    assessmentMethods.forEach(method => {
-      assessmentMethodsObj[method.value] = false;
-    });
-
     const newCriterion = {
       id: `ac_${uuidv4()}`,
       number: `${learningOutcome.number}.${learningOutcome.assessment_criteria.length + 1}`,
@@ -158,7 +132,6 @@ const LearningOutcomes = ({
       description: '',
       type: 'to-do',
       showOrder: learningOutcome.assessment_criteria.length + 1,
-      assessmentMethods: assessmentMethodsObj,
       timesMet: 0
     };
 
@@ -235,33 +208,7 @@ const LearningOutcomes = ({
     return criteria;
   };
 
-  // Function to toggle an assessment method
-  const toggleAssessmentMethod = (loId, acId, methodKey) => {
-    const updatedOutcomes = learningOutcomes.map(lo => {
-      if (lo.id === loId) {
-        const updatedCriteria = lo.assessment_criteria.map(ac => {
-          if (ac.id === acId) {
-            return {
-              ...ac,
-              assessmentMethods: {
-                ...ac.assessmentMethods,
-                [methodKey]: !ac.assessmentMethods[methodKey]
-              }
-            };
-          }
-          return ac;
-        });
-
-        return {
-          ...lo,
-          assessment_criteria: updatedCriteria
-        };
-      }
-      return lo;
-    });
-
-    onChange(unitId, 'learning_outcomes', updatedOutcomes);
-  };
+  // assessment methods removed
 
   // Function to update times met
   const updateTimesMet = (loId, acId, value) => {
@@ -275,7 +222,7 @@ const LearningOutcomes = ({
     <Paper elevation={0} className={styles.container}>
       <Box className={styles.header}>
         <Typography variant="h6">
-          Learning Outcomes
+          {courseType === 'Qualification' ? 'Units' : 'Learning Outcomes'}
           <Badge
             badgeContent={learningOutcomes.length}
             color="primary"
@@ -504,33 +451,6 @@ const LearningOutcomes = ({
                                               rows={2}
                                               className={`${styles.inputField} ${styles.descriptionField}`}
                                             />
-
-                                            <Box className={styles.assessmentMethodsContainer}>
-                                              <Typography variant="caption" style={{ width: '100%', marginBottom: '8px' }}>
-                                                Assessment Methods:
-                                              </Typography>
-                                              <FormGroup row>
-                                                {assessmentMethods.map(method => (
-                                                  <FormControlLabel
-                                                    key={method.value}
-                                                    control={
-                                                      <Checkbox
-                                                        checked={ac.assessmentMethods?.[method.value] || false}
-                                                        onChange={() => toggleAssessmentMethod(lo.id, ac.id, method.value)}
-                                                        disabled={readOnly}
-                                                        size="small"
-                                                      />
-                                                    }
-                                                    label={
-                                                      <Tooltip title={method.tooltip}>
-                                                        <Typography variant="caption">{method.label}</Typography>
-                                                      </Tooltip>
-                                                    }
-                                                    className={styles.assessmentMethod}
-                                                  />
-                                                ))}
-                                              </FormGroup>
-                                            </Box>
 
                                             <div className={styles.criterionActions}>
                                               <span

@@ -122,9 +122,9 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
     if (courseData.course_core_type === 'Gateway') {
       return ['Course Details'];
     } else if (courseData.course_core_type === 'Standard') {
-      return ['Course Details', 'Learning Outcome', 'Assessment Criteria'];
+      return ['Course Details', 'Module'];
     } else {
-      return ['Course Details', 'Learning Outcome', 'Assessment Criteria'];
+      return ['Course Details', 'Unit'];
     }
   }, [courseData.course_core_type]);
 
@@ -328,7 +328,7 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
       {activeStep === 1 && courseData.course_core_type !== 'Gateway' && courseSaved && (
         <Paper elevation={0} className="p-6 border border-gray-200 mb-6">
           <Typography variant="h6" gutterBottom>
-           Learning Outcomes
+           {courseData.course_core_type === 'Standard' ? 'Modules' : 'Units'}
           </Typography>
 
           {courseData.course_core_type === 'Standard' ? (
@@ -344,6 +344,24 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
                 setCourseSaved={setCourseSaved}
                 edit={edit}
               />
+
+              {/* Assessment Criteria (Topics) for Standard */}
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                  Assessment Criteria
+                </Typography>
+                {/* @ts-ignore - Type issues will be fixed in a future update */}
+                <StandardTopicEditor
+                  courseId={courseId || ''}
+                  showTopicEditor={showTopicEditor}
+                  setShowTopicEditor={setShowTopicEditor}
+                  mandatoryUnit={mandatoryUnit}
+                  courseDispatch={courseDispatch}
+                  savedUnits={savedUnits}
+                  edit={edit}
+                  saveCourse={saveCourse}
+                />
+              </Box>
             </>
           ) : (
             <>
@@ -386,100 +404,6 @@ const CourseBuilder: React.FC<CourseBuilderProps> = (props) => {
               startIcon={<ArrowBackIcon />}
             />
           </Box>
-        </Paper>
-      )}
-
-      {/* Step 3: Criteria/Topics */}
-      {activeStep === 2 && courseData.course_core_type === 'Standard' && (
-        <Paper elevation={0} className="p-6 border border-gray-200 mb-6">
-          <Typography variant="h6" gutterBottom>
-          Assessment Criteria
-          </Typography>
-
-          {/* @ts-ignore - Type issues will be fixed in a future update */}
-          <StandardTopicEditor
-            courseId={courseId || ''}
-            showTopicEditor={showTopicEditor}
-            setShowTopicEditor={setShowTopicEditor}
-            mandatoryUnit={mandatoryUnit}
-            courseDispatch={courseDispatch}
-            savedUnits={savedUnits}
-            edit={edit}
-            saveCourse={saveCourse}
-          />
-        </Paper>
-      )}
-
-      {activeStep === 2 && courseData.course_core_type === 'Qualification' && courseSaved && Object.values(savedUnits).some(saved => saved) && (
-        <Paper elevation={0} className="p-6 border border-gray-200 mb-6">
-          <Typography variant="h6" gutterBottom>
-          Assessment Criteria
-          </Typography>
-
-          {Object.values(mandatoryUnit).length > 0 ? (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Select a unit to manage its assessment criteria:
-              </Typography>
-              {Object.values(mandatoryUnit).map((unit: any) => (
-                <Accordion key={unit.id}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>
-                      <strong>{unit.title || 'Untitled Unit'}</strong> {unit.unit_ref ? `(${unit.unit_ref})` : ''}
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <QualificationCriteriaTable
-                      unitId={unit.id}
-                      learningOutcomes={unit.learning_outcomes || []}
-                      onChange={handleLearningOutcomesChange}
-                      readOnly={edit === "view"}
-                      saveCourse={saveCourse}
-                      renderUpdateButton={false}
-                    />
-                  </AccordionDetails>
-                </Accordion>
-              ))}
-
-              {/* Update Criteria button outside the accordion */}
-              {edit !== "view" && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-                  <SecondaryButton
-                    name="Update Criteria"
-                    onClick={async () => {
-                      try {
-                        const result = await saveCourse();
-                        if (result) {
-                          dispatch(showMessage({
-                            message: "All criteria updated and saved successfully.",
-                            variant: "success"
-                          }));
-                        } else {
-                          dispatch(showMessage({
-                            message: "Failed to save criteria to the server. Please try again.",
-                            variant: "error"
-                          }));
-                        }
-                      } catch (error) {
-                        console.error('Error saving course:', error);
-                        dispatch(showMessage({
-                          message: "An error occurred while saving criteria.",
-                          variant: "error"
-                        }));
-                      }
-                    }}
-                    sx={{ backgroundColor: '#4caf50', color: 'white', '&:hover': { backgroundColor: '#388e3c' } }}
-                  />
-                </Box>
-              )}
-            </Box>
-          ) : (
-            <Box className="p-6 border border-gray-200 rounded-md bg-gray-50 text-center">
-              <Typography className="opacity-50">
-                No units available. Please add units first.
-              </Typography>
-            </Box>
-          )}
         </Paper>
       )}
     </Box>

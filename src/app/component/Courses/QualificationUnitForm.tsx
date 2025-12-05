@@ -115,13 +115,7 @@ const QualificationUnitForm: React.FC<QualificationUnitFormProps> = ({
         />
 
         <Box className="flex items-center justify-between gap-2">
-          {edit !== "view" && (
-            <SecondaryButton
-              name="Add Sub Outcomes"
-              className="min-w-112"
-              onClick={() => addSubUnitHandler(unit?.id)}
-            />
-          )}
+          {/* Add Sub Outcomes button removed */}
         </Box>
       </div>
     </div>
