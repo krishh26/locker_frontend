@@ -62,6 +62,31 @@ const baseCourseSchema = yup.object().shape({
   assigned_gateway_name: yup.string().optional(),
   questions: yup.array().optional(),
   assigned_standards: yup.array().optional(),
+  units: yup
+    .array()
+    .of(
+      yup.object().shape({
+        id: yup.mixed().optional(),
+        title: yup.string().optional(),
+        component_ref: yup.string().optional(),
+        description: yup.string().optional(),
+        mandatory: yup.string().optional(),
+        active: yup.string().optional(),
+        delivery_method: yup.string().optional(),
+        otj_hours: yup.string().optional(),
+        delivery_lead: yup.string().optional(),
+        sort_order: yup.string().optional(),
+        moduleType: yup.string().optional(),
+        unit_ref: yup.string().optional(),
+        level: yup.mixed().nullable().optional(),
+        glh: yup.number().nullable().optional(),
+        credit_value: yup.number().nullable().optional(),
+        subUnit: yup.array().optional(),
+        learning_outcomes: yup.array().optional(),
+        assessment_criteria: yup.array().optional(),
+      })
+    )
+    .optional(),
 })
 
 // Qualification-specific validation
@@ -100,6 +125,43 @@ const standardSchema = baseCourseSchema.shape({
   two_page_standard_link: yup.string().url('Must be a valid URL').optional(),
   assessment_plan_link: yup.string().url('Must be a valid URL').optional(),
   assigned_gateway_id: yup.number().nullable().optional(),
+  // Units/Modules validation for Standard - validate each unit
+  units: yup
+    .array()
+    .of(
+      yup.object().shape({
+        id: yup.mixed().optional(),
+        title: yup.string().required('Module Title is required'),
+        component_ref: yup.string().required('Module Reference Number is required'),
+        description: yup.string().optional(),
+        mandatory: yup.string().optional(),
+        active: yup.string().optional(),
+        delivery_method: yup.string().optional(),
+        otj_hours: yup.string().optional(),
+        delivery_lead: yup.string().optional(),
+        sort_order: yup.string().optional(),
+        subUnit: yup.array().optional(),
+        learning_outcomes: yup.array().optional(),
+        // Assessment Criteria validation for Standard modules
+        assessment_criteria: yup
+          .array()
+          .of(
+            yup.object().shape({
+              id: yup.mixed().optional(),
+              title: yup.string().required('Topic Title is required'),
+              description: yup.string().optional(),
+              type: yup
+                .string()
+                .oneOf(['Behaviour', 'Knowledge', 'Skills'])
+                .required('Type is required'),
+              showOrder: yup.number().optional(),
+              code: yup.string().optional(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .optional(),
 })
 
 // Gateway-specific validation (no course_type field)

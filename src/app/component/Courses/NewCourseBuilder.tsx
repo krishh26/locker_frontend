@@ -29,11 +29,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import {
   selectCourseBuilder,
-  selectActiveStep,
   selectIsSaving,
-  setActiveStep,
-  nextStep,
-  previousStep,
   setSaving,
   setError,
   CourseFormData,
@@ -54,7 +50,7 @@ interface NewCourseBuilderProps {
   handleClose?: () => void
 }
 
-const STEPS = ['Course Details', 'Units/Modules', 'Review']
+const STEPS = ['Course Details', 'Units/Modules']
 
 const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
   edit = 'create',
@@ -68,8 +64,9 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
   const { saveCourse, loadCourse } = useCourseBuilderAPI()
   const { showSuccess, showError, NotificationComponent } = useNotification()
 
-  const { activeStep, isSaving, course_id } = useSelector(selectCourseBuilder)
+  const { isSaving, course_id } = useSelector(selectCourseBuilder)
   const [gatewayCourses, setGatewayCourses] = useState<GatewayCourse[]>([])
+  const [activeStep, setActiveStep] = useState<number>(0)
 
   const isEdit = course_id || courseId
 
@@ -126,7 +123,8 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
     [initialCourseType]
   )
 
-  // Initialize React Hook Form with schema based on initial course type
+  // Initialize React Hook Form with dynamic resolver
+  // The resolver will check the current course_core_type value from the form data
   const {
     control,
     handleSubmit,
@@ -135,17 +133,21 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
     watch,
     setValue,
     getValues,
+    trigger,
   } = useForm<CourseFormData>({
-    resolver: yupResolver(getCourseValidationSchema(initialCourseType)),
-    mode: 'onChange',
+    resolver: async (values, context, options) => {
+      // Dynamically determine which schema to use based on current course_core_type value
+      const currentCourseType = (values.course_core_type || initialCourseType) as CourseCoreType
+      const schema = getCourseValidationSchema(currentCourseType)
+      return yupResolver(schema)(values, context, options)
+    },
     defaultValues: defaultFormValues,
     shouldUnregister: false, // Keep all fields registered even when empty
   })
-
+  console.log("🚀 ~ NewCourseBuilder ~ errors:", errors)
 
   // Watch course_core_type for UI display
-  const courseCoreType = watch('course_core_type') || 'Qualification'
-  console.log("🚀 ~ NewCourseBuilder ~ courseCoreType:", courseCoreType)
+  const courseCoreType = watch('course_core_type') || initialCourseType
 
   // Course type configuration for UI display
   const courseTypeConfig = useMemo(() => {
@@ -195,6 +197,8 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
             operational_start_date: result.data.operational_start_date || '',
             recommended_minimum_age: result.data.recommended_minimum_age || '',
             overall_grading_type: result.data.overall_grading_type || '',
+            // Include units array from API response
+            units: (result.data as any).units || [],
             permitted_delivery_types:
               result.data.permitted_delivery_types || '',
             professional_certification:
@@ -241,7 +245,9 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
       // Ensure guided_learning_hours is included even if empty
       guided_learning_hours: data.guided_learning_hours ?? '',
     }
+    console.log("🚀 ~ onSubmit ~ formData:", formData)
 
+    // Units/modules are already part of the form data
     const courseIdToSave = course_id || courseId
 
     const result = await saveCourse(formData, courseIdToSave)
@@ -252,13 +258,7 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
       )
 
       if (activeStep < STEPS.length - 1) {
-        dispatch(nextStep())
-      } else {
-        // Form completed - navigate after showing success message
-        setTimeout(() => {
-          handleClose?.()
-          navigate('/courseBuilder')
-        }, 1500)
+        setActiveStep((prev) => prev + 1)
       }
     } else {
       showError(result.error || 'Failed to save course. Please try again.')
@@ -270,18 +270,22 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
     if (activeStep === 0) {
       // Validate step 1 before proceeding
       handleSubmit(onSubmit)()
+    } else if (activeStep < STEPS.length - 1) {
+      // Move to next step if not on last step
+      setActiveStep((prev) => prev + 1)
     } else {
-      dispatch(nextStep())
+      // On last step, submit the form
+      handleSubmit(onSubmit)()
     }
   }
 
   const handleBack = () => {
-    dispatch(previousStep())
+    setActiveStep((prev) => Math.max(0, prev - 1))
   }
 
   const handleStepClick = (step: number) => {
     if (step <= activeStep) {
-      dispatch(setActiveStep(step))
+      setActiveStep(step)
     }
   }
 
@@ -314,18 +318,9 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
             courseId={courseId || course_id}
             courseCoreType={courseCoreType}
             edit={edit}
+            control={control}
+            setValue={setValue}
           />
-        )
-      case 2:
-        return (
-          <Box>
-            <Typography variant='h6' gutterBottom>
-              Review
-            </Typography>
-            <Typography variant='body2' color='textSecondary'>
-              Review section will be added here
-            </Typography>
-          </Box>
         )
       default:
         return null
@@ -461,7 +456,11 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
                   : handleNext
               }
             >
-              {isEdit ? 'Update Course' : 'Create Course'}
+              {isSaving
+                ? 'Saving...'
+                : isEdit
+                ? 'Update Course'
+                : 'Create Course'}
             </Button>
           </Box>
         </form>

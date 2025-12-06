@@ -23,7 +23,7 @@ import {
   MenuItem,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { useForm, useFieldArray, Controller } from 'react-hook-form'
+import { useFieldArray, Controller, useWatch, UseFormSetValue } from 'react-hook-form'
 import { CourseCoreType } from 'app/store/courseBuilderSlice'
 import { useNotification } from './useNotification'
 import { useCourseBuilderAPI } from './useCourseBuilderAPI'
@@ -36,6 +36,8 @@ interface CourseUnitsModulesStepProps {
   courseId?: string
   courseCoreType: CourseCoreType
   edit?: 'create' | 'edit' | 'view'
+  control: any
+  setValue: any
 }
 
 interface LearningOutcome {
@@ -70,38 +72,49 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
   courseId,
   courseCoreType,
   edit = 'create',
+  control,
+  setValue,
 }) => {
-  const { showSuccess, showError, NotificationComponent } = useNotification()
+  const { NotificationComponent } = useNotification()
   const { loadCourse } = useCourseBuilderAPI()
   const isViewMode = edit === 'view'
-
-  const { control, handleSubmit, watch, reset } = useForm<UnitsModulesFormData>({
-    defaultValues: {
-      units: [],
-    },
-  })
 
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'units',
   })
 
-  const units = watch('units')
+  const units = useWatch({
+    control,
+    name: 'units',
+    defaultValue: [],
+  })
 
-  // Load existing units/modules when courseId is available
+  // Auto-update sort_order when units are added/removed
   useEffect(() => {
-    if (courseId) {
-      loadCourse(courseId).then((result) => {
-        if (result.success && result.data) {
-          // TODO: Load units from API response
-          // For now, initialize with empty array
-          // Units would be in result.data.units if available
-        //   const loadedUnits = []
-        //   reset({ units: loadedUnits })
+    if (units && units.length > 0 && setValue) {
+      units.forEach((unit: any, index: number) => {
+        const expectedSortOrder = String(index + 1)
+        if (unit.sort_order !== expectedSortOrder) {
+          setValue(`units.${index}.sort_order`, expectedSortOrder)
         }
       })
     }
-  }, [courseId, loadCourse, reset])
+  }, [units?.length, setValue, units])
+
+  // Load existing units/modules when courseId is available
+  useEffect(() => {
+    if (courseId && setValue) {
+      loadCourse(courseId).then((result) => {
+        if (result.success && result.data) {
+          const units = (result.data as any).units
+          if (units && Array.isArray(units)) {
+            setValue('units', units)
+          }
+        }
+      })
+    }
+  }, [courseId, loadCourse, setValue])
 
   // Check if course is saved (has courseId)
   if (!courseId) {
@@ -128,17 +141,18 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
 
   const handleAddUnit = () => {
     if (courseCoreType === 'Standard') {
+      // Get current units count for auto-filling sort_order
+      const currentUnitsCount = units?.length || 0
       const newModule: Unit = {
         id: Date.now(),
         title: '',
         component_ref: '',
         mandatory: 'true',
-        moduleType: 'behaviour',
         description: '',
         delivery_method: '',
         otj_hours: '0',
         delivery_lead: '',
-        sort_order: '0',
+        sort_order: String(currentUnitsCount + 1), // Auto-fill with next number
         active: 'true',
         subUnit: [],
         learning_outcomes: [],
@@ -169,17 +183,6 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
     }
   }
 
-  const handleSave = async (data: UnitsModulesFormData) => {
-    try {
-      // TODO: Implement API call to save units/modules
-      // This will use updateCourseAPI with units array
-      showSuccess(
-        `${courseCoreType === 'Standard' ? 'Modules' : 'Units'} saved successfully!`
-      )
-    } catch (error) {
-      showError('Failed to save. Please try again.')
-    }
-  }
 
   // Render based on course type
   if (courseCoreType === 'Standard') {
@@ -246,13 +249,15 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                     <Controller
                       name={`units.${index}.title`}
                       control={control}
-                      render={({ field }) => (
+                      render={({ field, fieldState: { error } }) => (
                         <TextField
                           {...field}
                           fullWidth
                           size="small"
                           placeholder="Enter Module Title"
                           required
+                          error={!!error}
+                          helperText={error?.message}
                           disabled={isViewMode}
                         />
                       )}
@@ -261,17 +266,20 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
 
                   <Grid item xs={12} md={6}>
                     <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Component Ref
+                      Module Reference Number <span style={{ color: 'red' }}>*</span>
                     </Typography>
                     <Controller
                       name={`units.${index}.component_ref`}
                       control={control}
-                      render={({ field }) => (
+                      render={({ field, fieldState: { error } }) => (
                         <TextField
                           {...field}
                           fullWidth
                           size="small"
-                          placeholder="Enter Component Ref"
+                          placeholder="Enter Module Reference Number"
+                          required
+                          error={!!error}
+                          helperText={error?.message}
                           disabled={isViewMode}
                         />
                       )}
@@ -295,27 +303,6 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                           placeholder="Enter module description"
                           disabled={isViewMode}
                         />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Module Type <span style={{ color: 'red' }}>*</span>
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.moduleType`}
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl fullWidth size="small">
-                          <Select {...field} disabled={isViewMode}>
-                            <MenuItem value="core">Core Module</MenuItem>
-                            <MenuItem value="optional">Optional Module</MenuItem>
-                            <MenuItem value="behaviour">Behaviour</MenuItem>
-                            <MenuItem value="knowledge">Knowledge</MenuItem>
-                            <MenuItem value="skill">Skill</MenuItem>
-                          </Select>
-                        </FormControl>
                       )}
                     />
                   </Grid>
@@ -356,6 +343,25 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                     />
                   </Grid>
 
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                      Sort Order
+                    </Typography>
+                    <Controller
+                      name={`units.${index}.sort_order`}
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          type="number"
+                          placeholder="Auto"
+                        />
+                      )}
+                    />
+                  </Grid>
+
                   <Grid item xs={12} md={6}>
                     <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                       Delivery Method/Evidence Requirement
@@ -381,26 +387,6 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                     </Typography>
                     <Controller
                       name={`units.${index}.otj_hours`}
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          type="number"
-                          placeholder="0"
-                          disabled={isViewMode}
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Sort Order
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.sort_order`}
                       control={control}
                       render={({ field }) => (
                         <TextField
