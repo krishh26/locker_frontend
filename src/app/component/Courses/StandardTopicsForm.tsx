@@ -25,14 +25,11 @@ import { v4 as uuidv4 } from 'uuid'
 
 export interface StandardTopic {
   id: string
-  number: string
   title: string
   description: string
-  type: 'to-do' | 'to-know' | 'req'
-  criterionCategory: 'knowledge' | 'skill' | 'behavior'
+  type: 'Behaviour' | 'Knowledge' | 'Skills'
   showOrder: number
-  timesMet: number
-  referenceNumber?: string
+  code?: string
 }
 
 interface StandardTopicsFormProps {
@@ -58,14 +55,11 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
   const handleAddTopic = () => {
     const newTopic: StandardTopic = {
       id: `topic_${uuidv4()}`,
-      number: `${fields.length + 1}`,
       title: '',
       description: '',
-      type: 'to-do',
-      criterionCategory: 'knowledge',
+      type: 'Behaviour',
       showOrder: fields.length + 1,
-      timesMet: 0,
-      referenceNumber: '',
+      code: '',
     }
     append(newTopic)
   }
@@ -143,83 +137,45 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
               </Box>
 
               <Grid container spacing={2}>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                     Type <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Controller
                     name={`units.${moduleIndex}.assessment_criteria.${index}.type`}
                     control={control}
-                    render={({ field }) => (
-                      <FormControl fullWidth size="small">
+                    render={({ field, fieldState: { error } }) => (
+                      <FormControl fullWidth size="small" error={!!error}>
                         <Select {...field} disabled={readOnly}>
-                          <MenuItem value="to-do">To Do</MenuItem>
-                          <MenuItem value="to-know">To Know</MenuItem>
-                          <MenuItem value="req">Required</MenuItem>
+                          <MenuItem value="Behaviour">Behaviour</MenuItem>
+                          <MenuItem value="Knowledge">Knowledge</MenuItem>
+                          <MenuItem value="Skills">Skills</MenuItem>
                         </Select>
                       </FormControl>
                     )}
                   />
                 </Grid>
 
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Category <span style={{ color: 'red' }}>*</span>
+                    Code
                   </Typography>
                   <Controller
-                    name={`units.${moduleIndex}.assessment_criteria.${index}.criterionCategory`}
-                    control={control}
-                    render={({ field }) => (
-                      <FormControl fullWidth size="small">
-                        <Select {...field} disabled={readOnly}>
-                          <MenuItem value="knowledge">Knowledge</MenuItem>
-                          <MenuItem value="skill">Skill</MenuItem>
-                          <MenuItem value="behavior">Behavior</MenuItem>
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Number
-                  </Typography>
-                  <Controller
-                    name={`units.${moduleIndex}.assessment_criteria.${index}.number`}
+                    name={`units.${moduleIndex}.assessment_criteria.${index}.code`}
                     control={control}
                     render={({ field }) => (
                       <TextField
                         {...field}
                         fullWidth
                         size="small"
-                        placeholder="e.g., 1"
+                        placeholder="Enter code"
                         disabled={readOnly}
                       />
                     )}
                   />
                 </Grid>
 
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Reference Number
-                  </Typography>
-                  <Controller
-                    name={`units.${moduleIndex}.assessment_criteria.${index}.referenceNumber`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        placeholder="Reference"
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                     Show Order
                   </Typography>
@@ -239,26 +195,6 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                   />
                 </Grid>
 
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Times Met
-                  </Typography>
-                  <Controller
-                    name={`units.${moduleIndex}.assessment_criteria.${index}.timesMet`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        type="number"
-                        placeholder="0"
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-
                 <Grid item xs={12}>
                   <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                     Title <span style={{ color: 'red' }}>*</span>
@@ -266,13 +202,15 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                   <Controller
                     name={`units.${moduleIndex}.assessment_criteria.${index}.title`}
                     control={control}
-                    render={({ field }) => (
+                    render={({ field, fieldState: { error } }) => (
                       <TextField
                         {...field}
                         fullWidth
                         size="small"
                         placeholder="Enter topic title"
                         required
+                        error={!!error}
+                        helperText={error?.message}
                         disabled={readOnly}
                       />
                     )}
