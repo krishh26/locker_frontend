@@ -10,11 +10,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { StandardTopicEditorProps } from './componentTypes';
 
 // Define interfaces
-interface AssessmentMethod {
-  value: string;
-  label: string;
-  fullName: string;
-}
 
 interface TableTopic {
   id: string;
@@ -24,7 +19,6 @@ interface TableTopic {
   type: 'to-do' | 'to-know' | 'req';
   criterionCategory: 'knowledge' | 'skill' | 'behavior';
   showOrder: number;
-  assessmentMethods: Record<string, string>;
   timesMet: number;
   referenceNumber?: string;
 }
@@ -39,7 +33,6 @@ interface Topic {
   referenceNumber?: string;
   showOrder: number;
   timesMet: number;
-  assessmentMethods?: Record<string, string>;
 }
 
 // No need for additional interfaces as we're using the Unit type from componentTypes.ts
@@ -57,47 +50,23 @@ const StandardTopicEditor: React.FC<StandardTopicEditorProps> = ({
   const readOnly = edit === 'view';
   const dispatch = useDispatch();
 
-  const assessmentMethods: AssessmentMethod[] = [
-    { value: 'pe', label: 'PE', fullName: 'Professional Evaluation' },
-    { value: 'do', label: 'DO', fullName: 'Direct Observation' },
-    { value: 'wt', label: 'WT', fullName: 'Witness Testimony' },
-    { value: 'qa', label: 'QA', fullName: 'Question & Answer' },
-    { value: 'ps', label: 'PS', fullName: 'Product Sample' },
-    { value: 'di', label: 'DI', fullName: 'Discussion' },
-    { value: 'si', label: 'SI', fullName: 'Simulation' },
-    { value: 'ee', label: 'ET', fullName: 'Expert Testimony' },
-    { value: 'ba', label: 'RA', fullName: 'Reflective Account' },
-    { value: 'ot', label: 'OT', fullName: 'Other' },
-    { value: 'ipl', label: 'RPL', fullName: 'Recognition of Prior Learning' },
-    { value: 'lo', label: 'LO', fullName: 'Learning Outcome' }
-  ];
+  // assessment methods removed
 
   const convertToTableTopic = (topic: Topic): TableTopic => {
-    if (!topic) {
-      console.warn('Received null or undefined topic in convertToTableTopic');
-      return {
-        id: `topic_${uuidv4()}`,
-        number: '',
-        title: '',
-        description: '',
-        type: 'to-do',
-        criterionCategory: 'knowledge',
-        showOrder: 0,
-        assessmentMethods: {},
-        timesMet: 0,
-        referenceNumber: ''
-      };
-    }
-    const methodsObj: Record<string, string> = {};
-    if (topic.assessmentMethods) {
-      Object.assign(methodsObj, topic.assessmentMethods);
-    }
-    assessmentMethods.forEach(method => {
-      if (methodsObj[method.value] === undefined) {
-        methodsObj[method.value] = '';
+      if (!topic) {
+        console.warn('Received null or undefined topic in convertToTableTopic');
+        return {
+          id: `topic_${uuidv4()}`,
+          number: '',
+          title: '',
+          description: '',
+          type: 'to-do',
+          criterionCategory: 'knowledge',
+          showOrder: 0,
+          timesMet: 0,
+          referenceNumber: ''
+        };
       }
-    });
-
     return {
       id: topic.id,
       number: topic.number || '',
@@ -106,7 +75,6 @@ const StandardTopicEditor: React.FC<StandardTopicEditorProps> = ({
       type: (topic.type as 'to-do' | 'to-know' | 'req') || 'to-do',
       criterionCategory: topic.criterionCategory || 'knowledge',
       showOrder: topic.showOrder || 0,
-      assessmentMethods: methodsObj,
       timesMet: topic.timesMet || 0,
       referenceNumber: topic.referenceNumber || ''
     };
@@ -122,7 +90,6 @@ const StandardTopicEditor: React.FC<StandardTopicEditorProps> = ({
       criterionCategory: tableTopic.criterionCategory,
       showOrder: tableTopic.showOrder,
       timesMet: tableTopic.timesMet,
-      assessmentMethods: tableTopic.assessmentMethods,
       referenceNumber: tableTopic.referenceNumber
     };
   };

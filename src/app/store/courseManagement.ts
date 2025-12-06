@@ -147,9 +147,6 @@ export const createCourseAPI = (data) => async (dispatch) => {
     try {
         dispatch(slice.setUpdatingLoader());
         const response = await axios.post(`${URL_BASE_LINK}/course/create`, data);
-        dispatch(
-            showMessage({ message: response.data.message, variant: "success" })
-        );
         dispatch(slice.updateCourse(response.data.data));
         dispatch(slice.setUpdatingLoader());
 
@@ -323,10 +320,6 @@ export const updateCourseAPI = (id, data) => async (dispatch) => {
 
         // Log the response data for debugging
         console.log('updateCourseAPI - Response data:', response.data);
-
-        dispatch(
-            showMessage({ message: response.data.message, variant: "success" })
-        );
 
         // Update the course data in the store
         dispatch(slice.updateCourseById(response.data.data));

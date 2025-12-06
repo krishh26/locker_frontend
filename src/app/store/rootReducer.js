@@ -28,6 +28,7 @@ import contractWork from './contractedWork'
 import learnersWaitingToBeSampled from './learnersWaitingToBeSampled'
 import progressExclusion from './progressExclusion'
 import homePage from './homePage'
+import courseBuilder from './courseBuilderSlice'
 
 import { evidenceAPI } from './api/evidence-api'
 import { learnerPlanAPI } from './api/learner-plan-api'
@@ -78,6 +79,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     learnersWaitingToBeSampled,
     progressExclusion,
     homePage,
+    courseBuilder,
 
     // Add the API reducer
     [evidenceAPI.reducerPath]: evidenceAPI.reducer,

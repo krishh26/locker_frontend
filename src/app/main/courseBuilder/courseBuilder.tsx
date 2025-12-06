@@ -205,8 +205,10 @@ const CourseBuilder = () => {
     // Reset course data in Redux store before navigating
     dispatch(resetCourseData());
 
-    // Always include the course core type in the URL as a query parameter
-    navigate(`/courseBuilder/course?type=${courseCoreType}`);
+    // Navigate with course type in location state (clean, professional approach)
+    navigate('/courseBuilder/course', {
+      state: { courseCoreType }
+    });
     handleMenuClose();
   };
 
