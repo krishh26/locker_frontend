@@ -31,8 +31,8 @@ export interface CourseFormData {
   two_page_standard_link: string;
   assessment_plan_link: string;
   brand_guidelines: string;
-  active: string;
-  included_in_off_the_job: string;
+  active: boolean;
+  included_in_off_the_job: boolean;
   awarding_body: string;
   assigned_gateway_id: number | null;
   assigned_gateway_name: string;

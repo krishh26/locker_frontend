@@ -44,23 +44,20 @@ interface LearningOutcome {
   id: string
   number: string
   description: string
-  assessment_criteria: any[]
   [key: string]: any
 }
 
 interface Unit {
   id?: string | number
   unit_ref?: string
-  component_ref?: string
   title: string
-  mandatory: string
+  mandatory: boolean
   level?: string | null
   glh?: number | null
   credit_value?: number | null
   moduleType?: string
-  subUnit?: any[]
   learning_outcomes?: LearningOutcome[]
-  assessment_criteria?: any[]
+  subUnit?: any[]
   [key: string]: any
 }
 
@@ -146,24 +143,23 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
       const newModule: Unit = {
         id: Date.now(),
         title: '',
-        component_ref: '',
-        mandatory: 'true',
+        unit_ref: '',
+        mandatory: true,
         description: '',
         delivery_method: '',
         otj_hours: '0',
         delivery_lead: '',
         sort_order: String(currentUnitsCount + 1), // Auto-fill with next number
-        active: 'true',
+        active: true,
         subUnit: [],
         learning_outcomes: [],
-        assessment_criteria: [],
       }
       append(newModule)
     } else {
       const newUnit: Unit = {
         id: Date.now(),
         title: '',
-        mandatory: 'true',
+        mandatory: true,
         unit_ref: '',
         level: null,
         glh: null,
@@ -174,10 +170,8 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
             id: `lo_${Date.now()}`,
             number: '1',
             description: 'Default Learning Outcome',
-            assessment_criteria: [],
           },
         ],
-        assessment_criteria: [],
       }
       append(newUnit)
     }
@@ -269,7 +263,7 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                       Module Reference Number <span style={{ color: 'red' }}>*</span>
                     </Typography>
                     <Controller
-                      name={`units.${index}.component_ref`}
+                      name={`units.${index}.unit_ref`}
                       control={control}
                       render={({ field, fieldState: { error } }) => (
                         <TextField
@@ -316,7 +310,11 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                       control={control}
                       render={({ field }) => (
                         <FormControl fullWidth size="small">
-                          <Select {...field} disabled={isViewMode}>
+                          <Select
+                            value={field.value === true || field.value === undefined ? 'true' : 'false'}
+                            onChange={(e) => field.onChange(e.target.value === 'true')}
+                            disabled={isViewMode}
+                          >
                             <MenuItem value="true">Mandatory</MenuItem>
                             <MenuItem value="false">Optional</MenuItem>
                           </Select>
@@ -334,7 +332,11 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                       control={control}
                       render={({ field }) => (
                         <FormControl fullWidth size="small">
-                          <Select {...field} disabled={isViewMode}>
+                          <Select
+                            value={field.value === true || field.value === undefined ? 'true' : 'false'}
+                            onChange={(e) => field.onChange(e.target.value === 'true')}
+                            disabled={isViewMode}
+                          >
                             <MenuItem value="true">Active</MenuItem>
                             <MenuItem value="false">Inactive</MenuItem>
                           </Select>
@@ -432,7 +434,7 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                     <StandardTopicsForm
                       control={control}
                       moduleIndex={index}
-                      assessmentCriteria={units[index]?.assessment_criteria || []}
+                      assessmentCriteria={units[index]?.subUnit || []}
                       readOnly={isViewMode}
                     />
                   </AccordionDetails>

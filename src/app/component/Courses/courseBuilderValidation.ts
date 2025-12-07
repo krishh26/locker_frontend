@@ -51,8 +51,8 @@ const baseCourseSchema = yup.object().shape({
   overall_grading_type: yup.string().optional(),
 
   // Default values (not in form but needed for API)
-  active: yup.string().default('Yes'),
-  included_in_off_the_job: yup.string().default('Yes'),
+  active: yup.boolean().default(true),
+  included_in_off_the_job: yup.boolean().default(true),
   awarding_body: yup.string().default('No Awarding Body'),
   permitted_delivery_types: yup.string().optional(),
   professional_certification: yup.string().optional(),
@@ -68,16 +68,15 @@ const baseCourseSchema = yup.object().shape({
       yup.object().shape({
         id: yup.mixed().optional(),
         title: yup.string().optional(),
-        component_ref: yup.string().optional(),
+        unit_ref: yup.string().optional(),
         description: yup.string().optional(),
-        mandatory: yup.string().optional(),
-        active: yup.string().optional(),
+        mandatory: yup.boolean().optional(),
+        active: yup.boolean().optional(),
         delivery_method: yup.string().optional(),
         otj_hours: yup.string().optional(),
         delivery_lead: yup.string().optional(),
         sort_order: yup.string().optional(),
         moduleType: yup.string().optional(),
-        unit_ref: yup.string().optional(),
         level: yup.mixed().nullable().optional(),
         glh: yup.number().nullable().optional(),
         credit_value: yup.number().nullable().optional(),
@@ -132,18 +131,17 @@ const standardSchema = baseCourseSchema.shape({
       yup.object().shape({
         id: yup.mixed().optional(),
         title: yup.string().required('Module Title is required'),
-        component_ref: yup.string().required('Module Reference Number is required'),
+        unit_ref: yup.string().required('Module Reference Number is required'),
         description: yup.string().optional(),
-        mandatory: yup.string().optional(),
-        active: yup.string().optional(),
+        mandatory: yup.boolean().optional(),
+        active: yup.boolean().optional(),
         delivery_method: yup.string().optional(),
         otj_hours: yup.string().optional(),
         delivery_lead: yup.string().optional(),
         sort_order: yup.string().optional(),
-        subUnit: yup.array().optional(),
         learning_outcomes: yup.array().optional(),
-        // Assessment Criteria validation for Standard modules
-        assessment_criteria: yup
+        // SubUnit validation for Standard modules
+        subUnit: yup
           .array()
           .of(
             yup.object().shape({

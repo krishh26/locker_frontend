@@ -49,7 +49,7 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
 }) => {
   const { fields, append, remove } = useFieldArray({
     control,
-    name: `units.${moduleIndex}.assessment_criteria`,
+    name: `units.${moduleIndex}.subUnit`,
   })
 
   const handleAddTopic = () => {
@@ -142,7 +142,7 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                     Type <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Controller
-                    name={`units.${moduleIndex}.assessment_criteria.${index}.type`}
+                    name={`units.${moduleIndex}.subUnit.${index}.type`}
                     control={control}
                     render={({ field, fieldState: { error } }) => (
                       <FormControl fullWidth size="small" error={!!error}>
@@ -161,7 +161,7 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                     Code
                   </Typography>
                   <Controller
-                    name={`units.${moduleIndex}.assessment_criteria.${index}.code`}
+                    name={`units.${moduleIndex}.subUnit.${index}.code`}
                     control={control}
                     render={({ field }) => (
                       <TextField
@@ -180,7 +180,7 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                     Show Order
                   </Typography>
                   <Controller
-                    name={`units.${moduleIndex}.assessment_criteria.${index}.showOrder`}
+                    name={`units.${moduleIndex}.subUnit.${index}.showOrder`}
                     control={control}
                     render={({ field }) => (
                       <TextField
@@ -200,7 +200,7 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                     Title <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Controller
-                    name={`units.${moduleIndex}.assessment_criteria.${index}.title`}
+                    name={`units.${moduleIndex}.subUnit.${index}.title`}
                     control={control}
                     render={({ field, fieldState: { error } }) => (
                       <TextField
@@ -222,7 +222,7 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                     Description
                   </Typography>
                   <Controller
-                    name={`units.${moduleIndex}.assessment_criteria.${index}.description`}
+                    name={`units.${moduleIndex}.subUnit.${index}.description`}
                     control={control}
                     render={({ field }) => (
                       <TextField

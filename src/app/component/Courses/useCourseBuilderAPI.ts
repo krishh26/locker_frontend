@@ -145,9 +145,14 @@ export const useCourseBuilderAPI = () => {
             two_page_standard_link: courseData.two_page_standard_link || '',
             assessment_plan_link: courseData.assessment_plan_link || '',
             brand_guidelines: courseData.brand_guidelines || '',
-            active: courseData.active || 'Yes',
+            active:
+              typeof courseData.active === 'boolean'
+                ? courseData.active
+                : courseData.active === 'Yes' || courseData.active === true,
             included_in_off_the_job:
-              courseData.included_in_off_the_job || 'Yes',
+              typeof courseData.included_in_off_the_job === 'boolean'
+                ? courseData.included_in_off_the_job
+                : courseData.included_in_off_the_job === 'Yes' || courseData.included_in_off_the_job === true,
             awarding_body: courseData.awarding_body || 'No Awarding Body',
             assigned_gateway_id: courseData.assigned_gateway_id || null,
             assigned_gateway_name: courseData.assigned_gateway_name || '',
@@ -167,7 +172,19 @@ export const useCourseBuilderAPI = () => {
                 })
               : [],
             // Include units array from API response
-            units: courseData.units || [],
+            // Map assessment_criteria to subUnit for Standard modules
+            // Map component_ref to unit_ref and mandatory string to boolean
+            units: courseData.units
+              ? courseData.units.map((unit: any) => ({
+                  ...unit,
+                  unit_ref: unit.unit_ref || unit.component_ref || '',
+                  mandatory:
+                    typeof unit.mandatory === 'boolean'
+                      ? unit.mandatory
+                      : unit.mandatory === 'true' || unit.mandatory === true,
+                  subUnit: unit.assessment_criteria || unit.subUnit || [],
+                }))
+              : [],
           }
 
           return { success: true, data: formData }

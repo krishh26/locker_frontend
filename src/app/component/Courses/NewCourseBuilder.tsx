@@ -111,8 +111,8 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
       assigned_standards: [],
 
       // Default values (not in form but needed for API)
-      active: 'Yes',
-      included_in_off_the_job: 'Yes',
+      active: true,
+      included_in_off_the_job: true,
       permitted_delivery_types: '',
       professional_certification: '',
       qualification_type: '',
@@ -206,9 +206,14 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
             two_page_standard_link: result.data.two_page_standard_link || '',
             assessment_plan_link: result.data.assessment_plan_link || '',
             brand_guidelines: result.data.brand_guidelines || '',
-            active: result.data.active || 'Yes',
+            active:
+              typeof result.data.active === 'boolean'
+                ? result.data.active
+                : result.data.active === 'Yes' || result.data.active === true,
             included_in_off_the_job:
-              result.data.included_in_off_the_job || 'Yes',
+              typeof result.data.included_in_off_the_job === 'boolean'
+                ? result.data.included_in_off_the_job
+                : result.data.included_in_off_the_job === 'Yes' || result.data.included_in_off_the_job === true,
             awarding_body: result.data.awarding_body || 'No Awarding Body',
             assigned_gateway_id: result.data.assigned_gateway_id || null,
             assigned_gateway_name: result.data.assigned_gateway_name || '',
@@ -238,14 +243,44 @@ const NewCourseBuilder: React.FC<NewCourseBuilderProps> = ({
 
   // Handle form submission
   const onSubmit = async (data: CourseFormData) => {
-    // Ensure all fields are included, even if empty
-    const formData: CourseFormData = {
+    // Merge with default values
+    const mergedData: any = {
       ...defaultFormValues,
       ...data,
       // Ensure guided_learning_hours is included even if empty
       guided_learning_hours: data.guided_learning_hours ?? '',
     }
-    console.log("🚀 ~ onSubmit ~ formData:", formData)
+
+    // Remove empty strings and null values from formData
+    const removeEmptyStrings = (obj: any): any => {
+      if (Array.isArray(obj)) {
+        return obj.map(item => removeEmptyStrings(item)).filter(item => item !== null && item !== undefined && item !== '')
+      } else if (obj !== null && typeof obj === 'object') {
+        const cleaned: any = {}
+        for (const key in obj) {
+          const value = obj[key]
+          if (value === '' || value === null) {
+            continue // Skip empty strings and null values
+          } else if (Array.isArray(value)) {
+            const cleanedArray = removeEmptyStrings(value)
+            if (cleanedArray.length > 0) {
+              cleaned[key] = cleanedArray
+            }
+          } else if (value !== null && typeof value === 'object') {
+            const cleanedObj = removeEmptyStrings(value)
+            if (Object.keys(cleanedObj).length > 0) {
+              cleaned[key] = cleanedObj
+            }
+          } else {
+            cleaned[key] = value
+          }
+        }
+        return cleaned
+      }
+      return obj
+    }
+
+    const formData: CourseFormData = removeEmptyStrings(mergedData) as CourseFormData
 
     // Units/modules are already part of the form data
     const courseIdToSave = course_id || courseId
