@@ -6,7 +6,7 @@
  * Clean, professional implementation using React Hook Form
  */
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Box,
   Typography,
@@ -29,8 +29,10 @@ import { useNotification } from './useNotification'
 import { useCourseBuilderAPI } from './useCourseBuilderAPI'
 import AssessmentCriteriaForm from './AssessmentCriteriaForm'
 import StandardTopicsForm from './StandardTopicsForm'
+import ImportModuleDialog from './ImportModuleDialog'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
+import FileUploadIcon from '@mui/icons-material/FileUpload'
 
 interface CourseUnitsModulesStepProps {
   courseId?: string
@@ -74,6 +76,7 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
   const { NotificationComponent } = useNotification()
   const { loadCourse } = useCourseBuilderAPI()
   const isViewMode = edit === 'view'
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -168,6 +171,12 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
     }
   }
 
+  const handleImportModules = (importedModules: any[]) => {
+    importedModules.forEach((module) => {
+      append(module)
+    })
+    setImportDialogOpen(false)
+  }
 
   // Render based on course type
   if (courseCoreType === 'Standard') {
@@ -183,13 +192,22 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
             </Typography>
           </Box>
           {!isViewMode && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAddUnit}
-            >
-              Add Module
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<FileUploadIcon />}
+                onClick={() => setImportDialogOpen(true)}
+              >
+                Import Modules
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleAddUnit}
+              >
+                Add Module
+              </Button>
+            </Box>
           )}
         </Box>
 
@@ -414,6 +432,14 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
         )}
 
         <NotificationComponent />
+        {/* Import Module Dialog */}
+        <ImportModuleDialog
+          open={importDialogOpen}
+          onClose={() => setImportDialogOpen(false)}
+          onImport={handleImportModules}
+          currentCourseId={courseId}
+          existingModules={units || []}
+        />
       </Box>
     )
   }
@@ -625,6 +651,8 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
         )}
 
         <NotificationComponent />
+
+        
       </Box>
     )
   }
