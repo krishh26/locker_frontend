@@ -31,8 +31,8 @@ export interface CourseFormData {
   two_page_standard_link: string;
   assessment_plan_link: string;
   brand_guidelines: string;
-  active: string;
-  included_in_off_the_job: string;
+  active: boolean;
+  included_in_off_the_job: boolean;
   awarding_body: string;
   assigned_gateway_id: number | null;
   assigned_gateway_name: string;
@@ -43,7 +43,6 @@ export interface CourseFormData {
 
 interface CourseBuilderState {
   // UI state
-  activeStep: number;
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -51,46 +50,20 @@ interface CourseBuilderState {
   // Course metadata
   course_id: string | number | null;
   editMode: EditMode;
-  
-  // Steps completion
-  completedSteps: Record<number, boolean>;
 }
 
 const initialState: CourseBuilderState = {
-  activeStep: 0,
   isLoading: false,
   isSaving: false,
   error: null,
   course_id: null,
   editMode: 'create',
-  completedSteps: {},
 };
 
 const courseBuilderSlice = createSlice({
   name: 'courseBuilder',
   initialState,
   reducers: {
-    // Step management
-    setActiveStep(state, action: PayloadAction<number>) {
-      state.activeStep = action.payload;
-    },
-    
-    nextStep(state) {
-      if (state.activeStep < 2) {
-        state.activeStep += 1;
-      }
-    },
-    
-    previousStep(state) {
-      if (state.activeStep > 0) {
-        state.activeStep -= 1;
-      }
-    },
-    
-    markStepCompleted(state, action: PayloadAction<number>) {
-      state.completedSteps[action.payload] = true;
-    },
-    
     // Loading states
     setLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;
@@ -120,8 +93,6 @@ const courseBuilderSlice = createSlice({
     
     // Reset state
     resetState(state) {
-      state.activeStep = 0;
-      state.completedSteps = {};
       state.error = null;
       state.course_id = null;
     },
@@ -129,10 +100,6 @@ const courseBuilderSlice = createSlice({
 });
 
 export const {
-  setActiveStep,
-  nextStep,
-  previousStep,
-  markStepCompleted,
   setLoading,
   setSaving,
   setError,
@@ -144,7 +111,6 @@ export const {
 
 // Selectors
 export const selectCourseBuilder = ({ courseBuilder }: any) => courseBuilder;
-export const selectActiveStep = ({ courseBuilder }: any) => courseBuilder.activeStep;
 export const selectIsLoading = ({ courseBuilder }: any) => courseBuilder.isLoading;
 export const selectIsSaving = ({ courseBuilder }: any) => courseBuilder.isSaving;
 export const selectCourseId = ({ courseBuilder }: any) => courseBuilder.course_id;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Grid,
   List,
@@ -15,6 +15,7 @@ import {
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DoubleArrowIcon from '@mui/icons-material/DoubleArrow';
+import { Control, useWatch, UseFormSetValue } from 'react-hook-form';
 
 // Define the interface for a course item
 interface CourseItem {
@@ -23,12 +24,13 @@ interface CourseItem {
 }
 
 interface CourseTransferListProps {
-  availableCourses: CourseItem[];
-  assignedCourses: CourseItem[];
-  onCoursesAssigned: (assigned: CourseItem[], remaining: CourseItem[]) => void;
+  control: Control<any>;
+  setValue: UseFormSetValue<any>;
+  allStandardCourses: CourseItem[]; // All available standard courses
   disabled?: boolean;
   leftTitle?: string;
   rightTitle?: string;
+  error?: boolean;
 }
 
 function not(a: CourseItem[], b: CourseItem[]): CourseItem[] {
@@ -44,27 +46,40 @@ function union(a: CourseItem[], b: CourseItem[]): CourseItem[] {
 }
 
 const CourseTransferList: React.FC<CourseTransferListProps> = ({
-  availableCourses,
-  assignedCourses,
-  onCoursesAssigned,
+  control,
+  setValue,
+  allStandardCourses,
   disabled = false,
   leftTitle = 'Unassigned Standard Courses',
-  rightTitle = 'Assigned Standard Courses'
+  rightTitle = 'Assigned Standard Courses',
+  error = false,
 }) => {
   const [checked, setChecked] = useState<CourseItem[]>([]);
-  const [left, setLeft] = useState<CourseItem[]>(availableCourses);
-  const [right, setRight] = useState<CourseItem[]>(assignedCourses);
 
-  // Update internal state when props change
-  useEffect(() => {
-    setLeft(availableCourses);
-    setRight(assignedCourses);
-  }, [availableCourses, assignedCourses]);
+  // Watch assigned_standards from React Hook Form
+  const assignedStandards = useWatch({
+    control,
+    name: 'assigned_standards',
+    defaultValue: [],
+  });
 
-  // Notify parent component when assigned courses change
-  useEffect(() => {
-    onCoursesAssigned(right, left);
-  }, [right, left, onCoursesAssigned]);
+  // Convert assigned_standards IDs to CourseItem format
+  const assignedCourseIds = useMemo(() => {
+    return (assignedStandards || []).map((id: any) => 
+      typeof id === 'object' && id !== null ? id.id?.toString() || id.toString() : id.toString()
+    );
+  }, [assignedStandards]);
+
+  // Separate available and assigned courses based on assigned_standards
+  const { left, right } = useMemo(() => {
+    const assigned = allStandardCourses.filter((item) => 
+      assignedCourseIds.includes(item.id)
+    );
+    const available = allStandardCourses.filter((item) => 
+      !assignedCourseIds.includes(item.id)
+    );
+    return { left: available, right: assigned };
+  }, [allStandardCourses, assignedCourseIds]);
 
   const leftChecked = intersection(checked, left);
   const rightChecked = intersection(checked, right);
@@ -92,41 +107,49 @@ const CourseTransferList: React.FC<CourseTransferListProps> = ({
     }
   };
 
+  const updateAssignedStandards = (newAssigned: CourseItem[]) => {
+    const assignedStandardIds = newAssigned.map((course) => {
+      const idNum = Number(course.id);
+      return isNaN(idNum) ? course.id : idNum;
+    });
+    setValue('assigned_standards', assignedStandardIds, { shouldValidate: true });
+  };
+
   const handleCheckedRight = () => {
     const newRight = [...right, ...leftChecked];
     const newLeft = not(left, leftChecked);
-    setRight(newRight);
-    setLeft(newLeft);
     setChecked(not(checked, leftChecked));
-    // Immediately notify parent to ensure UI is updated
-    onCoursesAssigned(newRight, newLeft);
+    updateAssignedStandards(newRight);
   };
 
   const handleCheckedLeft = () => {
     const newLeft = [...left, ...rightChecked];
     const newRight = not(right, rightChecked);
-    setLeft(newLeft);
-    setRight(newRight);
     setChecked(not(checked, rightChecked));
-    onCoursesAssigned(newRight, newLeft);
+    updateAssignedStandards(newRight);
   };
 
   const handleAllRight = () => {
     const newRight = [...right, ...left];
-    setRight(newRight);
-    setLeft([]);
-    onCoursesAssigned(newRight, []);
+    updateAssignedStandards(newRight);
   };
 
   const handleAllLeft = () => {
-    const newLeft = [...left, ...right];
-    setLeft(newLeft);
-    setRight([]);
-    onCoursesAssigned([], newLeft);
+    updateAssignedStandards([]);
   };
 
   const customList = (title: React.ReactNode, items: CourseItem[], side: 'left' | 'right') => (
-    <Card variant="outlined" sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Card 
+      variant="outlined" 
+      sx={{ 
+        width: '100%', 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        borderColor: error && side === 'right' ? 'error.main' : undefined,
+        borderWidth: error && side === 'right' ? 2 : undefined
+      }}
+    >
       <CardHeader
         sx={{ px: 2, py: 1 }}
         title={
@@ -213,66 +236,68 @@ const CourseTransferList: React.FC<CourseTransferListProps> = ({
   );
 
   return (
-    <Grid container spacing={2} justifyContent="center" alignItems="center">
-      <Grid item xs={5}>
-        {customList(leftTitle, left, 'left')}
-      </Grid>
-      <Grid item xs={2}>
-        <Grid container direction="column" alignItems="center" spacing={2}>
-          <Grid item>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleCheckedRight}
-              disabled={leftChecked.length === 0 || disabled}
-              aria-label="move selected right"
-              sx={{ minWidth: '40px' }}
-            >
-              <ArrowForwardIcon />
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleCheckedLeft}
-              disabled={rightChecked.length === 0 || disabled}
-              aria-label="move selected left"
-              sx={{ minWidth: '40px' }}
-            >
-              <ArrowBackIcon />
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleAllRight}
-              disabled={left.length === 0 || disabled}
-              aria-label="move all right"
-              sx={{ minWidth: '40px' }}
-            >
-              <DoubleArrowIcon />
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleAllLeft}
-              disabled={right.length === 0 || disabled}
-              aria-label="move all left"
-              sx={{ minWidth: '40px', transform: 'rotate(180deg)' }}
-            >
-              <DoubleArrowIcon />
-            </Button>
+    <Box>
+      <Grid container spacing={2} justifyContent="center" alignItems="center">
+        <Grid item xs={5}>
+          {customList(leftTitle, left, 'left')}
+        </Grid>
+        <Grid item xs={2}>
+          <Grid container direction="column" alignItems="center" spacing={2}>
+            <Grid item>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleCheckedRight}
+                disabled={leftChecked.length === 0 || disabled}
+                aria-label="move selected right"
+                sx={{ minWidth: '40px' }}
+              >
+                <ArrowForwardIcon />
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleCheckedLeft}
+                disabled={rightChecked.length === 0 || disabled}
+                aria-label="move selected left"
+                sx={{ minWidth: '40px' }}
+              >
+                <ArrowBackIcon />
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleAllRight}
+                disabled={left.length === 0 || disabled}
+                aria-label="move all right"
+                sx={{ minWidth: '40px' }}
+              >
+                <DoubleArrowIcon />
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleAllLeft}
+                disabled={right.length === 0 || disabled}
+                aria-label="move all left"
+                sx={{ minWidth: '40px', transform: 'rotate(180deg)' }}
+              >
+                <DoubleArrowIcon />
+              </Button>
+            </Grid>
           </Grid>
         </Grid>
+        <Grid item xs={5}>
+          {customList(rightTitle, right, 'right')}
+        </Grid>
       </Grid>
-      <Grid item xs={5}>
-        {customList(rightTitle, right, 'right')}
-      </Grid>
-    </Grid>
+    </Box>
   );
 };
 

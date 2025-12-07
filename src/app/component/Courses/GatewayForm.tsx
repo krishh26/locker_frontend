@@ -14,6 +14,7 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material'
+import { useForm } from 'react-hook-form'
 import Style from './style.module.css'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -57,9 +58,18 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
     courseData.questions || []
   )
 
-  // State for available and assigned courses
-  const [availableCourses, setAvailableCourses] = useState<CourseItem[]>([])
-  const [assignedCourses, setAssignedCourses] = useState<CourseItem[]>([])
+  // Create a minimal React Hook Form instance for CourseTransferList
+  const { control, setValue, watch } = useForm({
+    defaultValues: {
+      assigned_standards: courseData.assigned_standards || [],
+    },
+  })
+
+  // Watch assigned_standards to sync with courseDispatch
+  const assignedStandards = watch('assigned_standards')
+
+  // State for all standard courses
+  const [allStandardCourses, setAllStandardCourses] = useState<CourseItem[]>([])
   const [loadingCourses, setLoadingCourses] = useState(false)
 
   // Fetch active standard courses when component mounts
@@ -81,23 +91,20 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
           name: `${course.course_name} (${course.course_code})`,
         }))
 
-        // If we have assigned_standards in courseData, separate them
-        // Support both formats: array of IDs [1, 2] or array of objects [{id: 1, name: '...'}]
-        const assignedIds = courseData.assigned_standards
-          ? courseData.assigned_standards.map((s: any) =>
-              typeof s === 'object' && s !== null ? s.id.toString() : s.toString()
-            )
-          : []
-
-        const assigned = standardItems.filter((item) =>
-          assignedIds.includes(item.id)
-        )
-        const available = standardItems.filter(
-          (item) => !assignedIds.includes(item.id)
-        )
-
-        setAssignedCourses(assigned)
-        setAvailableCourses(available)
+        setAllStandardCourses(standardItems)
+        
+        // Initialize form with current assigned_standards
+        if (courseData.assigned_standards) {
+          const assignedIds = courseData.assigned_standards.map((s: any) => {
+            if (typeof s === 'object' && s !== null) {
+              const idNum = Number(s.id)
+              return isNaN(idNum) ? s.id : idNum
+            }
+            const idNum = Number(s)
+            return isNaN(idNum) ? s : idNum
+          })
+          setValue('assigned_standards', assignedIds)
+        }
       } catch (error) {
         console.error('Error fetching active standard courses:', error)
       } finally {
@@ -115,19 +122,13 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
       isMounted = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [setValue])
 
-  // Update courseData when assigned courses change
+  // Update courseData when assigned_standards changes in form
   useEffect(() => {
-    // Extract only IDs from assigned courses
-    const assignedStandardIds = assignedCourses.map((course) => {
-      // Convert to number if possible, otherwise keep as string
-      const idNum = Number(course.id)
-      return isNaN(idNum) ? course.id : idNum
-    })
+    if (!courseDispatch || !assignedStandards) return
 
     // Compare with current assigned_standards to avoid unnecessary updates
-    // Support both formats: array of IDs [1, 2] or array of objects [{id: 1, name: '...'}]
     const currentAssignedIds = courseData.assigned_standards
       ? courseData.assigned_standards.map((s: any) => {
           if (typeof s === 'object' && s !== null) {
@@ -143,7 +144,7 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
     const currentSorted = [...currentAssignedIds].sort((a, b) =>
       a.toString().localeCompare(b.toString())
     )
-    const newSorted = [...assignedStandardIds].sort((a, b) =>
+    const newSorted = [...assignedStandards].sort((a, b) =>
       a.toString().localeCompare(b.toString())
     )
 
@@ -152,12 +153,11 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
       courseDispatch({
         type: 'UPDATE_COURSE_FIELD',
         field: 'assigned_standards',
-        value: assignedStandardIds,
+        value: assignedStandards,
       })
     }
-    // Include courseData.assigned_standards in the dependency array
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignedCourses, courseDispatch])
+  }, [assignedStandards, courseDispatch])
 
   // Function to add a new question item
   const addQuestionItem = () => {
@@ -216,16 +216,6 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
     })
   }
 
-  // Handler for when courses are assigned in the transfer list
-  const handleCoursesAssigned = (
-    assigned: CourseItem[],
-    remaining: CourseItem[]
-  ) => {
-    setAssignedCourses(assigned)
-    setAvailableCourses(remaining)
-
-    // The useEffect will handle updating courseData.assigned_standards
-  }
 
   return (
     <>
@@ -435,9 +425,9 @@ const GatewayForm: React.FC<GatewayFormProps> = ({
           </Box>
         ) : (
           <CourseTransferList
-            availableCourses={availableCourses}
-            assignedCourses={assignedCourses}
-            onCoursesAssigned={handleCoursesAssigned}
+            control={control}
+            setValue={setValue}
+            allStandardCourses={allStandardCourses}
             disabled={edit === 'view'}
             leftTitle='Unassigned Standard (Active) Courses'
             rightTitle='Assigned Standard (Active) Courses'

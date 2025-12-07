@@ -51,8 +51,8 @@ const baseCourseSchema = yup.object().shape({
   overall_grading_type: yup.string().optional(),
 
   // Default values (not in form but needed for API)
-  active: yup.string().default('Yes'),
-  included_in_off_the_job: yup.string().default('Yes'),
+  active: yup.boolean().default(true),
+  included_in_off_the_job: yup.boolean().default(true),
   awarding_body: yup.string().default('No Awarding Body'),
   permitted_delivery_types: yup.string().optional(),
   professional_certification: yup.string().optional(),
@@ -62,6 +62,7 @@ const baseCourseSchema = yup.object().shape({
   assigned_gateway_name: yup.string().optional(),
   questions: yup.array().optional(),
   assigned_standards: yup.array().optional(),
+  // Units validation is defined in Qualification and Standard schemas only
 })
 
 // Qualification-specific validation
@@ -88,6 +89,41 @@ const qualificationSchema = baseCourseSchema.shape({
   qualification_status: yup.string().optional(),
   duration_period: yup.string().optional(),
   duration_value: yup.string().optional(),
+  // Units validation for Qualification - validate each unit
+  units: yup
+    .array()
+    .of(
+      yup.object().shape({
+        id: yup.mixed().optional(),
+        unit_ref: yup.string().required('Unit Ref is required'),
+        title: yup.string().required('Unit Title is required'),
+        description: yup.string().optional(),
+        mandatory: yup.boolean().optional(),
+        level: yup.mixed().nullable().optional(),
+        glh: yup.number().nullable().optional(),
+        credit_value: yup.number().nullable().optional(),
+        learning_outcomes: yup.array().optional(),
+        // SubUnit (Assessment Criteria) validation for Qualification units
+        subUnit: yup
+          .array()
+          .of(
+            yup.object().shape({
+              id: yup.mixed().optional(),
+              title: yup.string().required('Assessment Criteria Title is required'),
+              description: yup.string().optional(),
+              type: yup
+                .string()
+                .oneOf(['to-do', 'to-know', 'req'])
+                .default('to-do'),
+              code: yup.string().optional(),
+              showOrder: yup.number().optional(),
+              timesMet: yup.number().optional(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .optional(),
 })
 
 // Standard-specific validation
@@ -100,6 +136,41 @@ const standardSchema = baseCourseSchema.shape({
   two_page_standard_link: yup.string().url('Must be a valid URL').optional(),
   assessment_plan_link: yup.string().url('Must be a valid URL').optional(),
   assigned_gateway_id: yup.number().nullable().optional(),
+  // Units/Modules validation for Standard - validate each unit
+  units: yup
+    .array()
+    .of(
+      yup.object().shape({
+        id: yup.mixed().optional(),
+        title: yup.string().required('Module Title is required'),
+        unit_ref: yup.string().required('Module Reference Number is required'),
+        description: yup.string().optional(),
+        active: yup.boolean().optional(),
+        delivery_method: yup.string().optional(),
+        otj_hours: yup.string().optional(),
+        delivery_lead: yup.string().optional(),
+        sort_order: yup.string().optional(),
+        learning_outcomes: yup.array().optional(),
+        // SubUnit validation for Standard modules
+        subUnit: yup
+          .array()
+          .of(
+            yup.object().shape({
+              id: yup.mixed().optional(),
+              title: yup.string().required('Topic Title is required'),
+              description: yup.string().optional(),
+              type: yup
+                .string()
+                .oneOf(['Behaviour', 'Knowledge', 'Skills'])
+                .required('Type is required'),
+              showOrder: yup.number().optional(),
+              code: yup.string().optional(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .optional(),
 })
 
 // Gateway-specific validation (no course_type field)
@@ -107,6 +178,41 @@ const gatewaySchema = baseCourseSchema.shape({
   course_core_type: yup.string().oneOf(['Gateway']).required(),
   // Gateway doesn't have course_type field
   course_type: yup.string().optional(),
+  // Gateway requires course_name and course_code (inherited from baseCourseSchema)
+  // Gateway doesn't require level field
+  level: yup.string().optional(),
+  // Gateway requires active field (inherited from baseCourseSchema as boolean)
+  // Questions validation for Gateway
+  questions: yup
+    .array()
+    .min(1, 'At least one question is required')
+    .of(
+      yup.object().shape({
+        id: yup.mixed().optional(),
+        question: yup.string().required('Question is required'),
+        evidenceRequired: yup.boolean().optional(),
+        isDropdown: yup.boolean().default(true),
+        dropdownOptions: yup
+          .string()
+          .test(
+            'dropdown-options-required',
+            'Dropdown options are required when dropdown is enabled',
+            function (value) {
+              const isDropdown = this.parent.isDropdown
+              if (isDropdown === true) {
+                return !!value && value.trim() !== ''
+              }
+              return true
+            }
+          ),
+      })
+    )
+    .min(1, 'At least one question is required'),
+  // Assigned standards validation for Gateway - at least one required
+  assigned_standards: yup
+    .array()
+    .min(1, 'At least one standard course must be assigned')
+    .required('At least one standard course must be assigned'),
 })
 
 // Dynamic schema based on course type

@@ -152,11 +152,9 @@ export const createCourseAPI = (data) => async (dispatch) => {
 
         return response.data;
     } catch (err) {
-        dispatch(
-            showMessage({ message: err.response.data.message, variant: "error" })
-        );
+        console.error('createCourseAPI - Error:', err);
         dispatch(slice.setUpdatingLoader());
-        return false;
+        return { success: false, error: err.response?.data?.message || 'An error occurred while creating the course' };
     }
 };
 

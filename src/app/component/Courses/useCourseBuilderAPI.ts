@@ -1,121 +1,124 @@
 /**
  * useCourseBuilderAPI.ts
- * 
+ *
  * Custom hook for CourseBuilder API operations
  * Integrates with existing courseManagement API functions
  */
 
-import { useCallback } from 'react';
-import { useDispatch } from 'react-redux';
-import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { showMessage } from 'app/store/fuse/messageSlice';
+import { useCallback } from 'react'
+import { useDispatch } from 'react-redux'
+import { useParams, useNavigate } from 'react-router-dom'
+import axios from 'axios'
+import { showMessage } from 'app/store/fuse/messageSlice'
 import {
   createCourseAPI,
   updateCourseAPI,
   fetchCourseById,
-} from 'app/store/courseManagement';
-import jsonData from 'src/url.json';
+} from 'app/store/courseManagement'
+import jsonData from 'src/url.json'
 import {
   CourseFormData,
   setSaving,
   setError,
   setCourseId,
-} from 'app/store/courseBuilderSlice';
+} from 'app/store/courseBuilderSlice'
 
 export const useCourseBuilderAPI = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
 
   // Create a new course
   const createCourse = useCallback(
     async (formData: CourseFormData) => {
       try {
-        dispatch(setSaving(true));
-        dispatch(setError(null));
+        dispatch(setSaving(true))
+        dispatch(setError(null))
 
-        const response = await dispatch(createCourseAPI(formData) as any);
+        const response = await dispatch(createCourseAPI(formData) as any)
 
         if (response && response.data) {
-          const newCourseId = response.data.course_id;
-          dispatch(setCourseId(newCourseId));
+          const newCourseId = response.data.course_id
+          dispatch(setCourseId(newCourseId))
 
-        //   // Update URL without navigation
+          //   // Update URL without navigation
           window.history.replaceState(
             null,
             '',
             `/courseBuilder/course/${newCourseId}`
-          );
+          )
 
-        //   // Fetch the created course to ensure proper initialization
-        //   await dispatch(fetchCourseById(newCourseId) as any);
+          //   // Fetch the created course to ensure proper initialization
+          //   await dispatch(fetchCourseById(newCourseId) as any);
 
-        //   dispatch(showMessage({
-        //     message: 'Course created successfully',
-        //     variant: 'success',
-        //   }));
+          //   dispatch(showMessage({
+          //     message: 'Course created successfully',
+          //     variant: 'success',
+          //   }));
 
-          return { success: true, course_id: newCourseId };
+          return { success: true, course_id: newCourseId }
         }
 
-        throw new Error('Failed to create course');
+        throw new Error('Failed to create course')
       } catch (error: any) {
-        const errorMessage = error?.response?.data?.message || error?.message || 'Failed to create course';
-        dispatch(setError(errorMessage));
-        dispatch(showMessage({
-          message: errorMessage,
-          variant: 'error',
-        }));
-        return { success: false, error: errorMessage };
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.message ||
+          'Failed to create course'
+        dispatch(setError(errorMessage))
+        dispatch(
+          showMessage({
+            message: errorMessage,
+            variant: 'error',
+          })
+        )
+        return { success: false, error: errorMessage }
       } finally {
-        dispatch(setSaving(false));
+        dispatch(setSaving(false))
       }
     },
     [dispatch]
-  );
+  )
 
   // Update an existing course
   const updateCourse = useCallback(
     async (formData: CourseFormData, id: string) => {
       try {
-        dispatch(setSaving(true));
-        dispatch(setError(null));
+        dispatch(setSaving(true))
+        dispatch(setError(null))
 
-        const success = await dispatch(updateCourseAPI(id, formData) as any);
+        await dispatch(updateCourseAPI(id, formData) as any)
 
-        if (success) {
-          // Fetch updated course data
-          await dispatch(fetchCourseById(id) as any);
-
-          return { success: true };
-        }
-
-        throw new Error('Failed to update course');
+        return { success: true }
       } catch (error: any) {
-        const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update course';
-        dispatch(setError(errorMessage));
-        dispatch(showMessage({
-          message: errorMessage,
-          variant: 'error',
-        }));
-        return { success: false, error: errorMessage };
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.message ||
+          'Failed to update course'
+        dispatch(setError(errorMessage))
+        dispatch(
+          showMessage({
+            message: errorMessage,
+            variant: 'error',
+          })
+        )
+        return { success: false, error: errorMessage }
       } finally {
-        dispatch(setSaving(false));
+        dispatch(setSaving(false))
       }
     },
     [dispatch]
-  );
+  )
 
   // Load course data for editing
   const loadCourse = useCallback(
     async (id: string) => {
       try {
-        dispatch(setSaving(true));
-        const URL_BASE_LINK = jsonData.API_LOCAL_URL;
-        const url = `${URL_BASE_LINK}/course/get/${id}`;
-        
-        const response = await axios.get(url);
-        const courseData = response.data.data;
+        dispatch(setSaving(true))
+        const URL_BASE_LINK = jsonData.API_LOCAL_URL
+        const url = `${URL_BASE_LINK}/course/get/${id}`
+
+        const response = await axios.get(url)
+        const courseData = response.data.data
 
         if (courseData) {
           // Map API response to CourseFormData format
@@ -137,60 +140,87 @@ export const useCourseBuilderAPI = () => {
             recommended_minimum_age: courseData.recommended_minimum_age || '',
             overall_grading_type: courseData.overall_grading_type || '',
             permitted_delivery_types: courseData.permitted_delivery_types || '',
-            professional_certification: courseData.professional_certification || '',
+            professional_certification:
+              courseData.professional_certification || '',
             two_page_standard_link: courseData.two_page_standard_link || '',
             assessment_plan_link: courseData.assessment_plan_link || '',
             brand_guidelines: courseData.brand_guidelines || '',
-            active: courseData.active || 'Yes',
-            included_in_off_the_job: courseData.included_in_off_the_job || 'Yes',
+            active:
+              typeof courseData.active === 'boolean'
+                ? courseData.active
+                : courseData.active === 'Yes' || courseData.active === true,
+            included_in_off_the_job:
+              typeof courseData.included_in_off_the_job === 'boolean'
+                ? courseData.included_in_off_the_job
+                : courseData.included_in_off_the_job === 'Yes' || courseData.included_in_off_the_job === true,
             awarding_body: courseData.awarding_body || 'No Awarding Body',
             assigned_gateway_id: courseData.assigned_gateway_id || null,
             assigned_gateway_name: courseData.assigned_gateway_name || '',
             questions: courseData.questions || courseData.checklist || [],
             assigned_standards: courseData.assigned_standards
               ? courseData.assigned_standards.map((s: any) => {
-                  if (typeof s === 'object' && s !== null && s.id !== undefined) {
-                    const idNum = Number(s.id);
-                    return isNaN(idNum) ? s.id : idNum;
+                  if (
+                    typeof s === 'object' &&
+                    s !== null &&
+                    s.id !== undefined
+                  ) {
+                    const idNum = Number(s.id)
+                    return isNaN(idNum) ? s.id : idNum
                   }
-                  const idNum = Number(s);
-                  return isNaN(idNum) ? s : idNum;
+                  const idNum = Number(s)
+                  return isNaN(idNum) ? s : idNum
                 })
               : [],
-          };
+            // Include units array from API response
+            // Map assessment_criteria to subUnit for Standard modules
+            // Map component_ref to unit_ref and mandatory string to boolean
+            units: courseData.units
+              ? courseData.units.map((unit: any) => ({
+                  ...unit,
+                  unit_ref: unit.unit_ref || unit.component_ref || '',
+                  mandatory:
+                    typeof unit.mandatory === 'boolean'
+                      ? unit.mandatory
+                      : unit.mandatory === 'true' || unit.mandatory === true,
+                  subUnit: unit.assessment_criteria || unit.subUnit || [],
+                }))
+              : [],
+          }
 
-          return { success: true, data: formData };
+          return { success: true, data: formData }
         }
 
-        throw new Error('Failed to load course');
+        throw new Error('Failed to load course')
       } catch (error: any) {
-        const errorMessage = error?.response?.data?.message || error?.message || 'Failed to load course';
-        dispatch(setError(errorMessage));
-        return { success: false, error: errorMessage };
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.message ||
+          'Failed to load course'
+        dispatch(setError(errorMessage))
+        return { success: false, error: errorMessage }
       } finally {
-        dispatch(setSaving(false));
+        dispatch(setSaving(false))
       }
     },
     [dispatch]
-  );
+  )
 
   // Save course (create or update based on courseId)
   const saveCourse = useCallback(
     async (formData: CourseFormData, courseId: string) => {
       if (courseId) {
-        return updateCourse(formData, courseId);
+        return updateCourse(formData, courseId)
       } else {
-        return createCourse(formData);
+        return createCourse(formData)
       }
     },
     [createCourse, updateCourse]
-  );
+  )
 
   return {
     createCourse,
     updateCourse,
     loadCourse,
     saveCourse,
-  };
-};
-
+  }
+}

@@ -449,12 +449,11 @@ const CourseDetailsForm: React.FC<CourseDetailsFormProps> = ({
                 control={control}
                 render={({ field }) => (
                   <Autocomplete
-                    {...field}
                     options={YES_NO_OPTIONS as readonly string[]}
                     disabled={isViewMode}
-                    value={field.value || 'Yes'}
+                    value={field.value === true || field.value === undefined ? 'Yes' : 'No'}
                     onChange={(_, newValue) =>
-                      field.onChange(newValue || 'Yes')
+                      field.onChange(newValue === 'Yes')
                     }
                     isOptionEqualToValue={(option, value) => option === value}
                     renderInput={(params) => (
@@ -484,12 +483,11 @@ const CourseDetailsForm: React.FC<CourseDetailsFormProps> = ({
                 control={control}
                 render={({ field }) => (
                   <Autocomplete
-                    {...field}
                     options={YES_NO_OPTIONS as readonly string[]}
                     disabled={isViewMode}
-                    value={field.value || 'Yes'}
+                    value={field.value === true || field.value === undefined ? 'Yes' : 'No'}
                     onChange={(_, newValue) =>
-                      field.onChange(newValue || 'Yes')
+                      field.onChange(newValue === 'Yes')
                     }
                     isOptionEqualToValue={(option, value) => option === value}
                     renderInput={(params) => (
