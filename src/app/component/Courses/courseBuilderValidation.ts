@@ -178,6 +178,41 @@ const gatewaySchema = baseCourseSchema.shape({
   course_core_type: yup.string().oneOf(['Gateway']).required(),
   // Gateway doesn't have course_type field
   course_type: yup.string().optional(),
+  // Gateway requires course_name and course_code (inherited from baseCourseSchema)
+  // Gateway doesn't require level field
+  level: yup.string().optional(),
+  // Gateway requires active field (inherited from baseCourseSchema as boolean)
+  // Questions validation for Gateway
+  questions: yup
+    .array()
+    .min(1, 'At least one question is required')
+    .of(
+      yup.object().shape({
+        id: yup.mixed().optional(),
+        question: yup.string().required('Question is required'),
+        evidenceRequired: yup.boolean().optional(),
+        isDropdown: yup.boolean().default(true),
+        dropdownOptions: yup
+          .string()
+          .test(
+            'dropdown-options-required',
+            'Dropdown options are required when dropdown is enabled',
+            function (value) {
+              const isDropdown = this.parent.isDropdown
+              if (isDropdown === true) {
+                return !!value && value.trim() !== ''
+              }
+              return true
+            }
+          ),
+      })
+    )
+    .min(1, 'At least one question is required'),
+  // Assigned standards validation for Gateway - at least one required
+  assigned_standards: yup
+    .array()
+    .min(1, 'At least one standard course must be assigned')
+    .required('At least one standard course must be assigned'),
 })
 
 // Dynamic schema based on course type
