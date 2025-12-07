@@ -5,7 +5,7 @@
  * Clean, professional implementation matching CourseDetailsForm pattern
  */
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -19,14 +19,14 @@ import {
   InputLabel,
   IconButton,
 } from '@mui/material'
-import { Controller, Control, useFieldArray, FieldErrors } from 'react-hook-form'
+import { Controller, Control, useFieldArray, FieldErrors, UseFormSetValue } from 'react-hook-form'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { v4 as uuidv4 } from 'uuid'
 
 export interface AssessmentCriterion {
   id: string
-  number: string
+  code: string
   title: string
   description: string
   type: 'to-do' | 'to-know' | 'req'
@@ -44,35 +44,29 @@ export interface LearningOutcome {
 interface AssessmentCriteriaFormProps {
   control: Control<any>
   unitIndex: number
-  learningOutcomes: LearningOutcome[]
+  assessmentCriteria: AssessmentCriterion[]
   errors?: FieldErrors<any>
   readOnly?: boolean
+  setValue?: UseFormSetValue<any>
 }
 
 const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
   control,
   unitIndex,
-  learningOutcomes,
+  assessmentCriteria,
   errors,
   readOnly = false,
+  setValue,
 }) => {
-  // Use the first learning outcome or create a default one
-  const learningOutcome = learningOutcomes?.[0] || {
-    id: `lo_${uuidv4()}`,
-    number: '1',
-    description: 'Default Learning Outcome',
-    assessment_criteria: [],
-  }
-
   const { fields, append, remove } = useFieldArray({
     control,
-    name: `units.${unitIndex}.learning_outcomes.0.assessment_criteria`,
+    name: `units.${unitIndex}.subUnit`,
   })
 
   const handleAddCriterion = () => {
     const newCriterion: AssessmentCriterion = {
       id: `ac_${uuidv4()}`,
-      number: `${learningOutcome.number}.${fields.length + 1}`,
+      code: '',
       title: '',
       description: '',
       type: 'to-do',
@@ -82,12 +76,22 @@ const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
     append(newCriterion)
   }
 
+  // Auto-update showOrder when criteria are added/removed
+  useEffect(() => {
+    if (fields.length > 0 && setValue) {
+      fields.forEach((_, index) => {
+        const expectedShowOrder = index + 1
+        setValue(`units.${unitIndex}.subUnit.${index}.showOrder`, expectedShowOrder)
+      })
+    }
+  }, [fields.length, setValue, unitIndex])
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Box>
           <Typography variant="body2" color="textSecondary">
-            Manage assessment criteria for learning outcomes
+            Manage assessment criteria for this unit
           </Typography>
         </Box>
         {!readOnly && (
@@ -155,15 +159,15 @@ const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
               </Box>
 
               <Grid container spacing={2}>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                     Type <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Controller
-                    name={`units.${unitIndex}.learning_outcomes.0.assessment_criteria.${index}.type`}
+                    name={`units.${unitIndex}.subUnit.${index}.type`}
                     control={control}
-                    render={({ field }) => (
-                      <FormControl fullWidth size="small">
+                    render={({ field, fieldState: { error } }) => (
+                      <FormControl fullWidth size="small" error={!!error}>
                         <Select {...field} disabled={readOnly}>
                           <MenuItem value="to-do">To Do</MenuItem>
                           <MenuItem value="to-know">To Know</MenuItem>
@@ -174,31 +178,31 @@ const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
                   />
                 </Grid>
 
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Number
+                    Code
                   </Typography>
                   <Controller
-                    name={`units.${unitIndex}.learning_outcomes.0.assessment_criteria.${index}.number`}
+                    name={`units.${unitIndex}.subUnit.${index}.code`}
                     control={control}
                     render={({ field }) => (
                       <TextField
                         {...field}
                         fullWidth
                         size="small"
-                        placeholder="e.g., 1.1"
+                        placeholder="Enter code"
                         disabled={readOnly}
                       />
                     )}
                   />
                 </Grid>
 
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                     Show Order
                   </Typography>
                   <Controller
-                    name={`units.${unitIndex}.learning_outcomes.0.assessment_criteria.${index}.showOrder`}
+                    name={`units.${unitIndex}.subUnit.${index}.showOrder`}
                     control={control}
                     render={({ field }) => (
                       <TextField
@@ -206,28 +210,8 @@ const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
                         fullWidth
                         size="small"
                         type="number"
-                        placeholder="Order"
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Times Met
-                  </Typography>
-                  <Controller
-                    name={`units.${unitIndex}.learning_outcomes.0.assessment_criteria.${index}.timesMet`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        type="number"
-                        placeholder="0"
-                        disabled={readOnly}
+                        placeholder="Auto"
+                        value={field.value ?? index + 1}
                       />
                     )}
                   />
@@ -238,15 +222,17 @@ const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
                     Title <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Controller
-                    name={`units.${unitIndex}.learning_outcomes.0.assessment_criteria.${index}.title`}
+                    name={`units.${unitIndex}.subUnit.${index}.title`}
                     control={control}
-                    render={({ field }) => (
+                    render={({ field, fieldState: { error } }) => (
                       <TextField
                         {...field}
                         fullWidth
                         size="small"
                         placeholder="Enter criterion title"
                         required
+                        error={!!error}
+                        helperText={error?.message}
                         disabled={readOnly}
                       />
                     )}
@@ -258,7 +244,7 @@ const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
                     Description
                   </Typography>
                   <Controller
-                    name={`units.${unitIndex}.learning_outcomes.0.assessment_criteria.${index}.description`}
+                    name={`units.${unitIndex}.subUnit.${index}.description`}
                     control={control}
                     render={({ field }) => (
                       <TextField

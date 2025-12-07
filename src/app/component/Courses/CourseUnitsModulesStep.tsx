@@ -56,7 +56,6 @@ interface Unit {
   glh?: number | null
   credit_value?: number | null
   moduleType?: string
-  learning_outcomes?: LearningOutcome[]
   subUnit?: any[]
   [key: string]: any
 }
@@ -152,7 +151,6 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
         sort_order: String(currentUnitsCount + 1), // Auto-fill with next number
         active: true,
         subUnit: [],
-        learning_outcomes: [],
       }
       append(newModule)
     } else {
@@ -165,13 +163,6 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
         glh: null,
         credit_value: null,
         subUnit: [],
-        learning_outcomes: [
-          {
-            id: `lo_${Date.now()}`,
-            number: '1',
-            description: 'Default Learning Outcome',
-          },
-        ],
       }
       append(newUnit)
     }
@@ -297,28 +288,6 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                           placeholder="Enter module description"
                           disabled={isViewMode}
                         />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Mandatory
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.mandatory`}
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl fullWidth size="small">
-                          <Select
-                            value={field.value === true || field.value === undefined ? 'true' : 'false'}
-                            onChange={(e) => field.onChange(e.target.value === 'true')}
-                            disabled={isViewMode}
-                          >
-                            <MenuItem value="true">Mandatory</MenuItem>
-                            <MenuItem value="false">Optional</MenuItem>
-                          </Select>
-                        </FormControl>
                       )}
                     />
                   </Grid>
@@ -513,13 +482,15 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                   <Controller
                     name={`units.${index}.unit_ref`}
                     control={control}
-                    render={({ field }) => (
+                    render={({ field, fieldState: { error } }) => (
                       <TextField
                         {...field}
                         fullWidth
                         size="small"
                         placeholder="Enter Unit Ref"
                         required
+                        error={!!error}
+                        helperText={error?.message}
                         disabled={isViewMode}
                       />
                     )}
@@ -533,13 +504,15 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                   <Controller
                     name={`units.${index}.title`}
                     control={control}
-                    render={({ field }) => (
+                    render={({ field, fieldState: { error } }) => (
                       <TextField
                         {...field}
                         fullWidth
                         size="small"
                         placeholder="Enter Unit Title"
                         required
+                        error={!!error}
+                        helperText={error?.message}
                         disabled={isViewMode}
                       />
                     )}
@@ -605,6 +578,28 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                     )}
                   />
                 </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                    Mandatory
+                  </Typography>
+                  <Controller
+                    name={`units.${index}.mandatory`}
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth size="small">
+                        <Select
+                          value={field.value === true || field.value === undefined ? 'true' : 'false'}
+                          onChange={(e) => field.onChange(e.target.value === 'true')}
+                          disabled={isViewMode}
+                        >
+                          <MenuItem value="true">Mandatory</MenuItem>
+                          <MenuItem value="false">Optional</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
               </Grid>
 
               {/* Assessment Criteria Section */}
@@ -618,8 +613,9 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                   <AssessmentCriteriaForm
                     control={control}
                     unitIndex={index}
-                    learningOutcomes={units[index]?.learning_outcomes || []}
+                    assessmentCriteria={units[index]?.subUnit || []}
                     readOnly={isViewMode}
+                    setValue={setValue}
                   />
                 </AccordionDetails>
               </Accordion>

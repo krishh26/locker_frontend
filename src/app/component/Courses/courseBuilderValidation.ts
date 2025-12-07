@@ -62,30 +62,7 @@ const baseCourseSchema = yup.object().shape({
   assigned_gateway_name: yup.string().optional(),
   questions: yup.array().optional(),
   assigned_standards: yup.array().optional(),
-  units: yup
-    .array()
-    .of(
-      yup.object().shape({
-        id: yup.mixed().optional(),
-        title: yup.string().optional(),
-        unit_ref: yup.string().optional(),
-        description: yup.string().optional(),
-        mandatory: yup.boolean().optional(),
-        active: yup.boolean().optional(),
-        delivery_method: yup.string().optional(),
-        otj_hours: yup.string().optional(),
-        delivery_lead: yup.string().optional(),
-        sort_order: yup.string().optional(),
-        moduleType: yup.string().optional(),
-        level: yup.mixed().nullable().optional(),
-        glh: yup.number().nullable().optional(),
-        credit_value: yup.number().nullable().optional(),
-        subUnit: yup.array().optional(),
-        learning_outcomes: yup.array().optional(),
-        assessment_criteria: yup.array().optional(),
-      })
-    )
-    .optional(),
+  // Units validation is defined in Qualification and Standard schemas only
 })
 
 // Qualification-specific validation
@@ -112,6 +89,41 @@ const qualificationSchema = baseCourseSchema.shape({
   qualification_status: yup.string().optional(),
   duration_period: yup.string().optional(),
   duration_value: yup.string().optional(),
+  // Units validation for Qualification - validate each unit
+  units: yup
+    .array()
+    .of(
+      yup.object().shape({
+        id: yup.mixed().optional(),
+        unit_ref: yup.string().required('Unit Ref is required'),
+        title: yup.string().required('Unit Title is required'),
+        description: yup.string().optional(),
+        mandatory: yup.boolean().optional(),
+        level: yup.mixed().nullable().optional(),
+        glh: yup.number().nullable().optional(),
+        credit_value: yup.number().nullable().optional(),
+        learning_outcomes: yup.array().optional(),
+        // SubUnit (Assessment Criteria) validation for Qualification units
+        subUnit: yup
+          .array()
+          .of(
+            yup.object().shape({
+              id: yup.mixed().optional(),
+              title: yup.string().required('Assessment Criteria Title is required'),
+              description: yup.string().optional(),
+              type: yup
+                .string()
+                .oneOf(['to-do', 'to-know', 'req'])
+                .default('to-do'),
+              code: yup.string().optional(),
+              showOrder: yup.number().optional(),
+              timesMet: yup.number().optional(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .optional(),
 })
 
 // Standard-specific validation
@@ -133,7 +145,6 @@ const standardSchema = baseCourseSchema.shape({
         title: yup.string().required('Module Title is required'),
         unit_ref: yup.string().required('Module Reference Number is required'),
         description: yup.string().optional(),
-        mandatory: yup.boolean().optional(),
         active: yup.boolean().optional(),
         delivery_method: yup.string().optional(),
         otj_hours: yup.string().optional(),
