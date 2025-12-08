@@ -87,8 +87,6 @@ const qualificationSchema = baseCourseSchema.shape({
   // Fields not in form but may be needed
   qualification_type: yup.string().optional(),
   qualification_status: yup.string().optional(),
-  duration_period: yup.string().optional(),
-  duration_value: yup.string().optional(),
   // Units validation for Qualification - validate each unit
   units: yup
     .array()
@@ -129,10 +127,9 @@ const qualificationSchema = baseCourseSchema.shape({
 // Standard-specific validation
 const standardSchema = baseCourseSchema.shape({
   course_core_type: yup.string().oneOf(['Standard']).required(),
-  // Required fields for Standard
   duration_period: yup.string().required('Duration period is required'),
-  duration_value: yup.string().optional(),
   // Optional fields for Standard
+  duration_value: yup.number().nullable().optional(),
   two_page_standard_link: yup.string().url('Must be a valid URL').optional(),
   assessment_plan_link: yup.string().url('Must be a valid URL').optional(),
   assigned_gateway_id: yup.number().nullable().optional(),

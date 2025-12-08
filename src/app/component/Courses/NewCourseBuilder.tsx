@@ -124,7 +124,7 @@ const NewCourseBuilder = ({
       qualification_type: '',
       qualification_status: '',
       duration_period: '',
-      duration_value: '',
+      duration_value: 0,
     }),
     [initialCourseType]
   )
@@ -181,16 +181,22 @@ const NewCourseBuilder = ({
 
   // Load course data if editing
   useEffect(() => {
-    if (courseId) {
-      loadCourse(courseId).then((result) => {
+    if (isEdit) {
+      loadCourse(isEdit).then((result) => {
         if (result.success && result.data) {
+          // Extract course_core_type first to ensure correct schema
+          const apiCourseCoreType = (result.data.course_core_type ||
+            initialCourseType) as CourseCoreType
+
+          // Set course_core_type immediately so UI renders correct fields
+          setValue('course_core_type', apiCourseCoreType, { shouldValidate: false })
+
           // Map API response to CourseFormData format
           const formData: CourseFormData = {
             course_name: result.data.course_name || '',
             course_code: result.data.course_code || '',
             course_type: result.data.course_type || '',
-            course_core_type: (result.data.course_core_type ||
-              initialCourseType) as CourseCoreType,
+            course_core_type: apiCourseCoreType,
             level: result.data.level || '',
             sector: result.data.sector || '',
             qualification_type: result.data.qualification_type || '',
@@ -198,7 +204,7 @@ const NewCourseBuilder = ({
             guided_learning_hours: result.data.guided_learning_hours || '',
             total_credits: result.data.total_credits || '',
             duration_period: result.data.duration_period || '',
-            duration_value: result.data.duration_value || '',
+            duration_value: Number(result.data.duration_value) || 0,
             operational_start_date: result.data.operational_start_date || '',
             recommended_minimum_age: result.data.recommended_minimum_age || '',
             overall_grading_type: result.data.overall_grading_type || '',
@@ -226,18 +232,30 @@ const NewCourseBuilder = ({
             assigned_standards: result.data.assigned_standards || [],
           }
 
-          // Initialize form with loaded data
-          reset(formData)
+          // Initialize form with loaded data - use nextTick to ensure course_core_type is set first
+          setTimeout(() => {
+            reset(formData, {
+              keepErrors: false,
+              keepDirty: false,
+              keepIsSubmitted: false,
+              keepTouched: false,
+              keepIsValid: false,
+              keepSubmitCount: false,
+            })
+            // Trigger validation after reset to ensure correct schema is used
+            trigger()
+          }, 0)
         }
       })
     }
-  }, [courseId])
+  }, [isEdit, reset, trigger, setValue, initialCourseType])
 
   // Fetch gateway courses for Standard type
   useEffect(() => {
     const fetchGateways = async () => {
       try {
         const gateways = await fetchActiveGatewayCourses()
+        console.log("🚀 ~ fetchGateways ~ gateways:", gateways)
         setGatewayCourses(gateways)
       } catch (error) {
         console.error('Failed to fetch gateway courses:', error)

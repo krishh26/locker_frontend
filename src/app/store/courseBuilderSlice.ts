@@ -22,7 +22,7 @@ export interface CourseFormData {
   guided_learning_hours: string;
   total_credits: string;
   duration_period: string;
-  duration_value: string;
+  duration_value: number | null;
   operational_start_date: string;
   recommended_minimum_age: string;
   overall_grading_type: string;
