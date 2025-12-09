@@ -18,10 +18,9 @@ import {
 } from '@mui/material';
 import { SecondaryButton, SecondaryButtonOutlined } from '../Buttons';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { v4 as uuidv4 } from 'uuid';
 
 interface ModuleFormData {
-  id: string;
+  id: number;
   component_ref: string;
   title: string;
   description?: string;
@@ -46,7 +45,7 @@ interface ModuleFormDialogProps {
 }
 
 const defaultModuleData: ModuleFormData = {
-  id: `module_${uuidv4()}`,
+  id: Date.now(),
   component_ref: '',
   title: '',
   description: '',
@@ -88,7 +87,7 @@ const ModuleFormDialog: React.FC<ModuleFormDialogProps> = ({
 
         setFormData({
           ...defaultModuleData,
-          id: `module_${uuidv4()}`,
+          id: Date.now(),
           component_ref: newRefNumber,
           title: `Module ${existingModules.length + 1}`
         });
@@ -112,7 +111,7 @@ const ModuleFormDialog: React.FC<ModuleFormDialogProps> = ({
 
     const dataToSave = {
       ...formData,
-      id: originalId || `module_${uuidv4()}`,
+      id: originalId || Date.now(),
       component_ref: formData.component_ref || '',
       title: formData.title || '',
       moduleType: formData.moduleType || 'behaviour',

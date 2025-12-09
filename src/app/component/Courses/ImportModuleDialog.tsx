@@ -32,7 +32,6 @@ import {
   fetchCourseAPI,
   selectCourseManagement,
 } from 'app/store/courseManagement'
-import { v4 as uuidv4 } from 'uuid'
 
 interface ImportModuleDialogProps {
   open: boolean
@@ -124,7 +123,7 @@ const ImportModuleDialog: React.FC<ImportModuleDialogProps> = ({
     const mappedModules = newModules.map((module, index) => {
       const currentLength = existingModules.length
       return {
-        id: `module_${uuidv4()}`,
+        id: Date.now(),
         title: module.title || '',
         unit_ref: module.unit_ref || module.component_ref || '',
         description: module.description || '',
