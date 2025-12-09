@@ -18,13 +18,13 @@ export const getValidationSchema = () => {
     units: Yup.array()
       .of(
         Yup.object().shape({
-          id: Yup.string().required(),
+          id: Yup.mixed().required(),
           title: Yup.string().required(),
           subUnit: Yup.array()
             .of(
               Yup.object().shape({
-                id: Yup.number().required(),
-                subTitle: Yup.string().required(),
+                id: Yup.string().required(),
+                title: Yup.string().required(),
                 learnerMap: Yup.boolean(),
                 trainerMap: Yup.boolean(),
                 comment: Yup.string().optional(),

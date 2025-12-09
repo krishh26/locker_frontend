@@ -24,15 +24,27 @@ export interface SignatureData {
 }
 
 export interface SubUnit {
-  id: number
-  subTitle: string
+  id: string
+  title: string
+  description?: string
+  type?: string
+  showOrder?: number
+  code?: string
   learnerMap?: boolean
   trainerMap?: boolean
   comment?: string
 }
 
 export interface Unit {
-  id: string
+  id: string | number
   title: string
+  unit_ref?: string
+  mandatory?: boolean
+  description?: string
+  delivery_method?: string
+  otj_hours?: string
+  delivery_lead?: string
+  sort_order?: string
+  active?: boolean
   subUnit: SubUnit[]
 }

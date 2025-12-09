@@ -447,9 +447,7 @@ export const fetchActiveGatewayCourses = async () => {
         const url = `${URL_BASE_LINK}/course/list?limit=100&core_type=Gateway`;
         const response = await axios.get(url);
 
-        const activeGateways = response.data.data.filter(
-            (course) => course.active === "Yes"
-        );
+        const activeGateways = response.data.data;
 
 
         return activeGateways;

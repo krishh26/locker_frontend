@@ -173,15 +173,27 @@ const CreateViewEvidenceLibrary = () => {
     }
     units: [
       {
-        id: string
+        id: string | number
         title: string
+        unit_ref?: string
+        mandatory?: boolean
+        description?: string
+        delivery_method?: string
+        otj_hours?: string
+        delivery_lead?: string
+        sort_order?: string
+        active?: boolean
         subUnit: [
           {
-            id: number
-            learnerMap: boolean
-            subTitle: string
-            comment: string
-            trainerMap: boolean
+            id: string
+            title: string
+            description?: string
+            type?: string
+            showOrder?: number
+            code?: string
+            learnerMap?: boolean
+            trainerMap?: boolean
+            comment?: string
           }
         ]
       }
@@ -204,11 +216,11 @@ const CreateViewEvidenceLibrary = () => {
         id: '',
         subUnit: [
           {
-            id: 0,
-            comment: '',
+            id: '',
+            title: '',
             learnerMap: false,
-            subTitle: '',
             trainerMap: false,
+            comment: '',
           },
         ],
         title: '',
@@ -374,7 +386,19 @@ const CreateViewEvidenceLibrary = () => {
       setValue('description', description ? description : '')
       setValue('grade', grade ? grade : '')
       setValue('assessment_method', assessment_method ? assessment_method : [])
-      setValue('units', units ? units : [])
+      // Initialize units with learnerMap, trainerMap, and comment if they don't exist
+      const initializedUnits = units
+        ? units.map((unit) => ({
+            ...unit,
+            subUnit: unit.subUnit?.map((sub) => ({
+              ...sub,
+              learnerMap: sub.learnerMap ?? false,
+              trainerMap: sub.trainerMap ?? false,
+              comment: sub.comment ?? '',
+            })) || [],
+          }))
+        : []
+      setValue('units', initializedUnits)
       setValue('session', session ? session : '')
       setValue('audio', external_feedback ? external_feedback : '')
       setValue('evidence_time_log', evidenceDetails.data.evidence_time_log || false)
@@ -404,7 +428,6 @@ const CreateViewEvidenceLibrary = () => {
 
   // Watch units from form - must be declared before any conditional returns
   const unitsWatch = watch('units')
-  console.log("🚀 ~ CreateViewEvidenceLibrary ~ unitsWatch:", unitsWatch)
   
   // Sync selected units from evidence form to time log
   useEffect(() => {
@@ -452,7 +475,17 @@ const CreateViewEvidenceLibrary = () => {
     if (exists) {
       updatedUnits = currentUnits.filter((unit) => unit.id !== method.id)
     } else {
-      updatedUnits = [...currentUnits, method]
+      // When adding a unit, ensure subUnits have learnerMap, trainerMap, and comment initialized
+      const unitToAdd = {
+        ...method,
+        subUnit: method.subUnit?.map((sub) => ({
+          ...sub,
+          learnerMap: sub.learnerMap ?? false,
+          trainerMap: sub.trainerMap ?? false,
+          comment: sub.comment ?? '',
+        })) || [],
+      }
+      updatedUnits = [...currentUnits, unitToAdd]
     }
 
     setValue('units', updatedUnits, { shouldValidate: true })
@@ -463,7 +496,7 @@ const CreateViewEvidenceLibrary = () => {
     updated.forEach((unit) => {
       unit.subUnit.forEach((sub) => {
         if (sub.id === row.id) {
-          sub.learnerMap = !sub.learnerMap
+          sub.learnerMap = !(sub.learnerMap ?? false)
         }
       })
     })
@@ -485,7 +518,7 @@ const CreateViewEvidenceLibrary = () => {
     updated.forEach((unit) => {
       unit.subUnit.forEach((sub) => {
         if (sub.id === row.id) {
-          sub.trainerMap = !sub.trainerMap
+          sub.trainerMap = !(sub.trainerMap ?? false)
         }
       })
     })
@@ -1055,7 +1088,7 @@ const CreateViewEvidenceLibrary = () => {
                   key={method.id}
                   control={
                     <Checkbox
-                      checked={!!(watch('units') && watch('units').some((unit) => unit.id == method.id))}
+                      checked={!!(watch('units') && watch('units').some((unit) => String(unit.id) === String(method.id)))}
                       onChange={(e) => handleCheckboxUnits(e, method)}
                       name='units'
                       disabled={isEditMode}
@@ -1082,7 +1115,7 @@ const CreateViewEvidenceLibrary = () => {
                       <TableRow>
                         <TableCell align='center'>
                           <Checkbox
-                            checked={units.subUnit.every((s) => s.learnerMap)}
+                            checked={units.subUnit.every((s) => s.learnerMap ?? false)}
                             onChange={(e) =>
                               selectAllLearnerMapHandler(
                                 unitIndex,
@@ -1108,7 +1141,7 @@ const CreateViewEvidenceLibrary = () => {
                               disabled={isEditMode}
                             />
                           </TableCell>
-                          <TableCell>{row?.subTitle}</TableCell>
+                          <TableCell>{row?.title}</TableCell>
                           <TableCell>
                             {userRole === 'Learner' ? (
                               row?.comment
@@ -1125,9 +1158,9 @@ const CreateViewEvidenceLibrary = () => {
                               <div
                                 style={{
                                   backgroundColor:
-                                    row.learnerMap && row.trainerMap
+                                    (row.learnerMap ?? false) && (row.trainerMap ?? false)
                                       ? 'green'
-                                      : row.learnerMap || row.trainerMap
+                                      : (row.learnerMap ?? false) || (row.trainerMap ?? false)
                                       ? 'orange'
                                       : 'maroon',
                                   width: '100%',
