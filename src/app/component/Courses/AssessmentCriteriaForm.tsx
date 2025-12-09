@@ -22,10 +22,9 @@ import {
 import { Controller, Control, useFieldArray, FieldErrors, UseFormSetValue } from 'react-hook-form'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { v4 as uuidv4 } from 'uuid'
 
 export interface AssessmentCriterion {
-  id: string
+  id: number
   code: string
   title: string
   description: string
@@ -65,7 +64,7 @@ const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
 
   const handleAddCriterion = () => {
     const newCriterion: AssessmentCriterion = {
-      id: `ac_${uuidv4()}`,
+      id: Date.now(),
       code: '',
       title: '',
       description: '',
