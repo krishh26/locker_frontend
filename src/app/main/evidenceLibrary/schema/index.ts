@@ -1,6 +1,8 @@
 import * as Yup from 'yup'
 
-export const getValidationSchema = () => {
+export const getValidationSchema = (userRole?: string) => {
+  const canEditDeclaration = ['Trainer', 'Admin', 'IQA'].includes(userRole || '')
+  
   return Yup.object().shape({
     title: Yup.string().required('Title is required'),
     description: Yup.string(),
@@ -11,7 +13,9 @@ export const getValidationSchema = () => {
     evidence_time_log: Yup.boolean().required('Please select one option'),
     session: Yup.string(),
     grade: Yup.string(),
-    declaration: Yup.bool().oneOf([true], 'You must accept the declaration'),
+    declaration: canEditDeclaration 
+      ? Yup.bool().optional()
+      : Yup.bool().oneOf([true], 'You must accept the declaration'),
     assessment_method: Yup.array()
       .of(Yup.string())
       .min(1, 'Please select at least one assessment method.'),

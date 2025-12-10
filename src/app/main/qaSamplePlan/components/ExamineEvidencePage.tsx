@@ -25,6 +25,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
+import EditIcon from '@mui/icons-material/Edit'
 import { useGetEvidenceListQuery, useAddAssignmentReviewMutation } from 'app/store/api/sample-plan-api'
 import FuseLoading from '@fuse/core/FuseLoading'
 import { useCurrentUser } from 'src/app/utils/userHelpers'
@@ -37,9 +38,6 @@ interface EvidenceRow {
   evidenceName: string
   evidenceDescription: string
   assessmentMethod: string
-  grade: string
-  dateSet: string
-  dateDue: string
   dateUploaded: string
 }
 
@@ -53,7 +51,6 @@ interface EvidenceData {
     key: string
     url: string
   }
-  grade: string | null
   assessment_method: string[]
   created_at: string
   unit: {
@@ -290,9 +287,6 @@ const ExamineEvidencePage: React.FC = () => {
         evidenceName: evidence.title || '-',
         evidenceDescription: evidence.description || '-',
         assessmentMethod: evidence.assessment_method?.join(', ') || '-',
-        grade: evidence.grade || '-',
-        dateSet: '-', // Not available in API response
-        dateDue: '-', // Not available in API response
         dateUploaded: evidence.created_at ? new Date(evidence.created_at).toLocaleDateString() : '-',
       }))
       setEvidenceRows(mappedRows)
@@ -430,15 +424,6 @@ const ExamineEvidencePage: React.FC = () => {
                       Assessment Method
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
-                      Grade
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
-                      Date Set
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
-                      Date Due
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
                       Date Uploaded
                     </TableCell>
                     <TableCell
@@ -464,7 +449,7 @@ const ExamineEvidencePage: React.FC = () => {
                   {evidenceRows.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={11}
+                        colSpan={8}
                         align='center'
                         sx={{ py: 4, color: '#666666' }}
                       >
@@ -478,7 +463,17 @@ const ExamineEvidencePage: React.FC = () => {
                       return (
                       <TableRow key={index} hover>
                         <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {row.refNo}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {row.refNo}
+                            <IconButton
+                              size="small"
+                              onClick={() => navigate(`/evidenceLibrary/${row.refNo}`)}
+                              sx={{ ml: 1 }}
+                              color="primary"
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
                         </TableCell>
                         <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
                           {fileUrl ? (
@@ -504,18 +499,15 @@ const ExamineEvidencePage: React.FC = () => {
                           {row.assessmentMethod}
                         </TableCell>
                         <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {row.grade}
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {row.dateSet}
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {row.dateDue}
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
                           {row.dateUploaded}
                         </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}></TableCell>
+                        <TableCell sx={{ borderRight: '1px solid #e0e0e0', textAlign: 'center' }}>
+                          <Checkbox
+                            checked={criteriaSignOff[row.refNo] || false}
+                            onChange={() => handleCriteriaToggle(row.refNo)}
+                            size="small"
+                          />
+                        </TableCell>
                         <TableCell sx={{ textAlign: 'center' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                             {(() => {
@@ -602,53 +594,6 @@ const ExamineEvidencePage: React.FC = () => {
               </Table>
             </TableContainer>
             
-            {/* Sign off criteria section */}
-            <Box
-              sx={{
-                p: 2,
-                borderTop: '1px solid #e0e0e0',
-                backgroundColor: '#fafafa',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                flexWrap: 'wrap',
-              }}
-            >
-              <Stack direction='row' spacing={1} alignItems='center'>
-                {Object.entries(criteriaSignOff).map(([key, checked]) => (
-                  <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Checkbox
-                      size='small'
-                      checked={checked}
-                      onChange={() => handleCriteriaToggle(key)}
-                      sx={{ p: 0.5 }}
-                    />
-                    <Typography variant='body2' sx={{ fontSize: '0.875rem' }}>
-                      {key}
-                    </Typography>
-                  </Box>
-                ))}
-              </Stack>
-              <Typography variant='body2' sx={{ color: '#666666', ml: 'auto' }}>
-                No. Req
-              </Typography>
-              <Button
-                variant='outlined'
-                size='small'
-                startIcon={<AddIcon />}
-                sx={{
-                  textTransform: 'none',
-                  borderColor: '#1976d2',
-                  color: '#1976d2',
-                  '&:hover': {
-                    borderColor: '#1565c0',
-                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
-                  },
-                }}
-              >
-                Show All
-              </Button>
-            </Box>
           </Paper>
 
           {/* Confirmation Statement Table */}

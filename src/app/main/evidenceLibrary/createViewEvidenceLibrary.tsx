@@ -107,7 +107,7 @@ const CreateViewEvidenceLibrary = () => {
     trigger,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: yupResolver(getValidationSchema()),
+    resolver: yupResolver(getValidationSchema(userRole)),
     defaultValues: {
       title: '',
       description: '',
@@ -118,7 +118,7 @@ const CreateViewEvidenceLibrary = () => {
       evidence_time_log: false,
       session: '',
       grade: '',
-      declaration: false,
+      declaration: ['Trainer', 'Admin', 'IQA'].includes(userRole) ? true : false,
       assessment_method: [],
       units: [],
       signatures: [
@@ -402,6 +402,9 @@ const CreateViewEvidenceLibrary = () => {
       setValue('session', session ? session : '')
       setValue('audio', external_feedback ? external_feedback : '')
       setValue('evidence_time_log', evidenceDetails.data.evidence_time_log || false)
+      // Set declaration to true for Trainer/Admin/IQA, otherwise use existing value
+      const canEditDeclaration = ['Trainer', 'Admin', 'IQA'].includes(userRole)
+      setValue('declaration', canEditDeclaration ? true : (evidenceDetails.data.declaration || false))
     }
   }, [evidenceDetails, setValue, isError, id, isLoading])
 
@@ -629,7 +632,13 @@ const CreateViewEvidenceLibrary = () => {
           variant: 'success',
         })
       )
-      navigate(`/evidenceLibrary`)
+      const isAdminOrIQA = ['Trainer', 'Admin', 'IQA'].includes(userRole)
+      if (isAdminOrIQA) {
+        navigate(`/qa-sample-plan`)
+      }
+      else {
+        navigate(`/evidenceLibrary`)
+      }
     } catch (error) {
       dispatch(
         showMessage({
@@ -751,23 +760,26 @@ const CreateViewEvidenceLibrary = () => {
             <Controller
               name='trainer_feedback'
               control={control}
-              render={({ field }) => (
-                <TextField
-                  name='title'
-                  size='small'
-                  multiline
-                  rows={4}
-                  fullWidth
-                  disabled={isEditMode || userRole !== 'Trainer'}
-                  style={
-                    userRole !== 'Trainer' || isEditMode
-                      ? { backgroundColor: 'whitesmoke' }
-                      : {}
-                  }
-                  error={!!errors.trainer_feedback}
-                  {...field}
-                />
-              )}
+              render={({ field }) => {
+                const canEdit = ['Trainer', 'Admin', 'IQA'].includes(userRole)
+                return (
+                  <TextField
+                    name='title'
+                    size='small'
+                    multiline
+                    rows={4}
+                    fullWidth
+                    disabled={isEditMode || !canEdit}
+                    style={
+                      !canEdit || isEditMode
+                        ? { backgroundColor: 'whitesmoke' }
+                        : {}
+                    }
+                    error={!!errors.trainer_feedback}
+                    {...field}
+                  />
+                )
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -777,23 +789,26 @@ const CreateViewEvidenceLibrary = () => {
             <Controller
               name='points_for_improvement'
               control={control}
-              render={({ field }) => (
-                <TextField
-                  name='title'
-                  size='small'
-                  fullWidth
-                  multiline
-                  rows={4}
-                  error={!!errors.points_for_improvement}
-                  disabled={isEditMode || userRole !== 'Trainer'}
-                  style={
-                    userRole !== 'Trainer' || isEditMode
-                      ? { backgroundColor: 'whitesmoke' }
-                      : {}
-                  }
-                  {...field}
-                />
-              )}
+              render={({ field }) => {
+                const canEdit = ['Trainer', 'Admin', 'IQA'].includes(userRole)
+                return (
+                  <TextField
+                    name='title'
+                    size='small'
+                    fullWidth
+                    multiline
+                    rows={4}
+                    error={!!errors.points_for_improvement}
+                    disabled={isEditMode || !canEdit}
+                    style={
+                      !canEdit || isEditMode
+                        ? { backgroundColor: 'whitesmoke' }
+                        : {}
+                    }
+                    {...field}
+                  />
+                )
+              }}
             />
           </Grid>
           <Grid item xs={12}>
@@ -1201,26 +1216,29 @@ const CreateViewEvidenceLibrary = () => {
             <Controller
               name='declaration'
               control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      {...field}
-                      checked={field.value}
-                      color='primary'
-                      disabled={isEditMode}
-                    />
-                  }
-                  label={
-                    <Typography variant='body1'>
-                      Please tick to confirm.
-                      <br />I declare that all material in this submission is my
-                      own work except where there is clear acknowledgement and
-                      appropriate reference to the work of others.
-                    </Typography>
-                  }
-                />
-              )}
+              render={({ field }) => {
+                const canEditDeclaration = ['Trainer', 'Admin', 'IQA'].includes(userRole)
+                return (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        {...field}
+                        checked={field.value}
+                        color='primary'
+                        disabled={isEditMode || canEditDeclaration}
+                      />
+                    }
+                    label={
+                      <Typography variant='body1'>
+                        Please tick to confirm.
+                        <br />I declare that all material in this submission is my
+                        own work except where there is clear acknowledgement and
+                        appropriate reference to the work of others.
+                      </Typography>
+                    }
+                  />
+                )
+              }}
             />
             {errors.declaration && (
               <FormHelperText error>
@@ -1234,7 +1252,15 @@ const CreateViewEvidenceLibrary = () => {
               color='secondary'
               className='rounded-md'
               disabled={isUpdateLoading}
-              onClick={() => navigate('/evidenceLibrary')}
+              onClick={() => {
+                const isAdminOrIQA = ['Trainer', 'Admin', 'IQA'].includes(userRole)
+                if (isAdminOrIQA) {
+                  navigate(`/qa-sample-plan`)
+                }
+                else {
+                  navigate(`/evidenceLibrary`)
+                }
+              }}
             >
               Cancel
             </Button>
