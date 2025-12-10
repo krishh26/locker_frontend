@@ -25,7 +25,7 @@ const EvidenceLibraryConfig = {
       },
     },
   },
-  auth: [authRoles.Learner , authRoles.Trainer,authRoles.Admin],
+  auth: [authRoles.Learner , authRoles.Trainer,authRoles.Admin , authRoles.IQA],
   routes: [
     {
       path: '/evidenceLibrary',

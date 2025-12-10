@@ -17,6 +17,12 @@ import {
   MenuItem,
   FormControl,
   IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material'
 import { Controller, Control, useFieldArray, FieldErrors } from 'react-hook-form'
 import AddIcon from '@mui/icons-material/Add'
@@ -26,10 +32,7 @@ import { v4 as uuidv4 } from 'uuid'
 export interface StandardTopic {
   id: string
   title: string
-  description: string
   type: 'Behaviour' | 'Knowledge' | 'Skills'
-  showOrder: number
-  code?: string
 }
 
 interface StandardTopicsFormProps {
@@ -56,191 +59,104 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
     const newTopic: StandardTopic = {
       id: `topic_${uuidv4()}`,
       title: '',
-      description: '',
       type: 'Behaviour',
-      showOrder: fields.length + 1,
-      code: '',
     }
     append(newTopic)
   }
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Box>
-          <Typography variant="body2" color="textSecondary">
-            Manage assessment criteria (topics) for this module
-          </Typography>
-        </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Typography
+          variant="body2"
+          gutterBottom
+          sx={{ fontWeight: 600, mb: 2, flex: 1 }}
+        >
+          Assessment Criteria {assessmentCriteria.length > 0 && `(${assessmentCriteria.length})`}
+        </Typography>
         {!readOnly && (
           <Button
-            variant="contained"
+            variant="outlined"
             startIcon={<AddIcon />}
             onClick={handleAddTopic}
             size="small"
           >
-            Add Topic
+            Add Assessment Criteria
           </Button>
         )}
       </Box>
 
-      {fields.length === 0 ? (
-        <Box
-          sx={{
-            p: 3,
-            border: '1px dashed',
-            borderColor: 'divider',
-            borderRadius: 2,
-            textAlign: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.02)',
-          }}
-        >
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-            No topics added yet.
-          </Typography>
-          {!readOnly && (
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={handleAddTopic}
-            >
-              Add First Topic
-            </Button>
-          )}
-        </Box>
-      ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {fields.map((field, index) => (
-            <Paper
-              key={field.id}
-              elevation={1}
-              sx={{
-                p: 3,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Topic {index + 1}
-                </Typography>
+      {fields.length > 0 && (
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  Type <span style={{ color: 'red' }}>*</span>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  Title <span style={{ color: 'red' }}>*</span>
+                </TableCell>
                 {!readOnly && (
-                  <IconButton
-                    color="error"
-                    size="small"
-                    onClick={() => remove(index)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  <TableCell sx={{ fontWeight: 600, width: 100 }} align="center">
+                    Actions
+                  </TableCell>
                 )}
-              </Box>
-
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Type <span style={{ color: 'red' }}>*</span>
-                  </Typography>
-                  <Controller
-                    name={`units.${moduleIndex}.subUnit.${index}.type`}
-                    control={control}
-                    render={({ field, fieldState: { error } }) => (
-                      <FormControl fullWidth size="small" error={!!error}>
-                        <Select {...field} disabled={readOnly}>
-                          <MenuItem value="Behaviour">Behaviour</MenuItem>
-                          <MenuItem value="Knowledge">Knowledge</MenuItem>
-                          <MenuItem value="Skills">Skills</MenuItem>
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Code
-                  </Typography>
-                  <Controller
-                    name={`units.${moduleIndex}.subUnit.${index}.code`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {fields.map((field, index) => (
+                <TableRow key={field.id} hover>
+                  <TableCell>
+                    <Controller
+                      name={`units.${moduleIndex}.subUnit.${index}.type`}
+                      control={control}
+                      render={({ field: formField, fieldState: { error } }) => (
+                        <FormControl size="small" sx={{ minWidth: 150 }} error={!!error}>
+                          <Select {...formField} disabled={readOnly}>
+                            <MenuItem value="Behaviour">Behaviour</MenuItem>
+                            <MenuItem value="Knowledge">Knowledge</MenuItem>
+                            <MenuItem value="Skills">Skills</MenuItem>
+                          </Select>
+                        </FormControl>
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Controller
+                      name={`units.${moduleIndex}.subUnit.${index}.title`}
+                      control={control}
+                      render={({ field: formField, fieldState: { error } }) => (
+                        <TextField
+                          {...formField}
+                          size="small"
+                          placeholder="Topic title"
+                          required
+                          error={!!error}
+                          helperText={error?.message}
+                          disabled={readOnly}
+                          sx={{ minWidth: 300 }}
+                          fullWidth
+                        />
+                      )}
+                    />
+                  </TableCell>
+                  {!readOnly && (
+                    <TableCell align="center">
+                      <IconButton
+                        color="error"
                         size="small"
-                        placeholder="Enter code"
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Show Order
-                  </Typography>
-                  <Controller
-                    name={`units.${moduleIndex}.subUnit.${index}.showOrder`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        type="number"
-                        placeholder="Order"
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Title <span style={{ color: 'red' }}>*</span>
-                  </Typography>
-                  <Controller
-                    name={`units.${moduleIndex}.subUnit.${index}.title`}
-                    control={control}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        placeholder="Enter topic title"
-                        required
-                        error={!!error}
-                        helperText={error?.message}
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Description
-                  </Typography>
-                  <Controller
-                    name={`units.${moduleIndex}.subUnit.${index}.description`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        multiline
-                        rows={3}
-                        size="small"
-                        placeholder="Enter topic description"
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
-          ))}
-        </Box>
+                        onClick={() => remove(index)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </Box>
   )

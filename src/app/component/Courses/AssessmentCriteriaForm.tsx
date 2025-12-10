@@ -5,38 +5,58 @@
  * Clean, professional implementation matching CourseDetailsForm pattern
  */
 
-import React, { useEffect } from 'react'
-import {
-  Box,
-  Typography,
-  TextField,
-  Grid,
-  Button,
-  Paper,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  IconButton,
-} from '@mui/material'
-import { Controller, Control, useFieldArray, FieldErrors, UseFormSetValue } from 'react-hook-form'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import {
+  Box,
+  Button,
+  Collapse,
+  FormControl,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography
+} from '@mui/material'
+import React, { useEffect, useState } from 'react'
+import {
+  Control,
+  Controller,
+  FieldErrors,
+  useFieldArray,
+  UseFormSetValue,
+  useWatch,
+} from 'react-hook-form'
+import TopicsForm from './TopicsForm'
 
 export interface AssessmentCriterion {
   id: number
   code: string
   title: string
-  description: string
   type: 'to-do' | 'to-know' | 'req'
   showOrder: number
   timesMet: number
+  topics?: Array<{
+    id: string
+    title: string
+    type?: string
+    showOrder?: number
+    code?: string
+  }>
 }
 
 export interface LearningOutcome {
   id: string
   number: string
-  description: string
   assessment_criteria: AssessmentCriterion[]
 }
 
@@ -62,15 +82,24 @@ const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
     name: `units.${unitIndex}.subUnit`,
   })
 
+  // Watch subUnits to access topics
+  const subUnits = useWatch({
+    control,
+    name: `units.${unitIndex}.subUnit`,
+    defaultValue: [],
+  })
+
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
+
   const handleAddCriterion = () => {
     const newCriterion: AssessmentCriterion = {
       id: Date.now(),
       code: '',
       title: '',
-      description: '',
       type: 'to-do',
       showOrder: fields.length + 1,
       timesMet: 0,
+      topics: [], // Initialize topics array
     }
     append(newCriterion)
   }
@@ -80,192 +109,208 @@ const AssessmentCriteriaForm: React.FC<AssessmentCriteriaFormProps> = ({
     if (fields.length > 0 && setValue) {
       fields.forEach((_, index) => {
         const expectedShowOrder = index + 1
-        setValue(`units.${unitIndex}.subUnit.${index}.showOrder`, expectedShowOrder)
+        setValue(
+          `units.${unitIndex}.subUnit.${index}.showOrder`,
+          expectedShowOrder
+        )
       })
     }
   }, [fields.length, setValue, unitIndex])
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Box>
-          <Typography variant="body2" color="textSecondary">
-            Manage assessment criteria for this unit
-          </Typography>
-        </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'justify-between', mb: 3 }}>
+        <Typography
+          variant='body2'
+          gutterBottom
+          sx={{ fontWeight: 600, mb: 2, flex: 1 }}
+        >
+          {' '}
+          Learning Outcome{' '}
+          {assessmentCriteria.length > 0 && `(${assessmentCriteria.length})`}
+        </Typography>
         {!readOnly && (
           <Button
-            variant="contained"
+            variant='contained'
             startIcon={<AddIcon />}
             onClick={handleAddCriterion}
-            size="small"
+            size='small'
           >
-            Add Criterion
+            Add Learning Outcome
           </Button>
         )}
       </Box>
 
-      {fields.length === 0 ? (
-        <Box
-          sx={{
-            p: 3,
-            border: '1px dashed',
-            borderColor: 'divider',
-            borderRadius: 2,
-            textAlign: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.02)',
-          }}
+      {fields.length > 0 && (
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{ border: '1px solid', borderColor: 'divider' }}
         >
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-            No assessment criteria added yet.
-          </Typography>
-          {!readOnly && (
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={handleAddCriterion}
-            >
-              Add First Criterion
-            </Button>
-          )}
-        </Box>
-      ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {fields.map((field, index) => (
-            <Paper
-              key={field.id}
-              elevation={1}
-              sx={{
-                p: 3,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Criterion {index + 1}
-                </Typography>
+          <Table size='small'>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableCell sx={{ width: 50 }}></TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  Type <span style={{ color: 'red' }}>*</span>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Code</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Show Order</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  Title <span style={{ color: 'red' }}>*</span>
+                </TableCell>
                 {!readOnly && (
-                  <IconButton
-                    color="error"
-                    size="small"
-                    onClick={() => remove(index)}
+                  <TableCell
+                    sx={{ fontWeight: 600, width: 100 }}
+                    align='center'
                   >
-                    <DeleteIcon />
-                  </IconButton>
+                    Actions
+                  </TableCell>
                 )}
-              </Box>
-
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Type <span style={{ color: 'red' }}>*</span>
-                  </Typography>
-                  <Controller
-                    name={`units.${unitIndex}.subUnit.${index}.type`}
-                    control={control}
-                    render={({ field, fieldState: { error } }) => (
-                      <FormControl fullWidth size="small" error={!!error}>
-                        <Select {...field} disabled={readOnly}>
-                          <MenuItem value="to-do">To Do</MenuItem>
-                          <MenuItem value="to-know">To Know</MenuItem>
-                          <MenuItem value="req">Required</MenuItem>
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Code
-                  </Typography>
-                  <Controller
-                    name={`units.${unitIndex}.subUnit.${index}.code`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        placeholder="Enter code"
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Show Order
-                  </Typography>
-                  <Controller
-                    name={`units.${unitIndex}.subUnit.${index}.showOrder`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        type="number"
-                        placeholder="Auto"
-                        value={field.value ?? index + 1}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Title <span style={{ color: 'red' }}>*</span>
-                  </Typography>
-                  <Controller
-                    name={`units.${unitIndex}.subUnit.${index}.title`}
-                    control={control}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        placeholder="Enter criterion title"
-                        required
-                        error={!!error}
-                        helperText={error?.message}
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Description
-                  </Typography>
-                  <Controller
-                    name={`units.${unitIndex}.subUnit.${index}.description`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        multiline
-                        rows={3}
-                        size="small"
-                        placeholder="Enter criterion description"
-                        disabled={readOnly}
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
-          ))}
-        </Box>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {fields.map((field, index) => {
+                const isExpanded = expandedRows.has(index)
+                return (
+                  <React.Fragment key={field.id}>
+                    <TableRow hover>
+                      <TableCell>
+                        <IconButton
+                          size='small'
+                          onClick={() => {
+                            const newExpanded = new Set(expandedRows)
+                            if (isExpanded) {
+                              newExpanded.delete(index)
+                            } else {
+                              newExpanded.add(index)
+                            }
+                            setExpandedRows(newExpanded)
+                          }}
+                        >
+                          {isExpanded ? (
+                            <KeyboardArrowUpIcon />
+                          ) : (
+                            <KeyboardArrowDownIcon />
+                          )}
+                        </IconButton>
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${unitIndex}.subUnit.${index}.type`}
+                          control={control}
+                          render={({
+                            field: formField,
+                            fieldState: { error },
+                          }) => (
+                            <FormControl
+                              size='small'
+                              sx={{ minWidth: 120 }}
+                              error={!!error}
+                            >
+                              <Select {...formField} disabled={readOnly}>
+                                <MenuItem value='to-do'>To Do</MenuItem>
+                                <MenuItem value='to-know'>To Know</MenuItem>
+                                <MenuItem value='req'>Required</MenuItem>
+                              </Select>
+                            </FormControl>
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${unitIndex}.subUnit.${index}.code`}
+                          control={control}
+                          render={({ field: formField }) => (
+                            <TextField
+                              {...formField}
+                              size='small'
+                              placeholder='Code'
+                              disabled={readOnly}
+                              sx={{ minWidth: 100 }}
+                            />
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${unitIndex}.subUnit.${index}.showOrder`}
+                          control={control}
+                          render={({ field: formField }) => (
+                            <TextField
+                              {...formField}
+                              size='small'
+                              type='number'
+                              placeholder='Auto'
+                              value={formField.value ?? index + 1}
+                              disabled={readOnly}
+                              sx={{ width: 80 }}
+                            />
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${unitIndex}.subUnit.${index}.title`}
+                          control={control}
+                          render={({
+                            field: formField,
+                            fieldState: { error },
+                          }) => (
+                            <TextField
+                              {...formField}
+                              size='small'
+                              placeholder='Criterion title'
+                              required
+                              error={!!error}
+                              helperText={error?.message}
+                              disabled={readOnly}
+                              sx={{ minWidth: 200 }}
+                              fullWidth
+                            />
+                          )}
+                        />
+                      </TableCell>
+                      {!readOnly && (
+                        <TableCell align='center'>
+                          <IconButton
+                            color='error'
+                            size='small'
+                            onClick={() => remove(index)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        style={{ paddingBottom: 0, paddingTop: 0 }}
+                        colSpan={readOnly ? 5 : 6}
+                      >
+                        <Collapse in={isExpanded} timeout='auto' unmountOnExit>
+                          <Box sx={{ margin: 2 }}>
+                            <TopicsForm
+                              control={control}
+                              unitIndex={unitIndex}
+                              subUnitIndex={index}
+                              topics={subUnits?.[index]?.topics || []}
+                              readOnly={readOnly}
+                              setValue={setValue}
+                            />
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </Box>
   )
 }
 
 export default AssessmentCriteriaForm
-
