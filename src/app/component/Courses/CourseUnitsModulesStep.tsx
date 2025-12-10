@@ -6,33 +6,38 @@
  * Clean, professional implementation using React Hook Form
  */
 
-import React, { useEffect, useState } from 'react'
-import {
-  Box,
-  Typography,
-  Alert,
-  Button,
-  Paper,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  TextField,
-  Grid,
-  FormControl,
-  Select,
-  MenuItem,
-} from '@mui/material'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { useFieldArray, Controller, useWatch, UseFormSetValue } from 'react-hook-form'
-import { CourseCoreType } from 'app/store/courseBuilderSlice'
-import { useNotification } from './useNotification'
-import { useCourseBuilderAPI } from './useCourseBuilderAPI'
-import AssessmentCriteriaForm from './AssessmentCriteriaForm'
-import StandardTopicsForm from './StandardTopicsForm'
-import ImportModuleDialog from './ImportModuleDialog'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import {
+  Alert,
+  Box,
+  Button,
+  Collapse,
+  FormControl,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography
+} from '@mui/material'
+import { CourseCoreType } from 'app/store/courseBuilderSlice'
+import React, { useEffect, useState } from 'react'
+import { Controller, useFieldArray, useWatch } from 'react-hook-form'
+import AssessmentCriteriaForm from './AssessmentCriteriaForm'
+import ImportModuleDialog from './ImportModuleDialog'
+import StandardTopicsForm from './StandardTopicsForm'
+import { useCourseBuilderAPI } from './useCourseBuilderAPI'
+import { useNotification } from './useNotification'
 
 interface CourseUnitsModulesStepProps {
   courseId?: string
@@ -77,6 +82,7 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
   const { loadCourse } = useCourseBuilderAPI()
   const isViewMode = edit === 'view'
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -216,219 +222,228 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
             No modules added yet. Click "Add Module" to get started.
           </Alert>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {fields.map((field, index) => (
-              <Paper
-                key={field.id}
-                elevation={1}
-                sx={{
-                  p: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                }}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    Module {index + 1}
-                  </Typography>
+          <TableContainer component={Paper} elevation={1}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableCell sx={{ width: 50 }}></TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    Module Title <span style={{ color: 'red' }}>*</span>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    Module Reference <span style={{ color: 'red' }}>*</span>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Active</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Sort Order</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Delivery Method</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>OTJ Hours</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Delivery Lead</TableCell>
                   {!isViewMode && (
-                    <Button
-                      color="error"
-                      size="small"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => remove(index)}
-                    >
-                      Remove
-                    </Button>
+                    <TableCell sx={{ fontWeight: 600, width: 100 }} align="center">
+                      Actions
+                    </TableCell>
                   )}
-                </Box>
-
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Module Title <span style={{ color: 'red' }}>*</span>
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.title`}
-                      control={control}
-                      render={({ field, fieldState: { error } }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          placeholder="Enter Module Title"
-                          required
-                          error={!!error}
-                          helperText={error?.message}
-                          disabled={isViewMode}
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Module Reference Number <span style={{ color: 'red' }}>*</span>
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.unit_ref`}
-                      control={control}
-                      render={({ field, fieldState: { error } }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          placeholder="Enter Module Reference Number"
-                          required
-                          error={!!error}
-                          helperText={error?.message}
-                          disabled={isViewMode}
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Description
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.description`}
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          multiline
-                          rows={3}
-                          size="small"
-                          placeholder="Enter module description"
-                          disabled={isViewMode}
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Active
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.active`}
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl fullWidth size="small">
-                          <Select
-                            value={field.value === true || field.value === undefined ? 'true' : 'false'}
-                            onChange={(e) => field.onChange(e.target.value === 'true')}
-                            disabled={isViewMode}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {fields.map((field, index) => {
+                  const isExpanded = expandedRows.has(index)
+                  return (
+                    <React.Fragment key={field.id}>
+                      <TableRow hover>
+                        <TableCell>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              const newExpanded = new Set(expandedRows)
+                              if (isExpanded) {
+                                newExpanded.delete(index)
+                              } else {
+                                newExpanded.add(index)
+                              }
+                              setExpandedRows(newExpanded)
+                            }}
                           >
-                            <MenuItem value="true">Active</MenuItem>
-                            <MenuItem value="false">Inactive</MenuItem>
-                          </Select>
-                        </FormControl>
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Sort Order
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.sort_order`}
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          type="number"
-                          placeholder="Auto"
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Delivery Method/Evidence Requirement
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.delivery_method`}
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          placeholder="Enter delivery method"
-                          disabled={isViewMode}
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      OTJ Hours
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.otj_hours`}
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          type="number"
-                          placeholder="0"
-                          disabled={isViewMode}
-                        />
-                      )}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Delivery Lead
-                    </Typography>
-                    <Controller
-                      name={`units.${index}.delivery_lead`}
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          size="small"
-                          placeholder="Enter delivery lead"
-                          disabled={isViewMode}
-                        />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-
-                {/* Assessment Criteria (Topics) Section */}
-                <Accordion sx={{ mt: 2, backgroundColor: '#f5f5f5' }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Assessment Criteria (Topics)
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <StandardTopicsForm
-                      control={control}
-                      moduleIndex={index}
-                      assessmentCriteria={units[index]?.subUnit || []}
-                      readOnly={isViewMode}
-                    />
-                  </AccordionDetails>
-                </Accordion>
-              </Paper>
-            ))}
-          </Box>
+                            {isExpanded ? (
+                              <KeyboardArrowUpIcon />
+                            ) : (
+                              <KeyboardArrowDownIcon />
+                            )}
+                          </IconButton>
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.title`}
+                            control={control}
+                            render={({ field: formField, fieldState: { error } }) => (
+                              <TextField
+                                {...formField}
+                                size="small"
+                                placeholder="Module Title"
+                                required
+                                error={!!error}
+                                helperText={error?.message}
+                                disabled={isViewMode}
+                                sx={{ minWidth: 150 }}
+                                fullWidth
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.unit_ref`}
+                            control={control}
+                            render={({ field: formField, fieldState: { error } }) => (
+                              <TextField
+                                {...formField}
+                                size="small"
+                                placeholder="Module Ref"
+                                required
+                                error={!!error}
+                                helperText={error?.message}
+                                disabled={isViewMode}
+                                sx={{ minWidth: 120 }}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.description`}
+                            control={control}
+                            render={({ field: formField }) => (
+                              <TextField
+                                {...formField}
+                                size="small"
+                                multiline
+                                rows={2}
+                                placeholder="Description"
+                                disabled={isViewMode}
+                                sx={{ minWidth: 150 }}
+                                fullWidth
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.active`}
+                            control={control}
+                            render={({ field: formField }) => (
+                              <FormControl size="small" sx={{ minWidth: 100 }}>
+                                <Select
+                                  value={formField.value === true || formField.value === undefined ? 'true' : 'false'}
+                                  onChange={(e) => formField.onChange(e.target.value === 'true')}
+                                  disabled={isViewMode}
+                                >
+                                  <MenuItem value="true">Active</MenuItem>
+                                  <MenuItem value="false">Inactive</MenuItem>
+                                </Select>
+                              </FormControl>
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.sort_order`}
+                            control={control}
+                            render={({ field: formField }) => (
+                              <TextField
+                                {...formField}
+                                size="small"
+                                type="number"
+                                placeholder="Auto"
+                                disabled={isViewMode}
+                                sx={{ width: 80 }}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.delivery_method`}
+                            control={control}
+                            render={({ field: formField }) => (
+                              <TextField
+                                {...formField}
+                                size="small"
+                                placeholder="Delivery Method"
+                                disabled={isViewMode}
+                                sx={{ minWidth: 150 }}
+                                fullWidth
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.otj_hours`}
+                            control={control}
+                            render={({ field: formField }) => (
+                              <TextField
+                                {...formField}
+                                size="small"
+                                type="number"
+                                placeholder="0"
+                                disabled={isViewMode}
+                                sx={{ width: 100 }}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.delivery_lead`}
+                            control={control}
+                            render={({ field: formField }) => (
+                              <TextField
+                                {...formField}
+                                size="small"
+                                placeholder="Delivery Lead"
+                                disabled={isViewMode}
+                                sx={{ minWidth: 120 }}
+                                fullWidth
+                              />
+                            )}
+                          />
+                        </TableCell>
+                        {!isViewMode && (
+                          <TableCell align="center">
+                            <IconButton
+                              color="error"
+                              size="small"
+                              onClick={() => remove(index)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                      <TableRow>
+                        <TableCell
+                          style={{ paddingBottom: 0, paddingTop: 0 }}
+                          colSpan={isViewMode ? 9 : 10}
+                        >
+                          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                            <Box sx={{ margin: 2 }}>
+                              <StandardTopicsForm
+                                control={control}
+                                moduleIndex={index}
+                                assessmentCriteria={units[index]?.subUnit || []}
+                                readOnly={isViewMode}
+                              />
+                            </Box>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
 
         <NotificationComponent />
@@ -472,183 +487,194 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
           No units added yet. Click "Add Unit" to get started.
         </Alert>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {fields.map((field, index) => (
-            <Paper
-              key={field.id}
-              elevation={1}
-              sx={{
-                p: 3,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 2,
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Unit {index + 1}
-                </Typography>
+        <TableContainer component={Paper} elevation={1}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableCell sx={{ width: 50 }}></TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  Unit Ref <span style={{ color: 'red' }}>*</span>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  Unit Title <span style={{ color: 'red' }}>*</span>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Level</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>GLH</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Credit Value</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Mandatory</TableCell>
                 {!isViewMode && (
-                  <Button
-                    color="error"
-                    size="small"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => remove(index)}
-                  >
-                    Remove
-                  </Button>
+                  <TableCell sx={{ fontWeight: 600, width: 100 }} align="center">
+                    Actions
+                  </TableCell>
                 )}
-              </Box>
-
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Unit Ref <span style={{ color: 'red' }}>*</span>
-                  </Typography>
-                  <Controller
-                    name={`units.${index}.unit_ref`}
-                    control={control}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        placeholder="Enter Unit Ref"
-                        required
-                        error={!!error}
-                        helperText={error?.message}
-                        disabled={isViewMode}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={8}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Unit Title <span style={{ color: 'red' }}>*</span>
-                  </Typography>
-                  <Controller
-                    name={`units.${index}.title`}
-                    control={control}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        placeholder="Enter Unit Title"
-                        required
-                        error={!!error}
-                        helperText={error?.message}
-                        disabled={isViewMode}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Level
-                  </Typography>
-                  <Controller
-                    name={`units.${index}.level`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        type="number"
-                        placeholder="Enter Level"
-                        disabled={isViewMode}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    GLH (Guided Learning Hours)
-                  </Typography>
-                  <Controller
-                    name={`units.${index}.glh`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        type="number"
-                        placeholder="Enter GLH"
-                        disabled={isViewMode}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Credit Value
-                  </Typography>
-                  <Controller
-                    name={`units.${index}.credit_value`}
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        fullWidth
-                        size="small"
-                        type="number"
-                        placeholder="Enter Credit Value"
-                        disabled={isViewMode}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                    Mandatory
-                  </Typography>
-                  <Controller
-                    name={`units.${index}.mandatory`}
-                    control={control}
-                    render={({ field }) => (
-                      <FormControl fullWidth size="small">
-                        <Select
-                          value={field.value === true || field.value === undefined ? 'true' : 'false'}
-                          onChange={(e) => field.onChange(e.target.value === 'true')}
-                          disabled={isViewMode}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {fields.map((field, index) => {
+                const isExpanded = expandedRows.has(index)
+                return (
+                  <React.Fragment key={field.id}>
+                    <TableRow hover>
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            const newExpanded = new Set(expandedRows)
+                            if (isExpanded) {
+                              newExpanded.delete(index)
+                            } else {
+                              newExpanded.add(index)
+                            }
+                            setExpandedRows(newExpanded)
+                          }}
                         >
-                          <MenuItem value="true">Mandatory</MenuItem>
-                          <MenuItem value="false">Optional</MenuItem>
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
-                </Grid>
-              </Grid>
-
-              {/* Assessment Criteria Section */}
-              <Accordion sx={{ mt: 2, backgroundColor: '#f5f5f5' }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Assessment Criteria
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <AssessmentCriteriaForm
-                    control={control}
-                    unitIndex={index}
-                    assessmentCriteria={units[index]?.subUnit || []}
-                    readOnly={isViewMode}
-                    setValue={setValue}
-                  />
-                </AccordionDetails>
-              </Accordion>
-            </Paper>
-            ))}
-          </Box>
-        )}
+                          {isExpanded ? (
+                            <KeyboardArrowUpIcon />
+                          ) : (
+                            <KeyboardArrowDownIcon />
+                          )}
+                        </IconButton>
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${index}.unit_ref`}
+                          control={control}
+                          render={({ field: formField, fieldState: { error } }) => (
+                            <TextField
+                              {...formField}
+                              size="small"
+                              placeholder="Unit Ref"
+                              required
+                              error={!!error}
+                              helperText={error?.message}
+                              disabled={isViewMode}
+                              sx={{ minWidth: 120 }}
+                            />
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${index}.title`}
+                          control={control}
+                          render={({ field: formField, fieldState: { error } }) => (
+                            <TextField
+                              {...formField}
+                              size="small"
+                              placeholder="Unit Title"
+                              required
+                              error={!!error}
+                              helperText={error?.message}
+                              disabled={isViewMode}
+                              sx={{ minWidth: 200 }}
+                              fullWidth
+                            />
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${index}.level`}
+                          control={control}
+                          render={({ field: formField }) => (
+                            <TextField
+                              {...formField}
+                              size="small"
+                              type="number"
+                              placeholder="Level"
+                              disabled={isViewMode}
+                              sx={{ width: 100 }}
+                            />
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${index}.glh`}
+                          control={control}
+                          render={({ field: formField }) => (
+                            <TextField
+                              {...formField}
+                              size="small"
+                              type="number"
+                              placeholder="GLH"
+                              disabled={isViewMode}
+                              sx={{ width: 100 }}
+                            />
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${index}.credit_value`}
+                          control={control}
+                          render={({ field: formField }) => (
+                            <TextField
+                              {...formField}
+                              size="small"
+                              type="number"
+                              placeholder="Credit"
+                              disabled={isViewMode}
+                              sx={{ width: 100 }}
+                            />
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          name={`units.${index}.mandatory`}
+                          control={control}
+                          render={({ field: formField }) => (
+                            <FormControl size="small" sx={{ minWidth: 120 }}>
+                              <Select
+                                value={formField.value === true || formField.value === undefined ? 'true' : 'false'}
+                                onChange={(e) => formField.onChange(e.target.value === 'true')}
+                                disabled={isViewMode}
+                              >
+                                <MenuItem value="true">Mandatory</MenuItem>
+                                <MenuItem value="false">Optional</MenuItem>
+                              </Select>
+                            </FormControl>
+                          )}
+                        />
+                      </TableCell>
+                      {!isViewMode && (
+                        <TableCell align="center">
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => remove(index)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                    <TableRow>
+                      <TableCell
+                        style={{ paddingBottom: 0, paddingTop: 0 }}
+                        colSpan={isViewMode ? 7 : 8}
+                      >
+                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                          <Box sx={{ margin: 2 }}>
+                            <AssessmentCriteriaForm
+                              control={control}
+                              unitIndex={index}
+                              assessmentCriteria={units[index]?.subUnit || []}
+                              readOnly={isViewMode}
+                              setValue={setValue}
+                            />
+                          </Box>
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
         <NotificationComponent />
 

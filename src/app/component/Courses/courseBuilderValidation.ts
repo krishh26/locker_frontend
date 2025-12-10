@@ -108,7 +108,6 @@ const qualificationSchema = baseCourseSchema.shape({
             yup.object().shape({
               id: yup.mixed().optional(),
               title: yup.string().required('Assessment Criteria Title is required'),
-              description: yup.string().optional(),
               type: yup
                 .string()
                 .oneOf(['to-do', 'to-know', 'req'])
@@ -116,6 +115,19 @@ const qualificationSchema = baseCourseSchema.shape({
               code: yup.string().optional(),
               showOrder: yup.number().optional(),
               timesMet: yup.number().optional(),
+              // Topics validation for Qualification SubUnits
+              topics: yup
+                .array()
+                .of(
+                  yup.object().shape({
+                    id: yup.string().optional(),
+                    title: yup.string().required('Topic Title is required'),
+                    type: yup.string().optional(),
+                    showOrder: yup.number().optional(),
+                    code: yup.string().optional(),
+                  })
+                )
+                .optional(),
             })
           )
           .optional(),
@@ -155,13 +167,10 @@ const standardSchema = baseCourseSchema.shape({
             yup.object().shape({
               id: yup.mixed().optional(),
               title: yup.string().required('Topic Title is required'),
-              description: yup.string().optional(),
               type: yup
                 .string()
                 .oneOf(['Behaviour', 'Knowledge', 'Skills'])
                 .required('Type is required'),
-              showOrder: yup.number().optional(),
-              code: yup.string().optional(),
             })
           )
           .optional(),
