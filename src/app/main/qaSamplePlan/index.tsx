@@ -392,15 +392,13 @@ const Index: React.FC = () => {
             return unitKey && selectedUnitsSet.has(unitKey)
           })
           .map((unit, unitIndex) => {
-            const unitIdRaw = unit?.unit_code ?? `${rowIndex}-${unitIndex}`
+            const unitIdRaw = unit?.unit_code ?? Date.now()
             const unitRefRaw = unit?.unit_name ?? unitIdRaw
 
-            const unitId =
-              String(unitIdRaw).trim() || `${rowIndex}-${unitIndex}`
-            const unitRef = String(unitRefRaw).trim() || unitId
+            const unitRef = String(unitRefRaw).trim()
 
             return {
-              id: unitId,
+              id: Number(unitIdRaw),
               unit_ref: unitRef,
             }
           })
@@ -581,15 +579,13 @@ const Index: React.FC = () => {
             return unitKey && selectedUnitsSet.has(unitKey)
           })
           .map((unit, unitIndex) => {
-            const unitIdRaw = unit?.unit_code ?? `${rowIndex}-${unitIndex}`
-            const unitRefRaw = unit?.unit_name ?? unitIdRaw
+            const unitId = unit?.unit_code ?? Date.now()
+            const unitRefRaw = unit?.unit_name ?? ''
 
-            const unitId =
-              String(unitIdRaw).trim() || `${rowIndex}-${unitIndex}`
-            const unitRef = String(unitRefRaw).trim() || unitId
+            const unitRef = String(unitRefRaw).trim()
 
             return {
-              id: unitId,
+              id: Number(unitId),
               unit_ref: unitRef,
             }
           })

@@ -596,7 +596,7 @@ const CreateViewEvidenceLibrary = () => {
     const payload = {
       ...data,
       id,
-      user_id: learnerUserId,
+      user_id: userRole === 'Learner' ? learnerUserId : evidenceDetails?.data?.user?.user_id,
     }
     try {
       if (data.audio && !data.audio?.url) {
@@ -623,6 +623,7 @@ const CreateViewEvidenceLibrary = () => {
           },
         }).unwrap()
       }
+      console.log("🚀 ~ onSubmit ~ payload:", payload)
 
       await updateEvidenceId(payload).unwrap()
 
