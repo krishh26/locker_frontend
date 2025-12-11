@@ -58,8 +58,10 @@ interface EvidenceData {
     title: string
   }
   mappedSubUnits: Array<{
-    id: number
+    id: string | number
     subTitle: string
+    learnerMapped?: boolean
+    review?: any
   }>
   reviews: {
     [role: string]: {
@@ -121,6 +123,38 @@ const ExamineEvidencePage: React.FC = () => {
     '1 12': false,
     '1 1': false,
   })
+  
+  // Expanded rows state for showing mappedSubUnits
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+  
+  // MappedSubUnits checkbox state
+  const [mappedSubUnitsChecked, setMappedSubUnitsChecked] = useState<Record<string, boolean>>({})
+  
+  // Get all unique mappedSubUnits from expanded evidence items
+  const getAllMappedSubUnits = () => {
+    const allSubUnits: Array<{ id: string | number; subTitle: string }> = []
+    const seenIds = new Set<string | number>()
+    
+    // Only get mappedSubUnits from expanded rows
+    evidenceRows.forEach((row) => {
+      if (expandedRows[row.refNo]) {
+        const evidence = evidenceData.find((e) => String(e.assignment_id) === row.refNo)
+        if (evidence?.mappedSubUnits) {
+          evidence.mappedSubUnits.forEach((subUnit) => {
+            if (!seenIds.has(subUnit.id)) {
+              seenIds.add(subUnit.id)
+              allSubUnits.push(subUnit)
+            }
+          })
+        }
+      }
+    })
+    
+    return allSubUnits
+  }
+  
+  const allMappedSubUnits = getAllMappedSubUnits()
+  const hasExpandedRows = Object.values(expandedRows).some((expanded) => expanded)
 
   // Confirmation statements data
   const [confirmationRows, setConfirmationRows] = useState<ConfirmationRow[]>([
@@ -302,9 +336,45 @@ const ExamineEvidencePage: React.FC = () => {
   }, [evidenceResponse])
 
   const handleCriteriaToggle = (key: string) => {
+    const isChecked = criteriaSignOff[key] || false
+    const newCheckedState = !isChecked
+    
+    // Update the criteria sign off state
     setCriteriaSignOff((prev) => ({
       ...prev,
-      [key]: !prev[key],
+      [key]: newCheckedState,
+    }))
+    
+    // Find the evidence for this refNo
+    const evidence = evidenceData.find((e) => String(e.assignment_id) === key)
+    
+    // If evidence exists and has mappedSubUnits, check/uncheck all of them
+    if (evidence?.mappedSubUnits && evidence.mappedSubUnits.length > 0) {
+      setMappedSubUnitsChecked((prev) => {
+        const updated = { ...prev }
+        evidence.mappedSubUnits.forEach((subUnit) => {
+          updated[String(subUnit.id)] = newCheckedState
+        })
+        return updated
+      })
+    }
+  }
+
+  const handleToggleAllRows = () => {
+    setExpandedRows((prev) => {
+      const next: Record<string, boolean> = {}
+      evidenceRows.forEach((row) => {
+        next[row.refNo] = !hasExpandedRows
+      })
+      return next
+    })
+  }
+
+  const handleMappedSubUnitToggle = (subUnitId: string | number) => {
+    const idString = String(subUnitId)
+    setMappedSubUnitsChecked((prev) => ({
+      ...prev,
+      [idString]: !prev[idString],
     }))
   }
 
@@ -328,6 +398,7 @@ const ExamineEvidencePage: React.FC = () => {
     // Handle add file logic
     console.log('Add file for', confirmationRows[index].role)
   }
+
 
   // Show loading state
   if (isLoadingEvidence) {
@@ -435,13 +506,29 @@ const ExamineEvidencePage: React.FC = () => {
                     >
                       Sign off all criteria
                     </TableCell>
+                    {hasExpandedRows && allMappedSubUnits.map((subUnit) => (
+                      <TableCell
+                        key={subUnit.id}
+                        sx={{
+                          fontWeight: 600,
+                          borderRight: '1px solid #e0e0e0',
+                          textAlign: 'center',
+                          minWidth: 100,
+                        }}
+                      >
+                        {subUnit.id}
+                      </TableCell>
+                    ))}
                     <TableCell
                       sx={{
                         fontWeight: 600,
                         textAlign: 'center',
+                        borderRight: hasExpandedRows ? '1px solid #e0e0e0' : 'none',
+                        cursor: 'pointer',
                       }}
+                      onClick={() => handleToggleAllRows()}
                     >
-                      Action
+                      {hasExpandedRows ? 'Show Less' : 'Show All'}
                     </TableCell>
                   </TableRow>
                 </TableHead>
@@ -449,7 +536,7 @@ const ExamineEvidencePage: React.FC = () => {
                   {evidenceRows.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={8 + (hasExpandedRows ? allMappedSubUnits.length : 0)}
                         align='center'
                         sx={{ py: 4, color: '#666666' }}
                       >
@@ -460,133 +547,85 @@ const ExamineEvidencePage: React.FC = () => {
                     evidenceRows.map((row, index) => {
                       const evidence = evidenceData[index]
                       const fileUrl = evidence?.file?.url
+                      const isExpanded = expandedRows[row.refNo] || false
+                      const mappedSubUnits = evidence?.mappedSubUnits || []
                       return (
-                      <TableRow key={index} hover>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {row.refNo}
-                            <IconButton
-                              size="small"
-                              onClick={() => navigate(`/evidenceLibrary/${row.refNo}`)}
-                              sx={{ ml: 1 }}
-                              color="primary"
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {fileUrl ? (
-                            <a
-                              href={fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: '#1976d2', textDecoration: 'none' }}
-                            >
-                              {row.evidenceDocuments}
-                            </a>
-                          ) : (
-                            row.evidenceDocuments
-                          )}
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {row.evidenceName}
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {row.evidenceDescription}
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {row.assessmentMethod}
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                          {row.dateUploaded}
-                        </TableCell>
-                        <TableCell sx={{ borderRight: '1px solid #e0e0e0', textAlign: 'center' }}>
-                          <Checkbox
-                            checked={criteriaSignOff[row.refNo] || false}
-                            onChange={() => handleCriteriaToggle(row.refNo)}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell sx={{ textAlign: 'center' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                            {(() => {
-                              const reviews = getReviewsForEvidence(evidence)
-                              if (reviews && Object.keys(reviews).length > 0) {
-                                // Sort reviews by role priority for consistent display
-                                const rolePriority: { [key: string]: number } = {
-                                  'IQA': 1,
-                                  'LIQA': 2,
-                                  'EQA': 3,
-                                  'Admin': 4,
-                                  'Trainer': 5,
-                                  'Employer': 6,
-                                  'Learner': 7,
-                                }
-                                const sortedReviews = Object.entries(reviews).sort(([roleA], [roleB]) => {
-                                  const priorityA = rolePriority[roleA] || 99
-                                  const priorityB = rolePriority[roleB] || 99
-                                  return priorityA - priorityB
-                                })
-                                
-                                return sortedReviews.map(([role, reviewData]) => (
-                                  <Tooltip
-                                    key={role}
-                                    title={
-                                      <Box>
-                                        <Typography variant='body2' sx={{ fontWeight: 600, mb: 0.5 }}>
-                                          {role} Review:
-                                        </Typography>
-                                        <Typography variant='body2' sx={{ mb: 0.5 }}>
-                                          {reviewData.comment || 'No comment'}
-                                        </Typography>
-                                        <Typography variant='caption' sx={{ display: 'block', color: reviewData.completed ? '#4caf50' : '#666666' }}>
-                                          Status: {reviewData.completed ? 'Completed' : 'Pending'}
-                                        </Typography>
-                                        {reviewData.signed_off_at && (
-                                          <Typography variant='caption' sx={{ display: 'block', mt: 0.5 }}>
-                                            Signed off: {new Date(reviewData.signed_off_at).toLocaleDateString()}
-                                            {reviewData.signed_off_by && ` by ${reviewData.signed_off_by}`}
-                                          </Typography>
-                                        )}
-                                      </Box>
-                                    }
-                                    arrow
-                                  >
-                                    <Chip
-                                      label={role}
-                                      size='small'
-                                      color={getRoleColor(role, reviewData.completed)}
-                                      variant={reviewData.completed ? 'filled' : 'outlined'}
-                                      sx={{
-                                        fontSize: '0.7rem',
-                                        height: 22,
-                                        fontWeight: reviewData.completed ? 600 : 500,
-                                        '& .MuiChip-label': {
-                                          px: 0.75,
-                                        },
-                                      }}
+                        <React.Fragment key={index}>
+                          <TableRow hover>
+                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {row.refNo}
+                                <IconButton
+                                  size="small"
+                                  onClick={() => navigate(`/evidenceLibrary/${row.refNo}`)}
+                                  sx={{ ml: 1 }}
+                                  color="primary"
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                              {fileUrl ? (
+                                <a
+                                  href={fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: '#1976d2', textDecoration: 'none' }}
+                                >
+                                  {row.evidenceDocuments}
+                                </a>
+                              ) : (
+                                row.evidenceDocuments
+                              )}
+                            </TableCell>
+                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                              {row.evidenceName}
+                            </TableCell>
+                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                              {row.evidenceDescription}
+                            </TableCell>
+                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                              {row.assessmentMethod}
+                            </TableCell>
+                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                              {row.dateUploaded}
+                            </TableCell>
+                            <TableCell sx={{ borderRight: '1px solid #e0e0e0', textAlign: 'center' }}>
+                              <Checkbox
+                                checked={criteriaSignOff[row.refNo] || false}
+                                onChange={() => handleCriteriaToggle(row.refNo)}
+                                size="small"
+                              />
+                            </TableCell>
+                            {hasExpandedRows && allMappedSubUnits.map((subUnit) => {
+                              const evidenceSubUnit = isExpanded ? mappedSubUnits.find((su) => su.id === subUnit.id) : null
+                              const isChecked = evidenceSubUnit 
+                                ? mappedSubUnitsChecked[String(evidenceSubUnit.id)] || false
+                                : false
+                              
+                              return (
+                                <TableCell
+                                  key={subUnit.id}
+                                  sx={{
+                                    borderRight: '1px solid #e0e0e0',
+                                    textAlign: 'center',
+                                  }}
+                                >
+                                  {isExpanded && evidenceSubUnit ? (
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onChange={() => handleMappedSubUnitToggle(evidenceSubUnit.id)}
+                                      size="small"
                                     />
-                                  </Tooltip>
-                                ))
-                              }
-                              return null
-                            })()}
-                            <IconButton
-                              size='small'
-                              onClick={() => handleOpenCommentModal(evidence)}
-                              sx={{
-                                color: '#1976d2',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                                },
-                              }}
-                            >
-                              <AddIcon fontSize='small' />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
+                                  ) : null}
+                                </TableCell>
+                              )
+                            })}
+                             <TableCell sx={{ borderRight: hasExpandedRows ? '1px solid #e0e0e0' : 'none', textAlign: 'center' }}>
+                            </TableCell>
+                          </TableRow>
+                        </React.Fragment>
                       )
                     })
                   )}

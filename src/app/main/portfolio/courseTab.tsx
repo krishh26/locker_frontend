@@ -88,7 +88,7 @@ const CourseTab = () => {
     selectLearnerManagement
   )
 
-  const learnerId = useLearnerId()
+  const { learner_id } = useSelector(selectGlobalUser).selectedUser
 
   const [courseDialog, setCourseDialog] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -109,7 +109,7 @@ const CourseTab = () => {
       course_id: '',
       trainer_id: '',
       IQA_id: '',
-      learner_id: learnerId,
+      learner_id: learner_id,
       EQA_id: '',
       LIQA_id: '',
       start_date: '',
@@ -124,7 +124,7 @@ const CourseTab = () => {
   console.log(errors)
 
   const handleLearnerRefetch = async () => {
-    const data = await dispatch(getLearnerDetails(learnerId))
+    const data = await dispatch(getLearnerDetails(learner_id))
     if (data) {
       dispatch(globalSlice.setSelectedUser(data))
     }
