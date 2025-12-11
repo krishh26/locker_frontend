@@ -26,11 +26,15 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import EditIcon from '@mui/icons-material/Edit'
-import { useGetEvidenceListQuery, useAddAssignmentReviewMutation } from 'app/store/api/sample-plan-api'
+import {
+  useGetEvidenceListQuery,
+  useAddAssignmentReviewMutation,
+} from 'app/store/api/sample-plan-api'
 import FuseLoading from '@fuse/core/FuseLoading'
 import { useCurrentUser } from 'src/app/utils/userHelpers'
 import { useDispatch } from 'react-redux'
 import { showMessage } from 'app/store/fuse/messageSlice'
+import UnitSignOffModal from './UnitSignOffModal'
 
 interface EvidenceRow {
   refNo: string
@@ -63,14 +67,16 @@ interface EvidenceData {
     learnerMapped?: boolean
     review?: any
   }>
-  reviews: {
-    [role: string]: {
-      completed: boolean
-      comment: string
-      signed_off_at: string | null
-      signed_off_by: string | null
-    }
-  } | Record<string, unknown>
+  reviews:
+    | {
+        [role: string]: {
+          completed: boolean
+          comment: string
+          signed_off_at: string | null
+          signed_off_by: string | null
+        }
+      }
+    | Record<string, unknown>
 }
 
 interface ConfirmationRow {
@@ -89,56 +95,76 @@ const ExamineEvidencePage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const params = useParams<{ planDetailId: string }>()
   const currentUser = useCurrentUser()
-  
+
   // Get planDetailId from URL params (new route) or search params (old route)
-  const planDetailId = params.planDetailId || searchParams.get('sampleResultsId') || searchParams.get('SampleResultsID') || ''
+  const planDetailId =
+    params.planDetailId ||
+    searchParams.get('sampleResultsId') ||
+    searchParams.get('SampleResultsID') ||
+    ''
   const unitCode = searchParams.get('unit_code') || ''
-  
+
   // Get unit name from search params or default
   const unitName = searchParams.get('unitName') || 'Unit 1'
   const moduleId = searchParams.get('module') || '2776'
   const unitId = searchParams.get('unitId') || searchParams.get('UnitID') || ''
 
   // Call API to fetch evidence list
-  const { data: evidenceResponse, isLoading: isLoadingEvidence, isError: isErrorEvidence, refetch: refetchEvidence } = useGetEvidenceListQuery(
+  const {
+    data: evidenceResponse,
+    isLoading: isLoadingEvidence,
+    isError: isErrorEvidence,
+    refetch: refetchEvidence,
+  } = useGetEvidenceListQuery(
     { planDetailId: planDetailId as string | number, unitCode },
     { skip: !planDetailId || !unitCode }
   )
 
   // Add assignment review mutation
-  const [addAssignmentReview, { isLoading: isSubmittingReview }] = useAddAssignmentReviewMutation()
+  const [addAssignmentReview, { isLoading: isSubmittingReview }] =
+    useAddAssignmentReviewMutation()
 
   // Evidence data state
   const [evidenceRows, setEvidenceRows] = useState<EvidenceRow[]>([])
   const [evidenceData, setEvidenceData] = useState<EvidenceData[]>([])
   const [displayUnitName, setDisplayUnitName] = useState<string>(unitName)
-  
+
   // Comment modal state
   const [commentModalOpen, setCommentModalOpen] = useState(false)
-  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceData | null>(null)
+  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceData | null>(
+    null
+  )
   const [comment, setComment] = useState('')
-  
+  const [openModal, setOpenModal] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(null)
+
   // Criteria sign-off state
-  const [criteriaSignOff, setCriteriaSignOff] = useState<Record<string, boolean>>({
+  const [criteriaSignOff, setCriteriaSignOff] = useState<
+    Record<string, boolean>
+  >({
     '1 12': false,
     '1 1': false,
   })
-  
+
   // Expanded rows state for showing mappedSubUnits
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
-  
+
   // MappedSubUnits checkbox state
-  const [mappedSubUnitsChecked, setMappedSubUnitsChecked] = useState<Record<string, boolean>>({})
-  
+  const [mappedSubUnitsChecked, setMappedSubUnitsChecked] = useState<
+    Record<string, boolean>
+  >({})
+
   // Get all unique mappedSubUnits from expanded evidence items
   const getAllMappedSubUnits = () => {
     const allSubUnits: Array<{ id: string | number; subTitle: string }> = []
     const seenIds = new Set<string | number>()
-    
+
     // Only get mappedSubUnits from expanded rows
     evidenceRows.forEach((row) => {
       if (expandedRows[row.refNo]) {
-        const evidence = evidenceData.find((e) => String(e.assignment_id) === row.refNo)
+        const evidence = evidenceData.find(
+          (e) => String(e.assignment_id) === row.refNo
+        )
         if (evidence?.mappedSubUnits) {
           evidence.mappedSubUnits.forEach((subUnit) => {
             if (!seenIds.has(subUnit.id)) {
@@ -149,18 +175,21 @@ const ExamineEvidencePage: React.FC = () => {
         }
       }
     })
-    
+
     return allSubUnits
   }
-  
+
   const allMappedSubUnits = getAllMappedSubUnits()
-  const hasExpandedRows = Object.values(expandedRows).some((expanded) => expanded)
+  const hasExpandedRows = Object.values(expandedRows).some(
+    (expanded) => expanded
+  )
 
   // Confirmation statements data
   const [confirmationRows, setConfirmationRows] = useState<ConfirmationRow[]>([
     {
       role: 'Learner',
-      statement: 'I confirm that this unit is complete and the evidence provided is a result of my own work',
+      statement:
+        'I confirm that this unit is complete and the evidence provided is a result of my own work',
       completed: false,
       signedOffBy: '',
       dated: '',
@@ -168,8 +197,9 @@ const ExamineEvidencePage: React.FC = () => {
       file: '',
     },
     {
-      role: 'Assessor',
-      statement: 'I confirm that the learner has demonstrated competence by satisfying all the skills and knowledge for this unit, and has been assessed according to requirements of the qualification.',
+      role: 'Trainer',
+      statement:
+        'I confirm that the learner has demonstrated competence by satisfying all the skills and knowledge for this unit, and has been assessed according to requirements of the qualification.',
       completed: false,
       signedOffBy: '',
       dated: '',
@@ -178,7 +208,8 @@ const ExamineEvidencePage: React.FC = () => {
     },
     {
       role: 'Lead assessor Countersignature (if required)',
-      statement: 'I confirm that the learner has demonstrated competence by satisfying all the skills and knowledge for this unit, and has been assessed according to requirements of the qualification.',
+      statement:
+        'I confirm that the learner has demonstrated competence by satisfying all the skills and knowledge for this unit, and has been assessed according to requirements of the qualification.',
       completed: false,
       signedOffBy: '',
       dated: '',
@@ -187,7 +218,8 @@ const ExamineEvidencePage: React.FC = () => {
     },
     {
       role: 'Employer',
-      statement: 'I can confirm that the evidence I have checked as an employer meets the standards.',
+      statement:
+        'I can confirm that the evidence I have checked as an employer meets the standards.',
       completed: false,
       signedOffBy: '',
       dated: '',
@@ -195,8 +227,9 @@ const ExamineEvidencePage: React.FC = () => {
       file: '',
     },
     {
-      role: 'Internal Quality Assurer',
-      statement: 'I can confirm that the evidence I have sampled as an Internal Quality Assurer meets the standards.',
+      role: 'IQA',
+      statement:
+        'I can confirm that the evidence I have sampled as an Internal Quality Assurer meets the standards.',
       completed: false,
       signedOffBy: '',
       dated: '',
@@ -204,7 +237,7 @@ const ExamineEvidencePage: React.FC = () => {
       file: '',
     },
     {
-      role: 'External Verifier',
+      role: 'EQA',
       statement: 'Verified as part of External QA Visit.',
       completed: false,
       signedOffBy: '',
@@ -221,23 +254,42 @@ const ExamineEvidencePage: React.FC = () => {
     setSelectedEvidence(evidence)
     // Pre-fill comment if there's already a review for current user's role
     const userRole = currentUser?.role || 'IQA'
-    const existingReview = evidence.reviews && typeof evidence.reviews === 'object' && !Array.isArray(evidence.reviews)
-      ? (evidence.reviews as { [role: string]: { comment: string } })[userRole]
-      : null
+    const existingReview =
+      evidence.reviews &&
+      typeof evidence.reviews === 'object' &&
+      !Array.isArray(evidence.reviews)
+        ? (evidence.reviews as { [role: string]: { comment: string } })[
+            userRole
+          ]
+        : null
     setComment(existingReview?.comment || '')
     setCommentModalOpen(true)
   }
 
   // Get reviews for display
   const getReviewsForEvidence = (evidence: EvidenceData) => {
-    if (!evidence.reviews || typeof evidence.reviews !== 'object' || Array.isArray(evidence.reviews)) {
+    if (
+      !evidence.reviews ||
+      typeof evidence.reviews !== 'object' ||
+      Array.isArray(evidence.reviews)
+    ) {
       return null
     }
-    return evidence.reviews as { [role: string]: { completed: boolean; comment: string; signed_off_at: string | null; signed_off_by: string | null } }
+    return evidence.reviews as {
+      [role: string]: {
+        completed: boolean
+        comment: string
+        signed_off_at: string | null
+        signed_off_by: string | null
+      }
+    }
   }
 
   // Get color for role chip
-  const getRoleColor = (role: string, completed: boolean): 'default' | 'primary' | 'success' | 'warning' | 'info' | 'error' => {
+  const getRoleColor = (
+    role: string,
+    completed: boolean
+  ): 'default' | 'primary' | 'success' | 'warning' | 'info' | 'error' => {
     if (completed) {
       return 'success'
     }
@@ -296,12 +348,13 @@ const ExamineEvidencePage: React.FC = () => {
           variant: 'success',
         })
       )
-      
+
       handleCloseCommentModal()
       // Refetch evidence list to get updated data
       refetchEvidence()
     } catch (error: any) {
-      const message = error?.data?.message || error?.error || 'Failed to add comment.'
+      const message =
+        error?.data?.message || error?.error || 'Failed to add comment.'
       dispatch(
         showMessage({
           message,
@@ -315,18 +368,25 @@ const ExamineEvidencePage: React.FC = () => {
   useEffect(() => {
     if (evidenceResponse?.data && Array.isArray(evidenceResponse.data)) {
       setEvidenceData(evidenceResponse.data)
-      const mappedRows: EvidenceRow[] = evidenceResponse.data.map((evidence: EvidenceData) => ({
-        refNo: String(evidence.assignment_id),
-        evidenceDocuments: evidence.file?.name || '-',
-        evidenceName: evidence.title || '-',
-        evidenceDescription: evidence.description || '-',
-        assessmentMethod: evidence.assessment_method?.join(', ') || '-',
-        dateUploaded: evidence.created_at ? new Date(evidence.created_at).toLocaleDateString() : '-',
-      }))
+      const mappedRows: EvidenceRow[] = evidenceResponse.data.map(
+        (evidence: EvidenceData) => ({
+          refNo: String(evidence.assignment_id),
+          evidenceDocuments: evidence.file?.name || '-',
+          evidenceName: evidence.title || '-',
+          evidenceDescription: evidence.description || '-',
+          assessmentMethod: evidence.assessment_method?.join(', ') || '-',
+          dateUploaded: evidence.created_at
+            ? new Date(evidence.created_at).toLocaleDateString()
+            : '-',
+        })
+      )
       setEvidenceRows(mappedRows)
-      
+
       // Update unit name from API response if available
-      if (evidenceResponse.data.length > 0 && evidenceResponse.data[0].unit?.title) {
+      if (
+        evidenceResponse.data.length > 0 &&
+        evidenceResponse.data[0].unit?.title
+      ) {
         setDisplayUnitName(evidenceResponse.data[0].unit.title)
       }
     } else if (evidenceResponse?.data && evidenceResponse.data.length === 0) {
@@ -338,16 +398,16 @@ const ExamineEvidencePage: React.FC = () => {
   const handleCriteriaToggle = (key: string) => {
     const isChecked = criteriaSignOff[key] || false
     const newCheckedState = !isChecked
-    
+
     // Update the criteria sign off state
     setCriteriaSignOff((prev) => ({
       ...prev,
       [key]: newCheckedState,
     }))
-    
+
     // Find the evidence for this refNo
     const evidence = evidenceData.find((e) => String(e.assignment_id) === key)
-    
+
     // If evidence exists and has mappedSubUnits, check/uncheck all of them
     if (evidence?.mappedSubUnits && evidence.mappedSubUnits.length > 0) {
       setMappedSubUnitsChecked((prev) => {
@@ -391,14 +451,22 @@ const ExamineEvidencePage: React.FC = () => {
 
   const handleAddComment = (index: number) => {
     // Handle add comment logic
-    console.log('Add comment for', confirmationRows[index].role)
+    setSelectedIndex(index)
+    setOpenModal(true)
+  }
+
+  const handleModalSubmit = (comment) => {
+    const updated = [...confirmationRows]
+    updated[selectedIndex].comments = comment
+    setConfirmationRows(updated)
+
+    setOpenModal(false)
   }
 
   const handleAddFile = (index: number) => {
     // Handle add file logic
     console.log('Add file for', confirmationRows[index].role)
   }
-
 
   // Show loading state
   if (isLoadingEvidence) {
@@ -409,7 +477,9 @@ const ExamineEvidencePage: React.FC = () => {
   if (isErrorEvidence) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography color="error">Failed to load evidence list. Please try again.</Typography>
+        <Typography color='error'>
+          Failed to load evidence list. Please try again.
+        </Typography>
       </Box>
     )
   }
@@ -434,11 +504,7 @@ const ExamineEvidencePage: React.FC = () => {
           backgroundColor: '#ffffff',
         }}
       >
-        <Stack
-          direction='row'
-          alignItems='center'
-          spacing={2}
-        >
+        <Stack direction='row' alignItems='center' spacing={2}>
           <IconButton
             onClick={() => navigate(-1)}
             size='small'
@@ -479,22 +545,34 @@ const ExamineEvidencePage: React.FC = () => {
               <Table size='small' sx={{ border: '1px solid #e0e0e0' }}>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
+                    <TableCell
+                      sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}
+                    >
                       Ref No
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
+                    <TableCell
+                      sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}
+                    >
                       Evidence Documents
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
+                    <TableCell
+                      sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}
+                    >
                       Evidence Name
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
+                    <TableCell
+                      sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}
+                    >
                       Evidence Description
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
+                    <TableCell
+                      sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}
+                    >
                       Assessment Method
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}>
+                    <TableCell
+                      sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0' }}
+                    >
                       Date Uploaded
                     </TableCell>
                     <TableCell
@@ -506,24 +584,27 @@ const ExamineEvidencePage: React.FC = () => {
                     >
                       Sign off all criteria
                     </TableCell>
-                    {hasExpandedRows && allMappedSubUnits.map((subUnit) => (
-                      <TableCell
-                        key={subUnit.id}
-                        sx={{
-                          fontWeight: 600,
-                          borderRight: '1px solid #e0e0e0',
-                          textAlign: 'center',
-                          minWidth: 100,
-                        }}
-                      >
-                        {subUnit.id}
-                      </TableCell>
-                    ))}
+                    {hasExpandedRows &&
+                      allMappedSubUnits.map((subUnit) => (
+                        <TableCell
+                          key={subUnit.id}
+                          sx={{
+                            fontWeight: 600,
+                            borderRight: '1px solid #e0e0e0',
+                            textAlign: 'center',
+                            minWidth: 100,
+                          }}
+                        >
+                          {subUnit.id}
+                        </TableCell>
+                      ))}
                     <TableCell
                       sx={{
                         fontWeight: 600,
                         textAlign: 'center',
-                        borderRight: hasExpandedRows ? '1px solid #e0e0e0' : 'none',
+                        borderRight: hasExpandedRows
+                          ? '1px solid #e0e0e0'
+                          : 'none',
                         cursor: 'pointer',
                       }}
                       onClick={() => handleToggleAllRows()}
@@ -536,7 +617,9 @@ const ExamineEvidencePage: React.FC = () => {
                   {evidenceRows.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={8 + (hasExpandedRows ? allMappedSubUnits.length : 0)}
+                        colSpan={
+                          8 + (hasExpandedRows ? allMappedSubUnits.length : 0)
+                        }
                         align='center'
                         sx={{ py: 4, color: '#666666' }}
                       >
@@ -552,26 +635,41 @@ const ExamineEvidencePage: React.FC = () => {
                       return (
                         <React.Fragment key={index}>
                           <TableRow hover>
-                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TableCell
+                              sx={{ borderRight: '1px solid #e0e0e0' }}
+                            >
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1,
+                                }}
+                              >
                                 {row.refNo}
                                 <IconButton
-                                  size="small"
-                                  onClick={() => navigate(`/evidenceLibrary/${row.refNo}`)}
+                                  size='small'
+                                  onClick={() =>
+                                    navigate(`/evidenceLibrary/${row.refNo}`)
+                                  }
                                   sx={{ ml: 1 }}
-                                  color="primary"
+                                  color='primary'
                                 >
-                                  <EditIcon fontSize="small" />
+                                  <EditIcon fontSize='small' />
                                 </IconButton>
                               </Box>
                             </TableCell>
-                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                            <TableCell
+                              sx={{ borderRight: '1px solid #e0e0e0' }}
+                            >
                               {fileUrl ? (
                                 <a
                                   href={fileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{ color: '#1976d2', textDecoration: 'none' }}
+                                  target='_blank'
+                                  rel='noopener noreferrer'
+                                  style={{
+                                    color: '#1976d2',
+                                    textDecoration: 'none',
+                                  }}
                                 >
                                   {row.evidenceDocuments}
                                 </a>
@@ -579,51 +677,81 @@ const ExamineEvidencePage: React.FC = () => {
                                 row.evidenceDocuments
                               )}
                             </TableCell>
-                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                            <TableCell
+                              sx={{ borderRight: '1px solid #e0e0e0' }}
+                            >
                               {row.evidenceName}
                             </TableCell>
-                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                            <TableCell
+                              sx={{ borderRight: '1px solid #e0e0e0' }}
+                            >
                               {row.evidenceDescription}
                             </TableCell>
-                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                            <TableCell
+                              sx={{ borderRight: '1px solid #e0e0e0' }}
+                            >
                               {row.assessmentMethod}
                             </TableCell>
-                            <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                            <TableCell
+                              sx={{ borderRight: '1px solid #e0e0e0' }}
+                            >
                               {row.dateUploaded}
                             </TableCell>
-                            <TableCell sx={{ borderRight: '1px solid #e0e0e0', textAlign: 'center' }}>
+                            <TableCell
+                              sx={{
+                                borderRight: '1px solid #e0e0e0',
+                                textAlign: 'center',
+                              }}
+                            >
                               <Checkbox
                                 checked={criteriaSignOff[row.refNo] || false}
                                 onChange={() => handleCriteriaToggle(row.refNo)}
-                                size="small"
+                                size='small'
                               />
                             </TableCell>
-                            {hasExpandedRows && allMappedSubUnits.map((subUnit) => {
-                              const evidenceSubUnit = isExpanded ? mappedSubUnits.find((su) => su.id === subUnit.id) : null
-                              const isChecked = evidenceSubUnit 
-                                ? mappedSubUnitsChecked[String(evidenceSubUnit.id)] || false
-                                : false
-                              
-                              return (
-                                <TableCell
-                                  key={subUnit.id}
-                                  sx={{
-                                    borderRight: '1px solid #e0e0e0',
-                                    textAlign: 'center',
-                                  }}
-                                >
-                                  {isExpanded && evidenceSubUnit ? (
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onChange={() => handleMappedSubUnitToggle(evidenceSubUnit.id)}
-                                      size="small"
-                                    />
-                                  ) : null}
-                                </TableCell>
-                              )
-                            })}
-                             <TableCell sx={{ borderRight: hasExpandedRows ? '1px solid #e0e0e0' : 'none', textAlign: 'center' }}>
-                            </TableCell>
+                            {hasExpandedRows &&
+                              allMappedSubUnits.map((subUnit) => {
+                                const evidenceSubUnit = isExpanded
+                                  ? mappedSubUnits.find(
+                                      (su) => su.id === subUnit.id
+                                    )
+                                  : null
+                                const isChecked = evidenceSubUnit
+                                  ? mappedSubUnitsChecked[
+                                      String(evidenceSubUnit.id)
+                                    ] || false
+                                  : false
+
+                                return (
+                                  <TableCell
+                                    key={subUnit.id}
+                                    sx={{
+                                      borderRight: '1px solid #e0e0e0',
+                                      textAlign: 'center',
+                                    }}
+                                  >
+                                    {isExpanded && evidenceSubUnit ? (
+                                      <Checkbox
+                                        checked={isChecked}
+                                        onChange={() =>
+                                          handleMappedSubUnitToggle(
+                                            evidenceSubUnit.id
+                                          )
+                                        }
+                                        size='small'
+                                      />
+                                    ) : null}
+                                  </TableCell>
+                                )
+                              })}
+                            <TableCell
+                              sx={{
+                                borderRight: hasExpandedRows
+                                  ? '1px solid #e0e0e0'
+                                  : 'none',
+                                textAlign: 'center',
+                              }}
+                            ></TableCell>
                           </TableRow>
                         </React.Fragment>
                       )
@@ -632,7 +760,6 @@ const ExamineEvidencePage: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            
           </Paper>
 
           {/* Confirmation Statement Table */}
@@ -648,10 +775,22 @@ const ExamineEvidencePage: React.FC = () => {
               <Table size='small' sx={{ border: '1px solid #e0e0e0' }}>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', width: '20%' }}>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        borderRight: '1px solid #e0e0e0',
+                        width: '20%',
+                      }}
+                    >
                       Role
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', width: '35%' }}>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        borderRight: '1px solid #e0e0e0',
+                        width: '35%',
+                      }}
+                    >
                       Confirmation Statement
                     </TableCell>
                     <TableCell
@@ -664,13 +803,31 @@ const ExamineEvidencePage: React.FC = () => {
                     >
                       Please tick when completed
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', width: '12%' }}>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        borderRight: '1px solid #e0e0e0',
+                        width: '12%',
+                      }}
+                    >
                       Signed off by
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', width: '10%' }}>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        borderRight: '1px solid #e0e0e0',
+                        width: '10%',
+                      }}
+                    >
                       Dated
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', width: '13%' }}>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        borderRight: '1px solid #e0e0e0',
+                        width: '13%',
+                      }}
+                    >
                       General Comments
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, width: '10%' }}>
@@ -678,87 +835,137 @@ const ExamineEvidencePage: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
-                  {confirmationRows.map((row, index) => (
-                    <TableRow key={index} hover>
-                      <TableCell
-                        sx={{
-                          borderRight: '1px solid #e0e0e0',
-                          fontWeight: 500,
-                          verticalAlign: 'top',
-                        }}
-                      >
-                        {row.role}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          borderRight: '1px solid #e0e0e0',
-                          verticalAlign: 'top',
-                        }}
-                      >
-                        {row.statement}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          borderRight: '1px solid #e0e0e0',
-                          textAlign: 'center',
-                          verticalAlign: 'top',
-                        }}
-                      >
-                        <Stack direction='row' alignItems='center' justifyContent='center' spacing={1}>
-                          <Checkbox
-                            size='small'
-                            checked={row.completed}
-                            onChange={() => handleConfirmationToggle(index)}
-                            sx={{ p: 0.5 }}
-                          />
-                          <IconButton
-                            size='small'
-                            onClick={() => handleAddComment(index)}
-                            sx={{
-                              p: 0.5,
-                              color: '#1976d2',
-                              '&:hover': {
-                                backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                              },
-                            }}
+                  {confirmationRows.map((row, index) => {
+                    const canAccess = currentUser?.role === row.role
+
+                    return (
+                      <TableRow key={index} hover>
+                        {/* Role */}
+                        <TableCell
+                          sx={{
+                            borderRight: '1px solid #e0e0e0',
+                            fontWeight: 500,
+                            verticalAlign: 'top',
+                          }}
+                        >
+                          {row.role}
+                        </TableCell>
+
+                        {/* Statement */}
+                        <TableCell
+                          sx={{
+                            borderRight: '1px solid #e0e0e0',
+                            verticalAlign: 'top',
+                          }}
+                        >
+                          {row.statement}
+                        </TableCell>
+
+                        {/* Tick + Comment */}
+                        <TableCell
+                          sx={{
+                            borderRight: '1px solid #e0e0e0',
+                            textAlign: 'center',
+                            verticalAlign: 'top',
+                          }}
+                        >
+                          <Stack
+                            direction='row'
+                            alignItems='center'
+                            justifyContent='center'
+                            spacing={1}
                           >
-                            <AddIcon fontSize='small' />
-                          </IconButton>
-                        </Stack>
-                      </TableCell>
-                      <TableCell sx={{ borderRight: '1px solid #e0e0e0', verticalAlign: 'top' }}>
-                        {row.signedOffBy || '-'}
-                      </TableCell>
-                      <TableCell sx={{ borderRight: '1px solid #e0e0e0', verticalAlign: 'top' }}>
-                        {row.dated || '-'}
-                      </TableCell>
-                      <TableCell sx={{ borderRight: '1px solid #e0e0e0', verticalAlign: 'top' }}>
-                        {row.comments || '-'}
-                      </TableCell>
-                      <TableCell sx={{ verticalAlign: 'top' }}>
-                        {row.file ? (
-                          <Typography variant='body2' color='primary'>
-                            {row.file}
-                          </Typography>
-                        ) : (
-                          <IconButton
-                            size='small'
-                            onClick={() => handleAddFile(index)}
-                            sx={{
-                              p: 0.5,
-                              color: '#1976d2',
-                              '&:hover': {
-                                backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                              },
-                            }}
-                          >
-                            <AddIcon fontSize='small' />
-                          </IconButton>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            <Checkbox
+                              size='small'
+                              checked={row.completed}
+                              onChange={() =>
+                                canAccess && handleConfirmationToggle(index)
+                              }
+                              disabled={!canAccess}
+                              sx={{ p: 0.5 }}
+                            />
+
+                            <IconButton
+                              size='small'
+                              onClick={() =>
+                                canAccess && handleAddComment(index)
+                              }
+                              disabled={!canAccess}
+                              sx={{
+                                p: 0.5,
+                                color: canAccess ? '#1976d2' : '#9e9e9e',
+                                cursor: canAccess ? 'pointer' : 'not-allowed',
+                                '&:hover': canAccess
+                                  ? { backgroundColor: 'rgba(25,118,210,0.08)' }
+                                  : {},
+                              }}
+                            >
+                              <AddIcon fontSize='small' />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+
+                        {/* Signed Off By */}
+                        <TableCell
+                          sx={{
+                            borderRight: '1px solid #e0e0e0',
+                            verticalAlign: 'top',
+                          }}
+                        >
+                          {canAccess
+                            ? row.signedOffBy || '-'
+                            : row.signedOffBy || '-'}
+                        </TableCell>
+
+                        {/* Dated */}
+                        <TableCell
+                          sx={{
+                            borderRight: '1px solid #e0e0e0',
+                            verticalAlign: 'top',
+                          }}
+                        >
+                          {canAccess ? row.dated || '-' : row.dated || '-'}
+                        </TableCell>
+
+                        {/* Comments */}
+                        <TableCell
+                          sx={{
+                            borderRight: '1px solid #e0e0e0',
+                            verticalAlign: 'top',
+                          }}
+                        >
+                          {row.comments || '-'}
+                        </TableCell>
+
+                        {/* File Upload */}
+                        <TableCell sx={{ verticalAlign: 'top' }}>
+                          {row.file ? (
+                            <Typography variant='body2' color='primary'>
+                              {row.file}
+                            </Typography>
+                          ) : (
+                            <IconButton
+                              size='small'
+                              onClick={() => canAccess && handleAddFile(index)}
+                              disabled={!canAccess}
+                              sx={{
+                                p: 0.5,
+                                color: canAccess ? '#1976d2' : '#9e9e9e',
+                                cursor: canAccess ? 'pointer' : 'not-allowed',
+                                '&:hover': canAccess
+                                  ? { backgroundColor: 'rgba(25,118,210,0.08)' }
+                                  : {},
+                              }}
+                            >
+                              <AddIcon fontSize='small' />
+                            </IconButton>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -829,14 +1036,17 @@ const ExamineEvidencePage: React.FC = () => {
               {selectedEvidence && (
                 <>
                   <Box>
-                    <Typography variant='body2' sx={{ color: '#666666', mb: 1 }}>
+                    <Typography
+                      variant='body2'
+                      sx={{ color: '#666666', mb: 1 }}
+                    >
                       Evidence: <strong>{selectedEvidence.title}</strong>
                     </Typography>
                     <Typography variant='body2' sx={{ color: '#666666' }}>
                       Assignment ID: {selectedEvidence.assignment_id}
                     </Typography>
                   </Box>
-                  
+
                   {/* Existing Reviews */}
                   {(() => {
                     const reviews = getReviewsForEvidence(selectedEvidence)
@@ -850,27 +1060,32 @@ const ExamineEvidencePage: React.FC = () => {
                             border: '1px solid #e0e0e0',
                           }}
                         >
-                          <Typography variant='subtitle2' sx={{ fontWeight: 600, mb: 1.5 }}>
+                          <Typography
+                            variant='subtitle2'
+                            sx={{ fontWeight: 600, mb: 1.5 }}
+                          >
                             Existing Reviews:
                           </Typography>
                           <Stack spacing={1.5}>
                             {(() => {
                               // Sort reviews by role priority for consistent display
                               const rolePriority: { [key: string]: number } = {
-                                'IQA': 1,
-                                'LIQA': 2,
-                                'EQA': 3,
-                                'Admin': 4,
-                                'Trainer': 5,
-                                'Employer': 6,
-                                'Learner': 7,
+                                IQA: 1,
+                                LIQA: 2,
+                                EQA: 3,
+                                Admin: 4,
+                                Trainer: 5,
+                                Employer: 6,
+                                Learner: 7,
                               }
-                              const sortedReviews = Object.entries(reviews).sort(([roleA], [roleB]) => {
+                              const sortedReviews = Object.entries(
+                                reviews
+                              ).sort(([roleA], [roleB]) => {
                                 const priorityA = rolePriority[roleA] || 99
                                 const priorityB = rolePriority[roleB] || 99
                                 return priorityA - priorityB
                               })
-                              
+
                               return sortedReviews.map(([role, reviewData]) => (
                                 <Box
                                   key={role}
@@ -881,34 +1096,69 @@ const ExamineEvidencePage: React.FC = () => {
                                     border: '1px solid #e0e0e0',
                                   }}
                                 >
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                  <Box
+                                    sx={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 1,
+                                      mb: 1,
+                                    }}
+                                  >
                                     <Chip
                                       label={role}
                                       size='small'
-                                      color={getRoleColor(role, reviewData.completed)}
-                                      variant={reviewData.completed ? 'filled' : 'outlined'}
-                                      sx={{ 
+                                      color={getRoleColor(
+                                        role,
+                                        reviewData.completed
+                                      )}
+                                      variant={
+                                        reviewData.completed
+                                          ? 'filled'
+                                          : 'outlined'
+                                      }
+                                      sx={{
                                         fontSize: '0.75rem',
-                                        fontWeight: reviewData.completed ? 600 : 500,
+                                        fontWeight: reviewData.completed
+                                          ? 600
+                                          : 500,
                                       }}
                                     />
-                                    <Typography 
-                                      variant='caption' 
-                                      sx={{ 
-                                        color: reviewData.completed ? '#4caf50' : '#666666',
-                                        fontWeight: reviewData.completed ? 600 : 400,
+                                    <Typography
+                                      variant='caption'
+                                      sx={{
+                                        color: reviewData.completed
+                                          ? '#4caf50'
+                                          : '#666666',
+                                        fontWeight: reviewData.completed
+                                          ? 600
+                                          : 400,
                                       }}
                                     >
-                                      {reviewData.completed ? 'Completed' : 'Pending'}
+                                      {reviewData.completed
+                                        ? 'Completed'
+                                        : 'Pending'}
                                     </Typography>
                                   </Box>
-                                  <Typography variant='body2' sx={{ color: '#333333', mb: 0.5 }}>
+                                  <Typography
+                                    variant='body2'
+                                    sx={{ color: '#333333', mb: 0.5 }}
+                                  >
                                     {reviewData.comment || 'No comment'}
                                   </Typography>
                                   {reviewData.signed_off_at && (
-                                    <Typography variant='caption' sx={{ color: '#666666', display: 'block' }}>
-                                      Signed off: {new Date(reviewData.signed_off_at).toLocaleString()}
-                                      {reviewData.signed_off_by && ` by ${reviewData.signed_off_by}`}
+                                    <Typography
+                                      variant='caption'
+                                      sx={{
+                                        color: '#666666',
+                                        display: 'block',
+                                      }}
+                                    >
+                                      Signed off:{' '}
+                                      {new Date(
+                                        reviewData.signed_off_at
+                                      ).toLocaleString()}
+                                      {reviewData.signed_off_by &&
+                                        ` by ${reviewData.signed_off_by}`}
                                     </Typography>
                                   )}
                                 </Box>
@@ -922,7 +1172,7 @@ const ExamineEvidencePage: React.FC = () => {
                   })()}
                 </>
               )}
-              
+
               <TextField
                 label={`Comment (${currentUser?.role || 'IQA'})`}
                 fullWidth
@@ -962,6 +1212,17 @@ const ExamineEvidencePage: React.FC = () => {
           </DialogActions>
         </Box>
       </Dialog>
+
+      <UnitSignOffModal
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        onSubmit={handleModalSubmit}
+        defaultValue={
+          selectedIndex !== null
+            ? confirmationRows[selectedIndex]?.comments || ''
+            : ''
+        }
+      />
     </Box>
   )
 }
