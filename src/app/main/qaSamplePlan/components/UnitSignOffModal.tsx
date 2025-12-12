@@ -7,7 +7,7 @@ import {
   Typography,
   Button,
 } from '@mui/material'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function UnitSignOffModal({
   open,
@@ -17,9 +17,24 @@ export default function UnitSignOffModal({
 }) {
   const [comment, setComment] = useState(defaultValue)
 
+  // Update comment when defaultValue changes
+  useEffect(() => {
+    if (open) {
+      setComment(defaultValue)
+    }
+  }, [defaultValue, open])
+
   const handleSubmit = () => {
+    if (!comment.trim()) {
+      return
+    }
     onSubmit(comment)
     setComment('')
+  }
+
+  const handleClose = () => {
+    setComment('')
+    onClose()
   }
 
   return (
@@ -42,11 +57,16 @@ export default function UnitSignOffModal({
       </DialogContent>
 
       <DialogActions sx={{ pb: 2, pr: 3 }}>
-        <Button variant='outlined' color='warning' onClick={onClose}>
+        <Button variant='outlined' color='warning' onClick={handleClose}>
           Cancel / Close
         </Button>
 
-        <Button variant='contained' color='primary' onClick={handleSubmit}>
+        <Button 
+          variant='contained' 
+          color='primary' 
+          onClick={handleSubmit}
+          disabled={!comment.trim()}
+        >
           Submit
         </Button>
       </DialogActions>

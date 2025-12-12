@@ -29,6 +29,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import {
   useGetEvidenceListQuery,
   useAddAssignmentReviewMutation,
+  useUpdateMappedSubUnitSignOffMutation,
 } from 'app/store/api/sample-plan-api'
 import FuseLoading from '@fuse/core/FuseLoading'
 import { useCurrentUser } from 'src/app/utils/userHelpers'
@@ -65,7 +66,14 @@ interface EvidenceData {
     id: string | number
     subTitle: string
     learnerMapped?: boolean
-    review?: any
+    review?: {
+      signed_off: boolean
+      signed_at?: string
+      signed_by?: {
+        user_id: number
+        name: string
+      }
+    } | null
   }>
   reviews:
     | {
@@ -124,6 +132,10 @@ const ExamineEvidencePage: React.FC = () => {
   const [addAssignmentReview, { isLoading: isSubmittingReview }] =
     useAddAssignmentReviewMutation()
 
+  // Update mappedSubUnit sign-off mutation
+  const [updateMappedSubUnitSignOff, { isLoading: isUpdatingSubUnit }] =
+    useUpdateMappedSubUnitSignOffMutation()
+
   // Evidence data state
   const [evidenceRows, setEvidenceRows] = useState<EvidenceRow[]>([])
   const [evidenceData, setEvidenceData] = useState<EvidenceData[]>([])
@@ -156,7 +168,19 @@ const ExamineEvidencePage: React.FC = () => {
 
   // Get all unique mappedSubUnits from expanded evidence items
   const getAllMappedSubUnits = () => {
-    const allSubUnits: Array<{ id: string | number; subTitle: string }> = []
+    const allSubUnits: Array<{
+      id: string | number
+      subTitle: string
+      learnerMapped?: boolean
+      review?: {
+        signed_off: boolean
+        signed_at?: string
+        signed_by?: {
+          user_id: number
+          name: string
+        }
+      } | null
+    }> = []
     const seenIds = new Set<string | number>()
 
     // Only get mappedSubUnits from expanded rows
@@ -389,6 +413,71 @@ const ExamineEvidencePage: React.FC = () => {
       ) {
         setDisplayUnitName(evidenceResponse.data[0].unit.title)
       }
+
+      // Initialize mappedSubUnits checked state from API response
+      const initialCheckedState: Record<string, boolean> = {}
+      evidenceResponse.data.forEach((evidence: EvidenceData) => {
+        if (evidence.mappedSubUnits) {
+          evidence.mappedSubUnits.forEach((subUnit) => {
+            const subUnitId = String(subUnit.id)
+            // Check if review exists and signed_off is true
+            if (subUnit.review && subUnit.review.signed_off === true) {
+              initialCheckedState[subUnitId] = true
+            } else {
+              initialCheckedState[subUnitId] = false
+            }
+          })
+        }
+      })
+      setMappedSubUnitsChecked(initialCheckedState)
+
+      // Update confirmation rows from reviews in API response
+      setConfirmationRows((prevRows) => {
+        const updatedRows = prevRows.map((row) => {
+          // Find reviews for this role across all evidence items
+          let reviewData = null
+          
+          for (const evidence of evidenceResponse.data) {
+            if (
+              evidence.reviews &&
+              typeof evidence.reviews === 'object' &&
+              !Array.isArray(evidence.reviews)
+            ) {
+              const reviews = evidence.reviews as {
+                [role: string]: {
+                  completed: boolean
+                  comment: string
+                  signed_off_at: string | null
+                  signed_off_by: string | null
+                }
+              }
+              
+              // Check if this role has a review
+              if (reviews[row.role]) {
+                reviewData = reviews[row.role]
+                break // Use the first matching review found
+              }
+            }
+          }
+
+          // Update row with review data if found
+          if (reviewData) {
+            return {
+              ...row,
+              completed: reviewData.completed || false,
+              comments: reviewData.comment || '',
+              signedOffBy: reviewData.signed_off_by || '',
+              dated: reviewData.signed_off_at
+                ? new Date(reviewData.signed_off_at).toLocaleDateString()
+                : '',
+            }
+          }
+
+          return row
+        })
+
+        return updatedRows
+      })
     } else if (evidenceResponse?.data && evidenceResponse.data.length === 0) {
       setEvidenceRows([])
       setEvidenceData([])
@@ -430,23 +519,184 @@ const ExamineEvidencePage: React.FC = () => {
     })
   }
 
-  const handleMappedSubUnitToggle = (subUnitId: string | number) => {
+  const handleMappedSubUnitToggle = async (
+    subUnitId: string | number,
+    assignmentId?: number
+  ) => {
     const idString = String(subUnitId)
+    const currentChecked = mappedSubUnitsChecked[idString] || false
+    const newSignedOffState = !currentChecked
+
+    // Optimistically update UI
     setMappedSubUnitsChecked((prev) => ({
       ...prev,
-      [idString]: !prev[idString],
+      [idString]: newSignedOffState,
     }))
+
+    try {
+      // Find the evidence that contains this mappedSubUnit
+      let targetEvidence = null
+      if (assignmentId) {
+        targetEvidence = evidenceData.find(
+          (e) => e.assignment_id === assignmentId
+        )
+      } else {
+        // If assignmentId not provided, find the first evidence containing this subUnit
+        targetEvidence = evidenceData.find((evidence) =>
+          evidence.mappedSubUnits?.some((su) => String(su.id) === idString)
+        )
+      }
+
+      if (!targetEvidence) {
+        dispatch(
+          showMessage({
+            message: 'Evidence not found. Cannot update sign-off status.',
+            variant: 'error',
+          })
+        )
+        // Revert the optimistic update
+        setMappedSubUnitsChecked((prev) => ({
+          ...prev,
+          [idString]: !newSignedOffState,
+        }))
+        return
+      }
+
+      if (!unitCode) {
+        dispatch(
+          showMessage({
+            message: 'Unit code is required.',
+            variant: 'error',
+          })
+        )
+        // Revert the optimistic update
+        setMappedSubUnitsChecked((prev) => ({
+          ...prev,
+          [idString]: !newSignedOffState,
+        }))
+        return
+      }
+
+      // Call API to update mappedSubUnit sign-off
+      await updateMappedSubUnitSignOff({
+        assignment_id: targetEvidence.assignment_id,
+        unit_code: unitCode,
+        pc_id: subUnitId,
+        signed_off: newSignedOffState,
+      }).unwrap()
+
+      dispatch(
+        showMessage({
+          message: 'Sign-off status updated successfully.',
+          variant: 'success',
+        })
+      )
+
+      // Refetch evidence list to get updated data
+      refetchEvidence()
+    } catch (error: any) {
+      // Revert the optimistic update on error
+      setMappedSubUnitsChecked((prev) => ({
+        ...prev,
+        [idString]: !newSignedOffState,
+      }))
+
+      const message =
+        error?.data?.message ||
+        error?.error ||
+        'Failed to update sign-off status.'
+      dispatch(
+        showMessage({
+          message,
+          variant: 'error',
+        })
+      )
+    }
   }
 
-  const handleConfirmationToggle = (index: number) => {
+  const handleConfirmationToggle = async (index: number) => {
+    const confirmationRow = confirmationRows[index]
+    if (!confirmationRow || !planDetailId || !unitCode) {
+      return
+    }
+
+    const newCompletedState = !confirmationRow.completed
+
+    // Optimistically update UI
     setConfirmationRows((prev) => {
       const updated = [...prev]
       updated[index] = {
         ...updated[index],
-        completed: !updated[index].completed,
+        completed: newCompletedState,
       }
       return updated
     })
+
+    try {
+      // Get the first evidence's assignment_id for unit-level sign-off
+      const firstEvidence = evidenceData.length > 0 ? evidenceData[0] : null
+      
+      if (!firstEvidence) {
+        dispatch(
+          showMessage({
+            message: 'No evidence found. Cannot update status.',
+            variant: 'error',
+          })
+        )
+        // Revert the optimistic update
+        setConfirmationRows((prev) => {
+          const updated = [...prev]
+          updated[index] = {
+            ...updated[index],
+            completed: !newCompletedState,
+          }
+          return updated
+        })
+        return
+      }
+
+      const role = confirmationRow.role
+      const comment = confirmationRow.comments || ''
+
+      // Call API to update assignment review with completed status
+      await addAssignmentReview({
+        assignment_id: firstEvidence.assignment_id,
+        sampling_plan_detail_id: Number(planDetailId),
+        role: role,
+        comment: comment,
+        unit_code: unitCode,
+        completed: newCompletedState,
+      }).unwrap()
+
+      dispatch(
+        showMessage({
+          message: 'Status updated successfully.',
+          variant: 'success',
+        })
+      )
+
+      // Refetch evidence list to get updated data
+      refetchEvidence()
+    } catch (error: any) {
+      // Revert the optimistic update on error
+      setConfirmationRows((prev) => {
+        const updated = [...prev]
+        updated[index] = {
+          ...updated[index],
+          completed: !newCompletedState,
+        }
+        return updated
+      })
+
+      const message =
+        error?.data?.message || error?.error || 'Failed to update status.'
+      dispatch(
+        showMessage({
+          message,
+          variant: 'error',
+        })
+      )
+    }
   }
 
   const handleAddComment = (index: number) => {
@@ -455,12 +705,73 @@ const ExamineEvidencePage: React.FC = () => {
     setOpenModal(true)
   }
 
-  const handleModalSubmit = (comment) => {
-    const updated = [...confirmationRows]
-    updated[selectedIndex].comments = comment
-    setConfirmationRows(updated)
+  const handleModalSubmit = async (comment: string) => {
+    if (!comment.trim() || selectedIndex === null || !planDetailId || !unitCode) {
+      dispatch(
+        showMessage({
+          message: 'Please fill in all required fields.',
+          variant: 'error',
+        })
+      )
+      return
+    }
 
-    setOpenModal(false)
+    try {
+      // Get the first evidence's assignment_id for unit-level sign-off
+      const firstEvidence = evidenceData.length > 0 ? evidenceData[0] : null
+      
+      if (!firstEvidence) {
+        dispatch(
+          showMessage({
+            message: 'No evidence found. Cannot add comment.',
+            variant: 'error',
+          })
+        )
+        return
+      }
+
+      const confirmationRow = confirmationRows[selectedIndex]
+      const role = confirmationRow?.role || currentUser?.role || 'IQA'
+      
+      // Call API to add assignment review
+      await addAssignmentReview({
+        assignment_id: firstEvidence.assignment_id,
+        sampling_plan_detail_id: Number(planDetailId),
+        role: role,
+        comment: comment.trim(),
+        unit_code: unitCode,
+      }).unwrap()
+
+      // Update local state
+      const updated = [...confirmationRows]
+      updated[selectedIndex] = {
+        ...updated[selectedIndex],
+        comments: comment.trim(),
+      }
+      setConfirmationRows(updated)
+
+      dispatch(
+        showMessage({
+          message: 'Comment added successfully.',
+          variant: 'success',
+        })
+      )
+
+      setOpenModal(false)
+      setSelectedIndex(null)
+      
+      // Refetch evidence list to get updated data
+      refetchEvidence()
+    } catch (error: any) {
+      const message =
+        error?.data?.message || error?.error || 'Failed to add comment.'
+      dispatch(
+        showMessage({
+          message,
+          variant: 'error',
+        })
+      )
+    }
   }
 
   const handleAddFile = (index: number) => {
@@ -716,8 +1027,10 @@ const ExamineEvidencePage: React.FC = () => {
                                       (su) => su.id === subUnit.id
                                     )
                                   : null
+                                // Check if review.signed_off is true from API, otherwise use state
                                 const isChecked = evidenceSubUnit
-                                  ? mappedSubUnitsChecked[
+                                  ? evidenceSubUnit.review?.signed_off === true ||
+                                    mappedSubUnitsChecked[
                                       String(evidenceSubUnit.id)
                                     ] || false
                                   : false
@@ -735,7 +1048,8 @@ const ExamineEvidencePage: React.FC = () => {
                                         checked={isChecked}
                                         onChange={() =>
                                           handleMappedSubUnitToggle(
-                                            evidenceSubUnit.id
+                                            evidenceSubUnit.id,
+                                            evidence?.assignment_id
                                           )
                                         }
                                         size='small'
@@ -941,26 +1255,10 @@ const ExamineEvidencePage: React.FC = () => {
 
                         {/* File Upload */}
                         <TableCell sx={{ verticalAlign: 'top' }}>
-                          {row.file ? (
+                          {row.file && (
                             <Typography variant='body2' color='primary'>
                               {row.file}
                             </Typography>
-                          ) : (
-                            <IconButton
-                              size='small'
-                              onClick={() => canAccess && handleAddFile(index)}
-                              disabled={!canAccess}
-                              sx={{
-                                p: 0.5,
-                                color: canAccess ? '#1976d2' : '#9e9e9e',
-                                cursor: canAccess ? 'pointer' : 'not-allowed',
-                                '&:hover': canAccess
-                                  ? { backgroundColor: 'rgba(25,118,210,0.08)' }
-                                  : {},
-                              }}
-                            >
-                              <AddIcon fontSize='small' />
-                            </IconButton>
                           )}
                         </TableCell>
                       </TableRow>

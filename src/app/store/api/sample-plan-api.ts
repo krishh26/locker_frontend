@@ -507,10 +507,29 @@ export const samplePlanAPI = createApi({
         role: string
         comment: string
         unit_code: string
+        completed?: boolean
       }
     >({
       query: (body) => ({
         url: 'sample-plan/assignment-review',
+        method: 'POST',
+        body,
+      }),
+    }),
+    updateMappedSubUnitSignOff: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+      },
+      {
+        assignment_id: number
+        unit_code: string | number
+        pc_id: string | number
+        signed_off: boolean
+      }
+    >({
+      query: (body) => ({
+        url: 'sample-plan/assignment-pc-review',
         method: 'POST',
         body,
       }),
@@ -594,6 +613,7 @@ export const {
   useGetEvidenceListQuery,
   useLazyGetEvidenceListQuery,
   useAddAssignmentReviewMutation,
+  useUpdateMappedSubUnitSignOffMutation,
 } = samplePlanAPI
 
 
