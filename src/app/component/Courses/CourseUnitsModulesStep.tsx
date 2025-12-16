@@ -8,7 +8,6 @@
 
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
-import FileUploadIcon from '@mui/icons-material/FileUpload'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import {
@@ -34,7 +33,6 @@ import { CourseCoreType } from 'app/store/courseBuilderSlice'
 import React, { useEffect, useState } from 'react'
 import { Controller, useFieldArray, useWatch } from 'react-hook-form'
 import AssessmentCriteriaForm from './AssessmentCriteriaForm'
-import ImportModuleDialog from './ImportModuleDialog'
 import StandardTopicsForm from './StandardTopicsForm'
 import { useCourseBuilderAPI } from './useCourseBuilderAPI'
 import { useNotification } from './useNotification'
@@ -45,6 +43,7 @@ interface CourseUnitsModulesStepProps {
   edit?: 'create' | 'edit' | 'view'
   control: any
   setValue: any
+  errors?: any
 }
 
 interface LearningOutcome {
@@ -58,11 +57,13 @@ interface Unit {
   id?: string | number
   unit_ref?: string
   title: string
-  mandatory: boolean
+  mandatory?: boolean
   level?: string | null
   glh?: number | null
   credit_value?: number | null
   moduleType?: string
+  type?: string
+  code?: string
   subUnit?: any[]
   [key: string]: any
 }
@@ -77,11 +78,11 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
   edit = 'create',
   control,
   setValue,
+  errors,
 }) => {
   const { NotificationComponent } = useNotification()
   const { loadCourse } = useCourseBuilderAPI()
   const isViewMode = edit === 'view'
-  const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
 
   const { fields, append, remove } = useFieldArray({
@@ -95,17 +96,62 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
     defaultValue: [],
   })
 
-  // Auto-update sort_order when units are added/removed
+  // Helper function to generate next code based on type
+  const getNextCode = (type: string, currentIndex?: number): string => {
+    if (!units || units.length === 0) {
+      const prefix = type === 'Knowledge' ? 'K' : type === 'Behaviour' ? 'B' : type === 'Skills' ? 'S' : 'D'
+      return `${prefix}1`
+    }
+
+    const prefix = type === 'Knowledge' ? 'K' : type === 'Behaviour' ? 'B' : type === 'Skills' ? 'S' : 'D'
+    const existingCodes = units
+      .map((unit: any, idx: number) => {
+        // Skip current unit if currentIndex is provided
+        if (currentIndex !== undefined && idx === currentIndex) return null
+        if (unit.type === type && unit.code) {
+          const match = unit.code.match(new RegExp(`^${prefix}(\\d+)$`))
+          return match ? parseInt(match[1], 10) : 0
+        }
+        return null
+      })
+      .filter((num: any) => num !== null && num > 0)
+
+    const maxNumber = existingCodes.length > 0 ? Math.max(...existingCodes) : 0
+    return `${prefix}${maxNumber + 1}`
+  }
+
+  // Close expanded rows when type changes from Duty to something else
+  // Also auto-add Assessment Criteria when type is Duty and subUnit is empty
+  // This logic is only for Standard type courses
   useEffect(() => {
-    if (units && units.length > 0 && setValue) {
+    if (courseCoreType === 'Standard' && units && units.length > 0 && setValue && !isViewMode) {
       units.forEach((unit: any, index: number) => {
-        const expectedSortOrder = String(index + 1)
-        if (unit.sort_order !== expectedSortOrder) {
-          setValue(`units.${index}.sort_order`, expectedSortOrder)
+        // Auto-add Assessment Criteria for Duty type units that don't have any
+        if (unit.type === 'Duty' && (!unit.subUnit || unit.subUnit.length === 0)) {
+          const newAssessmentCriteria = {
+            id: Date.now(),
+            title: '',
+            type: 'Knowledge',
+            code: 'K1',
+          }
+          setValue(`units.${index}.subUnit`, [newAssessmentCriteria])
         }
       })
+      
+      // Close expanded rows when type changes from Duty to something else
+      setExpandedRows((prevExpanded) => {
+        const newExpanded = new Set(prevExpanded)
+        let changed = false
+        units.forEach((unit: any, index: number) => {
+          if (unit.type !== 'Duty' && prevExpanded.has(index)) {
+            newExpanded.delete(index)
+            changed = true
+          }
+        })
+        return changed ? newExpanded : prevExpanded
+      })
     }
-  }, [units?.length, setValue, units])
+  }, [courseCoreType, units, setValue, isViewMode])
 
   // Load existing units/modules when courseId is available
   useEffect(() => {
@@ -146,19 +192,13 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
 
   const handleAddUnit = () => {
     if (courseCoreType === 'Standard') {
-      // Get current units count for auto-filling sort_order
-      const currentUnitsCount = units?.length || 0
+      const type = 'Knowledge'
       const newModule: Unit = {
         id: Date.now(),
         title: '',
-        unit_ref: '',
-        mandatory: true,
+        code: getNextCode(type),
+        type: type,
         description: '',
-        delivery_method: '',
-        otj_hours: '0',
-        delivery_lead: '',
-        sort_order: String(currentUnitsCount + 1), // Auto-fill with next number
-        active: true,
         subUnit: [],
       }
       append(newModule)
@@ -177,12 +217,6 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
     }
   }
 
-  const handleImportModules = (importedModules: any[]) => {
-    importedModules.forEach((module) => {
-      append(module)
-    })
-    setImportDialogOpen(false)
-  }
 
   // Render based on course type
   if (courseCoreType === 'Standard') {
@@ -198,22 +232,13 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
             </Typography>
           </Box>
           {!isViewMode && (
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                variant="outlined"
-                startIcon={<FileUploadIcon />}
-                onClick={() => setImportDialogOpen(true)}
-              >
-                Import Modules
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleAddUnit}
-              >
-                Add Module
-              </Button>
-            </Box>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddUnit}
+            >
+              Add Module
+            </Button>
           )}
         </Box>
 
@@ -228,17 +253,15 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                 <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                   <TableCell sx={{ width: 50 }}></TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>
-                    Module Title <span style={{ color: 'red' }}>*</span>
+                    Type <span style={{ color: 'red' }}>*</span>
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>
-                    Module Reference <span style={{ color: 'red' }}>*</span>
+                    Code <span style={{ color: 'red' }}>*</span>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    Title <span style={{ color: 'red' }}>*</span>
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Active</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Sort Order</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Delivery Method</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>OTJ Hours</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Delivery Lead</TableCell>
                   {!isViewMode && (
                     <TableCell sx={{ fontWeight: 600, width: 100 }} align="center">
                       Actions
@@ -249,28 +272,94 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
               <TableBody>
                 {fields.map((field, index) => {
                   const isExpanded = expandedRows.has(index)
+                  const unitType = units[index]?.type
+                  const showAssessmentCriteria = unitType === 'Duty'
                   return (
                     <React.Fragment key={field.id}>
                       <TableRow hover>
                         <TableCell>
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              const newExpanded = new Set(expandedRows)
-                              if (isExpanded) {
-                                newExpanded.delete(index)
-                              } else {
-                                newExpanded.add(index)
-                              }
-                              setExpandedRows(newExpanded)
-                            }}
-                          >
-                            {isExpanded ? (
-                              <KeyboardArrowUpIcon />
-                            ) : (
-                              <KeyboardArrowDownIcon />
+                          {showAssessmentCriteria && (
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                const newExpanded = new Set(expandedRows)
+                                if (isExpanded) {
+                                  newExpanded.delete(index)
+                                } else {
+                                  newExpanded.add(index)
+                                }
+                                setExpandedRows(newExpanded)
+                              }}
+                            >
+                              {isExpanded ? (
+                                <KeyboardArrowUpIcon />
+                              ) : (
+                                <KeyboardArrowDownIcon />
+                              )}
+                            </IconButton>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.type`}
+                            control={control}
+                            render={({ field: formField, fieldState: { error } }) => (
+                              <FormControl size="small" sx={{ minWidth: 150 }} error={!!error}>
+                                <Select
+                                  {...formField}
+                                  disabled={isViewMode}
+                                  onChange={(e) => {
+                                    const newType = e.target.value
+                                    const previousType = formField.value
+                                    formField.onChange(newType)
+                                    // Auto-populate code when type changes
+                                    if (setValue && !isViewMode) {
+                                      const newCode = getNextCode(newType, index)
+                                      setValue(`units.${index}.code`, newCode)
+                                      
+                                      // Auto-add Assessment Criteria when type changes to Duty
+                                      if (newType === 'Duty' && previousType !== 'Duty') {
+                                        const currentSubUnit = units[index]?.subUnit || []
+                                        // Only add if subUnit is empty
+                                        if (currentSubUnit.length === 0) {
+                                          const newAssessmentCriteria = {
+                                            id: Date.now(),
+                                            title: '',
+                                            type: 'Knowledge',
+                                            code: 'K1',
+                                          }
+                                          setValue(`units.${index}.subUnit`, [newAssessmentCriteria])
+                                        }
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <MenuItem value="Knowledge">Knowledge</MenuItem>
+                                  <MenuItem value="Behaviour">Behaviour</MenuItem>
+                                  <MenuItem value="Skills">Skills</MenuItem>
+                                  <MenuItem value="Duty">Duty</MenuItem>
+                                </Select>
+                              </FormControl>
                             )}
-                          </IconButton>
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Controller
+                            name={`units.${index}.code`}
+                            control={control}
+                            render={({ field: formField, fieldState: { error } }) => (
+                              <TextField
+                                {...formField}
+                                size="small"
+                                placeholder="Code"
+                                required
+                                error={!!error}
+                                helperText={error?.message}
+                                disabled={isViewMode}
+                                sx={{ minWidth: 120 }}
+                              />
+                            )}
+                          />
                         </TableCell>
                         <TableCell>
                           <Controller
@@ -280,31 +369,13 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                               <TextField
                                 {...formField}
                                 size="small"
-                                placeholder="Module Title"
+                                placeholder="Title"
                                 required
                                 error={!!error}
                                 helperText={error?.message}
                                 disabled={isViewMode}
-                                sx={{ minWidth: 150 }}
+                                sx={{ minWidth: 200 }}
                                 fullWidth
-                              />
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Controller
-                            name={`units.${index}.unit_ref`}
-                            control={control}
-                            render={({ field: formField, fieldState: { error } }) => (
-                              <TextField
-                                {...formField}
-                                size="small"
-                                placeholder="Module Ref"
-                                required
-                                error={!!error}
-                                helperText={error?.message}
-                                disabled={isViewMode}
-                                sx={{ minWidth: 120 }}
                               />
                             )}
                           />
@@ -321,89 +392,7 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                                 rows={2}
                                 placeholder="Description"
                                 disabled={isViewMode}
-                                sx={{ minWidth: 150 }}
-                                fullWidth
-                              />
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Controller
-                            name={`units.${index}.active`}
-                            control={control}
-                            render={({ field: formField }) => (
-                              <FormControl size="small" sx={{ minWidth: 100 }}>
-                                <Select
-                                  value={formField.value === true || formField.value === undefined ? 'true' : 'false'}
-                                  onChange={(e) => formField.onChange(e.target.value === 'true')}
-                                  disabled={isViewMode}
-                                >
-                                  <MenuItem value="true">Active</MenuItem>
-                                  <MenuItem value="false">Inactive</MenuItem>
-                                </Select>
-                              </FormControl>
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Controller
-                            name={`units.${index}.sort_order`}
-                            control={control}
-                            render={({ field: formField }) => (
-                              <TextField
-                                {...formField}
-                                size="small"
-                                type="number"
-                                placeholder="Auto"
-                                disabled={isViewMode}
-                                sx={{ width: 80 }}
-                              />
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Controller
-                            name={`units.${index}.delivery_method`}
-                            control={control}
-                            render={({ field: formField }) => (
-                              <TextField
-                                {...formField}
-                                size="small"
-                                placeholder="Delivery Method"
-                                disabled={isViewMode}
-                                sx={{ minWidth: 150 }}
-                                fullWidth
-                              />
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Controller
-                            name={`units.${index}.otj_hours`}
-                            control={control}
-                            render={({ field: formField }) => (
-                              <TextField
-                                {...formField}
-                                size="small"
-                                type="number"
-                                placeholder="0"
-                                disabled={isViewMode}
-                                sx={{ width: 100 }}
-                              />
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Controller
-                            name={`units.${index}.delivery_lead`}
-                            control={control}
-                            render={({ field: formField }) => (
-                              <TextField
-                                {...formField}
-                                size="small"
-                                placeholder="Delivery Lead"
-                                disabled={isViewMode}
-                                sx={{ minWidth: 120 }}
+                                sx={{ minWidth: 200 }}
                                 fullWidth
                               />
                             )}
@@ -421,23 +410,43 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                           </TableCell>
                         )}
                       </TableRow>
-                      <TableRow>
-                        <TableCell
-                          style={{ paddingBottom: 0, paddingTop: 0 }}
-                          colSpan={isViewMode ? 9 : 10}
-                        >
-                          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                            <Box sx={{ margin: 2 }}>
-                              <StandardTopicsForm
-                                control={control}
-                                moduleIndex={index}
-                                assessmentCriteria={units[index]?.subUnit || []}
-                                readOnly={isViewMode}
-                              />
-                            </Box>
-                          </Collapse>
-                        </TableCell>
-                      </TableRow>
+                      {showAssessmentCriteria && (
+                        <TableRow>
+                          <TableCell
+                            style={{ paddingBottom: 0, paddingTop: 0 }}
+                            colSpan={isViewMode ? 5 : 6}
+                          >
+                            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                              <Box sx={{ margin: 2 }}>
+                                {errors?.units?.[index]?.subUnit?.message && (
+                                  <Alert severity="error" sx={{ mb: 2 }}>
+                                    {errors.units[index]?.subUnit?.message}
+                                  </Alert>
+                                )}
+                                <StandardTopicsForm
+                                  control={control}
+                                  moduleIndex={index}
+                                  assessmentCriteria={units[index]?.subUnit || []}
+                                  readOnly={isViewMode}
+                                  setValue={setValue}
+                                />
+                              </Box>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {unitType === 'Duty' && errors?.units?.[index]?.subUnit?.message && !isExpanded && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={isViewMode ? 5 : 6}
+                            sx={{ border: 'none', py: 0 }}
+                          >
+                            <Alert severity="error" sx={{ mt: 1 }}>
+                              {errors.units[index]?.subUnit?.message}
+                            </Alert>
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </React.Fragment>
                   )
                 })}
@@ -447,14 +456,6 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
         )}
 
         <NotificationComponent />
-        {/* Import Module Dialog */}
-        <ImportModuleDialog
-          open={importDialogOpen}
-          onClose={() => setImportDialogOpen(false)}
-          onImport={handleImportModules}
-          currentCourseId={courseId}
-          existingModules={units || []}
-        />
       </Box>
     )
   }
@@ -519,13 +520,15 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                         <IconButton
                           size="small"
                           onClick={() => {
-                            const newExpanded = new Set(expandedRows)
-                            if (isExpanded) {
-                              newExpanded.delete(index)
-                            } else {
-                              newExpanded.add(index)
-                            }
-                            setExpandedRows(newExpanded)
+                            setExpandedRows((prevExpanded) => {
+                              const newExpanded = new Set(prevExpanded)
+                              if (newExpanded.has(index)) {
+                                newExpanded.delete(index)
+                              } else {
+                                newExpanded.add(index)
+                              }
+                              return newExpanded
+                            })
                           }}
                         >
                           {isExpanded ? (

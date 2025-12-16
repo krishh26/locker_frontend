@@ -32,12 +32,15 @@ export interface SubUnit {
   code?: string
   learnerMap?: boolean
   trainerMap?: boolean
+  signedOff?: boolean
   comment?: string
 }
 
 export interface Unit {
   id: string | number
   title: string
+  type?: string
+  code?: string
   unit_ref?: string
   mandatory?: boolean
   description?: string
@@ -47,4 +50,8 @@ export interface Unit {
   sort_order?: string
   active?: boolean
   subUnit: SubUnit[]
+  learnerMap?: boolean
+  trainerMap?: boolean
+  signedOff?: boolean
+  comment?: string
 }

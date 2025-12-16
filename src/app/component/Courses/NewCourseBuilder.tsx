@@ -142,14 +142,15 @@ const NewCourseBuilder = ({
     trigger,
   } = useForm<CourseFormData>({
     resolver: async (values, context, options) => {
-      // Dynamically determine which schema to use based on current course_core_type value
+      // Dynamically determine which schema to use based on current course_core_type value and activeStep
       const currentCourseType = (values.course_core_type || initialCourseType) as CourseCoreType
-      const schema = getCourseValidationSchema(currentCourseType)
+      const schema = getCourseValidationSchema(currentCourseType, activeStep)
       return yupResolver(schema)(values, context, options)
     },
     defaultValues: defaultFormValues,
     shouldUnregister: false, // Keep all fields registered even when empty
   })
+  console.log("🚀 ~ NewCourseBuilder ~ errors:", errors)
 
   // Watch course_core_type for UI display
   const courseCoreType = watch('course_core_type') || initialCourseType
@@ -419,6 +420,7 @@ const NewCourseBuilder = ({
             edit={edit}
             control={control}
             setValue={setValue}
+            errors={errors}
           />
         )
       default:

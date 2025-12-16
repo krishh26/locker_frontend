@@ -23,6 +23,7 @@ import {
   Typography,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import EditIcon from '@mui/icons-material/Edit'
@@ -705,11 +706,11 @@ const ExamineEvidencePage: React.FC = () => {
     setOpenModal(true)
   }
 
-  const handleModalSubmit = async (comment: string) => {
-    if (!comment.trim() || selectedIndex === null || !planDetailId || !unitCode) {
+  const handleModalSubmit = async (comment: string, file?: File) => {
+    if ((!comment.trim()) || selectedIndex === null || !planDetailId || !unitCode) {
       dispatch(
         showMessage({
-          message: 'Please fill in all required fields.',
+          message: 'Please fill in comment.',
           variant: 'error',
         })
       )
@@ -738,9 +739,23 @@ const ExamineEvidencePage: React.FC = () => {
         assignment_id: firstEvidence.assignment_id,
         sampling_plan_detail_id: Number(planDetailId),
         role: role,
-        comment: comment.trim(),
+        comment: comment.trim() || '',
         unit_code: unitCode,
       }).unwrap()
+
+      // Handle file upload if provided
+      // Note: File can be uploaded separately if the backend API doesn't support file uploads in the review endpoint
+      if (file) {
+        // TODO: Upload file using appropriate API endpoint
+        // For now, file is passed but not uploaded
+        // You can implement file upload logic here using uploadSampleDocument or similar API
+        dispatch(
+          showMessage({
+            message: 'File attached. Note: File upload integration pending.',
+            variant: 'info',
+          })
+        )
+      }
 
       // Update local state
       const updated = [...confirmationRows]
@@ -965,7 +980,13 @@ const ExamineEvidencePage: React.FC = () => {
                                   sx={{ ml: 1 }}
                                   color='primary'
                                 >
-                                  <EditIcon fontSize='small' />
+                                  {
+                                    currentUser?.role === 'IQA' || currentUser?.role === 'EV' ? (
+                                      <EditIcon fontSize='small' />
+                                    ) : (
+                                      <VisibilityIcon fontSize='small' />
+                                    )
+                                  }
                                 </IconButton>
                               </Box>
                             </TableCell>
