@@ -508,11 +508,42 @@ export const samplePlanAPI = createApi({
         comment: string
         unit_code: string
         completed?: boolean
+        file?: File
+      }
+    >({
+      query: (body) => {
+        const formData = new FormData()
+        formData.append('assignment_id', String(body.assignment_id))
+        formData.append('sampling_plan_detail_id', String(body.sampling_plan_detail_id))
+        formData.append('role', body.role)
+        formData.append('comment', body.comment)
+        formData.append('unit_code', body.unit_code)
+        if (body.completed !== undefined) {
+          formData.append('completed', String(body.completed))
+        }
+        if (body.file) {
+          formData.append('file', body.file)
+        }
+
+        return {
+          url: 'sample-plan/assignment-review',
+          method: 'POST',
+          body: formData,
+        }
+      },
+    }),
+    deleteAssignmentReviewFile: builder.mutation<
+      {
+        message?: string
+        status?: boolean
+      },
+      {
+        assignment_review_id: number
       }
     >({
       query: (body) => ({
-        url: 'sample-plan/assignment-review',
-        method: 'POST',
+        url: 'sample-plan/assignment-review/file',
+        method: 'DELETE',
         body,
       }),
     }),
@@ -647,6 +678,7 @@ export const {
   useGetEvidenceListQuery,
   useLazyGetEvidenceListQuery,
   useAddAssignmentReviewMutation,
+  useDeleteAssignmentReviewFileMutation,
   useUpdateMappedSubUnitSignOffMutation,
   useGetUnitMappingByTypeQuery,
   useLazyGetUnitMappingByTypeQuery,

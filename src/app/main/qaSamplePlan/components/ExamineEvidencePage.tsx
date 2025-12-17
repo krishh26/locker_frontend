@@ -11,6 +11,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogTitle,
   IconButton,
   Paper,
   Stack,
@@ -33,11 +34,13 @@ import CloseIcon from '@mui/icons-material/Close'
 import EditIcon from '@mui/icons-material/Edit'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 // API Hooks
 import {
   useGetEvidenceListQuery,
   useAddAssignmentReviewMutation,
+  useDeleteAssignmentReviewFileMutation,
   useUpdateMappedSubUnitSignOffMutation,
   useGetUnitMappingByTypeQuery,
 } from 'app/store/api/sample-plan-api'
@@ -96,10 +99,17 @@ interface EvidenceData {
   reviews:
     | {
         [role: string]: {
+          id?: number
           completed: boolean
           comment: string
           signed_off_at: string | null
           signed_off_by: string | null
+          file?: {
+            name: string
+            size: number
+            url: string
+            key: string
+          } | null
         }
       }
     | Record<string, unknown>
@@ -113,6 +123,7 @@ interface ConfirmationRow {
   dated: string
   comments: string
   file: string
+  assignment_review_id?: number
 }
 
 
@@ -235,6 +246,9 @@ const ExamineEvidencePage: React.FC = () => {
   const [addAssignmentReview, { isLoading: isSubmittingReview }] =
     useAddAssignmentReviewMutation()
 
+  const [deleteAssignmentReviewFile, { isLoading: isDeletingFile }] =
+    useDeleteAssignmentReviewFileMutation()
+
   const [updateMappedSubUnitSignOff, { isLoading: isUpdatingSubUnit }] =
     useUpdateMappedSubUnitSignOffMutation()
 
@@ -264,6 +278,8 @@ const ExamineEvidencePage: React.FC = () => {
   const [comment, setComment] = useState('')
   const [openModal, setOpenModal] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false)
+  const [fileToDeleteIndex, setFileToDeleteIndex] = useState<number | null>(null)
 
   // Checkbox States
   const [criteriaSignOff, setCriteriaSignOff] = useState<Record<string, boolean>>({})
@@ -910,35 +926,35 @@ const ExamineEvidencePage: React.FC = () => {
       const confirmationRow = confirmationRows[selectedIndex]
       const role = confirmationRow?.role || currentUser?.role || 'IQA'
 
-      await addAssignmentReview({
+      const response = await addAssignmentReview({
         assignment_id: firstEvidence.assignment_id,
         sampling_plan_detail_id: Number(planDetailId),
         role: role,
         comment: comment.trim() || '',
         unit_code: unitCode,
+        file: file,
       }).unwrap()
 
-      if (file) {
-        dispatch(
-          showMessage({
-            message: 'File attached. Note: File upload integration pending.',
-            variant: 'info',
-          })
-        )
-      }
+      // Extract assignment_review_id from response if available
+      // The API response may include id or assignment_review_id in the data field
+      const assignmentReviewId = (response as any)?.data?.id || (response as any)?.data?.assignment_review_id
 
       setConfirmationRows((prev) => {
         const updated = [...prev]
         updated[selectedIndex] = {
           ...updated[selectedIndex],
           comments: comment.trim(),
+          file: file ? file.name : updated[selectedIndex].file,
+          assignment_review_id: assignmentReviewId || updated[selectedIndex].assignment_review_id,
         }
         return updated
       })
 
       dispatch(
         showMessage({
-          message: 'Comment added successfully.',
+          message: file 
+            ? 'Comment and file uploaded successfully.' 
+            : 'Comment added successfully.',
           variant: 'success',
         })
       )
@@ -956,6 +972,73 @@ const ExamineEvidencePage: React.FC = () => {
         })
       )
     }
+  }
+
+  const handleDeleteFileClick = (index: number) => {
+    setFileToDeleteIndex(index)
+    setDeleteFileDialogOpen(true)
+  }
+
+  const handleDeleteFileConfirm = async () => {
+    if (fileToDeleteIndex === null) {
+      setDeleteFileDialogOpen(false)
+      return
+    }
+
+    const index = fileToDeleteIndex
+    const confirmationRow = confirmationRows[index]
+    
+    if (!confirmationRow?.assignment_review_id) {
+      dispatch(
+        showMessage({
+          message: 'Unable to delete file: Review ID not found.',
+          variant: 'error',
+        })
+      )
+      setDeleteFileDialogOpen(false)
+      setFileToDeleteIndex(null)
+      return
+    }
+
+    try {
+      await deleteAssignmentReviewFile({
+        assignment_review_id: confirmationRow.assignment_review_id,
+      }).unwrap()
+
+      setConfirmationRows((prev) => {
+        const updated = [...prev]
+        updated[index] = {
+          ...updated[index],
+          file: '',
+        }
+        return updated
+      })
+
+      dispatch(
+        showMessage({
+          message: 'File deleted successfully.',
+          variant: 'success',
+        })
+      )
+
+      setDeleteFileDialogOpen(false)
+      setFileToDeleteIndex(null)
+      refetchEvidence()
+    } catch (error: any) {
+      const message =
+        error?.data?.message || error?.error || 'Failed to delete file.'
+      dispatch(
+        showMessage({
+          message,
+          variant: 'error',
+        })
+      )
+    }
+  }
+
+  const handleDeleteFileCancel = () => {
+    setDeleteFileDialogOpen(false)
+    setFileToDeleteIndex(null)
   }
 
   // ==========================================================================
@@ -1051,10 +1134,17 @@ const ExamineEvidencePage: React.FC = () => {
             ) {
               const reviews = evidence.reviews as {
                 [role: string]: {
+                  id?: number
                   completed: boolean
                   comment: string
                   signed_off_at: string | null
                   signed_off_by: string | null
+                  file?: {
+                    name: string
+                    size: number
+                    url: string
+                    key: string
+                  } | null
                 }
               }
 
@@ -1066,6 +1156,7 @@ const ExamineEvidencePage: React.FC = () => {
           }
 
           if (reviewData) {
+            const fileName = reviewData.file?.name || ''
             return {
               ...row,
               completed: reviewData.completed || false,
@@ -1074,6 +1165,8 @@ const ExamineEvidencePage: React.FC = () => {
               dated: reviewData.signed_off_at
                 ? new Date(reviewData.signed_off_at).toLocaleDateString()
                 : '',
+              file: fileName || row.file || '',
+              assignment_review_id: reviewData.id || row.assignment_review_id,
             }
           }
 
@@ -1582,10 +1675,27 @@ const ExamineEvidencePage: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ verticalAlign: 'top' }}>
                     {row.file && (
-                      <Typography variant='body2' color='primary'>
-                        {row.file}
-                      </Typography>
+                      <Stack direction='row' spacing={1} alignItems='center'>
+                        <Typography variant='body2' color='primary' sx={{ flex: 1 }}>
+                          {row.file}
+                        </Typography>
+                        {canAccess && row.assignment_review_id && (
+                          <IconButton
+                            size='small'
+                            onClick={() => handleDeleteFileClick(index)}
+                            disabled={isDeletingFile}
+                            sx={{
+                              p: 0.5,
+                              color: '#d32f2f',
+                              '&:hover': { backgroundColor: 'rgba(211,47,47,0.08)' },
+                            }}
+                          >
+                            <DeleteIcon fontSize='small' />
+                          </IconButton>
+                        )}
+                      </Stack>
                     )}
+                    {!row.file && '-'}
                   </TableCell>
                 </TableRow>
               )
@@ -2047,6 +2157,56 @@ const ExamineEvidencePage: React.FC = () => {
           selectedIndex !== null ? confirmationRows[selectedIndex]?.comments || '' : ''
         }
       />
+
+      {/* Delete File Confirmation Dialog */}
+      <Dialog
+        open={deleteFileDialogOpen}
+        onClose={handleDeleteFileCancel}
+        maxWidth='xs'
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <Box sx={{ p: 3 }}>
+          <DialogTitle sx={{ p: 0, mb: 2, fontWeight: 600 }}>
+            Delete File?
+          </DialogTitle>
+          <DialogContent sx={{ p: 0, mb: 3 }}>
+            <Typography variant='body2' color='text.secondary'>
+              Are you sure you want to delete this file? This action cannot be undone.
+            </Typography>
+            {fileToDeleteIndex !== null && confirmationRows[fileToDeleteIndex]?.file && (
+              <Typography variant='body2' sx={{ mt: 1, fontWeight: 500 }}>
+                File: {confirmationRows[fileToDeleteIndex].file}
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 0, justifyContent: 'flex-end' }}>
+            <Stack direction='row' spacing={2}>
+              <Button
+                variant='outlined'
+                onClick={handleDeleteFileCancel}
+                disabled={isDeletingFile}
+                sx={{ textTransform: 'none' }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant='contained'
+                color='error'
+                onClick={handleDeleteFileConfirm}
+                disabled={isDeletingFile}
+                sx={{ textTransform: 'none' }}
+              >
+                {isDeletingFile ? 'Deleting...' : 'Delete'}
+              </Button>
+            </Stack>
+          </DialogActions>
+        </Box>
+      </Dialog>
     </Box>
   )
 }
