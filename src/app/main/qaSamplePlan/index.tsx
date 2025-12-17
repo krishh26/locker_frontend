@@ -741,7 +741,7 @@ const Index: React.FC = () => {
   }, [learnersData])
 
   // Get course name from planSummary or courses array
-  // Compute current modal unit name
+  // Compute current modal unit name and type
   const currentModalUnitName = useMemo(() => {
     if (!currentModalLearner || !currentModalUnitKey) {
       return null
@@ -752,7 +752,22 @@ const Index: React.FC = () => {
     const selectedUnit = units.find(
       (u: any) => (u.unit_code || u.unit_name) === currentModalUnitKey
     )
-    return selectedUnit?.unit_name || null
+    
+    return selectedUnit?.unit_name || ''
+  }, [currentModalLearner, currentModalUnitKey])
+  
+  // Get current modal unit type separately
+  const currentModalUnitType = useMemo<string | null>(() => {
+    if (!currentModalLearner || !currentModalUnitKey) {
+      return null
+    }
+    const units = Array.isArray(currentModalLearner.units)
+      ? currentModalLearner.units
+      : []
+    const selectedUnit = units.find(
+      (u: any) => (u.unit_code || u.unit_name) === currentModalUnitKey
+    )
+    return (selectedUnit?.type as string) || null
   }, [currentModalLearner, currentModalUnitKey])
 
   const courseName = useMemo(() => {
@@ -1780,6 +1795,7 @@ const Index: React.FC = () => {
         planDetailId={planDetailId}
         unitCode={currentModalUnitKey}
         unitName={currentModalUnitName}
+        unitType={currentModalUnitType}
         onCreateNew={handleCreateNew}
         isCreating={isApplySamplesLoading}
         onDeleteSuccess={() => {

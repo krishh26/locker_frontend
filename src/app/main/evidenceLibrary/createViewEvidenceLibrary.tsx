@@ -171,10 +171,6 @@ const CreateViewEvidenceLibrary = () => {
       refetchOnMountOrArgChange: true,
     }
   )
-  console.log(
-    '🚀 ~ CreateViewEvidenceLibrary ~ evidenceDetails:',
-    evidenceDetails
-  )
 
   const {
     data: signatureList,
@@ -1139,6 +1135,11 @@ const CreateViewEvidenceLibrary = () => {
                   />
                 </Tooltip>
               ))}
+              {errors.assessment_method && (
+                <FormHelperText error>
+                  {errors.assessment_method.message}
+                </FormHelperText>
+              )}
             </FormGroup>
           </Grid>
           <Grid item xs={12}>
@@ -1488,22 +1489,29 @@ const CreateViewEvidenceLibrary = () => {
                                   )
                                   const hasSubUnit =
                                     unit?.subUnit && unit.subUnit.length > 0
-                                  
+
                                   // Get current values from form state (unitsWatch) for real-time updates
-                                  let currentLearnerMap = row?.learnerMap ?? false
-                                  let currentTrainerMap = row?.trainerMap ?? false
+                                  let currentLearnerMap =
+                                    row?.learnerMap ?? false
+                                  let currentTrainerMap =
+                                    row?.trainerMap ?? false
                                   let currentSignedOff = row?.signedOff ?? false
                                   let currentComment = row?.comment ?? ''
-                                  
+
                                   if (!hasSubUnit) {
                                     // For units without subUnits, get values from unitsWatch
                                     const currentUnit = (unitsWatch || []).find(
-                                      (u) => String(u.id) === String(row.id || row.unitId)
+                                      (u) =>
+                                        String(u.id) ===
+                                        String(row.id || row.unitId)
                                     )
                                     if (currentUnit) {
-                                      currentLearnerMap = currentUnit.learnerMap ?? false
-                                      currentTrainerMap = currentUnit.trainerMap ?? false
-                                      currentSignedOff = currentUnit.signedOff ?? false
+                                      currentLearnerMap =
+                                        currentUnit.learnerMap ?? false
+                                      currentTrainerMap =
+                                        currentUnit.trainerMap ?? false
+                                      currentSignedOff =
+                                        currentUnit.signedOff ?? false
                                       currentComment = currentUnit.comment ?? ''
                                     }
                                   } else {
@@ -1512,14 +1520,19 @@ const CreateViewEvidenceLibrary = () => {
                                       (u) => String(u.id) === String(row.unitId)
                                     )
                                     if (currentUnit?.subUnit) {
-                                      const currentSubUnit = currentUnit.subUnit.find(
-                                        (s) => String(s.id) === String(row.id)
-                                      )
+                                      const currentSubUnit =
+                                        currentUnit.subUnit.find(
+                                          (s) => String(s.id) === String(row.id)
+                                        )
                                       if (currentSubUnit) {
-                                        currentLearnerMap = currentSubUnit.learnerMap ?? false
-                                        currentTrainerMap = currentSubUnit.trainerMap ?? false
-                                        currentSignedOff = currentSubUnit.signedOff ?? false
-                                        currentComment = currentSubUnit.comment ?? ''
+                                        currentLearnerMap =
+                                          currentSubUnit.learnerMap ?? false
+                                        currentTrainerMap =
+                                          currentSubUnit.trainerMap ?? false
+                                        currentSignedOff =
+                                          currentSubUnit.signedOff ?? false
+                                        currentComment =
+                                          currentSubUnit.comment ?? ''
                                       }
                                     }
                                   }
@@ -1535,10 +1548,15 @@ const CreateViewEvidenceLibrary = () => {
                                             } else {
                                               const updated = [...unitsWatch]
                                               const unitToUpdate = updated.find(
-                                                (u) => String(u.id) === String(row.id || row.unitId)
+                                                (u) =>
+                                                  String(u.id) ===
+                                                  String(row.id || row.unitId)
                                               )
                                               if (unitToUpdate) {
-                                                unitToUpdate.learnerMap = !(unitToUpdate.learnerMap ?? false)
+                                                unitToUpdate.learnerMap = !(
+                                                  unitToUpdate.learnerMap ??
+                                                  false
+                                                )
                                                 setValue('units', updated)
                                                 trigger('units')
                                               }
@@ -1571,10 +1589,15 @@ const CreateViewEvidenceLibrary = () => {
                                                 const updated = [...unitsWatch]
                                                 const unitToUpdate =
                                                   updated.find(
-                                                    (u) => String(u.id) === String(row.id || row.unitId)
+                                                    (u) =>
+                                                      String(u.id) ===
+                                                      String(
+                                                        row.id || row.unitId
+                                                      )
                                                   )
                                                 if (unitToUpdate) {
-                                                  unitToUpdate.comment = e.target.value
+                                                  unitToUpdate.comment =
+                                                    e.target.value
                                                   setValue('units', updated)
                                                 }
                                               }
@@ -1600,12 +1623,22 @@ const CreateViewEvidenceLibrary = () => {
                                                 const updated = [...unitsWatch]
                                                 const unitToUpdate =
                                                   updated.find(
-                                                    (u) => String(u.id) === String(row.id || row.unitId)
+                                                    (u) =>
+                                                      String(u.id) ===
+                                                      String(
+                                                        row.id || row.unitId
+                                                      )
                                                   )
                                                 if (unitToUpdate) {
-                                                  unitToUpdate.trainerMap = !(unitToUpdate.trainerMap ?? false)
-                                                  if (!unitToUpdate.trainerMap) {
-                                                    unitToUpdate.signedOff = false
+                                                  unitToUpdate.trainerMap = !(
+                                                    unitToUpdate.trainerMap ??
+                                                    false
+                                                  )
+                                                  if (
+                                                    !unitToUpdate.trainerMap
+                                                  ) {
+                                                    unitToUpdate.signedOff =
+                                                      false
                                                   }
                                                   setValue('units', updated)
                                                 }
@@ -1660,10 +1693,15 @@ const CreateViewEvidenceLibrary = () => {
                                               const updated = [...unitsWatch]
                                               // For units without subUnits, use row.id (which is the unit id)
                                               const unitToUpdate = updated.find(
-                                                (u) => String(u.id) === String(row.id || row.unitId)
+                                                (u) =>
+                                                  String(u.id) ===
+                                                  String(row.id || row.unitId)
                                               )
                                               if (unitToUpdate) {
-                                                unitToUpdate.signedOff = !(unitToUpdate.signedOff ?? false)
+                                                unitToUpdate.signedOff = !(
+                                                  unitToUpdate.signedOff ??
+                                                  false
+                                                )
                                                 setValue('units', updated)
                                                 trigger('units')
                                               }
@@ -1677,6 +1715,12 @@ const CreateViewEvidenceLibrary = () => {
                               </TableBody>
                             </Table>
                           </TableContainer>
+                          {/* Show validation error for combined Knowledge/Behaviour/Skills units */}
+                          {(errors?.units as any)?.message && (
+                            <FormHelperText error>
+                              {(errors.units as any).message}
+                            </FormHelperText>
+                          )}
                         </Box>
                       )
                     } else {
@@ -2104,6 +2148,11 @@ const CreateViewEvidenceLibrary = () => {
                           {errors?.units?.[unitIndex]?.subUnit?.message && (
                             <FormHelperText error>
                               {errors.units[unitIndex].subUnit.message}
+                            </FormHelperText>
+                          )}
+                           {(errors?.units as any)?.message && (
+                            <FormHelperText error>
+                              {(errors.units as any).message}
                             </FormHelperText>
                           )}
                         </Box>

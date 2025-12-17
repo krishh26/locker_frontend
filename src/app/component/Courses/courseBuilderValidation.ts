@@ -92,7 +92,7 @@ const qualificationSchemaBase = baseCourseSchema.shape({
 // Units validation schema for Qualification (only used in step 1)
 const qualificationUnitsSchema = yup.object().shape({
   id: yup.mixed().optional(),
-  unit_ref: yup.string().required('Unit Ref is required'),
+  code: yup.string().required('Unit Ref is required'),
   title: yup.string().required('Unit Title is required'),
   description: yup.string().optional(),
   mandatory: yup.boolean().optional(),

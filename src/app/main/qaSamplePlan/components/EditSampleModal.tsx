@@ -82,6 +82,7 @@ interface EditSampleModalProps {
   planDetailId?: string | number | null
   unitCode?: string | null
   unitName?: string | null
+  unitType?: string | null
   onCreateNew?: () => void
   isCreating?: boolean
   onDeleteSuccess?: () => void
@@ -108,6 +109,7 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
   planDetailId = null,
   unitCode = null,
   unitName = null,
+  unitType = null,
   onCreateNew,
   isCreating = false,
   onDeleteSuccess,
@@ -871,16 +873,13 @@ export const EditSampleModal: React.FC<EditSampleModalProps> = ({
           <Button
             variant='contained'
             onClick={() => {
-              // Navigate to examine evidence page with new URL format
+              // Navigate to examine evidence page with searchParams
               if (planDetailId) {
                 const params = new URLSearchParams()
-                if (unitCode) {
-                  params.append('unit_code', unitCode)
-                }
-                if (unitName) {
-                  params.append('unitName', unitName)
-                }
-                navigate(`/sample-plan/${planDetailId}/evidence${params.toString() ? `?${params.toString()}` : ''}`)
+                if (unitCode) params.set('unit_code', unitCode)
+                if (unitName) params.set('unitName', unitName)
+                if (unitType) params.set('unitType', unitType)
+                navigate(`/sample-plan/${planDetailId}/evidence?${params.toString()}`)
               }
             }}
             sx={{

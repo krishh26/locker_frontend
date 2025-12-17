@@ -49,12 +49,45 @@ export const getValidationSchema = (userRole?: string) => {
               "Each unit must have at least one sub unit or unit-level Learner's Map selected",
               function (subUnits, context) {
                 const unit = context.parent
+                // Check if this is a Knowledge, Behaviour, or Skills unit (no subUnits)
+                const isUnitWithoutSubUnits = ['Knowledge', 'Behaviour', 'Skills'].includes(unit?.type || '')
+                
+                // Check if subUnits array exists and has items
+                const hasSubUnits = subUnits && Array.isArray(subUnits) && subUnits.length > 0
+                
+                // For Standard courses: Only validate units that are actually selected (have learnerMap)
+                // If unit doesn't have learnerMap selected, skip validation (it's just displayed, not selected)
+                const unitLearnerMap = unit?.learnerMap
+                
                 // If unit has subUnits, check subUnit learnerMap
-                if (subUnits && Array.isArray(subUnits) && subUnits.length > 0) {
-                  return subUnits.some((s) => s?.learnerMap === true)
+                if (hasSubUnits) {
+                  // Check if any subUnit has learnerMap selected
+                  const hasSubUnitLearnerMap = subUnits.some((s) => s?.learnerMap === true)
+                  // If no subUnit has learnerMap, this unit is not selected - skip validation
+                  if (!hasSubUnitLearnerMap) {
+                    return true // Skip validation for unselected units
+                  }
+                  return hasSubUnitLearnerMap
                 }
-                // If unit has no subUnits, check unit-level learnerMap (for Standard courses)
-                return unit?.learnerMap === true
+                
+                // If unit has no subUnits (Knowledge/Behaviour/Skills or other types)
+                if (!hasSubUnits) {
+                  // For Knowledge/Behaviour/Skills: only validate if unit-level learnerMap is selected
+                  // If learnerMap is false/undefined, the unit is just displayed, not selected - skip validation
+                  if (isUnitWithoutSubUnits) {
+                    // Only validate if learnerMap is explicitly set (selected)
+                    // If learnerMap is false or undefined, skip validation
+                    if (unitLearnerMap === false || unitLearnerMap === undefined) {
+                      return true // Skip validation - unit is displayed but not selected
+                    }
+                    return unitLearnerMap === true
+                  }
+                  // For other units without subUnits, skip validation
+                  return true
+                }
+                
+                // Default: return false if no conditions are met
+                return false
               }
             ),
         })
@@ -67,14 +100,21 @@ export const getValidationSchema = (userRole?: string) => {
           if (!Array.isArray(units) || units.length === 0) return false
           
           return units.some((unit) => {
+            // Check if this is a Knowledge, Behaviour, or Skills unit (no subUnits)
+            const isUnitWithoutSubUnits = ['Knowledge', 'Behaviour', 'Skills'].includes(unit?.type || '')
+            
             // Check if unit has subUnits
             const hasSubUnits = unit?.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0
             
             if (hasSubUnits) {
-              // Check subUnit learnerMap
+              // Check subUnit learnerMap (for Duty units or Qualification courses)
               return unit.subUnit.some((s) => s?.learnerMap === true)
+            } else if (isUnitWithoutSubUnits) {
+              // For Knowledge, Behaviour, Skills: treat unit itself as subUnit
+              // Check unit-level learnerMap
+              return unit?.learnerMap === true
             } else {
-              // Check unit-level learnerMap (for Standard courses)
+              // Fallback: check unit-level learnerMap (for other cases)
               return unit?.learnerMap === true
             }
           })

@@ -55,7 +55,7 @@ interface LearningOutcome {
 
 interface Unit {
   id?: string | number
-  unit_ref?: string
+  code?: string
   title: string
   mandatory?: boolean
   level?: string | null
@@ -63,7 +63,6 @@ interface Unit {
   credit_value?: number | null
   moduleType?: string
   type?: string
-  code?: string
   subUnit?: any[]
   [key: string]: any
 }
@@ -207,7 +206,7 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
         id: Date.now(),
         title: '',
         mandatory: true,
-        unit_ref: '',
+        code: '',
         level: null,
         glh: null,
         credit_value: null,
@@ -540,7 +539,7 @@ const CourseUnitsModulesStep: React.FC<CourseUnitsModulesStepProps> = ({
                       </TableCell>
                       <TableCell>
                         <Controller
-                          name={`units.${index}.unit_ref`}
+                          name={`units.${index}.code`}
                           control={control}
                           render={({ field: formField, fieldState: { error } }) => (
                             <TextField
