@@ -24,15 +24,17 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material'
-import { Controller, Control, useFieldArray, FieldErrors } from 'react-hook-form'
+import { Controller, Control, useFieldArray, FieldErrors, useWatch, UseFormSetValue } from 'react-hook-form'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { v4 as uuidv4 } from 'uuid'
 
 export interface StandardTopic {
-  id: string
+  id: number
   title: string
   type: 'Behaviour' | 'Knowledge' | 'Skills'
+  code?: string
+  description?: string
 }
 
 interface StandardTopicsFormProps {
@@ -41,6 +43,7 @@ interface StandardTopicsFormProps {
   assessmentCriteria: StandardTopic[]
   errors?: FieldErrors<any>
   readOnly?: boolean
+  setValue?: UseFormSetValue<any>
 }
 
 const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
@@ -49,17 +52,50 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
   assessmentCriteria = [],
   errors,
   readOnly = false,
+  setValue,
 }) => {
   const { fields, append, remove } = useFieldArray({
     control,
     name: `units.${moduleIndex}.subUnit`,
   })
 
+  const subUnits = useWatch({
+    control,
+    name: `units.${moduleIndex}.subUnit`,
+    defaultValue: [],
+  })
+
+  // Helper function to generate next code based on type
+  const getNextSubUnitCode = (type: string, currentIndex?: number): string => {
+    if (!subUnits || subUnits.length === 0) {
+      const prefix = type === 'Knowledge' ? 'K' : type === 'Behaviour' ? 'B' : 'S'
+      return `${prefix}1`
+    }
+
+    const prefix = type === 'Knowledge' ? 'K' : type === 'Behaviour' ? 'B' : 'S'
+    const existingCodes = subUnits
+      .map((subUnit: any, idx: number) => {
+        // Skip current subUnit if currentIndex is provided
+        if (currentIndex !== undefined && idx === currentIndex) return null
+        if (subUnit.type === type && subUnit.code) {
+          const match = subUnit.code.match(new RegExp(`^${prefix}(\\d+)$`))
+          return match ? parseInt(match[1], 10) : 0
+        }
+        return null
+      })
+      .filter((num: any) => num !== null && num > 0)
+
+    const maxNumber = existingCodes.length > 0 ? Math.max(...existingCodes) : 0
+    return `${prefix}${maxNumber + 1}`
+  }
+
   const handleAddTopic = () => {
+    const type = 'Knowledge'
     const newTopic: StandardTopic = {
-      id: `topic_${uuidv4()}`,
+      id: Date.now(),
       title: '',
-      type: 'Behaviour',
+      type: type,
+      code: getNextSubUnitCode(type),
     }
     append(newTopic)
   }
@@ -95,8 +131,12 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                   Type <span style={{ color: 'red' }}>*</span>
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>
+                  Code <span style={{ color: 'red' }}>*</span>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>
                   Title <span style={{ color: 'red' }}>*</span>
                 </TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
                 {!readOnly && (
                   <TableCell sx={{ fontWeight: 600, width: 100 }} align="center">
                     Actions
@@ -113,12 +153,42 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                       control={control}
                       render={({ field: formField, fieldState: { error } }) => (
                         <FormControl size="small" sx={{ minWidth: 150 }} error={!!error}>
-                          <Select {...formField} disabled={readOnly}>
-                            <MenuItem value="Behaviour">Behaviour</MenuItem>
+                          <Select
+                            {...formField}
+                            disabled={readOnly}
+                            onChange={(e) => {
+                              const newType = e.target.value
+                              formField.onChange(newType)
+                              // Auto-populate code when type changes
+                              if (setValue && !readOnly) {
+                                const newCode = getNextSubUnitCode(newType, index)
+                                setValue(`units.${moduleIndex}.subUnit.${index}.code`, newCode)
+                              }
+                            }}
+                          >
                             <MenuItem value="Knowledge">Knowledge</MenuItem>
+                            <MenuItem value="Behaviour">Behaviour</MenuItem>
                             <MenuItem value="Skills">Skills</MenuItem>
                           </Select>
                         </FormControl>
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Controller
+                      name={`units.${moduleIndex}.subUnit.${index}.code`}
+                      control={control}
+                      render={({ field: formField, fieldState: { error } }) => (
+                        <TextField
+                          {...formField}
+                          size="small"
+                          placeholder="Code"
+                          required
+                          error={!!error}
+                          helperText={error?.message}
+                          disabled={readOnly}
+                          sx={{ minWidth: 100 }}
+                        />
                       )}
                     />
                   </TableCell>
@@ -136,6 +206,24 @@ const StandardTopicsForm: React.FC<StandardTopicsFormProps> = ({
                           helperText={error?.message}
                           disabled={readOnly}
                           sx={{ minWidth: 300 }}
+                          fullWidth
+                        />
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Controller
+                      name={`units.${moduleIndex}.subUnit.${index}.description`}
+                      control={control}
+                      render={({ field: formField }) => (
+                        <TextField
+                          {...formField}
+                          size="small"
+                          multiline
+                          rows={2}
+                          placeholder="Description"
+                          disabled={readOnly}
+                          sx={{ minWidth: 200 }}
                           fullWidth
                         />
                       )}

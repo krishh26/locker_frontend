@@ -168,17 +168,6 @@ export const fetchCourseById = (course_id) => async (dispatch) => {
         const response = await axios.get(url);
         const courseData = response.data.data;
 
-        // Log the course data for debugging
-        console.log('fetchCourseById - Raw course data:', {
-            course_id: courseData.course_id,
-            course_name: courseData.course_name,
-            units: courseData.units ? courseData.units.map(unit => ({
-                id: unit.id,
-                title: unit.title,
-                assessment_criteria: unit.assessment_criteria ? unit.assessment_criteria.length : 0
-            })) : 'No units'
-        });
-
         const preFillData = {
             course_id: courseData.course_id,
             assessment_language: courseData.assessment_language || "",
@@ -228,17 +217,7 @@ export const fetchCourseById = (course_id) => async (dispatch) => {
                 })
               : [],
         };
-
-        // Log the prefill data for debugging
-        console.log('fetchCourseById - Prefill data:', {
-            course_id: preFillData.course_id,
-            course_name: preFillData.course_name,
-            units: preFillData.units ? preFillData.units.map(unit => ({
-                id: unit.id,
-                title: unit.title,
-                assessment_criteria: unit.assessment_criteria ? unit.assessment_criteria.length : 0
-            })) : 'No units'
-        });
+        console.log("🚀 ~ fetchCourseById ~ preFillData:", preFillData)
 
         dispatch(slice.updatePreFillData(preFillData));
         dispatch(slice.setUnitData(courseData.units || []));

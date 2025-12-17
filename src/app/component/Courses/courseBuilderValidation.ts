@@ -65,8 +65,8 @@ const baseCourseSchema = yup.object().shape({
   // Units validation is defined in Qualification and Standard schemas only
 })
 
-// Qualification-specific validation
-const qualificationSchema = baseCourseSchema.shape({
+// Base qualification schema without units (for step 0)
+const qualificationSchemaBase = baseCourseSchema.shape({
   course_core_type: yup.string().oneOf(['Qualification']).required(),
   course_type: yup.string().required('Course type is required'),
   brand_guidelines: yup.string().required('Course guidance is required'),
@@ -87,47 +87,43 @@ const qualificationSchema = baseCourseSchema.shape({
   // Fields not in form but may be needed
   qualification_type: yup.string().optional(),
   qualification_status: yup.string().optional(),
-  // Units validation for Qualification - validate each unit
-  units: yup
+})
+
+// Units validation schema for Qualification (only used in step 1)
+const qualificationUnitsSchema = yup.object().shape({
+  id: yup.mixed().optional(),
+  code: yup.string().required('Unit Ref is required'),
+  title: yup.string().required('Unit Title is required'),
+  description: yup.string().optional(),
+  mandatory: yup.boolean().optional(),
+  level: yup.mixed().nullable().optional(),
+  glh: yup.number().nullable().optional(),
+  credit_value: yup.number().nullable().optional(),
+  learning_outcomes: yup.array().optional(),
+  // SubUnit (Assessment Criteria) validation for Qualification units
+  subUnit: yup
     .array()
     .of(
       yup.object().shape({
         id: yup.mixed().optional(),
-        unit_ref: yup.string().required('Unit Ref is required'),
-        title: yup.string().required('Unit Title is required'),
-        description: yup.string().optional(),
-        mandatory: yup.boolean().optional(),
-        level: yup.mixed().nullable().optional(),
-        glh: yup.number().nullable().optional(),
-        credit_value: yup.number().nullable().optional(),
-        learning_outcomes: yup.array().optional(),
-        // SubUnit (Assessment Criteria) validation for Qualification units
-        subUnit: yup
+        title: yup.string().required('Assessment Criteria Title is required'),
+        type: yup
+          .string()
+          .oneOf(['to-do', 'to-know', 'req'])
+          .default('to-do'),
+        code: yup.string().optional(),
+        showOrder: yup.number().optional(),
+        timesMet: yup.number().optional(),
+        // Topics validation for Qualification SubUnits
+        topics: yup
           .array()
           .of(
             yup.object().shape({
-              id: yup.mixed().optional(),
-              title: yup.string().required('Assessment Criteria Title is required'),
-              type: yup
-                .string()
-                .oneOf(['to-do', 'to-know', 'req'])
-                .default('to-do'),
-              code: yup.string().optional(),
+              id: yup.string().optional(),
+              title: yup.string().required('Topic Title is required'),
+              type: yup.string().optional(),
               showOrder: yup.number().optional(),
-              timesMet: yup.number().optional(),
-              // Topics validation for Qualification SubUnits
-              topics: yup
-                .array()
-                .of(
-                  yup.object().shape({
-                    id: yup.string().optional(),
-                    title: yup.string().required('Topic Title is required'),
-                    type: yup.string().optional(),
-                    showOrder: yup.number().optional(),
-                    code: yup.string().optional(),
-                  })
-                )
-                .optional(),
+              code: yup.string().optional(),
             })
           )
           .optional(),
@@ -136,8 +132,17 @@ const qualificationSchema = baseCourseSchema.shape({
     .optional(),
 })
 
-// Standard-specific validation
-const standardSchema = baseCourseSchema.shape({
+// Qualification-specific validation
+const qualificationSchema = qualificationSchemaBase.shape({
+  // Units validation for Qualification - validate each unit (only in step 1)
+  units: yup
+    .array()
+    .of(qualificationUnitsSchema)
+    .optional(),
+})
+
+// Base standard schema without units (for step 0)
+const standardSchemaBase = baseCourseSchema.shape({
   course_core_type: yup.string().oneOf(['Standard']).required(),
   duration_period: yup.string().required('Duration period is required'),
   // Optional fields for Standard
@@ -145,37 +150,55 @@ const standardSchema = baseCourseSchema.shape({
   two_page_standard_link: yup.string().url('Must be a valid URL').optional(),
   assessment_plan_link: yup.string().url('Must be a valid URL').optional(),
   assigned_gateway_id: yup.number().nullable().optional(),
-  // Units/Modules validation for Standard - validate each unit
-  units: yup
+})
+
+// Units validation schema for Standard (only used in step 1)
+const standardUnitsSchema = yup.object().shape({
+  id: yup.mixed().optional(),
+  type: yup
+    .string()
+    .oneOf(['Knowledge', 'Behaviour', 'Skills', 'Duty'])
+    .default('Knowledge')
+    .required('Type is required'),
+  code: yup.string().default('K1').required('Code is required'),
+  title: yup.string().required('Title is required'),
+  description: yup.string().optional(),
+  // SubUnit (Assessment Criteria) validation for Standard units - required for Duty type
+  subUnit: yup
     .array()
     .of(
       yup.object().shape({
         id: yup.mixed().optional(),
-        title: yup.string().required('Module Title is required'),
-        unit_ref: yup.string().required('Module Reference Number is required'),
+        title: yup.string().required('Topic Title is required'),
+        type: yup
+          .string()
+          .oneOf(['Behaviour', 'Knowledge', 'Skills'])
+          .default('Knowledge')
+          .required('Type is required'),
+        code: yup.string().default('K1').required('Code is required'),
         description: yup.string().optional(),
-        active: yup.boolean().optional(),
-        delivery_method: yup.string().optional(),
-        otj_hours: yup.string().optional(),
-        delivery_lead: yup.string().optional(),
-        sort_order: yup.string().optional(),
-        learning_outcomes: yup.array().optional(),
-        // SubUnit validation for Standard modules
-        subUnit: yup
-          .array()
-          .of(
-            yup.object().shape({
-              id: yup.mixed().optional(),
-              title: yup.string().required('Topic Title is required'),
-              type: yup
-                .string()
-                .oneOf(['Behaviour', 'Knowledge', 'Skills'])
-                .required('Type is required'),
-            })
-          )
-          .optional(),
       })
     )
+    .test(
+      'duty-requires-subunit',
+      'At least one Assessment Criteria is required when Type is Duty',
+      function (value) {
+        const parent = this.parent
+        if (parent?.type === 'Duty') {
+          return Array.isArray(value) && value.length > 0
+        }
+        return true // Optional for other types
+      }
+    )
+    .optional(),
+})
+
+// Standard-specific validation
+const standardSchema = standardSchemaBase.shape({
+  // Units validation for Standard - validate each unit (only in step 1)
+  units: yup
+    .array()
+    .of(standardUnitsSchema)
     .optional(),
 })
 
@@ -221,13 +244,22 @@ const gatewaySchema = baseCourseSchema.shape({
     .required('At least one standard course must be assigned'),
 })
 
-// Dynamic schema based on course type
-export const getCourseValidationSchema = (courseType: CourseCoreType) => {
+// Dynamic schema based on course type and active step
+export const getCourseValidationSchema = (courseType: CourseCoreType, activeStep: number = 0) => {
+  // Only validate units when activeStep is 1
+  const shouldValidateUnits = activeStep === 1
+
   switch (courseType) {
     case 'Qualification':
-      return qualificationSchema
+      if (shouldValidateUnits) {
+        return qualificationSchema
+      }
+      return qualificationSchemaBase
     case 'Standard':
-      return standardSchema
+      if (shouldValidateUnits) {
+        return standardSchema
+      }
+      return standardSchemaBase
     case 'Gateway':
       return gatewaySchema
     default:
@@ -236,4 +268,11 @@ export const getCourseValidationSchema = (courseType: CourseCoreType) => {
 }
 
 // Export individual schemas for flexibility
-export { baseCourseSchema, qualificationSchema, standardSchema, gatewaySchema }
+export { 
+  baseCourseSchema, 
+  qualificationSchema, 
+  qualificationSchemaBase,
+  standardSchema, 
+  standardSchemaBase,
+  gatewaySchema 
+}

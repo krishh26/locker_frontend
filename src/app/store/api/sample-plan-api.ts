@@ -534,6 +534,19 @@ export const samplePlanAPI = createApi({
         body,
       }),
     }),
+    getUnitMappingByType: builder.query<
+      UnitMappingResponse,
+      {
+        planDetailId: string | number
+      }
+    >({
+      query: ({ planDetailId }) => {
+        const encodedId = encodeURIComponent(String(planDetailId))
+        return {
+          url: `sample-plan/${encodedId}/unit-mapping`,
+        }
+      },
+    }),
   }),
 })
 
@@ -584,6 +597,27 @@ export interface SampleAllocatedForm {
   }
 }
 
+export interface UnitMappingItem {
+  unit_code: number | string
+  code: string
+  unit_title: string
+  type?: string
+  learnerMapped: boolean
+  trainerMapped: boolean
+  subUnits: Array<{
+    id: string | number
+    code?: string
+    title?: string
+    learnerMapped?: boolean
+    trainerMapped?: boolean
+  }>
+}
+
+export interface UnitMappingResponse {
+  status: boolean
+  data: UnitMappingItem[]
+}
+
 export const {
   useGetSamplePlansQuery,
   useLazyGetSamplePlanLearnersQuery,
@@ -614,6 +648,8 @@ export const {
   useLazyGetEvidenceListQuery,
   useAddAssignmentReviewMutation,
   useUpdateMappedSubUnitSignOffMutation,
+  useGetUnitMappingByTypeQuery,
+  useLazyGetUnitMappingByTypeQuery,
 } = samplePlanAPI
 
 
