@@ -1,4 +1,4 @@
-import { FC, useState } from 'react'
+import { FC, useState, useEffect } from 'react'
 import { yupResolver } from '@hookform/resolvers/yup'
 import {
   Button,
@@ -47,6 +47,7 @@ import * as yup from 'yup'
 import { useUploadEvidenceFileMutation } from 'app/store/api/evidence-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
+import { selectCourseManagement } from 'app/store/courseManagement'
 import { useDispatch } from 'react-redux'
 import { useTheme } from '@mui/material/styles'
 
@@ -80,6 +81,12 @@ type FormValues = {
 
 type EvidenceUploadWithCreationProps = {
   handleClose: () => void
+  selectedCourseFilter?: {
+    course_id: number
+    course_name: string
+    course_code: string
+    units?: any[]
+  } | null
 }
 
 const fileTypes = [
@@ -126,7 +133,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
   );
 };
 
-const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handleClose }) => {
+const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handleClose, selectedCourseFilter }) => {
   const navigate = useNavigate()
   const dispatch: any = useDispatch()
   const theme = useTheme()
@@ -137,6 +144,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
 
   // Document creation states
   const [selectedCourse, setSelectedCourse] = useState('')
+  const [hasUserSelectedCourse, setHasUserSelectedCourse] = useState(false)
   const [wordContent, setWordContent] = useState('')
   const [documentTitle, setDocumentTitle] = useState('')
   const [excelData, setExcelData] = useState<ExcelRow[]>([
@@ -154,7 +162,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
       (item) => item?.course
     ) || []
 
-
+  const { singleData } = useSelector(selectCourseManagement)
   const learner = useSelector(selectLearnerManagement)?.learner?.user_id
   const user = useCurrentUser()
   const {
@@ -169,6 +177,29 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
       file: null,
     },
   })
+
+  // Set default course from selectedCourseFilter (priority) or singleData when available (only if user hasn't manually selected)
+  useEffect(() => {
+    if (data.length > 0 && !hasUserSelectedCourse) {
+      // Priority 1: Use selectedCourseFilter if provided
+      // Priority 2: Fall back to singleData
+      const defaultCourseId = selectedCourseFilter?.course_id 
+        ? String(selectedCourseFilter.course_id)
+        : singleData?.course?.course_id 
+          ? String(singleData.course.course_id)
+          : null
+      
+      if (defaultCourseId) {
+        // Set for upload form
+        setValue('courseId', defaultCourseId, { shouldValidate: false })
+        
+        // Set for document creation
+        if (!selectedCourse) {
+          setSelectedCourse(defaultCourseId)
+        }
+      }
+    }
+  }, [selectedCourseFilter?.course_id, singleData?.course?.course_id, data.length, setValue, hasUserSelectedCourse, selectedCourse])
 
   const onSubmit = async (values: FormValues) => {
     const fromData = new FormData()
@@ -704,6 +735,10 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
                         <Select
                           {...field}
                           displayEmpty
+                          onChange={(e) => {
+                            field.onChange(e)
+                            setHasUserSelectedCourse(true)
+                          }}
                           sx={{ 
                             '& .MuiSelect-select': {
                               py: 1.5
@@ -902,6 +937,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
                 onChange={(e) => {
                   console.log('Course selected:', e.target.value);
                   setSelectedCourse(e.target.value);
+                  setHasUserSelectedCourse(true);
                 }}
                 sx={{
                   '& .MuiSelect-select': {

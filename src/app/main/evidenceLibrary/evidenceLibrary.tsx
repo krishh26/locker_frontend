@@ -1,21 +1,17 @@
+import { useDebounce } from '@fuse/hooks'
 import ArchiveIcon from '@mui/icons-material/Archive'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import ClearIcon from '@mui/icons-material/Clear'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
-import DeleteIcon from '@mui/icons-material/Delete'
-import DescriptionIcon from '@mui/icons-material/Description'
 import DownloadIcon from '@mui/icons-material/Download'
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import SchoolIcon from '@mui/icons-material/School'
 import SearchIcon from '@mui/icons-material/Search'
-import VisibilityIcon from '@mui/icons-material/Visibility'
 import {
   alpha,
-  Avatar,
+  Autocomplete,
   Box,
   Button,
-  Card,
   Checkbox,
   Chip,
   Container,
@@ -24,37 +20,26 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  IconButton,
   InputAdornment,
   List,
   ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Menu,
-  MenuItem,
-  Link as MuiLink,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
   TextField,
-  Tooltip,
   Typography,
   useTheme
 } from '@mui/material'
-import { FC, useEffect, useState } from 'react'
-
-import FuseLoading from '@fuse/core/FuseLoading'
+import IconButton from '@mui/material/IconButton'
 import {
   useDeleteEvidenceMutation,
   useGetEvidenceListQuery,
 } from 'app/store/api/evidence-api'
+import { selectCourseManagement } from 'app/store/courseManagement'
 import { showMessage } from 'app/store/fuse/messageSlice'
-import { useDispatch } from 'react-redux'
+import { selectLearnerManagement } from 'app/store/learnerManagement'
+import { FC, useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import {
   DangerButton,
@@ -62,153 +47,109 @@ import {
   SecondaryButtonOutlined,
 } from 'src/app/component/Buttons'
 import AlertDialog from 'src/app/component/Dialogs/AlertDialog'
-import DataNotFound from 'src/app/component/Pages/dataNotFound'
 import EvidenceUploadWithCreation from 'src/app/component/react-upload-files/EvidenceUploadWithCreation'
 import { useLearnerUserId } from 'src/app/utils/userHelpers'
+import ActionMenu from './components/ActionMenu'
+import DownloadDialog from './components/DownloadDialog'
+import EvidenceTable from './components/EvidenceTable'
 import ReuploadEvidenceLibrary from './reupload-evidenceLibrary'
+import {
+  CourseOption,
+  DataState,
+  DialogState,
+  EvidenceData,
+  UIState
+} from './types'
+import { selectionReducer } from './utils/selectionReducer'
 
-interface EvidenceData {
-  assignment_id: number
-  file: {
-    name: string
-    key: string
-    url: string
-  } | null
-  declaration: string | null
-  title: string | null
-  description: string | null
-  trainer_feedback: string | null
-  external_feedback: string | null
-  learner_comments: string | null
-  points_for_improvement: string | null
-  assessment_method: string | null
-  session: string | null
-  grade: string | null
-  units: string | null
-  status: string
-  evidence_time_log: boolean
-  created_at: string
-  updated_at: string
-  course_id: {
-    course_id: number
-    course_name: string
-    course_code: string
-  }
-}
-
-interface Column {
-  id:
-    | 'title'
-    | 'description'
-    | 'trainer_feedback'
-    | 'learner_comments'
-    | 'file'
-    | 'status'
-    | 'created_at'
-    | 'action'
-  label: string
-  minWidth?: number
-  align?: 'right'
-  format?: (value: number) => string
-}
-
-const columns: readonly Column[] = [
-  { id: 'title', label: 'Title', minWidth: 200 },
-  { id: 'description', label: 'Description', minWidth: 250 },
-  { id: 'status', label: 'Status', minWidth: 120 },
-  { id: 'file', label: 'Files', minWidth: 100 },
-  { id: 'trainer_feedback', label: 'Trainer Feedback', minWidth: 200 },
-  { id: 'learner_comments', label: 'Learner Comments', minWidth: 200 },
-  { id: 'created_at', label: 'Created Date', minWidth: 150 },
-  { id: 'action', label: 'Actions', minWidth: 100 },
-]
 
 const EvidenceLibrary: FC = () => {
   const theme = useTheme()
-  const [isOpenFileUpload, setIsOpenFileUpload] = useState<boolean>(false)
-  const [isOpenReupload, setIsOpenReupload] = useState<boolean>(false)
-  const [isOpenDeleteBox, setIsOpenDeleteBox] = useState<boolean>(false)
-  const [isOpenCourseSelection, setIsOpenCourseSelection] = useState<boolean>(false)
-  const [isOpenFileSelection, setIsOpenFileSelection] = useState<boolean>(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [evidenceData, setEvidenceData] = useState<EvidenceData[]>([])
-  const [selectedRow, setSelectedRow] = useState<EvidenceData | null>(null)
-  const [isDownloading, setIsDownloading] = useState<boolean>(false)
-  const [selectedCourses, setSelectedCourses] = useState<Set<number>>(new Set())
-  const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set())
-  const [selectAll, setSelectAll] = useState<boolean>(false)
-  const [selectAllFiles, setSelectAllFiles] = useState<boolean>(false)
-  const [totalItems, setTotalItems] = useState<number>(0)
-  const [totalPages, setTotalPages] = useState<number>(0)
+  
+  // Grouped dialog state
+  const [dialogs, setDialogs] = useState<DialogState>({
+    fileUpload: false,
+    reupload: false,
+    deleteBox: false,
+    courseSelection: false,
+    fileSelection: false,
+  })
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<CourseOption | null>(null)
+  console.log("🚀 ~ EvidenceLibrary ~ selectedCourseFilter:", selectedCourseFilter)
+  const [hasUserClearedFilter, setHasUserClearedFilter] = useState(false)
+  const [selectedCourseForDownload, setSelectedCourseForDownload] = useState<number | null>(null)
+
+  // Grouped data state
+  const [dataState, setDataState] = useState<DataState>({
+    evidenceData: [],
+    totalItems: 0,
+    totalPages: 0,
+  })
+
+  // Grouped UI state
+  const [uiState, setUIState] = useState<UIState>({
+    selectedRow: null,
+    anchorEl: null,
+    isDownloading: false,
+  })
+
+  // Selection state with reducer
+  const [selectionState, dispatchSelection] = useReducer(selectionReducer, {
+    selectedCourses: new Set<number>(),
+    selectedFiles: new Set<number>(),
+    selectAll: false,
+    selectAllFiles: false,
+  })
+
+  // Pagination state (already grouped, keeping as is)
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
   })
 
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  // Dialog helper functions
+  const openDialog = useCallback((dialog: keyof DialogState) => {
+    setDialogs(prev => ({ ...prev, [dialog]: true }))
+  }, [])
+
+  const closeDialog = useCallback((dialog: keyof DialogState) => {
+    setDialogs(prev => ({ ...prev, [dialog]: false }))
+  }, [])
+
+  const closeAllDialogs = useCallback(() => {
+    setDialogs({
+      fileUpload: false,
+      reupload: false,
+      deleteBox: false,
+      courseSelection: false,
+      fileSelection: false,
+    })
+  }, [])
 
   const navigate = useNavigate()
   const dispatch = useDispatch()
 
-  const isOpenAction = Boolean(anchorEl)
+  const isOpenAction = Boolean(uiState.anchorEl)
 
   const learnerUserId = useLearnerUserId()
 
-  const { data, isLoading, isError, error, refetch } = useGetEvidenceListQuery(
-    {
-      user_id: learnerUserId,
-      page: pagination.pageIndex + 1,
-      limit: pagination.pageSize,
-      meta: true,
-      search: searchQuery,
-    },
-    {
-      refetchOnMountOrArgChange: true,
-    }
-  )
 
-  const [deleteEvidence, { isLoading: isDeleteLoading }] =
-    useDeleteEvidenceMutation()
-
-  useEffect(() => {
-    const existingErrorId = 'existingErrorId'
-
-    if (isError && error) {
-      console.error('Error', error)
-
-      return
-    }
-
-    if (data) {
-      setEvidenceData(data.data)
-      if (data.meta_data) {
-        setTotalItems(data.meta_data.items || 0)
-        setTotalPages(data.meta_data.pages || 0)
-      }
-    }
-  }, [data, isError, error, isLoading])
-
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const openMenu = (e: React.MouseEvent<HTMLElement>, evidence: EvidenceData) => {
-    handleClick(e)
-    setSelectedRow(evidence)
-  }
-
-  // Helper function to format date
-  const formatDate = (dateString: string) => {
+  const { singleData } = useSelector(selectCourseManagement)
+  const { learner } = useSelector(selectLearnerManagement)
+  // Helper functions (moved before column definitions)
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     })
-  }
+  }, [])
 
-  // Helper function to get status color
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status.toLowerCase()) {
       case 'not started':
         return 'default'
@@ -221,26 +162,139 @@ const EvidenceLibrary: FC = () => {
       default:
         return 'default'
     }
-  }
+  }, [])
 
-  // Helper function to display value or dash
-  const displayValue = (value: string | null | undefined) => {
+  const displayValue = useCallback((value: string | null | undefined) => {
     if (value === null || value === undefined || value === 'null' || value === '' || value.trim() === '') {
       return '-'
     }
     return value
-  }
+  }, [])
 
-  // Helper function to truncate text
-  const truncateText = (text: string | null, maxLength: number = 50) => {
+  const truncateText = useCallback((text: string | null, maxLength: number = 50) => {
     if (!text || text === 'null' || text.trim() === '') return '-'
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text
-  }
+  }, [])
 
-  // Helper function to get unique courses from evidence data
-  const getUniqueCourses = () => {
+  const handleClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    setUIState(prev => ({ ...prev, anchorEl: event.currentTarget }))
+  }, [])
+
+  const openMenu = useCallback((e: React.MouseEvent<HTMLElement>, evidence: EvidenceData) => {
+    handleClick(e)
+    setUIState(prev => ({ ...prev, selectedRow: evidence }))
+  }, [handleClick])
+
+  // Column definitions and table setup moved to EvidenceTable component
+
+  // Debounce search query to avoid excessive API calls
+  const debouncedUpdateSearch = useDebounce((value: string) => {
+    setDebouncedSearchQuery(value)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 })) // Reset to first page on search
+  }, 300)
+
+  const { data, isLoading, isError, error, refetch } = useGetEvidenceListQuery(
+    {
+      user_id: learnerUserId,
+      page: pagination.pageIndex + 1,
+      limit: pagination.pageSize,
+      meta: true,
+      search: debouncedSearchQuery,
+      course_id: selectedCourseFilter?.course_id,
+    },
+    {
+      skip: !selectedCourseFilter?.course_id,
+      refetchOnMountOrArgChange: true,
+    }
+  )
+
+  const [deleteEvidence, { isLoading: isDeleteLoading }] =
+    useDeleteEvidenceMutation()
+
+  useEffect(() => {
+    if (isError && error) {
+      console.error('Error fetching evidence list:', error)
+      dispatch(
+        showMessage({
+          message: 'Failed to load evidence. Please refresh the page.',
+          variant: 'error',
+        })
+      )
+      return
+    }
+
+    if (data) {
+      setDataState({
+        evidenceData: data.data,
+        totalItems: data.meta_data?.items || 0,
+        totalPages: data.meta_data?.pages || 0,
+      })
+    }
+  }, [data, isError, error, isLoading, dispatch])
+
+  // Store unique courses from evidence data for filter dropdown
+  // We'll build this from the current data, and it will grow as user navigates
+  const [availableCourses, setAvailableCourses] = useState<Map<number, { course_id: number; course_name: string; course_code: string }>>(new Map())
+
+  // Update available courses when data changes
+  useEffect(() => {
+    if (data?.data) {
+      setAvailableCourses(prev => {
+        const newMap = new Map(prev)
+        let hasChanges = false
+        
+        data.data.forEach(evidence => {
+          if (evidence.course_id && !newMap.has(evidence.course_id.course_id)) {
+            newMap.set(evidence.course_id.course_id, {
+              course_id: evidence.course_id.course_id,
+              course_name: evidence.course_id.course_name,
+              course_code: evidence.course_id.course_code,
+            })
+            hasChanges = true
+          }
+        })
+        
+        // Only return new Map if we actually added courses (prevents unnecessary re-renders)
+        return hasChanges ? newMap : prev
+      })
+    }
+  }, [data?.data]) // Only depend on data.data, not the entire data object
+
+  // Memoized function to transform learner.course array to Autocomplete options format
+  const learnerCourses = useMemo(() => {
+    if (!learner?.course || !Array.isArray(learner.course)) {
+      return []
+    }
+    
+    return learner.course
+      .map((courseItem: any) => {
+        // Handle nested course structure
+        const course = courseItem.course || courseItem
+        if (course && course.course_id) {
+          return {
+            course_id: course.course_id,
+            course_name: course.course_name || '',
+            course_code: course.course_code || '',
+            units: course.units || courseItem.units || [],
+          }
+        }
+        return null
+      })
+      .filter((course: any) => course !== null)
+      .sort((a, b) => a.course_name.localeCompare(b.course_name))
+  }, [learner?.course])
+
+  // Memoized function to get unique courses for filter (sorted) - kept for backward compatibility
+  const getUniqueCourses = useMemo(() => {
+    return Array.from(availableCourses.values()).sort((a, b) => 
+      a.course_name.localeCompare(b.course_name)
+    )
+  }, [availableCourses])
+
+  // Memoized function to get unique courses for download dialog (from current page data)
+  const getUniqueCoursesForDownload = useMemo(() => {
     const courseMap = new Map()
-    evidenceData.forEach(evidence => {
+    dataState.evidenceData.forEach(evidence => {
       if (evidence.course_id) {
         courseMap.set(evidence.course_id.course_id, {
           course_id: evidence.course_id.course_id,
@@ -252,7 +306,7 @@ const EvidenceLibrary: FC = () => {
     })
     
     // Count files per course
-    evidenceData.forEach(evidence => {
+    dataState.evidenceData.forEach(evidence => {
       if (evidence.course_id && evidence.file) {
         const course = courseMap.get(evidence.course_id.course_id)
         if (course) {
@@ -262,73 +316,125 @@ const EvidenceLibrary: FC = () => {
     })
     
     return Array.from(courseMap.values())
-  }
+  }, [dataState.evidenceData])
 
-  // Helper function to get files from selected courses
-  const getFilesFromSelectedCourses = () => {
-    return evidenceData.filter(evidence => 
+  // Memoized function to get files from selected courses
+  // Fetch evidence for selected course in download dialog
+  const { data: selectedCourseEvidenceData, isLoading: isLoadingCourseEvidence } = useGetEvidenceListQuery(
+    {
+      user_id: learnerUserId,
+      page: 1,
+      limit: 1000, // Get all evidence for the course
+      meta: false,
+      search: '',
+      course_id: selectedCourseForDownload || '',
+    },
+    {
+      skip: !selectedCourseForDownload || !dialogs.fileSelection,
+      refetchOnMountOrArgChange: true,
+    }
+  )
+
+  const getFilesFromSelectedCourses = useMemo(() => {
+    // If a course is selected in download dialog, use that course's evidence
+    if (selectedCourseForDownload && selectedCourseEvidenceData?.data) {
+      return selectedCourseEvidenceData.data.filter((evidence: EvidenceData) => 
+        evidence.file && evidence.course_id?.course_id === selectedCourseForDownload
+      )
+    }
+    // Otherwise, use the old logic for multiple course selection
+    return dataState.evidenceData.filter(evidence => 
       evidence.file && 
       evidence.course_id && 
-      selectedCourses.has(evidence.course_id.course_id)
+      selectionState.selectedCourses.has(evidence.course_id.course_id)
     )
-  }
+  }, [dataState.evidenceData, selectionState.selectedCourses, selectedCourseForDownload, selectedCourseEvidenceData])
 
   // Handle course selection
-  const handleCourseSelection = (courseId: number) => {
-    const newSelectedCourses = new Set(selectedCourses)
-    if (newSelectedCourses.has(courseId)) {
-      newSelectedCourses.delete(courseId)
-    } else {
-      newSelectedCourses.add(courseId)
-    }
-    setSelectedCourses(newSelectedCourses)
-  }
+  const handleCourseSelection = useCallback((courseId: number) => {
+    dispatchSelection({ type: 'TOGGLE_COURSE', courseId })
+  }, [])
 
-  // Handle select all courses
-  const handleSelectAll = () => {
-    if (selectAll) {
-      setSelectedCourses(new Set())
-      setSelectAll(false)
+      // Handle select all courses
+  const handleSelectAll = useCallback(() => {
+    if (selectionState.selectAll) {
+      dispatchSelection({ type: 'DESELECT_ALL_COURSES' })
     } else {
-      const allCourseIds = getUniqueCourses().map(course => course.course_id)
-      setSelectedCourses(new Set(allCourseIds))
-      setSelectAll(true)
+      const allCourseIds = getUniqueCoursesForDownload.map(course => course.course_id)
+      dispatchSelection({ type: 'SELECT_ALL_COURSES', courseIds: allCourseIds })
     }
-  }
+  }, [selectionState.selectAll, getUniqueCoursesForDownload])
+
+  // Sync selectAll state with actual selection
+  useEffect(() => {
+    if (getUniqueCoursesForDownload.length > 0) {
+      const courseIds = getUniqueCoursesForDownload.map(course => course.course_id)
+      const allSelected = courseIds.length > 0 && 
+        courseIds.every(id => selectionState.selectedCourses.has(id))
+      
+      // Only dispatch if state actually needs to change
+      if (allSelected !== selectionState.selectAll) {
+        dispatchSelection({
+          type: 'SYNC_SELECT_ALL_COURSES',
+          courseIds,
+          selectedCourses: selectionState.selectedCourses,
+        })
+      }
+    } else {
+      if (selectionState.selectAll) {
+        dispatchSelection({ type: 'DESELECT_ALL_COURSES' })
+      }
+    }
+  }, [selectionState.selectedCourses, selectionState.selectAll, getUniqueCoursesForDownload])
 
   // Handle file selection
-  const handleFileSelection = (assignmentId: number) => {
-    const newSelectedFiles = new Set(selectedFiles)
-    if (newSelectedFiles.has(assignmentId)) {
-      newSelectedFiles.delete(assignmentId)
-    } else {
-      newSelectedFiles.add(assignmentId)
-    }
-    setSelectedFiles(newSelectedFiles)
-  }
+  const handleFileSelection = useCallback((assignmentId: number) => {
+    dispatchSelection({ type: 'TOGGLE_FILE', fileId: assignmentId })
+  }, [])
 
   // Handle select all files
-  const handleSelectAllFiles = () => {
-    if (selectAllFiles) {
-      setSelectedFiles(new Set())
-      setSelectAllFiles(false)
+  const handleSelectAllFiles = useCallback(() => {
+    if (selectionState.selectAllFiles) {
+      dispatchSelection({ type: 'DESELECT_ALL_FILES' })
     } else {
-      const allFileIds = getFilesFromSelectedCourses().map(file => file.assignment_id)
-      setSelectedFiles(new Set(allFileIds))
-      setSelectAllFiles(true)
+      const allFileIds = getFilesFromSelectedCourses.map(file => file.assignment_id)
+      dispatchSelection({ type: 'SELECT_ALL_FILES', fileIds: allFileIds })
     }
-  }
+  }, [selectionState.selectAllFiles, getFilesFromSelectedCourses])
+
+  // Sync selectAllFiles state with actual selection
+  useEffect(() => {
+    if (getFilesFromSelectedCourses.length > 0) {
+      const fileIds = getFilesFromSelectedCourses.map(file => file.assignment_id)
+      const allSelected = fileIds.length > 0 && 
+        fileIds.every(id => selectionState.selectedFiles.has(id))
+      
+      // Only dispatch if state actually needs to change
+      if (allSelected !== selectionState.selectAllFiles) {
+        dispatchSelection({
+          type: 'SYNC_SELECT_ALL_FILES',
+          fileIds,
+          selectedFiles: selectionState.selectedFiles,
+        })
+      }
+    } else {
+      if (selectionState.selectAllFiles) {
+        dispatchSelection({ type: 'DESELECT_ALL_FILES' })
+      }
+    }
+  }, [selectionState.selectedFiles, selectionState.selectAllFiles, getFilesFromSelectedCourses])
 
   // Reset course selection when dialog opens
-  const handleOpenCourseSelection = () => {
-    setSelectedCourses(new Set())
-    setSelectAll(false)
-    setIsOpenCourseSelection(true)
-  }
+  const handleOpenCourseSelection = useCallback(() => {
+    dispatchSelection({ type: 'RESET_COURSES' })
+    dispatchSelection({ type: 'RESET_FILES' })
+    setSelectedCourseForDownload(null)
+    openDialog('fileSelection')
+  }, [openDialog])
 
   // Handle proceeding to file selection
-  const handleProceedToFileSelection = () => {
-    if (selectedCourses.size === 0) {
+  const handleProceedToFileSelection = useCallback(() => {
+    if (selectionState.selectedCourses.size === 0) {
       dispatch(
         showMessage({
           message: 'Please select at least one course to proceed',
@@ -339,45 +445,22 @@ const EvidenceLibrary: FC = () => {
     }
 
     // Get all files from selected courses and select them by default
-    const filesFromSelectedCourses = getFilesFromSelectedCourses()
-    const allFileIds = filesFromSelectedCourses.map(file => file.assignment_id)
-    setSelectedFiles(new Set(allFileIds))
-    setSelectAllFiles(true)
+    const allFileIds = getFilesFromSelectedCourses.map(file => file.assignment_id)
+    dispatchSelection({ type: 'SELECT_ALL_FILES', fileIds: allFileIds })
     
-    setIsOpenCourseSelection(false)
-    setIsOpenFileSelection(true)
-  }
+    closeDialog('courseSelection')
+    openDialog('fileSelection')
+  }, [selectionState.selectedCourses.size, getFilesFromSelectedCourses, dispatch, closeDialog, openDialog])
 
   // Reset file selection when dialog opens
-  const handleOpenFileSelection = () => {
-    const filesFromSelectedCourses = getFilesFromSelectedCourses()
-    const allFileIds = filesFromSelectedCourses.map(file => file.assignment_id)
-    setSelectedFiles(new Set(allFileIds))
-    setSelectAllFiles(true)
-    setIsOpenFileSelection(true)
-  }
+  const handleOpenFileSelection = useCallback(() => {
+    const allFileIds = getFilesFromSelectedCourses.map(file => file.assignment_id)
+    dispatchSelection({ type: 'SELECT_ALL_FILES', fileIds: allFileIds })
+    openDialog('fileSelection')
+  }, [getFilesFromSelectedCourses, openDialog])
 
-  // Helper function to get signed URL from backend
-  const getSignedUrl = async (fileKey: string): Promise<string> => {
-    try {
-      const response = await fetch(`/api/signed-url?fileKey=${encodeURIComponent(fileKey)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error(`Failed to get signed URL: ${response.statusText}`)
-      }
-      
-      const data = await response.json()
-      return data.signedUrl
-    } catch (error) {
-      console.error('Error getting signed URL:', error)
-      throw error
-    }
-  }
+  // Note: getSignedUrl removed as it's currently unused.
+  // If needed in the future, implement a backend endpoint that provides signed URLs for S3 files.
 
   // Helper function to download file with CORS handling
   const downloadFile = async (url: string, filename: string): Promise<Blob> => {
@@ -597,8 +680,8 @@ const EvidenceLibrary: FC = () => {
   }
 
   // Open course selection dialog for download all
-  const handleDownloadAll = () => {
-    if (!evidenceData || evidenceData.length === 0) {
+  const handleDownloadAll = useCallback(() => {
+    if (!dataState.evidenceData || dataState.evidenceData.length === 0) {
       dispatch(
         showMessage({
           message: 'No evidence files to download',
@@ -608,7 +691,7 @@ const EvidenceLibrary: FC = () => {
       return
     }
 
-    const evidenceWithFiles = evidenceData.filter(evidence => evidence.file)
+    const evidenceWithFiles = dataState.evidenceData.filter(evidence => evidence.file)
     
     if (evidenceWithFiles.length === 0) {
       dispatch(
@@ -621,11 +704,11 @@ const EvidenceLibrary: FC = () => {
     }
 
     handleOpenCourseSelection()
-  }
+  }, [dataState.evidenceData, dispatch, handleOpenCourseSelection])
 
   // Download selected files as ZIP
-  const handleDownloadSelectedFiles = async () => {
-    if (selectedFiles.size === 0) {
+  const handleDownloadSelectedFiles = useCallback(async () => {
+    if (selectionState.selectedFiles.size === 0) {
       dispatch(
         showMessage({
           message: 'Please select at least one file to download',
@@ -635,14 +718,14 @@ const EvidenceLibrary: FC = () => {
       return
     }
 
-    setIsDownloading(true)
-    setIsOpenFileSelection(false)
+    setUIState(prev => ({ ...prev, isDownloading: true }))
+    closeDialog('fileSelection')
     
     try {
       // Filter evidence with selected files
-      const evidenceWithFiles = evidenceData.filter(evidence => 
+      const evidenceWithFiles = dataState.evidenceData.filter(evidence => 
         evidence.file && 
-        selectedFiles.has(evidence.assignment_id)
+        selectionState.selectedFiles.has(evidence.assignment_id)
       )
       
       if (evidenceWithFiles.length === 0) {
@@ -798,8 +881,8 @@ const EvidenceLibrary: FC = () => {
       
       // Create a more descriptive filename
       const timestamp = new Date().toISOString().split('T')[0]
-      const selectedCourseNames = getUniqueCourses()
-        .filter(course => selectedCourses.has(course.course_id))
+      const selectedCourseNames = getUniqueCoursesForDownload
+        .filter(course => selectionState.selectedCourses.has(course.course_id))
         .map(course => course.course_name.replace(/\s+/g, '_'))
         .join('_')
       
@@ -837,9 +920,9 @@ const EvidenceLibrary: FC = () => {
         })
       )
     } finally {
-      setIsDownloading(false)
+      setUIState(prev => ({ ...prev, isDownloading: false }))
     }
-  }
+  }, [selectionState.selectedFiles, selectionState.selectedCourses, dataState.evidenceData, dispatch, getUniqueCourses, closeDialog])
 
   // Handle single file download
   const handleSingleFileDownload = async (evidence: any) => {
@@ -889,24 +972,24 @@ const EvidenceLibrary: FC = () => {
     }
   }
 
-  const handleClose = () => {
-    setIsOpenFileUpload(false)
-    setAnchorEl(null)
-  }
+  const handleClose = useCallback(() => {
+    closeDialog('fileUpload')
+    setUIState(prev => ({ ...prev, anchorEl: null }))
+  }, [closeDialog])
 
-  const handleReuploadClose = () => {
-    setIsOpenReupload(false)
-  }
+  const handleReuploadClose = useCallback(() => {
+    closeDialog('reupload')
+  }, [closeDialog])
 
-  const handleNavigate = () => {
-    if (selectedRow) {
-      navigate(`/evidenceLibrary/${selectedRow.assignment_id}`, {
+  const handleNavigate = useCallback(() => {
+    if (uiState.selectedRow) {
+      navigate(`/evidenceLibrary/${uiState.selectedRow.assignment_id}`, {
         state: {
           isEdit: true,
         },
       })
     }
-  }
+  }, [uiState.selectedRow, navigate])
 
   const handlePageChange = (event: unknown, newPage: number) => {
     setPagination((prev) => ({ ...prev, pageIndex: newPage }))
@@ -921,21 +1004,54 @@ const EvidenceLibrary: FC = () => {
   }
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value)
-    setPagination((prev) => ({ ...prev, pageIndex: 0 })) // Reset to first page on search
+    const value = event.target.value
+    setSearchQuery(value)
+    debouncedUpdateSearch(value)
   }
 
   const handleClearSearch = () => {
     setSearchQuery('')
+    setDebouncedSearchQuery('')
     setPagination((prev) => ({ ...prev, pageIndex: 0 }))
   }
 
-  const handleDelete = async () => {
-    if (!selectedRow) return
+  const handleCourseFilterChange = useCallback((event: any, newValue: { course_id: number; course_name: string; course_code: string; units?: any[] } | null) => {
+    setSelectedCourseFilter(newValue)
+    // Track if user manually cleared the filter
+    if (newValue === null) {
+      setHasUserClearedFilter(true)
+    }
+    setPagination((prev) => ({ ...prev, pageIndex: 0 })) // Reset to first page on filter change
+  }, [])
+
+  // Set default selected course from singleData when available (only once, not after user clears it)
+  useEffect(() => {
+    if (
+      singleData?.course?.course_id && 
+      !selectedCourseFilter && 
+      !hasUserClearedFilter && 
+      learnerCourses.length > 0
+    ) {
+      const defaultCourse = learnerCourses.find(
+        (course) => course.course_id === singleData.course.course_id
+      )
+      if (defaultCourse) {
+        // Include units from singleData if available
+        const courseWithUnits = {
+          ...defaultCourse,
+          units: singleData.course.units || defaultCourse.units || [],
+        }
+        setSelectedCourseFilter(courseWithUnits)
+      }
+    }
+  }, [singleData?.course?.course_id, singleData?.course?.units, learnerCourses, selectedCourseFilter, hasUserClearedFilter])
+
+  const handleDelete = useCallback(async () => {
+    if (!uiState.selectedRow) return
     
     try {
-      await deleteEvidence({ id: selectedRow.assignment_id }).unwrap()
-      setIsOpenDeleteBox(false)
+      await deleteEvidence({ id: uiState.selectedRow.assignment_id }).unwrap()
+      closeDialog('deleteBox')
       refetch()
       dispatch(
         showMessage({
@@ -951,7 +1067,7 @@ const EvidenceLibrary: FC = () => {
         })
       )
     }
-  }
+  }, [uiState.selectedRow, deleteEvidence, closeDialog, refetch, dispatch])
 
   return (
     <Container sx={{ mt: 8, pb: 4 }}>
@@ -973,8 +1089,8 @@ const EvidenceLibrary: FC = () => {
             color='secondary'
             size='large'
             onClick={handleDownloadAll}
-            disabled={isDownloading || !evidenceData || evidenceData.length === 0}
-            startIcon={isDownloading ? <ArchiveIcon /> : <DownloadIcon />}
+            disabled={uiState.isDownloading || !dataState.evidenceData || dataState.evidenceData.length === 0}
+            startIcon={uiState.isDownloading ? <ArchiveIcon /> : <DownloadIcon />}
             sx={{
               borderRadius: 2,
               px: 3,
@@ -992,13 +1108,13 @@ const EvidenceLibrary: FC = () => {
               }
             }}
           >
-            {isDownloading ? 'Downloading...' : 'Download Evidence Files'}
+            {uiState.isDownloading ? 'Downloading...' : 'Download Evidence Files'}
           </Button>
           <Button
             variant='contained'
             color='primary'
             size='large'
-            onClick={() => setIsOpenFileUpload(true)}
+            onClick={() => openDialog('fileUpload')}
             startIcon={<CloudUploadIcon />}
             sx={{
               borderRadius: 2,
@@ -1017,10 +1133,23 @@ const EvidenceLibrary: FC = () => {
         </Box>
       </Box>
 
-      {/* Search Bar */}
-      <Box sx={{ mb: 3 }}>
+      {/* Search Bar and Course Filter */}
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField
-          fullWidth
+          sx={{
+            flex: 1,
+            minWidth: 250,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.background.paper, 1),
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.02),
+              },
+              '&.Mui-focused': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.02),
+              },
+            },
+          }}
           variant="outlined"
           placeholder="Search by title"
           value={searchQuery}
@@ -1048,27 +1177,68 @@ const EvidenceLibrary: FC = () => {
               </InputAdornment>
             ),
           }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-              backgroundColor: alpha(theme.palette.background.paper, 1),
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.02),
-              },
-              '&.Mui-focused': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.02),
-              },
-            },
-          }}
+        />
+        <Autocomplete
+          sx={{ flex: 1, minWidth: 250 }}
+          options={learnerCourses}
+          getOptionLabel={(option) => option.course_name || ''}
+          value={selectedCourseFilter}
+          onChange={handleCourseFilterChange}
+          disableClearable
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Filter by course"
+              variant="outlined"
+              InputProps={{
+                ...params.InputProps,
+                startAdornment: (
+                  <>
+                    <InputAdornment position="start">
+                      <SchoolIcon sx={{ color: theme.palette.text.secondary }} />
+                    </InputAdornment>
+                    {params.InputProps.startAdornment}
+                  </>
+                ),
+                endAdornment: params.InputProps.endAdornment,
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  backgroundColor: alpha(theme.palette.background.paper, 1),
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+                  },
+                },
+              }}
+            />
+          )}
+          renderOption={(props, option) => (
+            <Box component="li" {...props} key={option.course_id}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {option.course_name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Code: {option.course_code}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+          noOptionsText="No courses found"
+          isOptionEqualToValue={(option, value) => option.course_id === value.course_id}
         />
         {searchQuery && (
           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              {isLoading ? 'Searching...' : `Found ${totalItems} result${totalItems !== 1 ? 's' : ''}`}
+              {isLoading ? 'Searching...' : `Found ${dataState.totalItems} result${dataState.totalItems !== 1 ? 's' : ''}`}
             </Typography>
-            {!isLoading && totalItems > 0 && (
+            {!isLoading && dataState.totalItems > 0 && (
               <Chip 
-                label={`Page ${pagination.pageIndex + 1} of ${totalPages}`}
+                label={`Page ${pagination.pageIndex + 1} of ${dataState.totalPages}`}
                 size="small"
                 variant="outlined"
                 color="primary"
@@ -1079,363 +1249,32 @@ const EvidenceLibrary: FC = () => {
         )}
       </Box>
 
-      <Card 
-        sx={{ 
-          boxShadow: theme.shadows[1],
-          borderRadius: 2,
-          overflow: 'hidden',
-          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
-        }}
-      >
-        <TableContainer 
-          sx={{ 
-            maxHeight: 600,
-            '&::-webkit-scrollbar': {
-              width: '8px',
-              height: '8px',
-            },
-            '&::-webkit-scrollbar-track': {
-              background: alpha(theme.palette.grey[300], 0.1),
-              borderRadius: '4px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              background: alpha(theme.palette.grey[400], 0.5),
-              borderRadius: '4px',
-              '&:hover': {
-                background: alpha(theme.palette.grey[400], 0.7),
-              },
-            },
-          }}
-        >
-          {isLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-              <FuseLoading />
-            </Box>
-          ) : evidenceData?.length > 0 ? (
-            <Table
-              stickyHeader
-              sx={{ 
-                minWidth: 1200,
-                '& .MuiTableCell-head': {
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 1,
-                  backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                },
-                '& .MuiTableCell-body': {
-                  backgroundColor: 'transparent',
-                }
-              }}
-              size='medium'
-              aria-label='evidence library table'
-            >
-              <TableHead>
-                <TableRow 
-                  sx={{ 
-                    backgroundColor: alpha(theme.palette.primary.light, 1),
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 2
-                  }}
-                >
-                  {columns.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      align={column.align}
-                      sx={{
-                        minWidth: column.minWidth,
-                        width: column.minWidth,
-                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                        borderBottom: `2px solid ${theme.palette.divider}`,
-                        py: 2,
-                        position: 'sticky',
-                        top: 0,
-                        zIndex: 2
-                      }}
-                    >
-                      {column.label}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {evidenceData.map((row, index) => (
-                  <TableRow 
-                    key={row.assignment_id || index}
-                    hover 
-                    sx={{ 
-                      '&:nth-of-type(odd)': {
-                        backgroundColor: alpha(theme.palette.action.hover, 0.02),
-                      },
-                      '&:hover': {
-                        backgroundColor: alpha(theme.palette.primary.main, 0.04),
-                      }
-                    }}
-                  >
-                    {columns.map((column) => {
-                      const value = row[column.id as keyof EvidenceData]
-                      return (
-                        <TableCell 
-                          key={column.id} 
-                          align={column.align}
-                          sx={{ 
-                            py: 2,
-                            minWidth: column.minWidth,
-                            width: column.minWidth,
-                            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                            backgroundColor: 'transparent'
-                          }}
-                        >
-                          {column.id === 'action' ? (
-                            <Tooltip title="More actions">
-                              <IconButton
-                                size='small'
-                                onClick={(e) => openMenu(e, row)}
-                                sx={{ 
-                                  color: theme.palette.text.secondary,
-                                  '&:hover': {
-                                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                                    color: theme.palette.primary.main
-                                  }
-                                }}
-                              >
-                                <MoreHorizIcon fontSize='small' />
-                              </IconButton>
-                            </Tooltip>
-                          ) : column.id === 'file' ? (
-                            row.file ? (
-                              <Tooltip title={row.file.name}>
-                                <MuiLink
-                                  href={row.file.url}
-                                  target='_blank'
-                                  rel='noopener'
-                                  sx={{ textDecoration: 'none' }}
-                                >
-                                  <Avatar
-                                    sx={{
-                                      backgroundColor: theme.palette.primary.main,
-                                      width: 40,
-                                      height: 40,
-                                      '&:hover': {
-                                        backgroundColor: theme.palette.primary.dark,
-                                        transform: 'scale(1.05)',
-                                        transition: 'all 0.2s ease-in-out'
-                                      }
-                                    }}
-                                  >
-                                    <DescriptionIcon sx={{ color: 'white' }} />
-                                  </Avatar>
-                                </MuiLink>
-                              </Tooltip>
-                            ) : (
-                              <Typography variant='body2' color='text.secondary'>
-                                -
-                              </Typography>
-                            )
-                          ) : column.id === 'status' ? (
-                            <Chip
-                              label={String(value || 'Unknown')}
-                              color={getStatusColor(String(value || ''))}
-                              size='small'
-                              variant='outlined'
-                              sx={{ fontWeight: 500 }}
-                            />
-                          ) : column.id === 'created_at' ? (
-                            <Typography variant='body2' color='text.secondary'>
-                              {value ? formatDate(String(value)) : '-'}
-                            </Typography>
-                          ) : column.id === 'title' || column.id === 'description' ? (
-                            <Tooltip title={String(value || '')}>
-                              <Typography 
-                                variant='body2' 
-                                sx={{ 
-                                  maxWidth: 200,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }}
-                              >
-                                {truncateText(String(value), 30)}
-                              </Typography>
-                            </Tooltip>
-                          ) : (
-                            <Typography variant='body2' color='text.secondary'>
-                              {displayValue(String(value))}
-                            </Typography>
-                          )}
-                        </TableCell>
-                      )
-                    })}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                py: 8,
-                px: 4
-              }}
-            >
-              <DataNotFound width='25%' />
-              <Typography variant='h5' sx={{ mt: 3, mb: 1, fontWeight: 500 }}>
-                {searchQuery ? 'No Results Found' : 'No Evidence Found'}
-              </Typography>
-              <Typography 
-                variant='body2' 
-                color='text.secondary'
-                sx={{ textAlign: 'center', maxWidth: 400 }}
-              >
-                {searchQuery 
-                  ? `No evidence matches your search "${searchQuery}". Try adjusting your search terms or clear the search to see all evidence.`
-                  : "You haven't uploaded any evidence yet. Click \"Add Evidence\" to get started with your portfolio."
-                }
-              </Typography>
-              {searchQuery && (
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  onClick={handleClearSearch}
-                  startIcon={<ClearIcon />}
-                  sx={{
-                    mt: 3,
-                    borderRadius: 2,
-                    px: 3,
-                    py: 1,
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderWidth: 2,
-                    '&:hover': {
-                      borderWidth: 2,
-                    }
-                  }}
-                >
-                  Clear Search
-                </Button>
-              )}
-            </Box>
-          )}
-        </TableContainer>
-        
-        {/* Pagination Controls */}
-        {evidenceData && evidenceData.length > 0 && (
-          <TablePagination
-            component="div"
-            count={totalItems}
-            page={pagination.pageIndex}
-            onPageChange={handlePageChange}
-            rowsPerPage={pagination.pageSize}
-            onRowsPerPageChange={handlePageSizeChange}
-            rowsPerPageOptions={[5, 10, 25, 50, 100]}
-            sx={{
-              borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              backgroundColor: alpha(theme.palette.grey[50], 0.3),
-              '& .MuiTablePagination-toolbar': {
-                px: 3,
-                py: 2,
-              },
-              '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-                fontWeight: 500,
-                color: theme.palette.text.secondary,
-              },
-              '& .MuiTablePagination-select': {
-                borderRadius: 1,
-                px: 1,
-                '&:focus': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                }
-              },
-              '& .MuiTablePagination-actions': {
-                '& .MuiIconButton-root': {
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                  }
-                }
-              }
-            }}
-            labelRowsPerPage="Items per page:"
-            labelDisplayedRows={({ from, to, count }) => 
-              `${from}-${to} of ${count !== -1 ? count : `more than ${to}`}`
-            }
-          />
-        )}
-      </Card>
-      <Menu
-        id='evidence-actions-menu'
-        anchorEl={anchorEl}
+      <EvidenceTable
+        data={dataState.evidenceData}
+        isLoading={isLoading}
+        searchQuery={debouncedSearchQuery}
+        onClearSearch={handleClearSearch}
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        totalItems={dataState.totalItems}
+        totalPages={dataState.totalPages}
+        selectedCourseFilter={selectedCourseFilter}
+        onOpenMenu={openMenu}
+      />
+      <ActionMenu
+        anchorEl={uiState.anchorEl}
         open={isOpenAction}
         onClose={handleClose}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: theme.shadows[8],
-            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            minWidth: 160
-          }
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem
-          onClick={() => {
-            handleClose()
-            setIsOpenReupload(true)
-          }}
-          sx={{
-            py: 1.5,
-            px: 2,
-            '&:hover': {
-              backgroundColor: alpha(theme.palette.primary.main, 0.08)
-            }
-          }}
-        >
-          <CloudUploadIcon sx={{ mr: 1.5, fontSize: 20 }} />
-          Reupload
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            handleClose()
-            handleNavigate()
-          }}
-          sx={{
-            py: 1.5,
-            px: 2,
-            '&:hover': {
-              backgroundColor: alpha(theme.palette.info.main, 0.08)
-            }
-          }}
-        >
-          <VisibilityIcon sx={{ mr: 1.5, fontSize: 20 }} />
-          View
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            handleClose()
-            setIsOpenDeleteBox(true)
-          }}
-          sx={{
-            py: 1.5,
-            px: 2,
-            color: theme.palette.error.main,
-            '&:hover': {
-              backgroundColor: alpha(theme.palette.error.main, 0.08)
-            }
-          }}
-        >
-          <DeleteIcon sx={{ mr: 1.5, fontSize: 20 }} />
-          Delete
-        </MenuItem>
-      </Menu>
+        selectedRow={uiState.selectedRow}
+        onReupload={() => openDialog('reupload')}
+        onView={handleNavigate}
+        onDownload={() => handleSingleFileDownload(uiState.selectedRow!)}
+        onDelete={() => openDialog('deleteBox')}
+      />
       <AlertDialog
-        open={Boolean(isOpenDeleteBox)}
-        close={() => setIsOpenDeleteBox(false)}
+        open={dialogs.deleteBox}
+        close={() => closeDialog('deleteBox')}
         title='Delete Evidence?'
         content='Deleting this evidence will also remove all associated data and relationships. Proceed with deletion?'
         actionButton={
@@ -1448,14 +1287,14 @@ const EvidenceLibrary: FC = () => {
         cancelButton={
           <SecondaryButtonOutlined
             className='px-24'
-            onClick={() => setIsOpenDeleteBox(false)}
+            onClick={() => closeDialog('deleteBox')}
             name='Cancel'
           />
         }
       />
       <Dialog
-        open={isOpenFileUpload}
-        onClose={() => setIsOpenFileUpload(false)}
+        open={dialogs.fileUpload}
+        onClose={() => closeDialog('fileUpload')}
         maxWidth="xl"
         fullWidth
         sx={{
@@ -1469,11 +1308,14 @@ const EvidenceLibrary: FC = () => {
           },
         }}
       >
-        <EvidenceUploadWithCreation handleClose={handleClose} />
+        <EvidenceUploadWithCreation 
+          handleClose={handleClose} 
+          selectedCourseFilter={selectedCourseFilter}
+        />
       </Dialog>
       <Dialog
-        open={isOpenReupload}
-        onClose={() => setIsOpenReupload(false)}
+        open={dialogs.reupload}
+        onClose={() => closeDialog('reupload')}
         maxWidth="md"
         fullWidth
         sx={{
@@ -1487,14 +1329,14 @@ const EvidenceLibrary: FC = () => {
       >
         <ReuploadEvidenceLibrary
           handleClose={handleReuploadClose}
-          id={selectedRow?.assignment_id}
+          id={uiState.selectedRow?.assignment_id}
         />
       </Dialog>
 
       {/* Course Selection Dialog */}
       <Dialog
-        open={isOpenCourseSelection}
-        onClose={() => setIsOpenCourseSelection(false)}
+        open={dialogs.courseSelection}
+        onClose={() => closeDialog('courseSelection')}
         maxWidth="sm"
         fullWidth
         sx={{
@@ -1532,7 +1374,7 @@ const EvidenceLibrary: FC = () => {
             <FormControlLabel
               control={
                 <Checkbox
-                  checked={selectAll}
+                  checked={selectionState.selectAll}
                   onChange={handleSelectAll}
                   icon={<CheckBoxOutlineBlankIcon />}
                   checkedIcon={<CheckBoxIcon />}
@@ -1554,7 +1396,7 @@ const EvidenceLibrary: FC = () => {
           </Box>
 
           <List sx={{ p: 0, maxHeight: 400, overflow: 'auto' }}>
-            {getUniqueCourses().map((course, index) => (
+            {getUniqueCoursesForDownload.map((course, index) => (
               <ListItem key={course.course_id} disablePadding>
                 <ListItemButton
                   onClick={() => handleCourseSelection(course.course_id)}
@@ -1564,14 +1406,14 @@ const EvidenceLibrary: FC = () => {
                     '&:hover': {
                       backgroundColor: alpha(theme.palette.primary.main, 0.04),
                     },
-                    backgroundColor: selectedCourses.has(course.course_id) 
+                    backgroundColor: selectionState.selectedCourses.has(course.course_id) 
                       ? alpha(theme.palette.primary.main, 0.08) 
                       : 'transparent'
                   }}
                 >
                   <ListItemIcon sx={{ minWidth: 40 }}>
                     <Checkbox
-                      checked={selectedCourses.has(course.course_id)}
+                      checked={selectionState.selectedCourses.has(course.course_id)}
                       icon={<CheckBoxOutlineBlankIcon />}
                       checkedIcon={<CheckBoxIcon />}
                       sx={{
@@ -1617,7 +1459,7 @@ const EvidenceLibrary: FC = () => {
           }}
         >
           <Button
-            onClick={() => setIsOpenCourseSelection(false)}
+            onClick={() => closeDialog('courseSelection')}
             variant="outlined"
             sx={{
               borderRadius: 2,
@@ -1636,7 +1478,7 @@ const EvidenceLibrary: FC = () => {
           <Button
             onClick={handleProceedToFileSelection}
             variant="contained"
-            disabled={selectedCourses.size === 0}
+            disabled={selectionState.selectedCourses.size === 0}
             startIcon={<DownloadIcon />}
             sx={{
               borderRadius: 2,
@@ -1654,205 +1496,33 @@ const EvidenceLibrary: FC = () => {
               }
             }}
           >
-            Next ({selectedCourses.size} course{selectedCourses.size !== 1 ? 's' : ''})
+            Next ({selectionState.selectedCourses.size} course{selectionState.selectedCourses.size !== 1 ? 's' : ''})
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* File Selection Dialog */}
-      <Dialog
-        open={isOpenFileSelection}
-        onClose={() => setIsOpenFileSelection(false)}
-        maxWidth="md"
-        fullWidth
-        sx={{
-          '.MuiDialog-paper': {
-            borderRadius: 3,
-            boxShadow: theme.shadows[24],
-            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
-          },
+      {/* Download Dialog */}
+      <DownloadDialog
+        open={dialogs.fileSelection}
+        onClose={() => {
+          closeDialog('fileSelection')
+          setSelectedCourseForDownload(null)
+          dispatchSelection({ type: 'RESET_FILES' })
         }}
-      >
-        <DialogTitle
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            py: 3,
-            px: 3,
-            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            backgroundColor: alpha(theme.palette.primary.main, 0.02)
-          }}
-        >
-          <DescriptionIcon sx={{ color: theme.palette.primary.main, fontSize: 28 }} />
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-              Select Files to Download
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Choose which files you want to download from the selected courses
-            </Typography>
-          </Box>
-        </DialogTitle>
-
-        <DialogContent sx={{ p: 0 }}>
-          <Box sx={{ p: 2, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={selectAllFiles}
-                  onChange={handleSelectAllFiles}
-                  icon={<CheckBoxOutlineBlankIcon />}
-                  checkedIcon={<CheckBoxIcon />}
-                  sx={{
-                    color: theme.palette.primary.main,
-                    '&.Mui-checked': {
-                      color: theme.palette.primary.main,
-                    },
-                  }}
-                />
-              }
-              label={
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Select All Files
-                </Typography>
-              }
-              sx={{ m: 0 }}
-            />
-          </Box>
-
-          <List sx={{ p: 0, maxHeight: 400, overflow: 'auto' }}>
-            {getFilesFromSelectedCourses().map((evidence, index) => (
-              <ListItem key={evidence.assignment_id} disablePadding>
-                <ListItemButton
-                  onClick={() => handleFileSelection(evidence.assignment_id)}
-                  sx={{
-                    py: 2,
-                    px: 3,
-                    '&:hover': {
-                      backgroundColor: alpha(theme.palette.primary.main, 0.04),
-                    },
-                    backgroundColor: selectedFiles.has(evidence.assignment_id) 
-                      ? alpha(theme.palette.primary.main, 0.08) 
-                      : 'transparent'
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Checkbox
-                      checked={selectedFiles.has(evidence.assignment_id)}
-                      icon={<CheckBoxOutlineBlankIcon />}
-                      checkedIcon={<CheckBoxIcon />}
-                      sx={{
-                        color: theme.palette.primary.main,
-                        '&.Mui-checked': {
-                          color: theme.palette.primary.main,
-                        },
-                      }}
-                    />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                        {evidence.title || `Evidence ${evidence.assignment_id}`}
-                      </Typography>
-                    }
-                    secondary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          {evidence.file?.name || 'No file name'}
-                        </Typography>
-                        <Chip
-                          label={evidence.course_id?.course_name || 'Unknown Course'}
-                          size="small"
-                          color="secondary"
-                          variant="outlined"
-                          sx={{ fontSize: '0.75rem', height: 20 }}
-                        />
-                        <Chip
-                          label={evidence.status || 'Unknown'}
-                          size="small"
-                          color={getStatusColor(evidence.status || '')}
-                          variant="outlined"
-                          sx={{ fontSize: '0.75rem', height: 20 }}
-                        />
-                      </Box>
-                    }
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </DialogContent>
-
-        <DialogActions
-          sx={{
-            p: 3,
-            borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            backgroundColor: alpha(theme.palette.grey[50], 0.5)
-          }}
-        >
-          <Button
-            onClick={() => {
-              setIsOpenFileSelection(false)
-              setIsOpenCourseSelection(true)
-            }}
-            variant="outlined"
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              textTransform: 'none',
-              fontWeight: 600,
-              borderWidth: 2,
-              '&:hover': {
-                borderWidth: 2,
-              }
-            }}
-          >
-            Back
-          </Button>
-          <Button
-            onClick={() => setIsOpenFileSelection(false)}
-            variant="outlined"
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              textTransform: 'none',
-              fontWeight: 600,
-              borderWidth: 2,
-              '&:hover': {
-                borderWidth: 2,
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDownloadSelectedFiles}
-            variant="contained"
-            disabled={selectedFiles.size === 0 || isDownloading}
-            startIcon={isDownloading ? <ArchiveIcon /> : <DownloadIcon />}
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              textTransform: 'none',
-              fontWeight: 600,
-              boxShadow: theme.shadows[2],
-              '&:hover': {
-                boxShadow: theme.shadows[4],
-              },
-              '&:disabled': {
-                backgroundColor: alpha(theme.palette.action.disabled, 0.3),
-                color: alpha(theme.palette.action.disabled, 0.5),
-              }
-            }}
-          >
-            {isDownloading ? 'Downloading...' : `Download (${selectedFiles.size} file${selectedFiles.size !== 1 ? 's' : ''})`}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        learnerCourses={learnerCourses}
+        selectedCourseForDownload={selectedCourseForDownload}
+        onCourseSelect={(courseId) => {
+          setSelectedCourseForDownload(courseId)
+          dispatchSelection({ type: 'RESET_FILES' })
+        }}
+        evidenceFiles={getFilesFromSelectedCourses}
+        isLoadingEvidence={isLoadingCourseEvidence}
+        selectionState={selectionState}
+        onFileSelection={handleFileSelection}
+        onSelectAllFiles={handleSelectAllFiles}
+        onDownload={handleDownloadSelectedFiles}
+        isDownloading={uiState.isDownloading}
+      />
     </Container>
   )
 }
