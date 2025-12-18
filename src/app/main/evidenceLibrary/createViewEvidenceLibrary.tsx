@@ -658,6 +658,98 @@ const CreateViewEvidenceLibrary = () => {
     setValue('units', updated)
   }
 
+  const selectAllSignedOffHandler = (unitIndex, checked) => {
+    const updated = [...unitsWatch]
+    const unit = updated[unitIndex]
+    if (unit) {
+      // First, determine current state from unitsWatch to handle toggle correctly
+      let allCurrentlySignedOff = false
+      
+      if (unit.subUnit && unit.subUnit.length > 0) {
+        const eligibleItems = unit.subUnit.filter(
+          (sub) => (sub.learnerMap ?? false) && (sub.trainerMap ?? false)
+        )
+        allCurrentlySignedOff = eligibleItems.length > 0 && 
+          eligibleItems.every((sub) => sub.signedOff ?? false)
+      } else {
+        if ((unit.learnerMap ?? false) && (unit.trainerMap ?? false)) {
+          allCurrentlySignedOff = unit.signedOff ?? false
+        }
+      }
+      
+      // Determine target state: if all are signed off, uncheck; otherwise, check
+      // Ignore the 'checked' parameter and determine from actual state
+      const targetState = allCurrentlySignedOff ? false : true
+      
+      // Handle units with subUnit
+      if (unit.subUnit && unit.subUnit.length > 0) {
+        unit.subUnit.forEach((sub) => {
+          // Only process items that have both learnerMap and trainerMap checked
+          if ((sub.learnerMap ?? false) && (sub.trainerMap ?? false)) {
+            sub.signedOff = targetState
+          }
+        })
+      } else {
+        // Handle units without subUnit (unit-level)
+        // Only process if both learnerMap and trainerMap are checked
+        if ((unit.learnerMap ?? false) && (unit.trainerMap ?? false)) {
+          unit.signedOff = targetState
+        }
+      }
+      setValue('units', updated)
+      trigger('units')
+    }
+  }
+
+  const selectAllSignedOffForCombinedHandler = (combinedSubUnits, checked) => {
+    const updated = [...unitsWatch]
+    
+    // Get all eligible items from the current state (not from combinedSubUnits which might be stale)
+    const eligibleItems: Array<{ unit: any; usub?: any; isSubUnit: boolean }> = []
+    
+    combinedSubUnits.forEach((sub) => {
+      const unit = updated.find((u) => u.id === sub.unitId)
+      if (!unit) return
+      
+      if (unit.subUnit && unit.subUnit.length > 0) {
+        const usub = unit.subUnit.find((u) => u.id === sub.id)
+        if (usub && (usub.learnerMap ?? false) && (usub.trainerMap ?? false)) {
+          eligibleItems.push({ unit, usub, isSubUnit: true })
+        }
+      } else {
+        if ((unit.learnerMap ?? false) && (unit.trainerMap ?? false)) {
+          eligibleItems.push({ unit, isSubUnit: false })
+        }
+      }
+    })
+    
+    // Check current state: are all eligible items signed off?
+    const allCurrentlySignedOff = eligibleItems.length > 0 && 
+      eligibleItems.every((item) => {
+        if (item.isSubUnit) {
+          return item.usub.signedOff ?? false
+        } else {
+          return item.unit.signedOff ?? false
+        }
+      })
+    
+    // Determine the target state: if all are signed off, uncheck; otherwise, check
+    // Ignore the 'checked' parameter and determine from actual state
+    const targetState = allCurrentlySignedOff ? false : true
+    
+    // Apply the target state to all eligible items
+    eligibleItems.forEach((item) => {
+      if (item.isSubUnit) {
+        item.usub.signedOff = targetState
+      } else {
+        item.unit.signedOff = targetState
+      }
+    })
+
+    setValue('units', updated)
+    trigger('units')
+  }
+
   const commentHandler = (e, id) => {
     const updated = [...unitsWatch]
     updated.forEach((unit) => {
@@ -775,7 +867,7 @@ const CreateViewEvidenceLibrary = () => {
           variant: 'success',
         })
       )
-      const isAdminOrIQA = ['Trainer', 'Admin', 'IQA'].includes(userRole)
+      const isAdminOrIQA = ['Admin', 'IQA'].includes(userRole)
       if (isAdminOrIQA) {
         navigate(`/qa-sample-plan`)
       } else {
@@ -1478,7 +1570,48 @@ const CreateViewEvidenceLibrary = () => {
                                   <TableCell>Trainer Comment</TableCell>
                                   <TableCell align='center'>Gap</TableCell>
                                   <TableCell align='center'>
-                                    Signed Off
+                                    {canEditTrainerFields ? (
+                                      <FormControlLabel
+                                        control={
+                                          <Checkbox
+                                            checked={
+                                              combinedSubUnits.length > 0 &&
+                                              combinedSubUnits.every(
+                                                (s) =>
+                                                  (s.learnerMap ?? false) &&
+                                                  (s.trainerMap ?? false) &&
+                                                  (s.signedOff ?? false)
+                                              )
+                                            }
+                                            indeterminate={
+                                              combinedSubUnits.some(
+                                                (s) =>
+                                                  (s.learnerMap ?? false) &&
+                                                  (s.trainerMap ?? false) &&
+                                                  (s.signedOff ?? false)
+                                              ) &&
+                                              !combinedSubUnits.every(
+                                                (s) =>
+                                                  (s.learnerMap ?? false) &&
+                                                  (s.trainerMap ?? false) &&
+                                                  (s.signedOff ?? false)
+                                              )
+                                            }
+                                            onChange={(e) =>
+                                              selectAllSignedOffForCombinedHandler(
+                                                combinedSubUnits,
+                                                e.target.checked
+                                              )
+                                            }
+                                            disabled={isEditMode}
+                                          />
+                                        }
+                                        label='Signed Off'
+                                        sx={{ margin: 0 }}
+                                      />
+                                    ) : (
+                                      'Signed Off'
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               </TableHead>
@@ -1797,7 +1930,54 @@ const CreateViewEvidenceLibrary = () => {
                                           Gap
                                         </TableCell>
                                         <TableCell align='center'>
-                                          Signed Off
+                                          {canEditTrainerFields ? (
+                                            <FormControlLabel
+                                              control={
+                                                <Checkbox
+                                                  checked={
+                                                    hasSubUnit
+                                                      ? units.subUnit.length > 0 &&
+                                                        units.subUnit.every(
+                                                          (s) =>
+                                                            (s.learnerMap ?? false) &&
+                                                            (s.trainerMap ?? false) &&
+                                                            (s.signedOff ?? false)
+                                                        )
+                                                      : (units.learnerMap ?? false) &&
+                                                        (units.trainerMap ?? false) &&
+                                                        (units.signedOff ?? false)
+                                                  }
+                                                  indeterminate={
+                                                    hasSubUnit
+                                                      ? units.subUnit.some(
+                                                          (s) =>
+                                                            (s.learnerMap ?? false) &&
+                                                            (s.trainerMap ?? false) &&
+                                                            (s.signedOff ?? false)
+                                                        ) &&
+                                                        !units.subUnit.every(
+                                                          (s) =>
+                                                            (s.learnerMap ?? false) &&
+                                                            (s.trainerMap ?? false) &&
+                                                            (s.signedOff ?? false)
+                                                        )
+                                                      : false
+                                                  }
+                                                  onChange={(e) =>
+                                                    selectAllSignedOffHandler(
+                                                      unitIndex,
+                                                      e.target.checked
+                                                    )
+                                                  }
+                                                  disabled={isEditMode}
+                                                />
+                                              }
+                                              label='Signed Off'
+                                              sx={{ margin: 0 }}
+                                            />
+                                          ) : (
+                                            'Signed Off'
+                                          )}
                                         </TableCell>
                                       </TableRow>
                                     </TableHead>
@@ -2049,7 +2229,48 @@ const CreateViewEvidenceLibrary = () => {
                                   <TableCell>Trainer Comment</TableCell>
                                   <TableCell align='center'>Gap</TableCell>
                                   <TableCell align='center'>
-                                    Signed Off
+                                    {canEditTrainerFields ? (
+                                      <FormControlLabel
+                                        control={
+                                          <Checkbox
+                                            checked={
+                                              units.subUnit.length > 0 &&
+                                              units.subUnit.every(
+                                                (s) =>
+                                                  (s.learnerMap ?? false) &&
+                                                  (s.trainerMap ?? false) &&
+                                                  (s.signedOff ?? false)
+                                              )
+                                            }
+                                            indeterminate={
+                                              units.subUnit.some(
+                                                (s) =>
+                                                  (s.learnerMap ?? false) &&
+                                                  (s.trainerMap ?? false) &&
+                                                  (s.signedOff ?? false)
+                                              ) &&
+                                              !units.subUnit.every(
+                                                (s) =>
+                                                  (s.learnerMap ?? false) &&
+                                                  (s.trainerMap ?? false) &&
+                                                  (s.signedOff ?? false)
+                                              )
+                                            }
+                                            onChange={(e) =>
+                                              selectAllSignedOffHandler(
+                                                unitIndex,
+                                                e.target.checked
+                                              )
+                                            }
+                                            disabled={isEditMode}
+                                          />
+                                        }
+                                        label='Signed Off'
+                                        sx={{ margin: 0 }}
+                                      />
+                                    ) : (
+                                      'Signed Off'
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               </TableHead>
