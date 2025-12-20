@@ -54,4 +54,5 @@ export interface Unit {
   trainerMap?: boolean
   signedOff?: boolean
   comment?: string
+  course_id?: string | number
 }
