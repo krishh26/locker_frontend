@@ -99,6 +99,62 @@ export const evidenceAPI = createApi({
         body: data,
       }),
     }),
+    // AssignmentMapping endpoints
+    getAssignmentMappings: builder.query({
+      query: ({ assignment_id }) => ({
+        url: `/assignment/${assignment_id}/mappings`,
+        method: 'GET',
+      }),
+    }),
+    createAssignmentMapping: builder.mutation({
+      query: (data) => ({
+        url: `/assignment-mapping/create`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    updateAssignmentMapping: builder.mutation({
+      query: ({ mapping_id, data }) => ({
+        url: `/assignment-mapping/update/${mapping_id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+    }),
+    deleteAssignmentMapping: builder.mutation({
+      query: ({ mapping_id }) => ({
+        url: `/assignment-mapping/delete/${mapping_id}`,
+        method: 'DELETE',
+      }),
+    }),
+    // Mapping-based signatures
+    getMappingSignatureList: builder.query({
+      query: ({ mapping_id }) => ({
+        url: `/assignment-mapping/${mapping_id}/signatures`,
+        method: 'GET',
+      }),
+    }),
+    requestMappingSignature: builder.mutation({
+      query: ({ mapping_id, data }) => ({
+        url: `/assignment-mapping/${mapping_id}/request-signature`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    saveMappingSignature: builder.mutation({
+      query: ({ mapping_id, data }) => ({
+        url: `/assignment-mapping/${mapping_id}/sign`,
+        method: 'POST',
+        body: data,
+      }),
+    }),
+    // Update PC ticks (learnerMap/trainerMap/signedOff) for mapping
+    updateMappingPC: builder.mutation({
+      query: ({ mapping_id, data }) => ({
+        url: `/assignment-mapping/${mapping_id}/pc`,
+        method: 'PATCH',
+        body: data,
+      }),
+    }),
   }),
 })
 export const {
@@ -114,4 +170,12 @@ export const {
   usePendingSignatureListQuery,
   useGetSignatureListQuery,
   useSaveSignatureMutation,
+  useGetAssignmentMappingsQuery,
+  useCreateAssignmentMappingMutation,
+  useUpdateAssignmentMappingMutation,
+  useDeleteAssignmentMappingMutation,
+  useGetMappingSignatureListQuery,
+  useRequestMappingSignatureMutation,
+  useSaveMappingSignatureMutation,
+  useUpdateMappingPCMutation,
 } = evidenceAPI

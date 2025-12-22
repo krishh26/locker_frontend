@@ -116,23 +116,23 @@ export const getValidationSchema = (userRole?: string) => {
           return courseIds.every((courseId) => {
             const courseUnits = unitsByCourse[courseId]
             return courseUnits.some((unit) => {
-              // Check if this is a Knowledge, Behaviour, or Skills unit (no subUnits)
-              const isUnitWithoutSubUnits = ['Knowledge', 'Behaviour', 'Skills'].includes(unit?.type || '')
-              
-              // Check if unit has subUnits
-              const hasSubUnits = unit?.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0
-              
-              if (hasSubUnits) {
-                // Check subUnit learnerMap (for Duty units or Qualification courses)
-                return unit.subUnit.some((s) => s?.learnerMap === true)
-              } else if (isUnitWithoutSubUnits) {
-                // For Knowledge, Behaviour, Skills: treat unit itself as subUnit
-                // Check unit-level learnerMap
-                return unit?.learnerMap === true
-              } else {
-                // Fallback: check unit-level learnerMap (for other cases)
-                return unit?.learnerMap === true
-              }
+            // Check if this is a Knowledge, Behaviour, or Skills unit (no subUnits)
+            const isUnitWithoutSubUnits = ['Knowledge', 'Behaviour', 'Skills'].includes(unit?.type || '')
+            
+            // Check if unit has subUnits
+            const hasSubUnits = unit?.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0
+            
+            if (hasSubUnits) {
+              // Check subUnit learnerMap (for Duty units or Qualification courses)
+              return unit.subUnit.some((s) => s?.learnerMap === true)
+            } else if (isUnitWithoutSubUnits) {
+              // For Knowledge, Behaviour, Skills: treat unit itself as subUnit
+              // Check unit-level learnerMap
+              return unit?.learnerMap === true
+            } else {
+              // Fallback: check unit-level learnerMap (for other cases)
+              return unit?.learnerMap === true
+            }
             })
           })
         }

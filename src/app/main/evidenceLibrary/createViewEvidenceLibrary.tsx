@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -44,6 +44,12 @@ import {
   useUploadExternalEvidenceFileMutation,
   useRequestSignatureMutation,
   useGetSignatureListQuery,
+  useGetAssignmentMappingsQuery,
+  useCreateAssignmentMappingMutation,
+  useUpdateAssignmentMappingMutation,
+  useDeleteAssignmentMappingMutation,
+  useGetMappingSignatureListQuery,
+  useUpdateMappingPCMutation,
 } from 'app/store/api/evidence-api'
 import { assessmentMethod, fileTypes } from 'src/utils/constants'
 
@@ -290,10 +296,133 @@ const CreateViewEvidenceLibrary = () => {
   const [uploadExternalEvidenceFile] = useUploadExternalEvidenceFileMutation()
   const [requestSignature, { isLoading: isRequestingSignature }] =
     useRequestSignatureMutation()
+  
+  // Mapping API hooks
+  const {
+    data: mappingsData,
+    isLoading: isLoadingMappings,
+  } = useGetAssignmentMappingsQuery(
+    { assignment_id: id as string },
+    {
+      skip: !id,
+      refetchOnMountOrArgChange: true,
+    }
+  )
+    console.log("🚀 ~ CreateViewEvidenceLibrary ~ mappingsData:", mappingsData)
+  
+  const [createMapping] = useCreateAssignmentMappingMutation()
+  const [updateMapping] = useUpdateAssignmentMappingMutation()
+  const [deleteMapping] = useDeleteAssignmentMappingMutation()
+  const [updateMappingPC] = useUpdateMappingPCMutation()
 
   useEffect(() => {
     if (!id) return navigate('/evidenceLibrary') // Redirect if no ID is provided
   }, [id])
+
+  // Helper function to reconstruct form state from mappings
+  const reconstructFormStateFromMappings = useCallback((mappings: any[], courses: any[]) => {
+    if (!mappings || mappings.length === 0 || !courses || courses.length === 0) {
+      return { selectedCourses: [], courseSelectedTypes: {}, units: [] }
+    }
+
+    // Group mappings by course_id
+    const mappingsByCourse = new Map<number, any[]>()
+    mappings.forEach((mapping) => {
+      if (!mappingsByCourse.has(mapping.course_id)) {
+        mappingsByCourse.set(mapping.course_id, [])
+      }
+      mappingsByCourse.get(mapping.course_id)!.push(mapping)
+    })
+
+    // Build selected courses from mappings
+    const selectedCoursesArray: any[] = []
+    const courseSelectedTypesObj: Record<string | number, string> = {}
+    const unitsArray: any[] = []
+
+    mappingsByCourse.forEach((courseMappings, courseId) => {
+      const course = courses.find((c: any) => c.course_id === courseId)
+      if (!course) return
+
+      selectedCoursesArray.push(course)
+
+      // For Standard courses, determine selected type from mappings
+      if (course.course_core_type === 'Standard') {
+        // Find the first mapping's unit type
+        const firstMapping = courseMappings[0]
+        if (firstMapping?.unit_ref && course.units) {
+          const matchedUnit = course.units.find(
+            (u: any) => u.code === firstMapping.unit_ref || u.unit_ref === firstMapping.unit_ref
+          )
+          if (matchedUnit?.type) {
+            courseSelectedTypesObj[courseId] = matchedUnit.type
+          }
+        }
+      }
+
+      // Reconstruct units from mappings + course structure
+      const courseUnits = course.units || []
+      const unitsMap = new Map<string, any>()
+
+      courseMappings.forEach((mapping) => {
+        const unit = courseUnits.find(
+          (u: any) => u.code === mapping.unit_ref || u.unit_ref === mapping.unit_ref
+        )
+        if (!unit) return
+
+        const unitKey = `${courseId}-${unit.id || unit.code}`
+        if (!unitsMap.has(unitKey)) {
+          unitsMap.set(unitKey, {
+            ...unit,
+            course_id: courseId,
+            type: unit.type,
+            code: unit.code || unit.unit_ref,
+            subUnit: [],
+            mapping_id: mapping.mapping_id, // Store mapping_id for updates
+          })
+        }
+
+        const unitData = unitsMap.get(unitKey)!
+
+        // If mapping has sub_unit_ref, it's a subunit mapping
+        if (mapping.sub_unit_ref !== null && mapping.sub_unit_ref !== undefined) {
+          // Find the subunit in the unit's subUnit array
+          const subunit = unit.subUnit?.find(
+            (s: any) => s.code === mapping.sub_unit_ref || s.id === mapping.sub_unit_ref
+          )
+          if (subunit) {
+            const existingSubUnit = unitData.subUnit.find(
+              (s: any) => s.id === subunit.id || s.code === subunit.code
+            )
+            if (!existingSubUnit) {
+              unitData.subUnit.push({
+                ...subunit,
+                learnerMap: mapping.learnerMap ?? false,
+                trainerMap: mapping.trainerMap ?? false,
+                signedOff: mapping.signedOff ?? false,
+                comment: mapping.comment ?? '',
+                mapping_id: mapping.mapping_id,
+              })
+            }
+          }
+        } else {
+          // Unit-only mapping (no subunits)
+          unitData.learnerMap = mapping.learnerMap ?? false
+          unitData.trainerMap = mapping.trainerMap ?? false
+          unitData.signedOff = mapping.signedOff ?? false
+          unitData.comment = mapping.comment ?? ''
+          unitData.mapping_id = mapping.mapping_id
+        }
+      })
+
+      unitsArray.push(...Array.from(unitsMap.values()))
+    })
+
+    return {
+      selectedCourses: selectedCoursesArray,
+      courseSelectedTypes: courseSelectedTypesObj,
+      units: unitsArray,
+    }
+  }, [])
 
   useEffect(() => {
     if (!isLoading && isError) {
@@ -301,7 +430,8 @@ const CreateViewEvidenceLibrary = () => {
       return
     }
 
-    if (evidenceDetails) {
+    // Load evidence-level data only (no course_id, no units)
+    if (evidenceDetails && !isLoadingMappings) {
       const {
         description,
         grade,
@@ -310,10 +440,11 @@ const CreateViewEvidenceLibrary = () => {
         assessment_method,
         external_feedback,
         title,
-        units,
         trainer_feedback,
         session,
       } = evidenceDetails.data
+
+      // Set evidence-level fields only
       setValue('title', title ? title : '')
       setValue('trainer_feedback', trainer_feedback ? trainer_feedback : '')
       setValue('learner_comments', learner_comments ? learner_comments : '')
@@ -324,75 +455,13 @@ const CreateViewEvidenceLibrary = () => {
       setValue('description', description ? description : '')
       setValue('grade', grade ? grade : '')
       setValue('assessment_method', assessment_method ? assessment_method : [])
-      // Initialize units with learnerMap, trainerMap, signedOff, and comment from API
-      const initializedUnits = units
-        ? units.map((unit) => {
-            const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
-            return {
-              ...unit,
-              // Preserve type and code from API
-              type: unit.type,
-              code: unit.code,
-              subUnit:
-                unit.subUnit?.map((sub) => ({
-                  ...sub,
-                  learnerMap: sub.learnerMap ?? false,
-                  trainerMap: sub.trainerMap ?? false,
-                  signedOff: sub.signedOff ?? false,
-                  comment: sub.comment ?? '',
-                })) || [],
-              // Initialize unit-level properties for units without subUnit (Standard courses)
-              learnerMap: hasSubUnit ? undefined : unit.learnerMap ?? false,
-              trainerMap: hasSubUnit ? undefined : unit.trainerMap ?? false,
-              signedOff: hasSubUnit ? undefined : unit.signedOff ?? false,
-              comment: hasSubUnit ? undefined : unit.comment ?? '',
-            }
-          })
-        : []
-      setValue('units', initializedUnits)
-
-      // For Standard courses, set default selected type based on units with learnerMap selected
-      if (
-        evidenceDetails.data.course_id?.course_core_type === 'Standard' &&
-        initializedUnits.length > 0
-      ) {
-        // Find the first unit type that has learnerMap selected
-        const unitWithLearnerMap = initializedUnits.find((unit) => {
-          const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
-          if (hasSubUnit) {
-            return unit.subUnit.some((sub) => sub.learnerMap === true)
-          } else {
-            return unit.learnerMap === true
-          }
-        })
-
-        if (unitWithLearnerMap?.type) {
-          setSelectedUnitType(unitWithLearnerMap.type)
-        }
-      }
-
-      // For Qualification courses, set selectedUnitIds based on units with learnerMap
-      if (
-        evidenceDetails.data.course_id?.course_core_type === 'Qualification' &&
-        initializedUnits.length > 0
-      ) {
-        const selectedIds = initializedUnits
-          .filter((unit) => {
-            const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
-            if (hasSubUnit) {
-              return unit.subUnit.some((sub) => sub.learnerMap === true)
-            }
-            return false
-          })
-          .map((unit) => unit.id)
-        setSelectedUnitIds(selectedIds)
-      }
       setValue('session', session ? session : '')
       setValue('audio', external_feedback ? external_feedback : '')
       setValue(
         'evidence_time_log',
         evidenceDetails.data.evidence_time_log || false
       )
+      
       // Set declaration to true for Trainer/Admin/IQA, otherwise use existing value
       const canEditDeclaration = ['Trainer', 'Admin', 'IQA'].includes(userRole)
       setValue(
@@ -400,134 +469,53 @@ const CreateViewEvidenceLibrary = () => {
         canEditDeclaration ? true : evidenceDetails.data.declaration || false
       )
 
-      // Initialize selected courses from evidence details (only if not already initialized)
-      // Use learnerCoursesData from Redux store to ensure course object is complete
-      if (
-        evidenceDetails.data.course_id &&
-        learnerCoursesData &&
-        learnerCoursesData.length > 0 &&
-        selectedCourses.length === 0
-      ) {
-        const courseFromEvidence = learnerCoursesData.find(
-          (course: any) =>
-            course.course_id === evidenceDetails.data.course_id.course_id
-        )
-        if (courseFromEvidence) {
-          setSelectedCourses([courseFromEvidence])
-          // Initialize course type selection for Standard courses
-          if (courseFromEvidence.course_core_type === 'Standard') {
-            const firstUnitWithLearnerMap = initializedUnits.find((unit) => {
-              const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
-              if (hasSubUnit) {
-                return unit.subUnit.some((sub) => sub.learnerMap === true)
-              } else {
-                return unit.learnerMap === true
-              }
-            })
-            if (firstUnitWithLearnerMap?.type) {
-              setCourseSelectedTypes({
-                [courseFromEvidence.course_id]: firstUnitWithLearnerMap.type,
-              })
-            }
-          }
+      // Reconstruct form state from mappings
+      if (mappingsData?.data && learnerCoursesData && learnerCoursesData.length > 0) {
+        const mappings = Array.isArray(mappingsData.data) ? mappingsData.data : []
+        const reconstructed = reconstructFormStateFromMappings(mappings, learnerCoursesData)
+        
+        if (reconstructed.selectedCourses.length > 0 && selectedCourses.length === 0) {
+          setSelectedCourses(reconstructed.selectedCourses)
+          setCourseSelectedTypes(reconstructed.courseSelectedTypes)
+          setValue('units', reconstructed.units)
         }
       }
     }
-  }, [evidenceDetails, setValue, isError, id, isLoading, learner])
+  }, [evidenceDetails, mappingsData, setValue, isError, id, isLoading, isLoadingMappings, learnerCoursesData, selectedCourses.length, reconstructFormStateFromMappings, userRole])
+
+  // Watch units from form - must be declared before any conditional returns
+  const unitsWatch = watch('units')
 
   // Initialize time log data when evidence details are loaded
   useEffect(() => {
     if (evidenceDetails?.data && learnerUserId) {
       const evidence = evidenceDetails.data
 
-      // Get units from evidence data as array (will be synced when unitsWatch changes)
+      // Get units from form state (unitsWatch) - will be synced when units change
       const evidenceUnits =
-        evidence.units && evidence.units.length > 0
-          ? evidence.units.map((unit) => unit?.title || '').filter(Boolean)
+        unitsWatch && unitsWatch.length > 0
+          ? unitsWatch.map((unit: any) => unit?.title || '').filter(Boolean)
           : []
+
+      // Get first selected course for time log (if any)
+      const firstCourseId = selectedCourses.length > 0 ? selectedCourses[0].course_id : null
 
       setTimeLogData((prev) => ({
         ...prev,
         user_id: selected
           ? selectedUser?.user_id
           : currentUser?.user_id || learnerUserId,
-        course_id: evidence.course_id?.course_id || prev.course_id,
+        course_id: firstCourseId || prev.course_id,
         unit: evidenceUnits.length > 0 ? evidenceUnits : prev.unit,
         impact_on_learner: evidence.description || prev.impact_on_learner,
         evidence_link: evidence.file?.url || window.location.href,
       }))
     }
-  }, [evidenceDetails, learnerUserId, selected, selectedUser, currentUser])
-
-  // Watch units from form - must be declared before any conditional returns
-  const unitsWatch = watch('units')
+  }, [evidenceDetails, learnerUserId, selected, selectedUser, currentUser, unitsWatch, selectedCourses])
 
   // Auto-initialize units in form when type is selected for Standard courses
-  useEffect(() => {
-    const courseType = evidenceDetails?.data?.course_id?.course_core_type
-    if (
-      courseType === 'Standard' &&
-      selectedUnitType !== null &&
-      evidenceDetails?.data?.course_id?.units
-    ) {
-      const allUnits = evidenceDetails.data.course_id.units || []
-      const filteredUnits = allUnits.filter(
-        (unit) => unit.type === selectedUnitType
-      )
-
-      if (filteredUnits.length > 0) {
-        // Initialize all units of the selected type
-        const initializedUnits = filteredUnits.map((method) => {
-          const hasSubUnit =
-            method.subUnit &&
-            Array.isArray(method.subUnit) &&
-            method.subUnit.length > 0
-
-          // Check if this unit already exists in form to preserve user changes
-          const currentUnits = unitsWatch || []
-          const existingUnit = currentUnits.find(
-            (u) => String(u.id) === String(method.id)
-          )
-
-          if (existingUnit && existingUnit.type === selectedUnitType) {
-            // Preserve existing unit data if it matches the selected type
-            return existingUnit
-          }
-
-          // Create new initialized unit
-          return {
-            ...method,
-            type: method.type,
-            code: method.code,
-            subUnit: hasSubUnit
-              ? method.subUnit.map((sub) => ({
-                  ...sub,
-                  learnerMap: sub.learnerMap ?? false,
-                  trainerMap: sub.trainerMap ?? false,
-                  signedOff: sub.signedOff ?? false,
-                  comment: sub.comment ?? '',
-                }))
-              : [],
-            learnerMap: hasSubUnit ? undefined : method.learnerMap ?? false,
-            trainerMap: hasSubUnit ? undefined : method.trainerMap ?? false,
-            signedOff: hasSubUnit ? undefined : method.signedOff ?? false,
-            comment: hasSubUnit ? undefined : method.comment ?? '',
-          }
-        })
-
-        // Replace all units with the new type's units
-        setValue('units', initializedUnits, { shouldValidate: false })
-      } else {
-        // If no units found for selected type, clear the form
-        setValue('units', [], { shouldValidate: false })
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    selectedUnitType,
-    evidenceDetails?.data?.course_id?.course_core_type,
-    evidenceDetails?.data?.course_id?.units,
-  ])
+  // This is handled by the course selection and type selection UI, so this useEffect is no longer needed
+  // Units are initialized when course type is selected in the UI
 
   // Remove units from form when they're deselected for Qualification courses
   useEffect(() => {
@@ -933,8 +921,18 @@ const CreateViewEvidenceLibrary = () => {
       }
     }
 
-    const payload = {
-      ...data,
+    // Step 1: Update evidence (evidence-level fields only, NO units/course_id)
+    const evidencePayload = {
+      title: data.title,
+      description: data.description,
+      trainer_feedback: data.trainer_feedback,
+      learner_comments: data.learner_comments,
+      points_for_improvement: data.points_for_improvement,
+      assessment_method: data.assessment_method,
+      session: data.session,
+      grade: data.grade,
+      evidence_time_log: data.evidence_time_log,
+      declaration: data.declaration,
       id,
       user_id:
         userRole === 'Learner'
@@ -942,6 +940,7 @@ const CreateViewEvidenceLibrary = () => {
           : evidenceDetails?.data?.user?.user_id,
     }
     try {
+      // Upload external feedback file if new file is selected
       if (data.audio && !data.audio?.url) {
         const formData = new FormData()
         formData.append('audio', data.audio)
@@ -952,21 +951,127 @@ const CreateViewEvidenceLibrary = () => {
         await uploadExternalEvidenceFile(externalPayload).unwrap()
       }
 
-      // Request signature with required roles
-      const requiredRoles = data.signatures
-        .filter((sig) => sig.signature_required)
-        .map((sig) => sig.role)
+      // Update evidence
+      await updateEvidenceId(evidencePayload).unwrap()
 
-      if (requiredRoles.length > 0) {
-        await requestSignature({
-          id,
-          data: {
-            roles: requiredRoles,
-            user_id: learnerUserId,
-          },
-        }).unwrap()
+      // Step 2: Handle mappings for each course/unit/subunit combination
+      const currentMappings = mappingsData?.data ? (Array.isArray(mappingsData.data) ? mappingsData.data : []) : []
+      const mappingsMap = new Map(currentMappings.map((m: any) => [`${m.course_id}-${m.unit_ref}-${m.sub_unit_ref || 'null'}`, m]))
+
+      // Build desired mappings from form state
+      const desiredMappings: Map<string, any> = new Map()
+      const formUnits = data.units || []
+
+      formUnits.forEach((unit: any) => {
+        const courseId = unit.course_id
+        const unitRef = unit.code || unit.unit_ref
+        const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
+
+        if (hasSubUnit) {
+          // Unit has subunits - create mapping for each subunit
+          unit.subUnit.forEach((sub: any) => {
+            const subUnitRef = sub.code || sub.id
+            const key = `${courseId}-${unitRef}-${subUnitRef}`
+            desiredMappings.set(key, {
+              assignment_id: id,
+              course_id: courseId,
+              unit_ref: unitRef,
+              sub_unit_ref: subUnitRef,
+              learnerMap: sub.learnerMap ?? false,
+              trainerMap: sub.trainerMap ?? false,
+              signedOff: sub.signedOff ?? false,
+              comment: sub.comment || '',
+              mapping_id: sub.mapping_id, // For updates
+            })
+          })
+        } else {
+          // Unit-only - create mapping for unit itself
+          const key = `${courseId}-${unitRef}-null`
+          desiredMappings.set(key, {
+            assignment_id: id,
+            course_id: courseId,
+            unit_ref: unitRef,
+            sub_unit_ref: null,
+            learnerMap: unit.learnerMap ?? false,
+            trainerMap: unit.trainerMap ?? false,
+            signedOff: unit.signedOff ?? false,
+            comment: unit.comment || '',
+            mapping_id: unit.mapping_id, // For updates
+          })
+        }
+      })
+
+      // Create/Update mappings and collect mapping IDs
+      const allMappingIds: number[] = []
+      const desiredMappingsArray = Array.from(desiredMappings.entries())
+      
+      for (const [key, desiredMapping] of desiredMappingsArray) {
+        const existingMapping = mappingsMap.get(key)
+        
+        if (existingMapping && (existingMapping as any).mapping_id) {
+          // Update existing mapping
+          const { mapping_id, ...updateData } = desiredMapping
+          await updateMapping({
+            mapping_id: (existingMapping as any).mapping_id,
+            data: updateData,
+          }).unwrap()
+          allMappingIds.push((existingMapping as any).mapping_id)
+        } else {
+          // Create new mapping and get mapping_id from response
+          const { mapping_id, ...createData } = desiredMapping
+          try {
+            const createResult = await createMapping(createData).unwrap()
+            // Extract mapping_id from response (adjust based on actual API response structure)
+            const newMappingId = (createResult as any)?.mapping_id || 
+                                (createResult as any)?.id || 
+                                (createResult as any)?.data?.mapping_id ||
+                                (createResult as any)?.data?.id
+            if (newMappingId) {
+              allMappingIds.push(newMappingId)
+            }
+          } catch (error) {
+            console.warn('Failed to create mapping:', error)
+          }
+        }
       }
-      await updateEvidenceId(payload).unwrap()
+
+      // Delete mappings that are no longer needed
+      const mappingsMapArray = Array.from(mappingsMap.entries())
+      for (const entry of mappingsMapArray) {
+        const mapKey = String(entry[0])
+        const existingMapping = entry[1] as any
+        if (!desiredMappings.has(mapKey) && existingMapping?.mapping_id) {
+          await deleteMapping({ mapping_id: existingMapping.mapping_id }).unwrap()
+        }
+      }
+
+      // Step 3: Handle signatures per mapping (if signature_required is set)
+      // Get required roles that need signatures
+      const requiredRoles = data.signatures
+        ?.filter((sig) => sig.signature_required)
+        .map((sig) => sig.role) || []
+
+      // Request signatures for each mapping and each required role
+      if (requiredRoles.length > 0 && allMappingIds.length > 0) {
+        for (const mappingId of allMappingIds) {
+          for (const role of requiredRoles) {
+            try {
+              await requestSignature({
+                id,
+                data: {
+                  mapping_id: mappingId,
+                  role: role,
+                  user_id: learnerUserId,
+                  is_requested: true,
+                },
+              }).unwrap()
+            } catch (error) {
+              // Log error but don't fail the entire submission
+              console.warn(`Failed to request signature for mapping ${mappingId}, role ${role}:`, error)
+            }
+          }
+        }
+      }
 
       dispatch(
         showMessage({
@@ -1539,20 +1644,20 @@ const CreateViewEvidenceLibrary = () => {
               .filter((course) => course.course_core_type === 'Standard')
               .map((course) => (
                 <Box key={course.course_id} sx={{ mb: 2 }}>
-                  <Typography variant='body1' sx={{ mb: 1, fontWeight: 500 }}>
+                <Typography variant='body1' sx={{ mb: 1, fontWeight: 500 }}>
                     {course.course_name} - Select Type:
-                  </Typography>
-                  <FormGroup row>
+                </Typography>
+                <FormGroup row>
                     {['Knowledge', 'Behaviour', 'Skills', 'Duty'].map(
                       (type) => (
-                        <FormControlLabel
-                          key={type}
-                          control={
-                            <Radio
+                    <FormControlLabel
+                      key={type}
+                      control={
+                        <Radio
                               checked={
                                 courseSelectedTypes[course.course_id] === type
                               }
-                              onChange={() => {
+                          onChange={() => {
                                 // Reset units for this course and type to unchecked when switching types
                                 const currentUnits = unitsWatch || []
                                 const unitsToKeep = currentUnits.filter(
@@ -1607,22 +1712,22 @@ const CreateViewEvidenceLibrary = () => {
                                 setValue('units', [...unitsToKeep, ...resetUnits], {
                                   shouldValidate: true,
                                 })
-                              }}
-                              disabled={isEditMode || !canEditLearnerFields}
-                            />
-                          }
-                          label={type}
+                          }}
+                          disabled={isEditMode || !canEditLearnerFields}
                         />
+                      }
+                      label={type}
+                    />
                       )
                     )}
-                  </FormGroup>
+                </FormGroup>
                   {/* Show validation error if type not selected */}
                   {!courseSelectedTypes[course.course_id] && (
                     <FormHelperText error>
                       Please select a type for {course.course_name}
                     </FormHelperText>
                   )}
-                </Box>
+              </Box>
               ))}
           </Grid>
           <Grid item xs={12}>
@@ -1631,15 +1736,15 @@ const CreateViewEvidenceLibrary = () => {
               .filter((course) => course.course_core_type === 'Qualification')
               .map((course) => (
                 <Box key={course.course_id} sx={{ mb: 2 }}>
-                  <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>
+                <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>
                     {course.course_name} - Select Units:
-                  </Typography>
-                  <FormGroup row>
+                </Typography>
+                <FormGroup row>
                     {course.units?.map((unit: any) => (
-                      <FormControlLabel
-                        key={unit.id}
-                        control={
-                          <Checkbox
+                    <FormControlLabel
+                      key={unit.id}
+                      control={
+                        <Checkbox
                             checked={
                               (unitsWatch || []).some(
                                 (u) =>
@@ -1647,47 +1752,47 @@ const CreateViewEvidenceLibrary = () => {
                                   u.course_id === course.course_id
                               )
                             }
-                            disabled={isEditMode || !canEditLearnerFields}
-                            onChange={(e) => {
+                          disabled={isEditMode || !canEditLearnerFields}
+                          onChange={(e) => {
                               const currentUnits = unitsWatch || []
-                              if (e.target.checked) {
-                                // Auto-add unit to form if not already present
-                                if (
-                                  !currentUnits.some(
+                            if (e.target.checked) {
+                              // Auto-add unit to form if not already present
+                              if (
+                                !currentUnits.some(
                                     (u) =>
                                       String(u.id) === String(unit.id) &&
                                       u.course_id === course.course_id
-                                  )
-                                ) {
-                                  const hasSubUnit =
-                                    unit.subUnit &&
-                                    Array.isArray(unit.subUnit) &&
-                                    unit.subUnit.length > 0
-                                  const unitToAdd = {
-                                    ...unit,
+                                )
+                              ) {
+                                const hasSubUnit =
+                                  unit.subUnit &&
+                                  Array.isArray(unit.subUnit) &&
+                                  unit.subUnit.length > 0
+                                const unitToAdd = {
+                                  ...unit,
                                     course_id: course.course_id,
                                     // Explicitly set learnerMap to false when adding unit
                                     learnerMap: false,
                                     trainerMap: false,
                                     signedOff: false,
                                     comment: '',
-                                    subUnit: hasSubUnit
+                                  subUnit: hasSubUnit
                                       ? unit.subUnit.map((sub: any) => ({
-                                          ...sub,
+                                        ...sub,
                                           learnerMap: false, // Always start as false
                                           trainerMap: false,
                                           signedOff: false,
                                           comment: '',
-                                        }))
-                                      : [],
-                                  }
-                                  setValue(
-                                    'units',
-                                    [...currentUnits, unitToAdd],
-                                    { shouldValidate: false }
-                                  )
+                                      }))
+                                    : [],
                                 }
-                              } else {
+                                setValue(
+                                  'units',
+                                  [...currentUnits, unitToAdd],
+                                  { shouldValidate: false }
+                                )
+                              }
+                            } else {
                                 // Remove unit from form when unchecked
                                 const updatedUnits = currentUnits.filter(
                                   (u) =>
@@ -1695,18 +1800,18 @@ const CreateViewEvidenceLibrary = () => {
                                       String(u.id) === String(unit.id) &&
                                       u.course_id === course.course_id
                                     )
-                                )
+                              )
                                 setValue('units', updatedUnits, {
                                   shouldValidate: false,
                                 })
-                              }
-                            }}
-                          />
-                        }
-                        label={unit.title}
-                      />
-                    ))}
-                  </FormGroup>
+                            }
+                          }}
+                        />
+                      }
+                      label={unit.title}
+                    />
+                  ))}
+                </FormGroup>
                   {/* Show validation error if no units selected */}
                   {!unitsWatch?.some(
                     (u) => u.course_id === course.course_id
@@ -2511,16 +2616,16 @@ const CreateViewEvidenceLibrary = () => {
                           {course.course_name} - Units
                         </Typography>
                         {displayUnits.map((units) => {
-                          const unitIndex = unitsWatch.findIndex(
-                            (u) => u.id === units.id
-                          )
+                      const unitIndex = unitsWatch.findIndex(
+                        (u) => u.id === units.id
+                      )
 
-                          return (
-                            <Box
-                              key={units.id}
-                              className='flex flex-col gap-2'
-                              sx={{ mt: 2, mb: 3 }}
-                            >
+                      return (
+                        <Box
+                          key={units.id}
+                          className='flex flex-col gap-2'
+                          sx={{ mt: 2, mb: 3 }}
+                        >
                           {/* Show Unit Title First */}
                           <Typography
                             variant='h5'
@@ -2707,8 +2812,8 @@ const CreateViewEvidenceLibrary = () => {
                               {(errors.units as any).message}
                             </FormHelperText>
                           )}
-                            </Box>
-                          )
+                        </Box>
+                      )
                         })}
                       </Box>
                     )
