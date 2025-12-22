@@ -79,7 +79,6 @@ const EvidenceLibrary: FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<CourseOption | null>(null)
-  console.log("🚀 ~ EvidenceLibrary ~ selectedCourseFilter:", selectedCourseFilter)
   const [hasUserClearedFilter, setHasUserClearedFilter] = useState(false)
   const [selectedCourseForDownload, setSelectedCourseForDownload] = useState<number | null>(null)
 

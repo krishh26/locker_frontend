@@ -54,4 +54,18 @@ export interface Unit {
   trainerMap?: boolean
   signedOff?: boolean
   comment?: string
+  course_id?: string | number
+}
+
+// AssignmentMapping interface for new backend architecture
+export interface AssignmentMapping {
+  mapping_id: number
+  assignment_id: number
+  course_id: number
+  unit_ref: string // unit.code
+  sub_unit_ref: string | null // subunit.code/id for unit+subunit courses, null for unit-only
+  learnerMap: boolean
+  trainerMap: boolean
+  signedOff?: boolean
+  comment?: string
 }
