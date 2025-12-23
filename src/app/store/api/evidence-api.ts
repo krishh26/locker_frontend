@@ -101,22 +101,22 @@ export const evidenceAPI = createApi({
     }),
     // AssignmentMapping endpoints
     getAssignmentMappings: builder.query({
-      query: ({ assignment_id }) => ({
-        url: `/assignment/${assignment_id}/mappings`,
-        method: 'GET',
-      }),
+      query: (params) => {
+        const queryString = Object.keys(params)
+          .filter((key) => params[key] !== null && params[key] !== undefined && params[key] !== '')
+          .map(
+            (key) =>
+              `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`
+          )
+          .join('&')
+        const url = `assignment/get-mapped${queryString ? `?${queryString}` : ''}`
+        return { url, method: 'GET' }
+      },
     }),
-    createAssignmentMapping: builder.mutation({
+    upsertAssignmentMapping: builder.mutation({
       query: (data) => ({
-        url: `/assignment-mapping/create`,
+        url: `/assignment/mapping`,
         method: 'POST',
-        body: data,
-      }),
-    }),
-    updateAssignmentMapping: builder.mutation({
-      query: ({ mapping_id, data }) => ({
-        url: `/assignment-mapping/update/${mapping_id}`,
-        method: 'PATCH',
         body: data,
       }),
     }),
@@ -171,8 +171,7 @@ export const {
   useGetSignatureListQuery,
   useSaveSignatureMutation,
   useGetAssignmentMappingsQuery,
-  useCreateAssignmentMappingMutation,
-  useUpdateAssignmentMappingMutation,
+  useUpsertAssignmentMappingMutation,
   useDeleteAssignmentMappingMutation,
   useGetMappingSignatureListQuery,
   useRequestMappingSignatureMutation,

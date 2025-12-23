@@ -45,8 +45,7 @@ import {
   useRequestSignatureMutation,
   useGetSignatureListQuery,
   useGetAssignmentMappingsQuery,
-  useCreateAssignmentMappingMutation,
-  useUpdateAssignmentMappingMutation,
+  useUpsertAssignmentMappingMutation,
   useDeleteAssignmentMappingMutation,
   useGetMappingSignatureListQuery,
   useUpdateMappingPCMutation,
@@ -302,7 +301,12 @@ const CreateViewEvidenceLibrary = () => {
     data: mappingsData,
     isLoading: isLoadingMappings,
   } = useGetAssignmentMappingsQuery(
-    { assignment_id: id as string },
+    { 
+      assignment_id: id as string,
+      course_id: undefined,
+      unit_code: undefined,
+      user_id: learnerUserId ? String(learnerUserId) : undefined,
+    },
     {
       skip: !id,
       refetchOnMountOrArgChange: true,
@@ -310,8 +314,7 @@ const CreateViewEvidenceLibrary = () => {
   )
     console.log("🚀 ~ CreateViewEvidenceLibrary ~ mappingsData:", mappingsData)
   
-  const [createMapping] = useCreateAssignmentMappingMutation()
-  const [updateMapping] = useUpdateAssignmentMappingMutation()
+  const [upsertMapping] = useUpsertAssignmentMappingMutation()
   const [deleteMapping] = useDeleteAssignmentMappingMutation()
   const [updateMappingPC] = useUpdateMappingPCMutation()
 
@@ -955,9 +958,7 @@ const CreateViewEvidenceLibrary = () => {
       await updateEvidenceId(evidencePayload).unwrap()
 
       // Step 2: Handle mappings for each course/unit/subunit combination
-      const currentMappings = mappingsData?.data ? (Array.isArray(mappingsData.data) ? mappingsData.data : []) : []
-      const mappingsMap = new Map(currentMappings.map((m: any) => [`${m.course_id}-${m.unit_ref}-${m.sub_unit_ref || 'null'}`, m]))
-
+      // Map key: course_id-unit_code (using unit_code instead of unit_ref/sub_unit_ref)
       // Build desired mappings from form state
       const desiredMappings: Map<string, any> = new Map()
       const formUnits = data.units || []
@@ -968,80 +969,55 @@ const CreateViewEvidenceLibrary = () => {
         const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
 
         if (hasSubUnit) {
-          // Unit has subunits - create mapping for each subunit
+          // Unit has subunits - create mapping for each subunit (unit_code = subunit code)
           unit.subUnit.forEach((sub: any) => {
-            const subUnitRef = sub.code || sub.id
-            const key = `${courseId}-${unitRef}-${subUnitRef}`
+            const subUnitCode = sub.code || sub.id
+            const key = `${courseId}-${subUnitCode}`
             desiredMappings.set(key, {
-              assignment_id: id,
-              course_id: courseId,
-              unit_ref: unitRef,
-              sub_unit_ref: subUnitRef,
+              assignment_id: Number(id),
+              course_id: Number(courseId),
+              unit_code: String(subUnitCode),
               learnerMap: sub.learnerMap ?? false,
               trainerMap: sub.trainerMap ?? false,
-              signedOff: sub.signedOff ?? false,
-              comment: sub.comment || '',
-              mapping_id: sub.mapping_id, // For updates
+              mapping_id: sub.mapping_id, // For updates (if exists)
             })
           })
         } else {
-          // Unit-only - create mapping for unit itself
-          const key = `${courseId}-${unitRef}-null`
+          // Unit-only - create mapping for unit itself (unit_code = unit code)
+          const key = `${courseId}-${unitRef}`
           desiredMappings.set(key, {
-            assignment_id: id,
-            course_id: courseId,
-            unit_ref: unitRef,
-            sub_unit_ref: null,
+            assignment_id: Number(id),
+            course_id: Number(courseId),
+            unit_code: String(unitRef),
             learnerMap: unit.learnerMap ?? false,
             trainerMap: unit.trainerMap ?? false,
-            signedOff: unit.signedOff ?? false,
-            comment: unit.comment || '',
-            mapping_id: unit.mapping_id, // For updates
+            mapping_id: unit.mapping_id, // For updates (if exists)
           })
         }
       })
 
-      // Create/Update mappings and collect mapping IDs
+      // Upsert mappings and collect mapping IDs
       const allMappingIds: number[] = []
       const desiredMappingsArray = Array.from(desiredMappings.entries())
       
       for (const [key, desiredMapping] of desiredMappingsArray) {
-        const existingMapping = mappingsMap.get(key)
-        
-        if (existingMapping && (existingMapping as any).mapping_id) {
-          // Update existing mapping
-          const { mapping_id, ...updateData } = desiredMapping
-          await updateMapping({
-            mapping_id: (existingMapping as any).mapping_id,
-            data: updateData,
-          }).unwrap()
-          allMappingIds.push((existingMapping as any).mapping_id)
-        } else {
-          // Create new mapping and get mapping_id from response
-          const { mapping_id, ...createData } = desiredMapping
-          try {
-            const createResult = await createMapping(createData).unwrap()
-            // Extract mapping_id from response (adjust based on actual API response structure)
-            const newMappingId = (createResult as any)?.mapping_id || 
-                                (createResult as any)?.id || 
-                                (createResult as any)?.data?.mapping_id ||
-                                (createResult as any)?.data?.id
-            if (newMappingId) {
-              allMappingIds.push(newMappingId)
-            }
-          } catch (error) {
-            console.warn('Failed to create mapping:', error)
+        try {
+          // Use merged upsert API - it handles both create and update
+          const { mapping_id, ...payload } = desiredMapping
+          const result = await upsertMapping(payload).unwrap()
+          
+          // Extract mapping_id from response
+          const mappingId = (result as any)?.mapping_id || 
+                          (result as any)?.id || 
+                          (result as any)?.data?.mapping_id ||
+                          (result as any)?.data?.id ||
+                          mapping_id // Fallback to existing mapping_id if present
+          
+          if (mappingId) {
+            allMappingIds.push(mappingId)
           }
-        }
-      }
-
-      // Delete mappings that are no longer needed
-      const mappingsMapArray = Array.from(mappingsMap.entries())
-      for (const entry of mappingsMapArray) {
-        const mapKey = String(entry[0])
-        const existingMapping = entry[1] as any
-        if (!desiredMappings.has(mapKey) && existingMapping?.mapping_id) {
-          await deleteMapping({ mapping_id: existingMapping.mapping_id }).unwrap()
+        } catch (error) {
+          console.warn('Failed to upsert mapping:', error)
         }
       }
 
