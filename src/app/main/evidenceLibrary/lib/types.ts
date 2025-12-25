@@ -10,6 +10,8 @@ export type FormValues = {
   grade: string
   declaration: boolean
   assessment_method: string[]
+  selectedCourses: any[]
+  courseSelectedTypes: Record<string | number, string>
   units: Unit[]
   signatures: SignatureData[]
 }

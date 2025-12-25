@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -43,12 +43,8 @@ import {
   useUpdateEvidenceIdMutation,
   useUploadExternalEvidenceFileMutation,
   useRequestSignatureMutation,
-  useGetSignatureListQuery,
-  useGetAssignmentMappingsQuery,
-  useCreateAssignmentMappingMutation,
-  useUpdateAssignmentMappingMutation,
+  useUpsertAssignmentMappingMutation,
   useDeleteAssignmentMappingMutation,
-  useGetMappingSignatureListQuery,
   useUpdateMappingPCMutation,
 } from 'app/store/api/evidence-api'
 import { assessmentMethod, fileTypes } from 'src/utils/constants'
@@ -80,16 +76,7 @@ const CreateViewEvidenceLibrary = () => {
   const [sessions, setSessions] = useState([])
   const [isTimeLogDialogOpen, setIsTimeLogDialogOpen] = useState(false)
   const [selectedUnitType, setSelectedUnitType] = useState<string | null>(null)
-  const [selectedUnitIds, setSelectedUnitIds] = useState<(string | number)[]>(
-    []
-  )
-  // State for multiple course selection
-  const [selectedCourses, setSelectedCourses] = useState<any[]>([])
-  console.log("🚀 ~ CreateViewEvidenceLibrary ~ selectedCourses:", selectedCourses)
-  // Track selected type for each Standard course (course_id -> type)
-  const [courseSelectedTypes, setCourseSelectedTypes] = useState<
-    Record<string | number, string>
-  >({})
+  // selectedCourses and courseSelectedTypes are now managed by React Hook Form
   const [timeLogData, setTimeLogData] = useState({
     user_id: null,
     course_id: null,
@@ -113,14 +100,18 @@ const CreateViewEvidenceLibrary = () => {
   const userRole = useUserRole()
   const { currentUser, selectedUser, selected } = useSelector(selectGlobalUser)
   const { learner } = useSelector(selectLearnerManagement)
+  
+  // Ref to track if form has been initialized to prevent resetting values
+  const isFormInitialized = useRef(false)
 
   const {
     control,
     handleSubmit,
     setValue,
     watch,
+    getValues,
     trigger,
-    formState: { errors },
+    formState: { errors, isSubmitted },
   } = useForm<FormValues>({
     resolver: yupResolver(getValidationSchema(userRole)),
     defaultValues: {
@@ -137,6 +128,8 @@ const CreateViewEvidenceLibrary = () => {
         ? true
         : false,
       assessment_method: [],
+      selectedCourses: [],
+      courseSelectedTypes: {},
       units: [],
       signatures: [
         {
@@ -173,7 +166,10 @@ const CreateViewEvidenceLibrary = () => {
         },
       ],
     },
+    mode: 'onSubmit',
   })
+
+  console.log("🚀 ~ CreateViewEvidenceLibrary ~ errors:", errors)
 
   const {
     data: evidenceDetails,
@@ -189,18 +185,9 @@ const CreateViewEvidenceLibrary = () => {
     }
   )
 
-  const {
-    data: signatureList,
-    isLoading: isLoadingSignatureList,
-    isError: isErrorSignatureList,
-    error: errorSignatureList,
-  } = useGetSignatureListQuery(
-    { id: id as string },
-    {
-      skip: !id,
-      refetchOnMountOrArgChange: true,
-    }
-  )
+  // Extract mappings and signatures from evidenceDetails
+  const mappingsData = evidenceDetails?.data?.mappings || []
+  const signatureList = evidenceDetails?.data?.signatures || []
 
   const {
     data,
@@ -235,20 +222,20 @@ const CreateViewEvidenceLibrary = () => {
 
   // Populate signatures from API data
   useEffect(() => {
-    if (signatureList && signatureList.data && signatureList.data.length > 0) {
+    if (signatureList && Array.isArray(signatureList) && signatureList.length > 0) {
       const signatureRoles = ['Trainer', 'Learner', 'Employer', 'IQA']
       const populatedSignatures = signatureRoles.map((role) => {
-        const apiSignature = signatureList.data.find((sig) => sig.role === role)
+        const apiSignature = signatureList.find((sig: any) => sig.role === role)
         if (apiSignature) {
           return {
             role: apiSignature.role,
             name: apiSignature.name || '',
-            signed: apiSignature.isSigned || false,
+            signed: apiSignature.is_signed || false,
             es: '', // ES field not in API response, keeping empty
-            date: apiSignature.signedAt
-              ? new Date(apiSignature.signedAt).toISOString().split('T')[0]
+            date: apiSignature.signed_at
+              ? new Date(apiSignature.signed_at).toISOString().split('T')[0]
               : '',
-            signature_required: apiSignature.isRequested || false,
+            signature_required: apiSignature.is_requested || false,
           }
         }
         return {
@@ -297,21 +284,7 @@ const CreateViewEvidenceLibrary = () => {
   const [requestSignature, { isLoading: isRequestingSignature }] =
     useRequestSignatureMutation()
   
-  // Mapping API hooks
-  const {
-    data: mappingsData,
-    isLoading: isLoadingMappings,
-  } = useGetAssignmentMappingsQuery(
-    { assignment_id: id as string },
-    {
-      skip: !id,
-      refetchOnMountOrArgChange: true,
-    }
-  )
-    console.log("🚀 ~ CreateViewEvidenceLibrary ~ mappingsData:", mappingsData)
-  
-  const [createMapping] = useCreateAssignmentMappingMutation()
-  const [updateMapping] = useUpdateAssignmentMappingMutation()
+  const [upsertMapping] = useUpsertAssignmentMappingMutation()
   const [deleteMapping] = useDeleteAssignmentMappingMutation()
   const [updateMappingPC] = useUpdateMappingPCMutation()
 
@@ -325,13 +298,21 @@ const CreateViewEvidenceLibrary = () => {
       return { selectedCourses: [], courseSelectedTypes: {}, units: [] }
     }
 
-    // Group mappings by course_id
+    // Group mappings by course_id (now directly available in mapping response)
     const mappingsByCourse = new Map<number, any[]>()
     mappings.forEach((mapping) => {
-      if (!mappingsByCourse.has(mapping.course_id)) {
-        mappingsByCourse.set(mapping.course_id, [])
+      // Use course_id directly from mapping response
+      const courseId = mapping.course_id
+      if (!courseId) return
+
+      // Support both unit_code (new API) and unit_ref (old API)
+      const unitCode = mapping.unit_code || mapping.unit_ref
+      if (!unitCode) return
+
+      if (!mappingsByCourse.has(courseId)) {
+        mappingsByCourse.set(courseId, [])
       }
-      mappingsByCourse.get(mapping.course_id)!.push(mapping)
+      mappingsByCourse.get(courseId)!.push(mapping)
     })
 
     // Build selected courses from mappings
@@ -349,9 +330,10 @@ const CreateViewEvidenceLibrary = () => {
       if (course.course_core_type === 'Standard') {
         // Find the first mapping's unit type
         const firstMapping = courseMappings[0]
-        if (firstMapping?.unit_ref && course.units) {
+        const unitCode = firstMapping?.unit_code || firstMapping?.unit_ref
+        if (unitCode && course.units) {
           const matchedUnit = course.units.find(
-            (u: any) => u.code === firstMapping.unit_ref || u.unit_ref === firstMapping.unit_ref
+            (u: any) => u.code === unitCode || u.unit_ref === unitCode
           )
           if (matchedUnit?.type) {
             courseSelectedTypesObj[courseId] = matchedUnit.type
@@ -364,8 +346,10 @@ const CreateViewEvidenceLibrary = () => {
       const unitsMap = new Map<string, any>()
 
       courseMappings.forEach((mapping) => {
+        // Support both unit_code (new API) and unit_ref (old API)
+        const unitCode = mapping.unit_code || mapping.unit_ref
         const unit = courseUnits.find(
-          (u: any) => u.code === mapping.unit_ref || u.unit_ref === mapping.unit_ref
+          (u: any) => u.code === unitCode || u.unit_ref === unitCode
         )
         if (!unit) return
 
@@ -383,33 +367,47 @@ const CreateViewEvidenceLibrary = () => {
 
         const unitData = unitsMap.get(unitKey)!
 
-        // If mapping has sub_unit_ref, it's a subunit mapping
-        if (mapping.sub_unit_ref !== null && mapping.sub_unit_ref !== undefined) {
+        // Support both sub_unit_id (new API) and sub_unit_ref (old API)
+        const subUnitRef = mapping.sub_unit_id || mapping.sub_unit_ref
+        // If mapping has sub_unit_ref, it's a sub unit mapping
+        if (subUnitRef !== null && subUnitRef !== undefined) {
           // Find the subunit in the unit's subUnit array
           const subunit = unit.subUnit?.find(
-            (s: any) => s.code === mapping.sub_unit_ref || s.id === mapping.sub_unit_ref
+            (s: any) => s.code === subUnitRef || s.id === subUnitRef
           )
           if (subunit) {
             const existingSubUnit = unitData.subUnit.find(
               (s: any) => s.id === subunit.id || s.code === subunit.code
             )
             if (!existingSubUnit) {
+              // Support both camelCase (learnerMap) and snake_case (learner_map) from API
+              const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
+              const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
+              const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
+              const comment = mapping.comment ?? ''
+              
               unitData.subUnit.push({
                 ...subunit,
-                learnerMap: mapping.learnerMap ?? false,
-                trainerMap: mapping.trainerMap ?? false,
-                signedOff: mapping.signedOff ?? false,
-                comment: mapping.comment ?? '',
+                learnerMap,
+                trainerMap,
+                signedOff,
+                comment,
                 mapping_id: mapping.mapping_id,
               })
             }
           }
         } else {
           // Unit-only mapping (no subunits)
-          unitData.learnerMap = mapping.learnerMap ?? false
-          unitData.trainerMap = mapping.trainerMap ?? false
-          unitData.signedOff = mapping.signedOff ?? false
-          unitData.comment = mapping.comment ?? ''
+          // Support both camelCase (learnerMap) and snake_case (learner_map) from API
+          const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
+          const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
+          const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
+          const comment = mapping.comment ?? ''
+          
+          unitData.learnerMap = learnerMap
+          unitData.trainerMap = trainerMap
+          unitData.signedOff = signedOff
+          unitData.comment = comment
           unitData.mapping_id = mapping.mapping_id
         }
       })
@@ -430,8 +428,13 @@ const CreateViewEvidenceLibrary = () => {
       return
     }
 
+    // Only initialize form once - prevent resetting values when user makes changes
+    if (isFormInitialized.current) {
+      return
+    }
+
     // Load evidence-level data only (no course_id, no units)
-    if (evidenceDetails && !isLoadingMappings) {
+    if (evidenceDetails && evidenceDetails.data) {
       const {
         description,
         grade,
@@ -470,21 +473,29 @@ const CreateViewEvidenceLibrary = () => {
       )
 
       // Reconstruct form state from mappings
-      if (mappingsData?.data && learnerCoursesData && learnerCoursesData.length > 0) {
-        const mappings = Array.isArray(mappingsData.data) ? mappingsData.data : []
-        const reconstructed = reconstructFormStateFromMappings(mappings, learnerCoursesData)
+      if (mappingsData && Array.isArray(mappingsData) && mappingsData.length > 0 && learnerCoursesData && learnerCoursesData.length > 0) {
+        const reconstructed = reconstructFormStateFromMappings(mappingsData, learnerCoursesData)
         
-        if (reconstructed.selectedCourses.length > 0 && selectedCourses.length === 0) {
-          setSelectedCourses(reconstructed.selectedCourses)
-          setCourseSelectedTypes(reconstructed.courseSelectedTypes)
+        const currentSelectedCourses = watch('selectedCourses') || []
+        if (reconstructed.selectedCourses.length > 0 && currentSelectedCourses.length === 0) {
+          setValue('selectedCourses', reconstructed.selectedCourses)
+          setValue('courseSelectedTypes', reconstructed.courseSelectedTypes)
           setValue('units', reconstructed.units)
         }
       }
-    }
-  }, [evidenceDetails, mappingsData, setValue, isError, id, isLoading, isLoadingMappings, learnerCoursesData, selectedCourses.length, reconstructFormStateFromMappings, userRole])
 
-  // Watch units from form - must be declared before any conditional returns
+      // Mark form as initialized after setting all values
+      isFormInitialized.current = true
+    } else if (!id) {
+      // For new evidence (no id), mark as initialized immediately to prevent future resets
+      isFormInitialized.current = true
+    }
+  }, [evidenceDetails, mappingsData, setValue, isError, id, isLoading, learnerCoursesData, reconstructFormStateFromMappings, userRole, watch, navigate])
+
+  // Watch form fields - must be declared before any conditional returns
   const unitsWatch = watch('units')
+  const selectedCourses = watch('selectedCourses') || []
+  const courseSelectedTypes = watch('courseSelectedTypes') || {}
 
   // Initialize time log data when evidence details are loaded
   useEffect(() => {
@@ -516,23 +527,6 @@ const CreateViewEvidenceLibrary = () => {
   // Auto-initialize units in form when type is selected for Standard courses
   // This is handled by the course selection and type selection UI, so this useEffect is no longer needed
   // Units are initialized when course type is selected in the UI
-
-  // Remove units from form when they're deselected for Qualification courses
-  useEffect(() => {
-    const courseType = evidenceDetails?.data?.course_id?.course_core_type
-    if (courseType === 'Qualification') {
-      const currentUnits = unitsWatch || []
-      // Remove units that are not in selectedUnitIds
-      const unitsToKeep = currentUnits.filter((unit) =>
-        selectedUnitIds.includes(unit.id)
-      )
-
-      if (unitsToKeep.length !== currentUnits.length) {
-        setValue('units', unitsToKeep, { shouldValidate: false })
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedUnitIds])
 
   // Sync selected units from evidence form to time log
   useEffect(() => {
@@ -576,48 +570,6 @@ const CreateViewEvidenceLibrary = () => {
     } else {
       console.error('File URL is not available')
     }
-  }
-
-  const handleCheckboxUnits = (event, method) => {
-    const currentUnits = [...(unitsWatch || [])]
-    const exists = currentUnits.find(
-      (unit) => String(unit.id) === String(method.id)
-    )
-    let updatedUnits = []
-
-    if (exists) {
-      updatedUnits = currentUnits.filter(
-        (unit) => String(unit.id) !== String(method.id)
-      )
-    } else {
-      // When adding a unit, ensure subUnits have learnerMap, trainerMap, and comment initialized
-      const hasSubUnit =
-        method.subUnit &&
-        Array.isArray(method.subUnit) &&
-        method.subUnit.length > 0
-      const unitToAdd = {
-        ...method,
-        // Explicitly preserve type property (important for Standard courses)
-        type: method.type,
-        code: method.code,
-        subUnit: hasSubUnit
-          ? method.subUnit.map((sub) => ({
-              ...sub,
-              learnerMap: sub.learnerMap ?? false,
-              trainerMap: sub.trainerMap ?? false,
-              comment: sub.comment ?? '',
-            }))
-          : [],
-        // Initialize unit-level properties for units without subUnit (Knowledge/Behaviour/Skills)
-        learnerMap: hasSubUnit ? undefined : method.learnerMap ?? false,
-        trainerMap: hasSubUnit ? undefined : method.trainerMap ?? false,
-        comment: hasSubUnit ? undefined : method.comment ?? '',
-      }
-      updatedUnits = [...currentUnits, unitToAdd]
-    }
-
-    console.log('🚀 ~ handleCheckboxUnits ~ updatedUnits:', updatedUnits)
-    setValue('units', updatedUnits, { shouldValidate: true })
   }
 
   const learnerMapHandler = (row) => {
@@ -875,8 +827,8 @@ const CreateViewEvidenceLibrary = () => {
   }
 
   const onSubmit = async (data: FormValues) => {
-    // Validate course selections before submitting
-    if (selectedCourses.length === 0) {
+    // Validate course selections before submitting (schema validation should handle this, but keep as backup)
+    if (!data.selectedCourses || data.selectedCourses.length === 0) {
       dispatch(
         showMessage({
           message: 'Please select at least one course',
@@ -887,11 +839,11 @@ const CreateViewEvidenceLibrary = () => {
     }
 
     // Validate Standard courses have type selected
-    const standardCourses = selectedCourses.filter(
+    const standardCourses = data.selectedCourses.filter(
       (c) => c.course_core_type === 'Standard'
     )
     for (const course of standardCourses) {
-      if (!courseSelectedTypes[course.course_id]) {
+      if (!data.courseSelectedTypes || !data.courseSelectedTypes[course.course_id]) {
         dispatch(
           showMessage({
             message: `Please select a type for ${course.course_name}`,
@@ -903,7 +855,7 @@ const CreateViewEvidenceLibrary = () => {
     }
 
     // Validate Qualification courses have units selected
-    const qualificationCourses = selectedCourses.filter(
+    const qualificationCourses = data.selectedCourses.filter(
       (c) => c.course_core_type === 'Qualification'
     )
     for (const course of qualificationCourses) {
@@ -955,93 +907,87 @@ const CreateViewEvidenceLibrary = () => {
       await updateEvidenceId(evidencePayload).unwrap()
 
       // Step 2: Handle mappings for each course/unit/subunit combination
-      const currentMappings = mappingsData?.data ? (Array.isArray(mappingsData.data) ? mappingsData.data : []) : []
-      const mappingsMap = new Map(currentMappings.map((m: any) => [`${m.course_id}-${m.unit_ref}-${m.sub_unit_ref || 'null'}`, m]))
-
+      // Map key: course_id-unit_code (using unit_code instead of unit_ref/sub_unit_ref)
       // Build desired mappings from form state
       const desiredMappings: Map<string, any> = new Map()
       const formUnits = data.units || []
 
       formUnits.forEach((unit: any) => {
         const courseId = unit.course_id
-        const unitRef = unit.code || unit.unit_ref
         const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
 
         if (hasSubUnit) {
-          // Unit has subunits - create mapping for each subunit
+          // Unit has subunits - create mapping for each subunit (unit_code = subunit code)
+          // Only include mappings where learnerMap is true
           unit.subUnit.forEach((sub: any) => {
-            const subUnitRef = sub.code || sub.id
-            const key = `${courseId}-${unitRef}-${subUnitRef}`
-            desiredMappings.set(key, {
-              assignment_id: id,
-              course_id: courseId,
-              unit_ref: unitRef,
-              sub_unit_ref: subUnitRef,
-              learnerMap: sub.learnerMap ?? false,
-              trainerMap: sub.trainerMap ?? false,
-              signedOff: sub.signedOff ?? false,
-              comment: sub.comment || '',
-              mapping_id: sub.mapping_id, // For updates
-            })
+            // Only add to desiredMappings if learnerMap is true
+            if (sub.learnerMap === true) {
+              const key = `${courseId}-${sub.id}`
+              desiredMappings.set(key, {
+                assignment_id: Number(id),
+                course_id: Number(courseId),
+                unit_code: String(sub.id),
+                learnerMap: true,
+                trainerMap: sub.trainerMap ?? false,
+                code: sub.code,
+                mapping_id: sub.mapping_id, // For updates (if exists)
+              })
+            }
           })
         } else {
-          // Unit-only - create mapping for unit itself
-          const key = `${courseId}-${unitRef}-null`
-          desiredMappings.set(key, {
-            assignment_id: id,
-            course_id: courseId,
-            unit_ref: unitRef,
-            sub_unit_ref: null,
-            learnerMap: unit.learnerMap ?? false,
-            trainerMap: unit.trainerMap ?? false,
-            signedOff: unit.signedOff ?? false,
-            comment: unit.comment || '',
-            mapping_id: unit.mapping_id, // For updates
-          })
+          // Unit-only - create mapping for unit itself (unit_code = unit code)
+          // Only include mappings where learnerMap is true
+          if (unit.learnerMap === true) {
+            const key = `${courseId}-${unit.id}`
+            desiredMappings.set(key, {
+              assignment_id: Number(id),
+              course_id: Number(courseId),
+              code: unit.code,
+              unit_code: String(unit.id),
+              learnerMap: true,
+              trainerMap: unit.trainerMap ?? false,
+              mapping_id: unit.mapping_id, // For updates (if exists)
+            })
+          }
         }
       })
 
-      // Create/Update mappings and collect mapping IDs
+      // Upsert mappings and collect mapping IDs
       const allMappingIds: number[] = []
       const desiredMappingsArray = Array.from(desiredMappings.entries())
       
       for (const [key, desiredMapping] of desiredMappingsArray) {
-        const existingMapping = mappingsMap.get(key)
-        
-        if (existingMapping && (existingMapping as any).mapping_id) {
-          // Update existing mapping
-          const { mapping_id, ...updateData } = desiredMapping
-          await updateMapping({
-            mapping_id: (existingMapping as any).mapping_id,
-            data: updateData,
-          }).unwrap()
-          allMappingIds.push((existingMapping as any).mapping_id)
-        } else {
-          // Create new mapping and get mapping_id from response
-          const { mapping_id, ...createData } = desiredMapping
-          try {
-            const createResult = await createMapping(createData).unwrap()
-            // Extract mapping_id from response (adjust based on actual API response structure)
-            const newMappingId = (createResult as any)?.mapping_id || 
-                                (createResult as any)?.id || 
-                                (createResult as any)?.data?.mapping_id ||
-                                (createResult as any)?.data?.id
-            if (newMappingId) {
-              allMappingIds.push(newMappingId)
-            }
-          } catch (error) {
-            console.warn('Failed to create mapping:', error)
+        try {
+          // Use merged upsert API - it handles both create and update
+          const { mapping_id, ...payload } = desiredMapping
+          const result = await upsertMapping(payload).unwrap()
+          
+          // Extract mapping_id from response
+          // Response structure: { status: true, message: "...", data: [{ mapping_id: 11, ... }] }
+          let mappingId: number | null = null
+          
+          if (result?.data && Array.isArray(result.data) && result.data.length > 0) {
+            // Get mapping_id from the first item in the data array
+            mappingId = result.data[0]?.mapping_id || null
+          } else if ((result as any)?.mapping_id) {
+            // Fallback: direct mapping_id property
+            mappingId = (result as any).mapping_id
+          } else if ((result as any)?.id) {
+            // Fallback: direct id property
+            mappingId = (result as any).id
+          } else if ((result as any)?.data?.mapping_id) {
+            // Fallback: data.mapping_id (if data is not an array)
+            mappingId = (result as any).data.mapping_id
+          } else if (mapping_id) {
+            // Final fallback: use existing mapping_id from desiredMapping
+            mappingId = mapping_id
           }
-        }
-      }
-
-      // Delete mappings that are no longer needed
-      const mappingsMapArray = Array.from(mappingsMap.entries())
-      for (const entry of mappingsMapArray) {
-        const mapKey = String(entry[0])
-        const existingMapping = entry[1] as any
-        if (!desiredMappings.has(mapKey) && existingMapping?.mapping_id) {
-          await deleteMapping({ mapping_id: existingMapping.mapping_id }).unwrap()
+          
+          if (mappingId) {
+            allMappingIds.push(mappingId)
+          }
+        } catch (error) {
+          console.warn('Failed to upsert mapping:', error)
         }
       }
 
@@ -1051,24 +997,19 @@ const CreateViewEvidenceLibrary = () => {
         ?.filter((sig) => sig.signature_required)
         .map((sig) => sig.role) || []
 
-      // Request signatures for each mapping and each required role
+      // Request signatures for each mapping with all required roles as array
       if (requiredRoles.length > 0 && allMappingIds.length > 0) {
         for (const mappingId of allMappingIds) {
-          for (const role of requiredRoles) {
-            try {
-              await requestSignature({
-                id,
-                data: {
-                  mapping_id: mappingId,
-                  role: role,
-                  user_id: learnerUserId,
-                  is_requested: true,
-                },
-              }).unwrap()
-            } catch (error) {
-              // Log error but don't fail the entire submission
-              console.warn(`Failed to request signature for mapping ${mappingId}, role ${role}:`, error)
-            }
+          try {   
+            await requestSignature({
+              id,
+              data: {
+                roles: requiredRoles,
+              },
+            }).unwrap()
+          } catch (error) {
+            // Log error but don't fail the entire submission
+            console.warn(`Failed to request signature for mapping ${mappingId}:`, error)
           }
         }
       }
@@ -1439,12 +1380,13 @@ const CreateViewEvidenceLibrary = () => {
                   />
                 </Tooltip>
               ))}
+         
+            </FormGroup>
               {errors.assessment_method && (
                 <FormHelperText error>
                   {errors.assessment_method.message}
                 </FormHelperText>
               )}
-            </FormGroup>
           </Grid>
           <Grid item xs={12}>
             <Typography variant='body1' gutterBottom>
@@ -1564,75 +1506,101 @@ const CreateViewEvidenceLibrary = () => {
             {isLoadingLearnerCourses ? (
               <CircularProgress size={24} />
             ) : (
-              <Autocomplete
-                multiple
-                options={learnerCoursesData || []}
-                getOptionLabel={(option: any) =>
-                  `${option.course_name} (${option.course_core_type})`
-                }
-                value={selectedCourses}
-                disabled={isEditMode || !canEditLearnerFields}
-                onChange={(event, newValue) => {
-                  const selected = newValue || []
-                  const removed = selectedCourses.filter(
-                    (c) => !selected.some((s: any) => s.course_id === c.course_id)
-                  )
-
-                  setSelectedCourses(selected)
-
-                  // Initialize type selection for newly selected Standard courses
-                  selected.forEach((course: any) => {
-                    if (
-                      course.course_core_type === 'Standard' &&
-                      !courseSelectedTypes[course.course_id]
-                    ) {
-                      setCourseSelectedTypes((prev) => ({
-                        ...prev,
-                        [course.course_id]: null,
-                      }))
+              <Controller
+                name="selectedCourses"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Autocomplete
+                    multiple
+                    options={learnerCoursesData || []}
+                    getOptionLabel={(option: any) =>
+                      `${option.course_name} (${option.course_core_type})`
                     }
-                  })
+                    value={field.value || []}
+                    disabled={isEditMode || !canEditLearnerFields}
+                    onChange={(event, newValue) => {
+                      const selected = newValue || []
+                      const currentValue = field.value || []
 
-                  // Remove type selection and units for deselected courses
-                  removed.forEach((course: any) => {
-                    setCourseSelectedTypes((prev) => {
-                      const updated = { ...prev }
-                      delete updated[course.course_id]
-                      return updated
-                    })
-                    // Remove units from form when course is deselected
-                    const currentUnits = unitsWatch || []
-                    const courseUnits = currentUnits.filter(
-                      (unit) => unit.course_id !== course.course_id
-                    )
-                    setValue('units', courseUnits, {
-                      shouldValidate: false,
-                    })
-                  })
-                }}
-                isOptionEqualToValue={(option: any, value: any) =>
-                  option.course_id === value.course_id
-                }
-                renderTags={(value, getTagProps) =>
-                  value.map((option: any, index: number) => (
-                    <Chip
-                      label={`${option.course_name} (${option.course_core_type})`}
-                      {...getTagProps({ index })}
-                      key={option.course_id}
-                    />
-                  ))
-                }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    size='small'
-                    label='Select Courses'
-                    error={selectedCourses.length === 0}
-                    helperText={
-                      selectedCourses.length === 0
-                        ? 'Please select at least one course'
-                        : ''
+                      // Use getValues() once to get all current form values
+                      const formValues = getValues()
+                      const currentCourseSelectedTypes = formValues.courseSelectedTypes || {}
+                      const currentUnits = formValues.units || []
+
+                      // Calculate removed courses
+                      const removed = currentValue.filter(
+                        (c) => !selected.some((s: any) => s.course_id === c.course_id)
+                      )
+
+                      // Prepare updates for courseSelectedTypes
+                      let updatedCourseSelectedTypes = { ...currentCourseSelectedTypes }
+                      
+                      // Initialize type selection for newly selected Standard courses
+                      selected.forEach((course: any) => {
+                        if (
+                          course.course_core_type === 'Standard' &&
+                          !updatedCourseSelectedTypes[course.course_id]
+                        ) {
+                          updatedCourseSelectedTypes[course.course_id] = ''
+                        }
+                      })
+
+                      // Remove type selection for deselected courses
+                      removed.forEach((course: any) => {
+                        delete updatedCourseSelectedTypes[course.course_id]
+                      })
+
+                      // Prepare units update (remove units for deselected courses)
+                      let updatedUnits = currentUnits
+                      if (removed.length > 0) {
+                        const removedCourseIds = removed.map((c: any) => c.course_id)
+                        updatedUnits = currentUnits.filter(
+                          (unit) => !removedCourseIds.includes(unit.course_id)
+                        )
+                      }
+
+                      // Batch all updates together - update selectedCourses first, then other fields
+                      field.onChange(selected)
+                      
+                      // Only update courseSelectedTypes if it changed
+                      if (JSON.stringify(updatedCourseSelectedTypes) !== JSON.stringify(currentCourseSelectedTypes)) {
+                        setValue('courseSelectedTypes', updatedCourseSelectedTypes, { 
+                          shouldDirty: false, 
+                          shouldTouch: false,
+                          shouldValidate: false
+                        })
+                      }
+
+                      // Only update units if they changed
+                      if (removed.length > 0 && updatedUnits.length !== currentUnits.length) {
+                        setValue('units', updatedUnits, {
+                          shouldValidate: false,
+                          shouldDirty: false,
+                          shouldTouch: false,
+                        })
+                      }
+                    }}
+                    isOptionEqualToValue={(option: any, value: any) =>
+                      option.course_id === value.course_id
                     }
+                    renderTags={(value, getTagProps) =>
+                      value.map((option: any, index: number) => (
+                        <Chip
+                          label={`${option.course_name} (${option.course_core_type})`}
+                          {...getTagProps({ index })}
+                          key={option.course_id}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        size='small'
+                        label='Select Courses'
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message || ''}
+                      />
+                    )}
                   />
                 )}
               />
@@ -1703,10 +1671,11 @@ const CreateViewEvidenceLibrary = () => {
                                 })
                                 
                                 // Update selected type first
-                                setCourseSelectedTypes((prev) => ({
-                                  ...prev,
+                                const currentCourseSelectedTypes = watch('courseSelectedTypes') || {}
+                                setValue('courseSelectedTypes', {
+                                  ...currentCourseSelectedTypes,
                                   [course.course_id]: type,
-                                }))
+                                })
                                 
                                 // Update form with reset units and trigger validation
                                 setValue('units', [...unitsToKeep, ...resetUnits], {
@@ -1721,10 +1690,17 @@ const CreateViewEvidenceLibrary = () => {
                       )
                     )}
                 </FormGroup>
-                  {/* Show validation error if type not selected */}
-                  {!courseSelectedTypes[course.course_id] && (
+                  {/* Show validation error if type not selected (only after form submission attempt) */}
+                  {isSubmitted && !courseSelectedTypes[course.course_id] && (
                     <FormHelperText error>
                       Please select a type for {course.course_name}
+                    </FormHelperText>
+                  )}
+                  {isSubmitted && errors.courseSelectedTypes && (
+                    <FormHelperText error>
+                      {typeof errors.courseSelectedTypes.message === 'string' 
+                        ? errors.courseSelectedTypes.message 
+                        : 'Please select a type for all Standard courses'}
                     </FormHelperText>
                   )}
               </Box>
@@ -1812,8 +1788,8 @@ const CreateViewEvidenceLibrary = () => {
                     />
                   ))}
                 </FormGroup>
-                  {/* Show validation error if no units selected */}
-                  {!unitsWatch?.some(
+                  {/* Show validation error if no units selected (only after form submission attempt) */}
+                  {isSubmitted && !unitsWatch?.some(
                     (u) => u.course_id === course.course_id
                   ) && (
                     <FormHelperText error>
@@ -1991,7 +1967,7 @@ const CreateViewEvidenceLibrary = () => {
                                       sx={{ margin: 0 }}
                                     />
                                   </TableCell>
-                                  <TableCell>Unit/Subunit name</TableCell>
+                                  <TableCell>Sub unit name</TableCell>
                                   <TableCell>Trainer Comment</TableCell>
                                   <TableCell align='center'>Gap</TableCell>
                                   <TableCell align='center'>
@@ -2128,7 +2104,7 @@ const CreateViewEvidenceLibrary = () => {
                                       <TableCell>
                                         {hasSubUnit
                                           ? row.title
-                                          : `${row.unitTitle} - ${row.title}`}
+                                          : `${row.title}`}
                                       </TableCell>
                                       <TableCell>
                                         {!canEditTrainerFields ? (
@@ -2273,12 +2249,38 @@ const CreateViewEvidenceLibrary = () => {
                               </TableBody>
                             </Table>
                           </TableContainer>
-                          {/* Show validation error for combined Knowledge/Behaviour/Skills units */}
-                          {(errors?.units as any)?.message && (
+                          {/* Show validation error for this specific course/type combination (only after form submission attempt) */}
+                          {isSubmitted && (() => {
+                            // Check if at least one learnerMap is selected for this course/type combination
+                            const hasLearnerMapSelected = combinedSubUnits.some((sub) => {
+                              const unit = typeUnits.find((u) => u.id === sub.unitId)
+                              const hasSubUnit = unit?.subUnit && unit.subUnit.length > 0
+                              
+                              if (!hasSubUnit) {
+                                // For units without subUnits, check unit-level learnerMap
+                                const currentUnit = (unitsWatch || []).find(
+                                  (u) => String(u.id) === String(sub.id || sub.unitId) && u.course_id === course.course_id
+                                )
+                                return currentUnit?.learnerMap === true
+                              } else {
+                                // For units with subUnits, check subUnit learnerMap
+                                const currentUnit = (unitsWatch || []).find(
+                                  (u) => String(u.id) === String(sub.unitId) && u.course_id === course.course_id
+                                )
+                                const currentSubUnit = currentUnit?.subUnit?.find(
+                                  (s) => String(s.id) === String(sub.id)
+                                )
+                                return currentSubUnit?.learnerMap === true
+                              }
+                            })
+                            
+                            // Only show error if no learnerMap is selected for this course/type
+                            return !hasLearnerMapSelected && (errors?.units as any)?.message && (
                             <FormHelperText error>
-                              {(errors.units as any).message}
+                                At least one unit must have Learner Map selected for {course.course_name} - {selectedType}
                             </FormHelperText>
-                          )}
+                            )
+                          })()}
                         </Box>
                       )
                     } else {
@@ -2347,7 +2349,7 @@ const CreateViewEvidenceLibrary = () => {
                                         </TableCell>
                                         <TableCell>
                                           {hasSubUnit
-                                            ? 'Subunit name'
+                                            ? 'Sub unit name'
                                             : 'Unit name'}
                                         </TableCell>
                                         <TableCell>Trainer Comment</TableCell>
@@ -2579,13 +2581,22 @@ const CreateViewEvidenceLibrary = () => {
                                     </TableBody>
                                   </Table>
                                 </TableContainer>
-                                {hasSubUnit &&
-                                  errors?.units?.[unitIndex]?.subUnit
-                                    ?.message && (
+                                {isSubmitted && hasSubUnit && (() => {
+                                  // Check if at least one learnerMap is selected for this unit's subUnits
+                                  const currentUnit = (unitsWatch || []).find(
+                                    (u) => String(u.id) === String(units.id) && u.course_id === course.course_id
+                                  )
+                                  const hasLearnerMapSelected = currentUnit?.subUnit?.some(
+                                    (sub) => sub.learnerMap === true
+                                  ) || false
+                                  
+                                  // Only show error if no learnerMap is selected for this unit
+                                  return !hasLearnerMapSelected && errors?.units?.[unitIndex]?.subUnit?.message && (
                                     <FormHelperText error>
                                       {errors.units[unitIndex].subUnit.message}
                                     </FormHelperText>
-                                  )}
+                                  )
+                                })()}
                               </Box>
                             )
                           })}
@@ -2661,7 +2672,7 @@ const CreateViewEvidenceLibrary = () => {
                                       sx={{ margin: 0 }}
                                     />
                                   </TableCell>
-                                  <TableCell>Subunit name</TableCell>
+                                  <TableCell>Sub unit name</TableCell>
                                   <TableCell>Trainer Comment</TableCell>
                                   <TableCell align='center'>Gap</TableCell>
                                   <TableCell align='center'>
@@ -2802,16 +2813,31 @@ const CreateViewEvidenceLibrary = () => {
                               </TableBody>
                             </Table>
                           </TableContainer>
-                          {errors?.units?.[unitIndex]?.subUnit?.message && (
+                          {/* Show validation error for this specific unit (only after form submission attempt) */}
+                          {isSubmitted && (() => {
+                            // Get the current unit from unitsWatch to check real-time state for THIS SPECIFIC UNIT ONLY
+                            const currentUnit = (unitsWatch || []).find(
+                              (u) => String(u.id) === String(units.id) && u.course_id === course.course_id
+                            )
+                            
+                            // Check if at least one learnerMap is selected for THIS SPECIFIC UNIT's subUnits only
+                            // This check is completely independent for each unit - only checks THIS unit's subUnits
+                            const hasLearnerMapSelected = currentUnit?.subUnit?.some(
+                              (sub) => sub.learnerMap === true
+                            ) || false
+                            
+                            // Show error ONLY for THIS SPECIFIC UNIT if no learnerMap is selected
+                            // Don't check global errors - each unit's error is independent
+                            // The error should only disappear when THIS unit has a learnerMap selected
+                            if (!hasLearnerMapSelected) {
+                              return (
                             <FormHelperText error>
-                              {errors.units[unitIndex].subUnit.message}
+                                  At least one sub unit must have Learner Map selected for {units.title}
                             </FormHelperText>
-                          )}
-                           {(errors?.units as any)?.message && (
-                            <FormHelperText error>
-                              {(errors.units as any).message}
-                            </FormHelperText>
-                          )}
+                              )
+                            }
+                            return null
+                })()}
                         </Box>
                       )
                         })}

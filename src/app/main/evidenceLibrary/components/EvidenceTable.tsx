@@ -45,6 +45,7 @@ interface EvidenceTableProps {
   totalItems: number
   totalPages: number
   selectedCourseFilter: CourseOption | null
+  learnerCourses: CourseOption[]
   onOpenMenu: (e: React.MouseEvent<HTMLElement>, evidence: EvidenceData) => void
 }
 
@@ -59,6 +60,7 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
   totalItems,
   totalPages,
   selectedCourseFilter,
+  learnerCourses,
   onOpenMenu
 }) => {
   const theme = useTheme()
@@ -103,21 +105,6 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
                 {truncateText(String(value), 30)}
               </Typography>
             </Tooltip>
-          )
-        },
-      }),
-      columnHelper.accessor('status', {
-        header: 'Status',
-        cell: (info) => {
-          const value = info.getValue()
-          return (
-            <Chip
-              label={String(value || 'Unknown')}
-              color={getStatusColor(String(value || ''))}
-              size='small'
-              variant='outlined'
-              sx={{ fontWeight: 500 }}
-            />
           )
         },
       }),
@@ -194,8 +181,64 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
       }),
     ]
 
-    // Add dynamic unit columns if selectedCourseFilter has units
-    if (selectedCourseFilter?.units && Array.isArray(selectedCourseFilter.units)) {
+    // If "All" is selected, show course name columns instead of unit columns
+    const isAllSelected = selectedCourseFilter?.course_id === ''
+    
+    if (isAllSelected) {
+      // Use learnerCourses array (filter out "All" option)
+      const courses = learnerCourses
+        .filter((course) => course.course_id !== '' && typeof course.course_id === 'number')
+        .sort((a, b) => a.course_name.localeCompare(b.course_name))
+      
+      // Create columns for each course from learner.course array
+      courses.forEach((course) => {
+          baseColumns.push(
+            columnHelper.display({
+              id: `course_${course.course_id}`,
+              header: () => (
+                <Tooltip title={course.course_name} arrow>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 600,
+                      cursor: 'help',
+                      textAlign: 'center',
+                      width: '100%'
+                    }}
+                  >
+                    {course.course_name}
+                  </Typography>
+                </Tooltip>
+              ),
+              cell: (info) => {
+                const row = info.row.original
+                // Check if this evidence belongs to this course using mappings array
+                // Check all mappings, not just the first one
+                const belongsToCourse = row.mappings && Array.isArray(row.mappings)
+                  ? row.mappings.some((mapping) => mapping.course?.course_id === course.course_id)
+                  : false
+                
+                return (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Checkbox
+                      checked={belongsToCourse}
+                      disabled
+                      size="small"
+                      sx={{
+                        padding: '4px',
+                        '&.Mui-disabled': {
+                          color: belongsToCourse ? theme.palette.primary.main : theme.palette.action.disabled,
+                        }
+                      }}
+                    />
+                  </Box>
+                )
+              },
+            })
+          )
+        })
+    } else if (selectedCourseFilter?.units && Array.isArray(selectedCourseFilter.units)) {
+      // Add dynamic unit columns if selectedCourseFilter has units
       selectedCourseFilter.units.forEach((unit: any) => {
         if (unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0) {
           unit.subUnit.forEach((subUnit: any) => {
@@ -223,7 +266,8 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
                 ),
                 cell: (info) => {
                   const row = info.row.original
-                  const mappingStatus = getUnitMappingStatus(row, subUnitId)
+                  // For subunits, pass the subUnitId and mark as isSubUnit=true
+                  const mappingStatus = getUnitMappingStatus(row, subUnitId, subUnitCode, true)
                   const isMapped = mappingStatus.learnerMap || mappingStatus.trainerMap || mappingStatus.signedOff
                   
                   let checkboxColor = theme.palette.action.disabled
@@ -279,7 +323,8 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
               ),
               cell: (info) => {
                 const row = info.row.original
-                const mappingStatus = getUnitMappingStatus(row, unitId)
+                // For units, pass the unitId and unitCode, isSubUnit=false
+                const mappingStatus = getUnitMappingStatus(row, unitId, unitCode, false)
                 const isMapped = mappingStatus.learnerMap || mappingStatus.trainerMap || mappingStatus.signedOff
                 
                 let checkboxColor = theme.palette.action.disabled
@@ -341,7 +386,7 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
     )
 
     return baseColumns
-  }, [theme, selectedCourseFilter?.units, onOpenMenu])
+  }, [theme, selectedCourseFilter?.units, selectedCourseFilter?.course_id, learnerCourses, onOpenMenu])
 
   const table = useReactTable({
     data,

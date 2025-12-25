@@ -47,7 +47,6 @@ import * as yup from 'yup'
 import { useUploadEvidenceFileMutation } from 'app/store/api/evidence-api'
 import { showMessage } from 'app/store/fuse/messageSlice'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
-import { selectCourseManagement } from 'app/store/courseManagement'
 import { useDispatch } from 'react-redux'
 import { useTheme } from '@mui/material/styles'
 
@@ -75,14 +74,13 @@ interface Slide {
 }
 
 type FormValues = {
-  courseId: string
   file: File | null
 }
 
 type EvidenceUploadWithCreationProps = {
   handleClose: () => void
   selectedCourseFilter?: {
-    course_id: number
+    course_id: number | ''
     course_name: string
     course_code: string
     units?: any[]
@@ -103,7 +101,6 @@ const fileTypes = [
 ]
 
 const schema = yup.object().shape({
-  courseId: yup.string().required('Course is required'),
   file: yup
     .mixed<File>()
     .required('A file is required')
@@ -143,8 +140,6 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
   const [loading, setLoading] = useState(false)
 
   // Document creation states
-  const [selectedCourse, setSelectedCourse] = useState('')
-  const [hasUserSelectedCourse, setHasUserSelectedCourse] = useState(false)
   const [wordContent, setWordContent] = useState('')
   const [documentTitle, setDocumentTitle] = useState('')
   const [excelData, setExcelData] = useState<ExcelRow[]>([
@@ -157,12 +152,6 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
   ])
   const [presentationTitle, setPresentationTitle] = useState('')
 
-  const data =
-    useSelector(selectLearnerManagement)?.learner?.course?.map(
-      (item) => item?.course
-    ) || []
-
-  const { singleData } = useSelector(selectCourseManagement)
   const learner = useSelector(selectLearnerManagement)?.learner?.user_id
   const user = useCurrentUser()
   const {
@@ -173,38 +162,14 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
   } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
-      courseId: '',
       file: null,
     },
   })
 
-  // Set default course from selectedCourseFilter (priority) or singleData when available (only if user hasn't manually selected)
-  useEffect(() => {
-    if (data.length > 0 && !hasUserSelectedCourse) {
-      // Priority 1: Use selectedCourseFilter if provided
-      // Priority 2: Fall back to singleData
-      const defaultCourseId = selectedCourseFilter?.course_id 
-        ? String(selectedCourseFilter.course_id)
-        : singleData?.course?.course_id 
-          ? String(singleData.course.course_id)
-          : null
-      
-      if (defaultCourseId) {
-        // Set for upload form
-        setValue('courseId', defaultCourseId, { shouldValidate: false })
-        
-        // Set for document creation
-        if (!selectedCourse) {
-          setSelectedCourse(defaultCourseId)
-        }
-      }
-    }
-  }, [selectedCourseFilter?.course_id, singleData?.course?.course_id, data.length, setValue, hasUserSelectedCourse, selectedCourse])
 
   const onSubmit = async (values: FormValues) => {
     const fromData = new FormData()
     fromData.append('file', values.file as File)
-    fromData.append('course_id', values.courseId)
     fromData.append('user_id', learner || user?.user_id)
 
     try {
@@ -470,14 +435,6 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
 
   // Upload created document as evidence
   const uploadCreatedDocument = async (file: Blob, filename: string) => {
-    if (!selectedCourse) {
-      dispatch(showMessage({
-        message: 'Please select a course',
-        variant: 'error'
-      }));
-      return;
-    }
-
     try {
       setLoading(true);
 
@@ -485,12 +442,10 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
         filename,
         fileSize: file.size,
         fileType: file.type,
-        selectedCourse
       });
 
       const formData = new FormData();
       formData.append('file', file, filename);
-      formData.append('course_id', selectedCourse);
 
       console.log('FormData created, calling API...');
       const response = await uploadEvidenceFile(formData).unwrap();
@@ -533,14 +488,10 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
     console.log('handleWordCreate called', {
       documentTitle,
       wordContentLength: wordContent.length,
-      selectedCourse,
       loading
     });
 
     try {
-      if (!selectedCourse) {
-        throw new Error('Please select a course first');
-      }
       if (!documentTitle.trim()) {
         throw new Error('Document title is required');
       }
@@ -575,14 +526,10 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
     console.log('handleExcelCreate called', {
       sheetName,
       excelDataRows: excelData.length,
-      selectedCourse,
       loading
     });
 
     try {
-      if (!selectedCourse) {
-        throw new Error('Please select a course first');
-      }
       if (!sheetName.trim()) {
         throw new Error('Sheet name is required');
       }
@@ -611,14 +558,10 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
     console.log('handlePowerPointCreate called', {
       presentationTitle,
       slidesCount: slides.length,
-      selectedCourse,
       loading
     });
 
     try {
-      if (!selectedCourse) {
-        throw new Error('Please select a course first');
-      }
       if (!presentationTitle.trim()) {
         throw new Error('Presentation title is required');
       }
@@ -706,65 +649,8 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
         <Box sx={{ p: 4, flex: 1, display: 'flex', flexDirection: 'column' }}>
           <form onSubmit={handleSubmit(onSubmit)} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Grid container spacing={3} sx={{ flex: 1 }}>
-              {/* Course Selection Card */}
-              <Grid item xs={12} md={6}>
-                <Card sx={{ 
-                  p: 3, 
-                  height: '100%',
-                  border: '2px solid',
-                  borderColor: errors.courseId ? theme.palette.error.main : theme.palette.primary.light,
-                  transition: 'all 0.3s',
-                  '&:hover': {
-                    boxShadow: 4,
-                    borderColor: theme.palette.primary.main
-                  }
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      📚 Select Course
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Choose the course this evidence belongs to
-                  </Typography>
-                  <Controller
-                    name="courseId"
-                    control={control}
-                    render={({ field }) => (
-                      <FormControl fullWidth error={!!errors.courseId}>
-                        <Select
-                          {...field}
-                          displayEmpty
-                          onChange={(e) => {
-                            field.onChange(e)
-                            setHasUserSelectedCourse(true)
-                          }}
-                          sx={{ 
-                            '& .MuiSelect-select': {
-                              py: 1.5
-                            }
-                          }}
-                        >
-                          <MenuItem value="" disabled>
-                            <em>Select a course...</em>
-                          </MenuItem>
-                          {data.map((course) => (
-                            <MenuItem key={course.course_id} value={course.course_id}>
-                              {course.course_name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                        {errors.courseId && (
-                          <FormHelperText>{errors.courseId.message}</FormHelperText>
-                        )}
-                      </FormControl>
-                    )}
-                  />
-                </Card>
-              </Grid>
-
               {/* File Upload Card */}
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12}>
                 <Card sx={{ 
                   p: 3, 
                   height: '100%',
@@ -883,7 +769,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
               borderColor: 'divider'
             }}>
               <Typography variant="body2" color="text.secondary">
-                * All fields are required
+                * File is required
               </Typography>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <Button
@@ -915,48 +801,6 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
       {/* Create Document Tab */}
       <TabPanel value={mainTab} index={1}>
         <Box sx={{ p: 4, flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {/* Course Selection Card */}
-          <Card sx={{ 
-            p: 3, 
-            mb: 3,
-            border: '2px solid', 
-            transition: 'all 0.3s'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                {selectedCourse ? '✅' : '⚠️'} Select Course for Evidence
-              </Typography>
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Choose which course this document will be associated with
-            </Typography>
-            <FormControl fullWidth>
-              <Select
-                value={selectedCourse}
-                displayEmpty
-                onChange={(e) => {
-                  console.log('Course selected:', e.target.value);
-                  setSelectedCourse(e.target.value);
-                  setHasUserSelectedCourse(true);
-                }}
-                sx={{
-                  '& .MuiSelect-select': {
-                    py: 1.5
-                  }
-                }}
-              >
-                <MenuItem value="" disabled>
-                  <em>Select a course...</em>
-                </MenuItem>
-                {data.map((course) => (
-                  <MenuItem key={course.course_id} value={course.course_id}>
-                    {course.course_name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Card>
-
           {/* Document Type Selection */}
           <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ 
@@ -1015,7 +859,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
                     setWordContent={setWordContent}
                     onSaveUpload={handleWordCreate}
                     loading={loading}
-                    disabled={!selectedCourse}
+                    disabled={false}
                   />
                 </Box>
               </TabPanel>
@@ -1030,7 +874,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
                     setExcelData={setExcelData}
                     onSaveUpload={handleExcelCreate}
                     loading={loading}
-                    disabled={!selectedCourse}
+                    disabled={false}
                   />
                 </Box>
               </TabPanel>
@@ -1045,7 +889,7 @@ const EvidenceUploadWithCreation: FC<EvidenceUploadWithCreationProps> = ({ handl
                     setSlides={setSlides}
                     onSaveUpload={handlePowerPointCreate}
                     loading={loading}
-                    disabled={!selectedCourse}
+                    disabled={false}
                   />
                 </Box>
               </TabPanel>

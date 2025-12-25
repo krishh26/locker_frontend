@@ -99,7 +99,7 @@ const SignatureModal: React.FC<SignatureModalProps> = ({
         for (const roleKey of signedRoles) {
           await saveSignature({
             id: document.id,
-            data: { role: roleKey.charAt(0).toUpperCase() + roleKey.slice(1) },
+            data: { role: roleKey.charAt(0).toUpperCase() + roleKey.slice(1),is_signed: true },
           }).unwrap()
         }
 
