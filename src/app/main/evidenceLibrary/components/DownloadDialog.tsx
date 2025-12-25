@@ -112,7 +112,11 @@ const DownloadDialog: FC<DownloadDialogProps> = ({
               </Typography>
             </Box>
             <List sx={{ p: 0, overflow: 'auto', flex: 1 }}>
-              {learnerCourses.map((course) => (
+              {learnerCourses
+                .filter((course): course is CourseOption & { course_id: number } => 
+                  course.course_id !== '' && typeof course.course_id === 'number'
+                ) // Filter out "All" option and narrow type
+                .map((course) => (
                 <ListItem key={course.course_id} disablePadding>
                   <ListItemButton
                     onClick={() => onCourseSelect(course.course_id)}

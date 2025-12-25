@@ -36,31 +36,43 @@ export const truncateText = (text: string | null, maxLength: number = 50): strin
 }
 
 export const getUnitMappingStatus = (
-  evidence: { units: any[] | null },
-  unitId: string | number
+  evidence: { mappings?: Array<{ unit_code: string; sub_unit_id: number | null; learnerMap: boolean; trainerMap: boolean; signedOff?: boolean }> },
+  unitId: string | number,
+  unitCode?: string,
+  isSubUnit: boolean = false
 ): { learnerMap: boolean; trainerMap: boolean; signedOff: boolean } => {
   const defaultStatus = { learnerMap: false, trainerMap: false, signedOff: false }
   
-  if (!evidence.units || !Array.isArray(evidence.units)) return defaultStatus
-  
-  // Check if any unit in evidence matches the unitId
-  for (const unit of evidence.units) {
-    // Check unit-level mapping
-    if (unit.id === unitId) {
-      return {
-        learnerMap: unit.learnerMap === true,
-        trainerMap: unit.trainerMap === true,
-        signedOff: unit.signedOff === true
-      }
-    }
-    // Check subUnit-level mapping
-    if (unit.subUnit && Array.isArray(unit.subUnit)) {
-      for (const subUnit of unit.subUnit) {
-        if (subUnit.id === unitId) {
+  // Check mappings array from API response
+  if (evidence.mappings && Array.isArray(evidence.mappings)) {
+    for (const mapping of evidence.mappings) {
+      if (isSubUnit) {
+        // For subunits: match by sub_unit_id (must be a number and match)
+        if (mapping.sub_unit_id !== null && Number(mapping.sub_unit_id) === Number(unitId)) {
           return {
-            learnerMap: subUnit.learnerMap === true,
-            trainerMap: subUnit.trainerMap === true,
-            signedOff: subUnit.signedOff === true
+            learnerMap: mapping.learnerMap === true,
+            trainerMap: mapping.trainerMap === true,
+            signedOff: mapping.signedOff === true
+          }
+        }
+      } else {
+        // For units: match by unit_code when sub_unit_id is null
+        if (mapping.sub_unit_id === null) {
+          // Try matching by unitCode if provided
+          if (unitCode && mapping.unit_code === unitCode) {
+            return {
+              learnerMap: mapping.learnerMap === true,
+              trainerMap: mapping.trainerMap === true,
+              signedOff: mapping.signedOff === true
+            }
+          }
+          // Fallback: try matching by converting unitId to string and comparing with unit_code
+          if (!unitCode && String(mapping.unit_code) === String(unitId)) {
+            return {
+              learnerMap: mapping.learnerMap === true,
+              trainerMap: mapping.trainerMap === true,
+              signedOff: mapping.signedOff === true
+            }
           }
         }
       }

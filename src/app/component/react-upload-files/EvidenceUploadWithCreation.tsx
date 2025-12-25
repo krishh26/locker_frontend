@@ -80,7 +80,7 @@ type FormValues = {
 type EvidenceUploadWithCreationProps = {
   handleClose: () => void
   selectedCourseFilter?: {
-    course_id: number
+    course_id: number | ''
     course_name: string
     course_code: string
     units?: any[]

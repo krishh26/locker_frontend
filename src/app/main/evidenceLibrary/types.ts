@@ -17,7 +17,21 @@ export interface EvidenceData {
   assessment_method: string | null
   session: string | null
   grade: string | null
-  units: any[] | null
+  mappings?: Array<{
+    mapping_id: number
+    unit_code: string
+    sub_unit_id: number | null
+    learnerMap: boolean
+    trainerMap: boolean
+    signedOff?: boolean
+    comment?: string | null
+    course?: {
+      course_id: number
+      course_name: string
+      course_code: string
+      units?: any[]
+    }
+  }>
   status: string
   evidence_time_log: boolean
   created_at: string
@@ -69,7 +83,7 @@ export type SelectionAction =
   | { type: 'RESET_FILES' }
 
 export interface CourseOption {
-  course_id: number
+  course_id: number | ''
   course_name: string
   course_code: string
   units?: any[]

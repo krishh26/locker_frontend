@@ -199,10 +199,10 @@ const EvidenceLibrary: FC = () => {
       limit: pagination.pageSize,
       meta: true,
       search: debouncedSearchQuery,
-      course_id: selectedCourseFilter?.course_id,
+      course_id: selectedCourseFilter?.course_id === ('' as any) ? '' : (selectedCourseFilter?.course_id as number | undefined),
     },
     {
-      skip: !selectedCourseFilter?.course_id,
+      skip: !selectedCourseFilter || (selectedCourseFilter.course_id !== ('' as any) && !selectedCourseFilter.course_id),
       refetchOnMountOrArgChange: true,
     }
   )
@@ -261,11 +261,19 @@ const EvidenceLibrary: FC = () => {
 
   // Memoized function to transform learner.course array to Autocomplete options format
   const learnerCourses = useMemo(() => {
-    if (!learner?.course || !Array.isArray(learner.course)) {
-      return []
+    // Create "All" option
+    const allOption: CourseOption = {
+      course_id: '' as any, // Using empty string to represent "All"
+      course_name: 'All',
+      course_code: '',
+      units: [],
     }
     
-    return learner.course
+    if (!learner?.course || !Array.isArray(learner.course)) {
+      return [allOption]
+    }
+    
+    const courses = learner.course
       .map((courseItem: any) => {
         // Handle nested course structure
         const course = courseItem.course || courseItem
@@ -275,12 +283,16 @@ const EvidenceLibrary: FC = () => {
             course_name: course.course_name || '',
             course_code: course.course_code || '',
             units: course.units || courseItem.units || [],
+            course_core_type: course.course_core_type || courseItem.course_core_type,
           }
         }
         return null
       })
-      .filter((course: any) => course !== null)
+      .filter((course: any) => course !== null && course.course_core_type !== 'Gateway')
       .sort((a, b) => a.course_name.localeCompare(b.course_name))
+    
+    // Add "All" option at the beginning
+    return [allOption, ...courses]
   }, [learner?.course])
 
   // Memoized function to get unique courses for filter (sorted) - kept for backward compatibility
@@ -1014,7 +1026,7 @@ const EvidenceLibrary: FC = () => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }))
   }
 
-  const handleCourseFilterChange = useCallback((event: any, newValue: { course_id: number; course_name: string; course_code: string; units?: any[] } | null) => {
+  const handleCourseFilterChange = useCallback((event: any, newValue: { course_id: number | ''; course_name: string; course_code: string; units?: any[] } | null) => {
     setSelectedCourseFilter(newValue)
     // Track if user manually cleared the filter
     if (newValue === null) {
@@ -1216,19 +1228,24 @@ const EvidenceLibrary: FC = () => {
             />
           )}
           renderOption={(props, option) => (
-            <Box component="li" {...props} key={option.course_id}>
+            <Box component="li" {...props} key={option.course_id || 'all'}>
               <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
                   {option.course_name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Code: {option.course_code}
-                </Typography>
+                {option.course_code && (
+                  <Typography variant="caption" color="text.secondary">
+                    Code: {option.course_code}
+                  </Typography>
+                )}
               </Box>
             </Box>
           )}
           noOptionsText="No courses found"
-          isOptionEqualToValue={(option, value) => option.course_id === value.course_id}
+          isOptionEqualToValue={(option, value) => {
+            if (option.course_id === '' && value?.course_id === '') return true
+            return option.course_id === value?.course_id
+          }}
         />
         {searchQuery && (
           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1259,6 +1276,7 @@ const EvidenceLibrary: FC = () => {
         totalItems={dataState.totalItems}
         totalPages={dataState.totalPages}
         selectedCourseFilter={selectedCourseFilter}
+        learnerCourses={learnerCourses}
         onOpenMenu={openMenu}
       />
       <ActionMenu
@@ -1309,7 +1327,7 @@ const EvidenceLibrary: FC = () => {
       >
         <EvidenceUploadWithCreation 
           handleClose={handleClose} 
-          selectedCourseFilter={selectedCourseFilter}
+          selectedCourseFilter={selectedCourseFilter && selectedCourseFilter.course_id !== ('' as any) ? selectedCourseFilter : null}
         />
       </Dialog>
       <Dialog

@@ -133,20 +133,6 @@ export const evidenceAPI = createApi({
         method: 'GET',
       }),
     }),
-    requestMappingSignature: builder.mutation({
-      query: ({ mapping_id, data }) => ({
-        url: `/assignment-mapping/${mapping_id}/request-signature`,
-        method: 'POST',
-        body: data,
-      }),
-    }),
-    saveMappingSignature: builder.mutation({
-      query: ({ mapping_id, data }) => ({
-        url: `/assignment-mapping/${mapping_id}/sign`,
-        method: 'POST',
-        body: data,
-      }),
-    }),
     // Update PC ticks (learnerMap/trainerMap/signedOff) for mapping
     updateMappingPC: builder.mutation({
       query: ({ mapping_id, data }) => ({
@@ -173,8 +159,5 @@ export const {
   useGetAssignmentMappingsQuery,
   useUpsertAssignmentMappingMutation,
   useDeleteAssignmentMappingMutation,
-  useGetMappingSignatureListQuery,
-  useRequestMappingSignatureMutation,
-  useSaveMappingSignatureMutation,
   useUpdateMappingPCMutation,
 } = evidenceAPI
