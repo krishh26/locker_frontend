@@ -914,7 +914,6 @@ const CreateViewEvidenceLibrary = () => {
 
       formUnits.forEach((unit: any) => {
         const courseId = unit.course_id
-        const unitRef = unit.code || unit.unit_ref
         const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
 
         if (hasSubUnit) {
@@ -923,14 +922,14 @@ const CreateViewEvidenceLibrary = () => {
           unit.subUnit.forEach((sub: any) => {
             // Only add to desiredMappings if learnerMap is true
             if (sub.learnerMap === true) {
-              const subUnitCode = sub.code || sub.id
-              const key = `${courseId}-${subUnitCode}`
+              const key = `${courseId}-${sub.id}`
               desiredMappings.set(key, {
                 assignment_id: Number(id),
                 course_id: Number(courseId),
-                unit_code: String(subUnitCode),
+                unit_code: String(sub.id),
                 learnerMap: true,
                 trainerMap: sub.trainerMap ?? false,
+                code: sub.code,
                 mapping_id: sub.mapping_id, // For updates (if exists)
               })
             }
@@ -939,11 +938,12 @@ const CreateViewEvidenceLibrary = () => {
           // Unit-only - create mapping for unit itself (unit_code = unit code)
           // Only include mappings where learnerMap is true
           if (unit.learnerMap === true) {
-            const key = `${courseId}-${unitRef}`
+            const key = `${courseId}-${unit.id}`
             desiredMappings.set(key, {
               assignment_id: Number(id),
               course_id: Number(courseId),
-              unit_code: String(unitRef),
+              code: unit.code,
+              unit_code: String(unit.id),
               learnerMap: true,
               trainerMap: unit.trainerMap ?? false,
               mapping_id: unit.mapping_id, // For updates (if exists)

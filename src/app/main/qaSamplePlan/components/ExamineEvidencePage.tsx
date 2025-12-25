@@ -1795,7 +1795,7 @@ const ExamineEvidencePage: React.FC = () => {
                             }}
                           ></TableCell>
                           <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                            {subUnit.id}
+                            {subUnit.code}
                           </TableCell>
                           <TableCell>{subUnit.title}</TableCell>
                         </TableRow>
