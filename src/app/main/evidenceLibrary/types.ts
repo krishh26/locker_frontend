@@ -29,6 +29,7 @@ export interface EvidenceData {
       course_id: number
       course_name: string
       course_code: string
+      course_core_type?: string
       units?: any[]
     }
   }>
