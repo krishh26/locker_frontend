@@ -100,6 +100,7 @@ const CreateViewEvidenceLibrary = () => {
   const userRole = useUserRole()
   const { currentUser, selectedUser, selected } = useSelector(selectGlobalUser)
   const { learner } = useSelector(selectLearnerManagement)
+  console.log("🚀 ~ CreateViewEvidenceLibrary ~ learner:", learner)
   
   // Ref to track if form has been initialized to prevent resetting values
   const isFormInitialized = useRef(false)
@@ -169,7 +170,6 @@ const CreateViewEvidenceLibrary = () => {
     mode: 'onSubmit',
   })
 
-  console.log("🚀 ~ CreateViewEvidenceLibrary ~ errors:", errors)
 
   const {
     data: evidenceDetails,
@@ -305,9 +305,9 @@ const CreateViewEvidenceLibrary = () => {
       const courseId = mapping.course_id
       if (!courseId) return
 
-      // Support both unit_code (new API) and unit_ref (old API)
-      const unitCode = mapping.unit_code || mapping.unit_ref
-      if (!unitCode) return
+      // unit_code now contains the unit ID (not code), but keep backward compatibility with unit_ref
+      const unitIdOrRef = mapping.unit_code || mapping.unit_ref
+      if (!unitIdOrRef) return
 
       if (!mappingsByCourse.has(courseId)) {
         mappingsByCourse.set(courseId, [])
@@ -330,10 +330,11 @@ const CreateViewEvidenceLibrary = () => {
       if (course.course_core_type === 'Standard') {
         // Find the first mapping's unit type
         const firstMapping = courseMappings[0]
-        const unitCode = firstMapping?.unit_code || firstMapping?.unit_ref
-        if (unitCode && course.units) {
+        const unitIdOrRef = firstMapping?.unit_code || firstMapping?.unit_ref
+        if (unitIdOrRef && course.units) {
+          // unit_code now contains unit ID, so match by id first, then fallback to code for backward compatibility
           const matchedUnit = course.units.find(
-            (u: any) => u.code === unitCode || u.unit_ref === unitCode
+            (u: any) => String(u.id) === String(unitIdOrRef) || u.code === unitIdOrRef || u.unit_ref === unitIdOrRef
           )
           if (matchedUnit?.type) {
             courseSelectedTypesObj[courseId] = matchedUnit.type
@@ -346,10 +347,72 @@ const CreateViewEvidenceLibrary = () => {
       const unitsMap = new Map<string, any>()
 
       courseMappings.forEach((mapping) => {
-        // Support both unit_code (new API) and unit_ref (old API)
-        const unitCode = mapping.unit_code || mapping.unit_ref
+        // unit_code now contains the unit ID (not code), but keep backward compatibility with unit_ref
+        const unitIdOrRef = mapping.unit_code || mapping.unit_ref
+        // Support both sub_unit_id (new API) and sub_unit_ref (old API)
+        const subUnitRef = mapping.sub_unit_id || mapping.sub_unit_ref
+        
+        // For Qualification courses: when sub_unit_id is null, unit_code might be a sub-unit ID
+        if (course.course_core_type === 'Qualification' && (subUnitRef === null || subUnitRef === undefined)) {
+          // Try to find it as a subUnit ID first
+          let foundSubUnit: any = null
+          let foundUnit: any = null
+          
+          for (const unit of courseUnits) {
+            if (unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0) {
+              const subunit = unit.subUnit.find(
+                (s: any) => String(s.id) === String(unitIdOrRef) || s.code === unitIdOrRef
+              )
+              if (subunit) {
+                foundSubUnit = subunit
+                foundUnit = unit
+                break
+              }
+            }
+          }
+          
+          if (foundSubUnit && foundUnit) {
+            // It's a sub-unit mapping for Qualification course
+            const unitKey = `${courseId}-${foundUnit.id || foundUnit.code}`
+            if (!unitsMap.has(unitKey)) {
+              unitsMap.set(unitKey, {
+                ...foundUnit,
+                course_id: courseId,
+                type: foundUnit.type,
+                code: foundUnit.code || foundUnit.unit_ref,
+                subUnit: [],
+                mapping_id: mapping.mapping_id, // Store mapping_id for updates
+              })
+            }
+            
+            const unitData = unitsMap.get(unitKey)!
+            const existingSubUnit = unitData.subUnit.find(
+              (s: any) => s.id === foundSubUnit.id || s.code === foundSubUnit.code
+            )
+            
+            if (!existingSubUnit) {
+              // Support both camelCase (learnerMap) and snake_case (learner_map) from API
+              const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
+              const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
+              const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
+              const comment = mapping.comment ?? ''
+              
+              unitData.subUnit.push({
+                ...foundSubUnit,
+                learnerMap,
+                trainerMap,
+                signedOff,
+                comment,
+                mapping_id: mapping.mapping_id,
+              })
+            }
+            return // Skip the rest of the logic for this mapping
+          }
+        }
+        
+        // For Standard courses or when sub_unit_id is provided: match by unit ID
         const unit = courseUnits.find(
-          (u: any) => u.code === unitCode || u.unit_ref === unitCode
+          (u: any) => String(u.id) === String(unitIdOrRef) || u.code === unitIdOrRef || u.unit_ref === unitIdOrRef
         )
         if (!unit) return
 
@@ -367,13 +430,11 @@ const CreateViewEvidenceLibrary = () => {
 
         const unitData = unitsMap.get(unitKey)!
 
-        // Support both sub_unit_id (new API) and sub_unit_ref (old API)
-        const subUnitRef = mapping.sub_unit_id || mapping.sub_unit_ref
         // If mapping has sub_unit_ref, it's a sub unit mapping
         if (subUnitRef !== null && subUnitRef !== undefined) {
-          // Find the subunit in the unit's subUnit array
+          // Find the subunit in the unit's subUnit array - match by id first, then code
           const subunit = unit.subUnit?.find(
-            (s: any) => s.code === subUnitRef || s.id === subUnitRef
+            (s: any) => String(s.id) === String(subUnitRef) || s.code === subUnitRef
           )
           if (subunit) {
             const existingSubUnit = unitData.subUnit.find(
@@ -397,7 +458,7 @@ const CreateViewEvidenceLibrary = () => {
             }
           }
         } else {
-          // Unit-only mapping (no subunits)
+          // Unit-only mapping (no subunits) - for Standard courses
           // Support both camelCase (learnerMap) and snake_case (learner_map) from API
           const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
           const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
