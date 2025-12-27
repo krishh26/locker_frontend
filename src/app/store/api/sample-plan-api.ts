@@ -502,7 +502,7 @@ export const samplePlanAPI = createApi({
         status?: boolean
       },
       {
-        assignment_id: number
+        mapping_id: number
         sampling_plan_detail_id: number
         role: string
         comment: string
@@ -513,7 +513,7 @@ export const samplePlanAPI = createApi({
     >({
       query: (body) => {
         const formData = new FormData()
-        formData.append('assignment_id', String(body.assignment_id))
+        formData.append('mapping_id', String(body.mapping_id))
         formData.append('sampling_plan_detail_id', String(body.sampling_plan_detail_id))
         formData.append('role', body.role)
         formData.append('comment', body.comment)
@@ -553,7 +553,7 @@ export const samplePlanAPI = createApi({
         status?: boolean
       },
       {
-        assignment_id: number
+        mapping_id: number
         unit_code: string | number
         pc_id: string | number
         signed_off: boolean
