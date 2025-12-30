@@ -824,7 +824,7 @@ export const LearnersTable: React.FC<LearnersTableProps> = ({
                                                   />
                                                   <Box sx={{ flex: 1 , display: 'flex', alignItems: 'center', gap: 2}}>
                                                     <Typography variant='body2' fontWeight={600}>
-                                                      {sanitizeText(unit.unit_name) || `Unit ${unitIndex + 1}`}
+                                                      {sanitizeText(unit.code) || `Unit ${unitIndex + 1}`}
                                                     </Typography>
                                                       {(() => {
                                                         const status = getUnitStatus(unit.status)
