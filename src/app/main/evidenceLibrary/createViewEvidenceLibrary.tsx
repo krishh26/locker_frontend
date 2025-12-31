@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -44,8 +44,6 @@ import {
   useUploadExternalEvidenceFileMutation,
   useRequestSignatureMutation,
   useUpsertAssignmentMappingMutation,
-  useDeleteAssignmentMappingMutation,
-  useUpdateMappingPCMutation,
 } from 'app/store/api/evidence-api'
 import { assessmentMethod, fileTypes } from 'src/utils/constants'
 
@@ -64,8 +62,20 @@ import { fetchCourseAPI } from 'app/store/courseManagement'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
 import NewTimeLog from '../timeLog/newTimeLog'
 import SignatureTable from './components/SignatureTable'
+import UnitsTable from './components/UnitsTable'
 import { FormValues } from './lib/types'
 import { getValidationSchema } from './schema'
+import {
+  COURSE_TYPES,
+  UNIT_TYPES,
+  USER_ROLES,
+  COMBINED_UNIT_TYPES,
+  ROLES_CAN_EDIT_DECLARATION,
+  ROLES_CAN_EDIT_TRAINER_FIELDS,
+  ROLES_REDIRECT_TO_QA,
+} from './constants'
+import { useEvidenceCount } from './hooks/useEvidenceCount'
+import { useUnitHandlers } from './hooks/useUnitHandlers'
 
 const CreateViewEvidenceLibrary = () => {
   const navigate = useNavigate()
@@ -73,11 +83,24 @@ const CreateViewEvidenceLibrary = () => {
   const [isEditMode, setIsEditMode] = useState<boolean>(
     location.state && location.state?.isEdit
   )
-  const [sessions, setSessions] = useState([])
+  // Session option structure: { id: number, label: string }
+  const [sessions, setSessions] = useState<Array<{ id: number; label: string }>>([])
   const [isTimeLogDialogOpen, setIsTimeLogDialogOpen] = useState(false)
-  const [selectedUnitType, setSelectedUnitType] = useState<string | null>(null)
   // selectedCourses and courseSelectedTypes are now managed by React Hook Form
-  const [timeLogData, setTimeLogData] = useState({
+  const [timeLogData, setTimeLogData] = useState<{
+    user_id: number | null
+    course_id: number | null
+    activity_date: string
+    activity_type: string
+    unit: string[]
+    trainer_id: number | null
+    type: string
+    spend_time: string
+    start_time: string
+    end_time: string
+    impact_on_learner: string
+    evidence_link: string
+  }>({
     user_id: null,
     course_id: null,
     activity_date: '',
@@ -100,7 +123,6 @@ const CreateViewEvidenceLibrary = () => {
   const userRole = useUserRole()
   const { currentUser, selectedUser, selected } = useSelector(selectGlobalUser)
   const { learner } = useSelector(selectLearnerManagement)
-  console.log("🚀 ~ CreateViewEvidenceLibrary ~ learner:", learner)
   
   // Ref to track if form has been initialized to prevent resetting values
   const isFormInitialized = useRef(false)
@@ -125,7 +147,7 @@ const CreateViewEvidenceLibrary = () => {
       evidence_time_log: false,
       session: '',
       grade: '',
-      declaration: ['Trainer', 'Admin', 'IQA'].includes(userRole)
+      declaration: ROLES_CAN_EDIT_DECLARATION.includes(userRole as any)
         ? true
         : false,
       assessment_method: [],
@@ -204,20 +226,22 @@ const CreateViewEvidenceLibrary = () => {
   )
 
   // Get learner courses from Redux store, filter out Gateway courses
-  const learnerCoursesData = learner?.course
-    ? learner.course
-        .map((courseItem: any) => {
-          // Handle nested course structure
-          const course = courseItem.course || courseItem
-          // Ensure units are included from either course or courseItem
-          return {
-            ...course,
-            units: course.units || courseItem.units || [],
-            course_core_type: course.course_core_type || courseItem.course_core_type,
-          }
-        })
-        .filter((course: any) => course?.course_core_type !== 'Gateway')
-    : []
+  // Memoize to prevent recalculation on every render
+  const learnerCoursesData = useMemo(() => {
+    if (!learner?.course) return []
+    return learner.course
+      .map((courseItem: any) => {
+        // Handle nested course structure
+        const course = courseItem.course || courseItem
+        // Ensure units are included from either course or courseItem
+        return {
+          ...course,
+          units: course.units || courseItem.units || [],
+          course_core_type: course.course_core_type || courseItem.course_core_type,
+        }
+      })
+      .filter((course: any) => course?.course_core_type !== COURSE_TYPES.GATEWAY)
+  }, [learner?.course])
   const isLoadingLearnerCourses = false
 
   // Populate signatures from API data
@@ -285,15 +309,13 @@ const CreateViewEvidenceLibrary = () => {
     useRequestSignatureMutation()
   
   const [upsertMapping] = useUpsertAssignmentMappingMutation()
-  const [deleteMapping] = useDeleteAssignmentMappingMutation()
-  const [updateMappingPC] = useUpdateMappingPCMutation()
 
   useEffect(() => {
     if (!id) return navigate('/evidenceLibrary') // Redirect if no ID is provided
   }, [id])
 
   // Helper function to reconstruct form state from mappings
-  const reconstructFormStateFromMappings = useCallback((mappings: any[], courses: any[], assignmentId?: number) => {
+  const reconstructFormStateFromMappings = useCallback((mappings: any[], courses: any[]) => {
     if (!mappings || mappings.length === 0 || !courses || courses.length === 0) {
       return { selectedCourses: [], courseSelectedTypes: {}, units: [] }
     }
@@ -327,7 +349,7 @@ const CreateViewEvidenceLibrary = () => {
       selectedCoursesArray.push(course)
 
       // For Standard courses, determine selected type from mappings
-      if (course.course_core_type === 'Standard') {
+      if (course.course_core_type === COURSE_TYPES.STANDARD) {
         // Find the first mapping's unit type
         const firstMapping = courseMappings[0]
         const unitIdOrRef = firstMapping?.unit_code || firstMapping?.unit_ref
@@ -353,7 +375,7 @@ const CreateViewEvidenceLibrary = () => {
         const subUnitRef = mapping.sub_unit_id || mapping.sub_unit_ref
         
         // For Qualification courses: when sub_unit_id is null, unit_code might be a sub-unit ID
-        if (course.course_core_type === 'Qualification' && (subUnitRef === null || subUnitRef === undefined)) {
+        if (course.course_core_type === COURSE_TYPES.QUALIFICATION && (subUnitRef === null || subUnitRef === undefined)) {
           // Try to find it as a subUnit ID first
           let foundSubUnit: any = null
           let foundUnit: any = null
@@ -381,43 +403,31 @@ const CreateViewEvidenceLibrary = () => {
                 type: foundUnit.type,
                 code: foundUnit.code || foundUnit.unit_ref,
                 subUnit: [],
-                evidenceBoxes: [],
+                mapping_id: mapping.mapping_id, // Store mapping_id for updates
               })
             }
             
             const unitData = unitsMap.get(unitKey)!
-            let existingSubUnit = unitData.subUnit.find(
+            const existingSubUnit = unitData.subUnit.find(
               (s: any) => s.id === foundSubUnit.id || s.code === foundSubUnit.code
             )
             
             if (!existingSubUnit) {
-              existingSubUnit = {
+              // Support both camelCase (learnerMap) and snake_case (learner_map) from API
+              const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
+              const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
+              const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
+              const comment = mapping.comment ?? ''
+              
+              unitData.subUnit.push({
                 ...foundSubUnit,
-                evidenceBoxes: [],
-              }
-              unitData.subUnit.push(existingSubUnit)
+                learnerMap,
+                trainerMap,
+                signedOff,
+                comment,
+                mapping_id: mapping.mapping_id,
+              })
             }
-            
-            // Add evidenceBox to subUnit
-            const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
-            const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
-            const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
-            const comment = mapping.comment ?? ''
-            
-            if (!existingSubUnit.evidenceBoxes) {
-              existingSubUnit.evidenceBoxes = []
-            }
-            
-            existingSubUnit.evidenceBoxes.push({
-              mapping_id: mapping.mapping_id,
-              assignment_id: mapping.assignment_id || assignmentId || 0,
-              learnerMap,
-              trainerMap,
-              signedOff,
-              comment,
-              sub_unit_id: null, // For Qualification, sub_unit_id in evidenceBox is null when unit_code is the sub-unit ID
-            })
-            
             return // Skip the rest of the logic for this mapping
           }
         }
@@ -436,7 +446,7 @@ const CreateViewEvidenceLibrary = () => {
             type: unit.type,
             code: unit.code || unit.unit_ref,
             subUnit: [],
-            evidenceBoxes: [],
+            mapping_id: mapping.mapping_id, // Store mapping_id for updates
           })
         }
 
@@ -449,58 +459,39 @@ const CreateViewEvidenceLibrary = () => {
             (s: any) => String(s.id) === String(subUnitRef) || s.code === subUnitRef
           )
           if (subunit) {
-            let existingSubUnit = unitData.subUnit.find(
+            const existingSubUnit = unitData.subUnit.find(
               (s: any) => s.id === subunit.id || s.code === subunit.code
             )
             if (!existingSubUnit) {
-              existingSubUnit = {
+              // Support both camelCase (learnerMap) and snake_case (learner_map) from API
+              const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
+              const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
+              const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
+              const comment = mapping.comment ?? ''
+              
+              unitData.subUnit.push({
                 ...subunit,
-                evidenceBoxes: [],
-              }
-              unitData.subUnit.push(existingSubUnit)
+                learnerMap,
+                trainerMap,
+                signedOff,
+                comment,
+                mapping_id: mapping.mapping_id,
+              })
             }
-            
-            // Add evidenceBox to subUnit
-            if (!existingSubUnit.evidenceBoxes) {
-              existingSubUnit.evidenceBoxes = []
-            }
-            
-            const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
-            const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
-            const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
-            const comment = mapping.comment ?? ''
-            
-            existingSubUnit.evidenceBoxes.push({
-              mapping_id: mapping.mapping_id,
-              assignment_id: mapping.assignment_id || assignmentId || 0,
-              learnerMap,
-              trainerMap,
-              signedOff,
-              comment,
-              sub_unit_id: Number(subUnitRef),
-            })
           }
         } else {
           // Unit-only mapping (no subunits) - for Standard courses
-          if (!unitData.evidenceBoxes) {
-            unitData.evidenceBoxes = []
-          }
-          
           // Support both camelCase (learnerMap) and snake_case (learner_map) from API
           const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
           const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
           const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
           const comment = mapping.comment ?? ''
           
-          unitData.evidenceBoxes.push({
-            mapping_id: mapping.mapping_id,
-            assignment_id: mapping.assignment_id || assignmentId || 0,
-            learnerMap,
-            trainerMap,
-            signedOff,
-            comment,
-            sub_unit_id: null,
-          })
+          unitData.learnerMap = learnerMap
+          unitData.trainerMap = trainerMap
+          unitData.signedOff = signedOff
+          unitData.comment = comment
+          unitData.mapping_id = mapping.mapping_id
         }
       })
 
@@ -566,8 +557,7 @@ const CreateViewEvidenceLibrary = () => {
 
       // Reconstruct form state from mappings
       if (mappingsData && Array.isArray(mappingsData) && mappingsData.length > 0 && learnerCoursesData && learnerCoursesData.length > 0) {
-        const assignmentId = evidenceDetails?.data?.assignment_id ? Number(evidenceDetails.data.assignment_id) : (id ? Number(id) : undefined)
-        const reconstructed = reconstructFormStateFromMappings(mappingsData, learnerCoursesData, assignmentId)
+        const reconstructed = reconstructFormStateFromMappings(mappingsData, learnerCoursesData)
         
         const currentSelectedCourses = watch('selectedCourses') || []
         if (reconstructed.selectedCourses.length > 0 && currentSelectedCourses.length === 0) {
@@ -589,6 +579,22 @@ const CreateViewEvidenceLibrary = () => {
   const unitsWatch = watch('units')
   const selectedCourses = watch('selectedCourses') || []
   const courseSelectedTypes = watch('courseSelectedTypes') || {}
+
+  // Use custom hooks
+  const { getEvidenceCount } = useEvidenceCount({ learner, selectedCourses })
+  const {
+    learnerMapHandler,
+    trainerMapHandler,
+    signedOffHandler,
+    commentHandler,
+    selectAllLearnerMapHandler,
+    selectAllSignedOffHandler,
+    selectAllSignedOffForCombinedHandler,
+  } = useUnitHandlers({
+    units: unitsWatch || [],
+    setValue,
+    trigger,
+  })
 
   // Initialize time log data when evidence details are loaded
   useEffect(() => {
@@ -644,322 +650,29 @@ const CreateViewEvidenceLibrary = () => {
   }, [unitsWatch])
 
   // Helper functions for field access control
-  const canEditLearnerFields = userRole === 'Learner'
-  const canEditTrainerFields = ['Trainer', 'IQA'].includes(userRole)
+  const canEditLearnerFields = userRole === USER_ROLES.LEARNER
+  const canEditTrainerFields = ROLES_CAN_EDIT_TRAINER_FIELDS.includes(userRole as any)
 
-  if (isLoading) {
-    return (
-      <Container sx={{ mt: 8, mb: 4 }}>
-        <Typography variant='h4' component='h1' gutterBottom>
-          Loading Evidence Details...
-        </Typography>
-      </Container>
-    )
-  }
-
-  const openFilePreview = (url) => {
+  // All hooks must be called before any conditional returns
+  const openFilePreview = useCallback((url: string) => {
     if (url) {
       window.open(url, '_blank')
     } else {
       console.error('File URL is not available')
     }
-  }
-
-  const learnerMapHandler = (evidenceBox) => {
-    // evidenceBox should have mapping_id
-    const mappingId = evidenceBox.mapping_id
-    if (!mappingId) {
-      // If mapping_id is null, this is a new evidenceBox - need to create it
-      // For now, just return as we can't create mappings without assignment_id
-      return
-    }
-    
-    const updated = [...unitsWatch]
-    updated.forEach((unit) => {
-      // Handle units with subUnit
-      if (unit.subUnit && unit.subUnit.length > 0) {
-        unit.subUnit.forEach((sub) => {
-          if (sub.evidenceBoxes && Array.isArray(sub.evidenceBoxes)) {
-            sub.evidenceBoxes.forEach((box: any) => {
-              if (box.mapping_id === mappingId) {
-                box.learnerMap = !(box.learnerMap ?? false)
-              }
-            })
-          }
-        })
-      } else {
-        // Handle units without subUnit (unit-level)
-        if (unit.evidenceBoxes && Array.isArray(unit.evidenceBoxes)) {
-          unit.evidenceBoxes.forEach((box: any) => {
-            if (box.mapping_id === mappingId) {
-              box.learnerMap = !(box.learnerMap ?? false)
-            }
-          })
-        }
-      }
-    })
-    setValue('units', updated)
-    trigger('units')
-  }
-
-  const selectAllLearnerMapHandler = (unitIndex, checked) => {
-    const updated = [...unitsWatch]
-    const unit = updated[unitIndex]
-    if (unit) {
-      // Handle units with subUnit
-      if (unit.subUnit && unit.subUnit.length > 0) {
-        unit.subUnit.forEach((sub) => {
-          if (sub.evidenceBoxes && Array.isArray(sub.evidenceBoxes)) {
-            sub.evidenceBoxes.forEach((box: any) => {
-              box.learnerMap = checked
-            })
-          }
-        })
-      } else {
-        // Handle units without subUnit (unit-level)
-        if (unit.evidenceBoxes && Array.isArray(unit.evidenceBoxes)) {
-          unit.evidenceBoxes.forEach((box: any) => {
-            box.learnerMap = checked
-          })
-        }
-      }
-    }
-    setValue('units', updated)
-    trigger('units')
-  }
-
-  const trainerMapHandler = (evidenceBox) => {
-    // evidenceBox should have mapping_id
-    const mappingId = evidenceBox.mapping_id
-    if (!mappingId) {
-      // If mapping_id is null, this is a new evidenceBox - need to create it
-      // For now, just return as we can't create mappings without assignment_id
-      return
-    }
-    
-    const updated = [...unitsWatch]
-    updated.forEach((unit) => {
-      // Handle units with subUnit
-      if (unit.subUnit && unit.subUnit.length > 0) {
-        unit.subUnit.forEach((sub) => {
-          if (sub.evidenceBoxes && Array.isArray(sub.evidenceBoxes)) {
-            sub.evidenceBoxes.forEach((box: any) => {
-              if (box.mapping_id === mappingId) {
-                box.trainerMap = !(box.trainerMap ?? false)
-                // Reset signedOff if trainerMap is unchecked
-                if (!box.trainerMap) {
-                  box.signedOff = false
-                }
-              }
-            })
-          }
-        })
-      } else {
-        // Handle units without subUnit (unit-level)
-        if (unit.evidenceBoxes && Array.isArray(unit.evidenceBoxes)) {
-          unit.evidenceBoxes.forEach((box: any) => {
-            if (box.mapping_id === mappingId) {
-              box.trainerMap = !(box.trainerMap ?? false)
-              // Reset signedOff if trainerMap is unchecked
-              if (!box.trainerMap) {
-                box.signedOff = false
-              }
-            }
-          })
-        }
-      }
-    })
-    setValue('units', updated)
-    trigger('units')
-  }
-
-  const signedOffHandler = (evidenceBox) => {
-    // evidenceBox should have mapping_id
-    const mappingId = evidenceBox.mapping_id
-    if (!mappingId) return
-    
-    const updated = [...unitsWatch]
-    updated.forEach((unit) => {
-      // Handle units with subUnit
-      if (unit.subUnit && unit.subUnit.length > 0) {
-        unit.subUnit.forEach((sub) => {
-          if (sub.evidenceBoxes && Array.isArray(sub.evidenceBoxes)) {
-            sub.evidenceBoxes.forEach((box: any) => {
-              if (box.mapping_id === mappingId) {
-                box.signedOff = !(box.signedOff ?? false)
-              }
-            })
-          }
-        })
-      } else {
-        // Handle units without subUnit (unit-level)
-        if (unit.evidenceBoxes && Array.isArray(unit.evidenceBoxes)) {
-          unit.evidenceBoxes.forEach((box: any) => {
-            if (box.mapping_id === mappingId) {
-              box.signedOff = !(box.signedOff ?? false)
-            }
-          })
-        }
-      }
-    })
-    setValue('units', updated)
-    trigger('units')
-  }
-
-  const selectAllSignedOffHandler = (unitIndex, checked) => {
-    const updated = [...unitsWatch]
-    const unit = updated[unitIndex]
-    if (unit) {
-      // First, determine current state from unitsWatch to handle toggle correctly
-      // Collect all eligible evidenceBoxes (those with both learnerMap and trainerMap true)
-      const eligibleEvidenceBoxes: Array<{ evidenceBox: any; unit: any; subUnit?: any }> = []
-      
-      if (unit.subUnit && unit.subUnit.length > 0) {
-        // For units with subUnits: check evidenceBoxes in each subUnit
-        unit.subUnit.forEach((sub) => {
-          if (sub.evidenceBoxes && Array.isArray(sub.evidenceBoxes)) {
-            sub.evidenceBoxes.forEach((evidenceBox: any) => {
-              if (evidenceBox.learnerMap && evidenceBox.trainerMap) {
-                eligibleEvidenceBoxes.push({ evidenceBox, unit, subUnit: sub })
-              }
-            })
-          }
-        })
-      } else {
-        // For units without subUnits: check evidenceBoxes in the unit
-        if (unit.evidenceBoxes && Array.isArray(unit.evidenceBoxes)) {
-          unit.evidenceBoxes.forEach((evidenceBox: any) => {
-            if (evidenceBox.learnerMap && evidenceBox.trainerMap) {
-              eligibleEvidenceBoxes.push({ evidenceBox, unit })
-            }
-          })
-        }
-      }
-      
-      // Check if all eligible evidenceBoxes are currently signed off
-      const allCurrentlySignedOff = eligibleEvidenceBoxes.length > 0 && 
-        eligibleEvidenceBoxes.every((item) => item.evidenceBox.signedOff ?? false)
-      
-      // Determine target state: if all are signed off, uncheck; otherwise, check
-      const targetState = allCurrentlySignedOff ? false : true
-      
-      // Update all eligible evidenceBoxes
-      if (unit.subUnit && unit.subUnit.length > 0) {
-        unit.subUnit.forEach((sub) => {
-          if (sub.evidenceBoxes && Array.isArray(sub.evidenceBoxes)) {
-            sub.evidenceBoxes.forEach((evidenceBox: any) => {
-              if (evidenceBox.learnerMap && evidenceBox.trainerMap) {
-                evidenceBox.signedOff = targetState
-              }
-            })
-          }
-        })
-      } else {
-        // Handle units without subUnit (unit-level)
-        if (unit.evidenceBoxes && Array.isArray(unit.evidenceBoxes)) {
-          unit.evidenceBoxes.forEach((evidenceBox: any) => {
-            if (evidenceBox.learnerMap && evidenceBox.trainerMap) {
-              evidenceBox.signedOff = targetState
-            }
-          })
-        }
-      }
-      setValue('units', updated)
-      trigger('units')
-    }
-  }
-
-  const selectAllSignedOffForCombinedHandler = (combinedEvidenceBoxes, checked) => {
-    // combinedEvidenceBoxes is now an array of evidenceBox objects
-    const updated = [...unitsWatch]
-    
-    // Collect all eligible evidenceBoxes (those with both learnerMap and trainerMap true)
-    const eligibleEvidenceBoxes: Array<{ evidenceBox: any; unit: any; subUnit?: any }> = []
-    
-    combinedEvidenceBoxes.forEach((evidenceBoxRow: any) => {
-      const mappingId = evidenceBoxRow.mapping_id
-      if (!mappingId) return // Skip new evidenceBoxes without mapping_id
-      
-      const unit = updated.find((u) => String(u.id) === String(evidenceBoxRow.unitId))
-      if (!unit) return
-      
-      if (evidenceBoxRow.subUnitId !== undefined && evidenceBoxRow.subUnitId !== null) {
-        // This is a subUnit evidenceBox
-        const subUnit = unit.subUnit?.find((s: any) => String(s.id) === String(evidenceBoxRow.subUnitId))
-        if (subUnit?.evidenceBoxes) {
-          const evidenceBox = subUnit.evidenceBoxes.find((box: any) => box.mapping_id === mappingId)
-          if (evidenceBox && evidenceBox.learnerMap && evidenceBox.trainerMap) {
-            eligibleEvidenceBoxes.push({ evidenceBox, unit, subUnit })
-          }
-        }
-      } else {
-        // This is a unit-level evidenceBox
-        if (unit.evidenceBoxes) {
-          const evidenceBox = unit.evidenceBoxes.find((box: any) => box.mapping_id === mappingId)
-          if (evidenceBox && evidenceBox.learnerMap && evidenceBox.trainerMap) {
-            eligibleEvidenceBoxes.push({ evidenceBox, unit })
-          }
-        }
-      }
-    })
-    
-    // Check current state: are all eligible evidenceBoxes signed off?
-    const allCurrentlySignedOff = eligibleEvidenceBoxes.length > 0 && 
-      eligibleEvidenceBoxes.every((item) => item.evidenceBox.signedOff ?? false)
-    
-    // Determine the target state: if all are signed off, uncheck; otherwise, check
-    const targetState = allCurrentlySignedOff ? false : true
-    
-    // Apply the target state to all eligible evidenceBoxes
-    eligibleEvidenceBoxes.forEach((item) => {
-      item.evidenceBox.signedOff = targetState
-    })
-
-    setValue('units', updated)
-    trigger('units')
-  }
-
-  const commentHandler = (e, mappingId) => {
-    if (!mappingId) return
-    
-    const updated = [...unitsWatch]
-    updated.forEach((unit) => {
-      // Handle units with subUnit
-      if (unit.subUnit && unit.subUnit.length > 0) {
-        unit.subUnit.forEach((sub) => {
-          if (sub.evidenceBoxes && Array.isArray(sub.evidenceBoxes)) {
-            sub.evidenceBoxes.forEach((box: any) => {
-              if (box.mapping_id === mappingId) {
-                box.comment = e.target.value
-              }
-            })
-          }
-        })
-      } else {
-        // Handle units without subUnit (unit-level)
-        if (unit.evidenceBoxes && Array.isArray(unit.evidenceBoxes)) {
-          unit.evidenceBoxes.forEach((box: any) => {
-            if (box.mapping_id === mappingId) {
-              box.comment = e.target.value
-            }
-          })
-        }
-      }
-    })
-    setValue('units', updated)
-  }
+  }, [])
 
   // Handle time log data update
-  const handleTimeLogDataUpdate = (e) => {
+  const handleTimeLogDataUpdate = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setTimeLogData((prevState) => ({
       ...prevState,
       [name]: value,
     }))
-  }
+  }, [])
 
   // Handle evidence time log radio change
-  const handleEvidenceTimeLogChange = (value: boolean) => {
+  const handleEvidenceTimeLogChange = useCallback((value: boolean) => {
     if (value === true) {
       // Pre-populate time log data with evidence information
       if (evidenceDetails?.data) {
@@ -986,21 +699,32 @@ const CreateViewEvidenceLibrary = () => {
       }
       setIsTimeLogDialogOpen(true)
     }
-  }
+  }, [evidenceDetails?.data, unitsWatch, selected, selectedUser, currentUser, learnerUserId])
 
   // Handle time log dialog close
-  const handleTimeLogDialogClose = () => {
+  const handleTimeLogDialogClose = useCallback(() => {
     setIsTimeLogDialogOpen(false)
-  }
+  }, [])
 
   // Handle time log submission success
-  const handleTimeLogSubmitSuccess = () => {
+  const handleTimeLogSubmitSuccess = useCallback(() => {
     setIsTimeLogDialogOpen(false)
     dispatch(
       showMessage({
         message: 'Time log created successfully',
         variant: 'success',
       })
+    )
+  }, [dispatch])
+
+  // Conditional return must be after all hooks
+  if (isLoading) {
+    return (
+      <Container sx={{ mt: 8, mb: 4 }}>
+        <Typography variant='h4' component='h1' gutterBottom>
+          Loading Evidence Details...
+        </Typography>
+      </Container>
     )
   }
 
@@ -1018,7 +742,7 @@ const CreateViewEvidenceLibrary = () => {
 
     // Validate Standard courses have type selected
     const standardCourses = data.selectedCourses.filter(
-      (c) => c.course_core_type === 'Standard'
+      (c) => c.course_core_type === COURSE_TYPES.STANDARD
     )
     for (const course of standardCourses) {
       if (!data.courseSelectedTypes || !data.courseSelectedTypes[course.course_id]) {
@@ -1034,7 +758,7 @@ const CreateViewEvidenceLibrary = () => {
 
     // Validate Qualification courses have units selected
     const qualificationCourses = data.selectedCourses.filter(
-      (c) => c.course_core_type === 'Qualification'
+      (c) => c.course_core_type === COURSE_TYPES.QUALIFICATION
     )
     for (const course of qualificationCourses) {
       const courseUnits = (unitsWatch || []).filter(
@@ -1084,9 +808,9 @@ const CreateViewEvidenceLibrary = () => {
       // Update evidence
       await updateEvidenceId(evidencePayload).unwrap()
 
-      // Step 2: Handle mappings from evidenceBoxes
-      // Each evidenceBox with learnerMap=true becomes a mapping
-      // Build desired mappings from evidenceBoxes in form state
+      // Step 2: Handle mappings for each course/unit/subunit combination
+      // Map key: course_id-unit_code (using unit_code instead of unit_ref/sub_unit_ref)
+      // Build desired mappings from form state
       const desiredMappings: Map<string, any> = new Map()
       const formUnits = data.units || []
 
@@ -1095,68 +819,49 @@ const CreateViewEvidenceLibrary = () => {
         const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
 
         if (hasSubUnit) {
-          // Unit has subunits - loop through subUnits and their evidenceBoxes
+          // Unit has subunits - create mapping for each subunit (unit_code = subunit code)
+          // Only include mappings where learnerMap is true
           unit.subUnit.forEach((sub: any) => {
-            const subEvidenceBoxes = sub.evidenceBoxes || []
-            subEvidenceBoxes.forEach((evidenceBox: any) => {
-              // Only include evidenceBoxes where learnerMap is true
-              if (evidenceBox.learnerMap === true) {
-                // Use mapping_id as key to avoid duplicates
-                const key = evidenceBox.mapping_id 
-                  ? `mapping-${evidenceBox.mapping_id}` 
-                  : `${courseId}-${sub.id}-${Date.now()}`
-                
-                desiredMappings.set(key, {
-                  assignment_id: Number(id),
-                  course_id: Number(courseId),
-                  unit_code: String(unit.id), // Parent unit ID
-                  sub_unit_id: sub.id ? Number(sub.id) : null,
-                  learnerMap: true,
-                  trainerMap: evidenceBox.trainerMap ?? false,
-                  signedOff: evidenceBox.signedOff ?? false,
-                  comment: evidenceBox.comment ?? null,
-                  mapping_id: evidenceBox.mapping_id, // For updates (if exists)
-                })
-              }
-            })
-          })
-        } else {
-          // Unit-only - loop through unit's evidenceBoxes
-          const unitEvidenceBoxes = unit.evidenceBoxes || []
-          unitEvidenceBoxes.forEach((evidenceBox: any) => {
-            // Only include evidenceBoxes where learnerMap is true
-            if (evidenceBox.learnerMap === true) {
-              // Use mapping_id as key to avoid duplicates
-              const key = evidenceBox.mapping_id 
-                ? `mapping-${evidenceBox.mapping_id}` 
-                : `${courseId}-${unit.id}-${Date.now()}`
-              
+            // Only add to desiredMappings if learnerMap is true
+            if (sub.learnerMap === true) {
+              const key = `${courseId}-${sub.id}`
               desiredMappings.set(key, {
                 assignment_id: Number(id),
                 course_id: Number(courseId),
-                unit_code: String(unit.id), // Unit ID
-                sub_unit_id: null,
+                unit_code: String(sub.id),
                 learnerMap: true,
-                trainerMap: evidenceBox.trainerMap ?? false,
-                signedOff: evidenceBox.signedOff ?? false,
-                comment: evidenceBox.comment ?? null,
-                mapping_id: evidenceBox.mapping_id, // For updates (if exists)
+                trainerMap: sub.trainerMap ?? false,
+                code: sub.code,
+                mapping_id: sub.mapping_id, // For updates (if exists)
               })
             }
           })
+        } else {
+          // Unit-only - create mapping for unit itself (unit_code = unit code)
+          // Only include mappings where learnerMap is true
+          if (unit.learnerMap === true) {
+            const key = `${courseId}-${unit.id}`
+            desiredMappings.set(key, {
+              assignment_id: Number(id),
+              course_id: Number(courseId),
+              code: unit.code,
+              unit_code: String(unit.id),
+              learnerMap: true,
+              trainerMap: unit.trainerMap ?? false,
+              mapping_id: unit.mapping_id, // For updates (if exists)
+            })
+          }
         }
       })
 
       // Upsert mappings and collect mapping IDs
       const allMappingIds: number[] = []
-      const mappingsToUpdatePC: Array<{ mapping_id: number; signedOff: boolean; comment: string | null }> = []
       const desiredMappingsArray = Array.from(desiredMappings.entries())
       
       for (const [key, desiredMapping] of desiredMappingsArray) {
         try {
           // Use merged upsert API - it handles both create and update
-          // Extract signedOff and comment to update separately via updateMappingPC
-          const { mapping_id, signedOff, comment, ...payload } = desiredMapping
+          const { mapping_id, ...payload } = desiredMapping
           const result = await upsertMapping(payload).unwrap()
           
           // Extract mapping_id from response
@@ -1182,32 +887,9 @@ const CreateViewEvidenceLibrary = () => {
           
           if (mappingId) {
             allMappingIds.push(mappingId)
-            // Store signedOff and comment to update via updateMappingPC
-            if (signedOff !== undefined || comment !== undefined) {
-              mappingsToUpdatePC.push({
-                mapping_id: mappingId,
-                signedOff: signedOff ?? false,
-                comment: comment ?? null,
-              })
-            }
           }
         } catch (error) {
           console.warn('Failed to upsert mapping:', error)
-        }
-      }
-
-      // Step 2.5: Update signedOff and comment for each mapping using updateMappingPC
-      for (const mappingPC of mappingsToUpdatePC) {
-        try {
-          await updateMappingPC({
-            mapping_id: mappingPC.mapping_id,
-            data: {
-              signedOff: mappingPC.signedOff,
-              comment: mappingPC.comment,
-            },
-          }).unwrap()
-        } catch (error) {
-          console.warn(`Failed to update PC for mapping ${mappingPC.mapping_id}:`, error)
         }
       }
 
@@ -1240,7 +922,7 @@ const CreateViewEvidenceLibrary = () => {
           variant: 'success',
         })
       )
-      const isAdminOrIQA = ['Admin', 'IQA'].includes(userRole)
+      const isAdminOrIQA = ROLES_REDIRECT_TO_QA.includes(userRole as any)
       if (isAdminOrIQA) {
         navigate(`/qa-sample-plan`)
       } else {
@@ -1249,7 +931,7 @@ const CreateViewEvidenceLibrary = () => {
     } catch (error) {
       dispatch(
         showMessage({
-          message: 'Something error',
+          message: 'Something went wrong. Please try again.',
           variant: 'error',
         })
       )
@@ -1758,7 +1440,7 @@ const CreateViewEvidenceLibrary = () => {
                       // Initialize type selection for newly selected Standard courses
                       selected.forEach((course: any) => {
                         if (
-                          course.course_core_type === 'Standard' &&
+                          course.course_core_type === COURSE_TYPES.STANDARD &&
                           !updatedCourseSelectedTypes[course.course_id]
                         ) {
                           updatedCourseSelectedTypes[course.course_id] = ''
@@ -1829,14 +1511,14 @@ const CreateViewEvidenceLibrary = () => {
           <Grid item xs={12}>
             {/* Type Filter for Standard Courses - Show for each selected Standard course */}
             {selectedCourses
-              .filter((course) => course.course_core_type === 'Standard')
+              .filter((course) => course.course_core_type === COURSE_TYPES.STANDARD)
               .map((course) => (
                 <Box key={course.course_id} sx={{ mb: 2 }}>
                 <Typography variant='body1' sx={{ mb: 1, fontWeight: 500 }}>
                     {course.course_name} - Select Type:
                 </Typography>
                 <FormGroup row>
-                    {['Knowledge', 'Behaviour', 'Skills', 'Duty'].map(
+                    {[UNIT_TYPES.KNOWLEDGE, UNIT_TYPES.BEHAVIOUR, UNIT_TYPES.SKILLS, UNIT_TYPES.DUTY].map(
                       (type) => (
                     <FormControlLabel
                       key={type}
@@ -1929,7 +1611,7 @@ const CreateViewEvidenceLibrary = () => {
           <Grid item xs={12}>
             {/* Unit selection for Qualification courses - Show for each selected Qualification course */}
             {selectedCourses
-              .filter((course) => course.course_core_type === 'Qualification')
+              .filter((course) => course.course_core_type === COURSE_TYPES.QUALIFICATION)
               .map((course) => (
                 <Box key={course.course_id} sx={{ mb: 2 }}>
                 <Typography variant='body2' sx={{ mb: 1, fontWeight: 500 }}>
@@ -1967,11 +1649,18 @@ const CreateViewEvidenceLibrary = () => {
                                 const unitToAdd = {
                                   ...unit,
                                     course_id: course.course_id,
-                                    evidenceBoxes: unit.evidenceBoxes || [],
+                                    // Explicitly set learnerMap to false when adding unit
+                                    learnerMap: false,
+                                    trainerMap: false,
+                                    signedOff: false,
+                                    comment: '',
                                   subUnit: hasSubUnit
                                       ? unit.subUnit.map((sub: any) => ({
                                         ...sub,
-                                          evidenceBoxes: sub.evidenceBoxes || [],
+                                          learnerMap: false, // Always start as false
+                                          trainerMap: false,
+                                          signedOff: false,
+                                          comment: '',
                                       }))
                                     : [],
                                 }
@@ -2017,7 +1706,7 @@ const CreateViewEvidenceLibrary = () => {
               <Box sx={{ mt: 3 }}>
                 {selectedCourses.map((course) => {
                   // For Standard courses, show units based on selected type
-                  if (course.course_core_type === 'Standard') {
+                  if (course.course_core_type === COURSE_TYPES.STANDARD) {
                     const selectedType = courseSelectedTypes[course.course_id]
                     if (!selectedType) return null
 
@@ -2061,10 +1750,16 @@ const CreateViewEvidenceLibrary = () => {
                             subUnit: hasSubUnit
                               ? method.subUnit.map((sub) => ({
                                   ...sub,
-                                  evidenceBoxes: sub.evidenceBoxes || [],
+                                  learnerMap: false, // Always start as false
+                                  trainerMap: false,
+                                  signedOff: false,
+                                  comment: '',
                                 }))
                               : [],
-                            evidenceBoxes: method.evidenceBoxes || [],
+                            learnerMap: hasSubUnit ? undefined : false, // Always start as false
+                            trainerMap: hasSubUnit ? undefined : false,
+                            signedOff: hasSubUnit ? undefined : false,
+                            comment: hasSubUnit ? undefined : '',
                           }
                         })
                         // Replace units of this type with fresh ones (unchecked)
@@ -2078,388 +1773,92 @@ const CreateViewEvidenceLibrary = () => {
 
                     // For Knowledge, Behaviour, Skills: Combine all subUnits into one table
                     // For Duty: Show separate tables for each unit
-                    const shouldCombineSubUnits = [
-                      'Knowledge',
-                      'Behaviour',
-                      'Skills',
-                    ].includes(selectedType)
+                    const shouldCombineSubUnits = COMBINED_UNIT_TYPES.includes(selectedType as any)
 
                     if (shouldCombineSubUnits) {
-                      // Combine all evidenceBoxes from all units/subUnits of this type
-                      // Each evidenceBox will be rendered as a separate row
-                      const combinedEvidenceBoxes: any[] = []
+                      // Combine all subUnits from all units of this type
+                      const combinedSubUnits: any[] = []
                       typeUnits.forEach((unit) => {
                         const hasSubUnit =
                           unit.subUnit && unit.subUnit.length > 0
                         if (hasSubUnit) {
-                          // For units with subUnits: loop through subUnits and their evidenceBoxes
                           unit.subUnit.forEach((sub) => {
-                            const subEvidenceBoxes = sub.evidenceBoxes || []
-                            subEvidenceBoxes.forEach((evidenceBox: any) => {
-                              combinedEvidenceBoxes.push({
-                                ...evidenceBox,
-                                // Keep parent unit/subUnit metadata for rendering
-                                unitId: unit.id,
-                                unitTitle: unit.title,
-                                subUnitId: sub.id,
-                                subUnitTitle: sub.title,
-                                subUnitCode: sub.code,
-                                courseId: course.course_id,
-                              })
+                            combinedSubUnits.push({
+                              ...sub,
+                              unitId: unit.id,
+                              unitTitle: unit.title,
+                              courseId: course.course_id,
                             })
-                            // If no evidenceBoxes exist, create a placeholder entry for this subUnit
-                            if (subEvidenceBoxes.length === 0) {
-                              combinedEvidenceBoxes.push({
-                                mapping_id: null, // New evidence box, will be created on save
-                                assignment_id: id ? Number(id) : null,
-                                learnerMap: false,
-                                trainerMap: false,
-                                signedOff: false,
-                                comment: '',
-                                sub_unit_id: sub.id,
-                                unitId: unit.id,
-                                unitTitle: unit.title,
-                                subUnitId: sub.id,
-                                subUnitTitle: sub.title,
-                                subUnitCode: sub.code,
-                                courseId: course.course_id,
-                              })
-                            }
                           })
                         } else {
-                          // For units without subUnits: loop through unit's evidenceBoxes
-                          const unitEvidenceBoxes = unit.evidenceBoxes || []
-                          unitEvidenceBoxes.forEach((evidenceBox: any) => {
-                            combinedEvidenceBoxes.push({
-                              ...evidenceBox,
-                              // Keep parent unit metadata for rendering
-                              unitId: unit.id,
-                              unitTitle: unit.title,
-                              courseId: course.course_id,
-                            })
+                          // If unit doesn't have subUnit, add the unit itself
+                          combinedSubUnits.push({
+                            id: unit.id,
+                            title: unit.title,
+                            learnerMap: unit.learnerMap ?? false,
+                            trainerMap: unit.trainerMap ?? false,
+                            signedOff: unit.signedOff ?? false,
+                            comment: unit.comment ?? '',
+                            unitId: unit.id,
+                            unitTitle: unit.title,
+                            courseId: course.course_id,
                           })
-                          // If no evidenceBoxes exist, create a placeholder entry for this unit
-                          if (unitEvidenceBoxes.length === 0) {
-                            combinedEvidenceBoxes.push({
-                              mapping_id: null, // New evidence box, will be created on save
-                              assignment_id: id ? Number(id) : null,
-                              learnerMap: false,
-                              trainerMap: false,
-                              signedOff: false,
-                              comment: '',
-                              sub_unit_id: null,
-                              unitId: unit.id,
-                              unitTitle: unit.title,
-                              courseId: course.course_id,
-                            })
-                          }
                         }
                       })
-                      
-                      // Use combinedEvidenceBoxes instead of combinedSubUnits
-                      const combinedSubUnits = combinedEvidenceBoxes
 
                       if (combinedSubUnits.length === 0) return null
 
-                      return (
-                        <Box key={course.course_id} sx={{ mb: 3 }}>
-                          <Typography
-                            variant='h6'
-                            sx={{ mb: 1, color: 'primary.main' }}
-                          >
-                            {course.course_name} - {selectedType} Units
-                          </Typography>
-                          <TableContainer>
-                            <Table size='small'>
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell>
-                                    <FormControlLabel
-                                      control={
-                                        <Checkbox
-                                          checked={combinedSubUnits.every(
-                                            (s) => s.learnerMap ?? false
-                                          )}
-                                          onChange={(e) => {
-                                            // Update all evidenceBoxes in combinedSubUnits
-                                            const updated = [...unitsWatch]
-                                            combinedSubUnits.forEach((evidenceBoxRow: any) => {
-                                              const mappingId = evidenceBoxRow.mapping_id
-                                              if (!mappingId) return // Skip new evidenceBoxes
-                                              
-                                              const unit = updated.find(
-                                                (u) => String(u.id) === String(evidenceBoxRow.unitId)
-                                              )
-                                              if (unit) {
-                                                if (evidenceBoxRow.subUnitId !== undefined && evidenceBoxRow.subUnitId !== null) {
-                                                  // This is a subUnit evidenceBox
-                                                  const subUnit = unit.subUnit?.find(
-                                                    (s: any) => String(s.id) === String(evidenceBoxRow.subUnitId)
-                                                  )
-                                                  if (subUnit?.evidenceBoxes) {
-                                                    const evidenceBox = subUnit.evidenceBoxes.find(
-                                                      (box: any) => box.mapping_id === mappingId
-                                                    )
-                                                    if (evidenceBox) {
-                                                      evidenceBox.learnerMap = e.target.checked
-                                                    }
-                                                  }
-                                                } else {
-                                                  // This is a unit-level evidenceBox
-                                                  if (unit.evidenceBoxes) {
-                                                    const evidenceBox = unit.evidenceBoxes.find(
-                                                      (box: any) => box.mapping_id === mappingId
-                                                    )
-                                                    if (evidenceBox) {
-                                                      evidenceBox.learnerMap = e.target.checked
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            })
-                                            setValue('units', updated)
-                                            trigger('units')
-                                          }}
-                                          disabled={
-                                            isEditMode || !canEditLearnerFields
-                                          }
-                                        />
-                                      }
-                                      label='Learner Map'
-                                      sx={{ margin: 0 }}
-                                    />
-                                  </TableCell>
-                                  <TableCell>Sub unit name</TableCell>
-                                  <TableCell>Trainer Comment</TableCell>
-                                  <TableCell align='center'>Gap</TableCell>
-                                  <TableCell align='center'>
-                                    {canEditTrainerFields ? (
-                                      <FormControlLabel
-                                        control={
-                                          <Checkbox
-                                            checked={
-                                              combinedSubUnits.length > 0 &&
-                                              combinedSubUnits.every(
-                                                (s) =>
-                                                  (s.learnerMap ?? false) &&
-                                                  (s.trainerMap ?? false) &&
-                                                  (s.signedOff ?? false)
-                                              )
-                                            }
-                                            indeterminate={
-                                              combinedSubUnits.some(
-                                                (s) =>
-                                                  (s.learnerMap ?? false) &&
-                                                  (s.trainerMap ?? false) &&
-                                                  (s.signedOff ?? false)
-                                              ) &&
-                                              !combinedSubUnits.every(
-                                                (s) =>
-                                                  (s.learnerMap ?? false) &&
-                                                  (s.trainerMap ?? false) &&
-                                                  (s.signedOff ?? false)
-                                              )
-                                            }
-                                            onChange={(e) =>
-                                              selectAllSignedOffForCombinedHandler(
-                                                combinedSubUnits,
-                                                e.target.checked
-                                              )
-                                            }
-                                            disabled={isEditMode}
-                                          />
-                                        }
-                                        label='Signed Off'
-                                        sx={{ margin: 0 }}
-                                      />
-                                    ) : (
-                                      'Signed Off'
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {combinedSubUnits.map((row) => {
-                                  // row is now an evidenceBox object
-                                  const mappingId = row.mapping_id
-                                  const hasSubUnit = row.subUnitId !== undefined && row.subUnitId !== null
-
-                                  // Get current values from form state (unitsWatch) for real-time updates
-                                  // Find the evidenceBox by mapping_id
-                                  let currentLearnerMap = row.learnerMap ?? false
-                                  let currentTrainerMap = row.trainerMap ?? false
-                                  let currentSignedOff = row.signedOff ?? false
-                                  let currentComment = row.comment ?? ''
-
-                                  // Update from unitsWatch if available (for real-time sync)
-                                  const currentUnit = (unitsWatch || []).find(
-                                    (u) => String(u.id) === String(row.unitId)
-                                  )
-                                  if (currentUnit) {
-                                    if (hasSubUnit && currentUnit.subUnit) {
-                                      const currentSubUnit = currentUnit.subUnit.find(
-                                        (s) => String(s.id) === String(row.subUnitId)
-                                      )
-                                      if (currentSubUnit?.evidenceBoxes) {
-                                        const currentEvidenceBox = currentSubUnit.evidenceBoxes.find(
-                                          (box: any) => box.mapping_id === mappingId
-                                        )
-                                        if (currentEvidenceBox) {
-                                          currentLearnerMap = currentEvidenceBox.learnerMap ?? false
-                                          currentTrainerMap = currentEvidenceBox.trainerMap ?? false
-                                          currentSignedOff = currentEvidenceBox.signedOff ?? false
-                                          currentComment = currentEvidenceBox.comment ?? ''
-                                        }
-                                      }
-                                    } else if (currentUnit.evidenceBoxes) {
-                                      const currentEvidenceBox = currentUnit.evidenceBoxes.find(
-                                        (box: any) => box.mapping_id === mappingId
-                                      )
-                                      if (currentEvidenceBox) {
-                                        currentLearnerMap = currentEvidenceBox.learnerMap ?? false
-                                        currentTrainerMap = currentEvidenceBox.trainerMap ?? false
-                                        currentSignedOff = currentEvidenceBox.signedOff ?? false
-                                        currentComment = currentEvidenceBox.comment ?? ''
-                                      }
-                                    }
-                                  }
-
-                                  // Determine display title
-                                  const displayTitle = hasSubUnit ? (row.subUnitTitle || row.title) : (row.unitTitle || row.title)
-
-                                  return (
-                                    <TableRow key={`evidenceBox-${mappingId || `new-${row.unitId}-${row.subUnitId || 'unit'}`}`}>
-                                      <TableCell>
-                                        <Checkbox
-                                          checked={currentLearnerMap}
-                                          onChange={() => {
-                                            learnerMapHandler(row)
-                                          }}
-                                          disabled={
-                                            isEditMode || !canEditLearnerFields
-                                          }
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        {displayTitle}
-                                      </TableCell>
-                                      <TableCell>
-                                        {!canEditTrainerFields ? (
-                                          <span>
-                                            {currentComment || 'No comment'}
-                                          </span>
-                                        ) : (
-                                          <TextField
-                                            size='small'
-                                            value={currentComment}
-                                            disabled={isEditMode}
-                                            onChange={(e) => {
-                                              commentHandler(e, mappingId)
-                                            }}
-                                          />
-                                        )}
-                                      </TableCell>
-                                      <TableCell
-                                        align='center'
-                                        className='flex items-center justify-center'
-                                      >
-                                        <div
-                                          className='border-2 border-gray-500 w-[16px] mt-[12px] h-[16px] p-[1px] flex items-center justify-center cursor-pointer'
-                                          onClick={() => {
-                                            if (
-                                              canEditTrainerFields &&
-                                              !isEditMode &&
-                                              currentLearnerMap
-                                            ) {
-                                              trainerMapHandler(row)
-                                            }
-                                          }}
-                                          style={{
-                                            cursor:
-                                              canEditTrainerFields &&
-                                              !isEditMode &&
-                                              currentLearnerMap
-                                                ? 'pointer'
-                                                : 'default',
-                                            opacity:
-                                              canEditTrainerFields &&
-                                              !isEditMode &&
-                                              currentLearnerMap
-                                                ? 1
-                                                : 0.8,
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              backgroundColor:
-                                                currentLearnerMap && currentTrainerMap
-                                                  ? 'green'
-                                                  : currentLearnerMap && !currentTrainerMap
-                                                  ? 'orange'
-                                                  : '',
-                                              width: '100%',
-                                              height: '100%',
-                                            }}
-                                          />
-                                        </div>
-                                      </TableCell>
-                                      <TableCell align='center'>
-                                        <Checkbox
-                                          checked={currentSignedOff}
-                                          disabled={
-                                            !canEditTrainerFields ||
-                                            isEditMode ||
-                                            !currentLearnerMap ||
-                                            !currentTrainerMap
-                                          }
-                                          onChange={() => {
-                                            signedOffHandler(row)
-                                          }}
-                                        />
-                                      </TableCell>
-                                    </TableRow>
-                                  )
-                                })}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                          {/* Show validation error for this specific course/type combination (only after form submission attempt) */}
-                          {isSubmitted && (() => {
-                            // Check if at least one evidenceBox has learnerMap selected for this course/type combination
-                            const hasLearnerMapSelected = combinedSubUnits.some((evidenceBoxRow: any) => {
-                              const mappingId = evidenceBoxRow.mapping_id
-                              if (!mappingId) return false // Skip new evidenceBoxes
-                              
-                              const currentUnit = (unitsWatch || []).find(
-                                (u) => String(u.id) === String(evidenceBoxRow.unitId) && u.course_id === course.course_id
-                              )
-                              if (!currentUnit) return false
-                              
-                              if (evidenceBoxRow.subUnitId !== undefined && evidenceBoxRow.subUnitId !== null) {
-                                // Check subUnit evidenceBox
-                                const currentSubUnit = currentUnit.subUnit?.find(
-                                  (s: any) => String(s.id) === String(evidenceBoxRow.subUnitId)
-                                )
-                                const evidenceBox = currentSubUnit?.evidenceBoxes?.find(
-                                  (box: any) => box.mapping_id === mappingId
-                                )
-                                return evidenceBox?.learnerMap === true
-                              } else {
-                                // Check unit-level evidenceBox
-                                const evidenceBox = currentUnit.evidenceBoxes?.find(
-                                  (box: any) => box.mapping_id === mappingId
-                                )
-                                return evidenceBox?.learnerMap === true
-                              }
-                            })
-                            
-                            // Only show error if no learnerMap is selected for this course/type
-                            return !hasLearnerMapSelected && (errors?.units as any)?.message && (
-                            <FormHelperText error>
-                                At least one unit must have Learner Map selected for {course.course_name} - {selectedType}
-                            </FormHelperText>
+                      // Calculate validation message for combined variant
+                      const validationMessage = isSubmitted ? (() => {
+                        const hasLearnerMapSelected = combinedSubUnits.some((sub) => {
+                          const unit = typeUnits.find((u) => u.id === sub.unitId)
+                          const hasSubUnit = unit?.subUnit && unit.subUnit.length > 0
+                          
+                          if (!hasSubUnit) {
+                            const currentUnit = (unitsWatch || []).find(
+                              (u) => String(u.id) === String(sub.id || sub.unitId) && u.course_id === course.course_id
                             )
-                          })()}
+                            return currentUnit?.learnerMap === true
+                          } else {
+                            const currentUnit = (unitsWatch || []).find(
+                              (u) => String(u.id) === String(sub.unitId) && u.course_id === course.course_id
+                            )
+                            const currentSubUnit = currentUnit?.subUnit?.find(
+                              (s) => String(s.id) === String(sub.id)
+                            )
+                            return currentSubUnit?.learnerMap === true
+                          }
+                        })
+                        
+                        return !hasLearnerMapSelected && (errors?.units as any)?.message
+                          ? `At least one unit must have Learner Map selected for ${course.course_name} - ${selectedType}`
+                          : undefined
+                      })() : undefined
+
+                      return (
+                        <Box key={course.course_id}>
+                          <UnitsTable
+                            variant='combined'
+                            title={`${course.course_name} - ${selectedType} Units`}
+                            rows={combinedSubUnits}
+                            unitsWatch={unitsWatch || []}
+                            courseId={course.course_id}
+                            isEditMode={isEditMode}
+                            canEditLearnerFields={canEditLearnerFields}
+                            canEditTrainerFields={canEditTrainerFields}
+                            isSubmitted={isSubmitted}
+                            errors={errors}
+                            learnerMapHandler={learnerMapHandler}
+                            trainerMapHandler={trainerMapHandler}
+                            signedOffHandler={signedOffHandler}
+                            commentHandler={commentHandler}
+                            selectAllSignedOffForCombinedHandler={selectAllSignedOffForCombinedHandler}
+                            getEvidenceCount={getEvidenceCount}
+                            setValue={setValue}
+                            trigger={trigger}
+                            validationMessage={validationMessage}
+                            combinedSubUnits={combinedSubUnits}
+                          />
                         </Box>
                       )
                     } else {
@@ -2478,326 +1877,64 @@ const CreateViewEvidenceLibrary = () => {
                             )
                             const hasSubUnit =
                               units.subUnit && units.subUnit.length > 0
-                            
-                            // Build rowsToDisplay from evidenceBoxes
-                            const rowsToDisplay: any[] = []
-                            if (hasSubUnit) {
-                              // For units with subUnits: loop through subUnits and their evidenceBoxes
-                              units.subUnit.forEach((sub) => {
-                                const subEvidenceBoxes = sub.evidenceBoxes || []
-                                subEvidenceBoxes.forEach((evidenceBox: any) => {
-                                  rowsToDisplay.push({
-                                    ...evidenceBox,
-                                    unitId: units.id,
-                                    unitTitle: units.title,
-                                    subUnitId: sub.id,
-                                    subUnitTitle: sub.title,
-                                    subUnitCode: sub.code,
-                                  })
-                                })
-                                // If no evidenceBoxes exist, create a placeholder entry
-                                if (subEvidenceBoxes.length === 0) {
-                                  rowsToDisplay.push({
-                                    mapping_id: null,
-                                    assignment_id: id ? Number(id) : null,
-                                    learnerMap: false,
-                                    trainerMap: false,
-                                    signedOff: false,
-                                    comment: '',
-                                    sub_unit_id: sub.id,
-                                    unitId: units.id,
-                                    unitTitle: units.title,
-                                    subUnitId: sub.id,
-                                    subUnitTitle: sub.title,
-                                    subUnitCode: sub.code,
-                                  })
-                                }
-                              })
-                            } else {
-                              // For units without subUnits: loop through unit's evidenceBoxes
-                              const unitEvidenceBoxes = units.evidenceBoxes || []
-                              unitEvidenceBoxes.forEach((evidenceBox: any) => {
-                                rowsToDisplay.push({
-                                  ...evidenceBox,
-                                  unitId: units.id,
-                                  unitTitle: units.title,
-                                })
-                              })
-                              // If no evidenceBoxes exist, create a placeholder entry
-                              if (unitEvidenceBoxes.length === 0) {
-                                rowsToDisplay.push({
-                                  mapping_id: null,
-                                  assignment_id: id ? Number(id) : null,
-                                  learnerMap: false,
-                                  trainerMap: false,
-                                  signedOff: false,
-                                  comment: '',
-                                  sub_unit_id: null,
-                                  unitId: units.id,
-                                  unitTitle: units.title,
-                                })
-                              }
-                            }
+                            const rowsToDisplay = hasSubUnit
+                              ? units.subUnit
+                              : [
+                                  {
+                                    id: units.id,
+                                    title: units.title,
+                                    learnerMap: units.learnerMap ?? false,
+                                    trainerMap: units.trainerMap ?? false,
+                                    comment: units.comment ?? '',
+                                  },
+                                ]
+
+                            // Calculate validation message for duty variant
+                            const validationMessage = isSubmitted && hasSubUnit ? (() => {
+                              const currentUnit = (unitsWatch || []).find(
+                                (u) => String(u.id) === String(units.id) && u.course_id === course.course_id
+                              )
+                              const hasLearnerMapSelected = currentUnit?.subUnit?.some(
+                                (sub) => sub.learnerMap === true
+                              ) || false
+                              
+                              return !hasLearnerMapSelected && errors?.units?.[unitIndex]?.subUnit?.message
+                                ? errors.units[unitIndex].subUnit.message
+                                : undefined
+                            })() : undefined
 
                             return (
-                              <Box
+                              <UnitsTable
                                 key={units.id}
-                                className='flex flex-col gap-2'
-                                sx={{ mt: 2, mb: 2 }}
-                              >
-                                {hasSubUnit && (
-                                  <Typography variant='h6'>
-                                    {units.title}
-                                  </Typography>
-                                )}
-                                <TableContainer>
-                                  <Table size='small'>
-                                    <TableHead>
-                                      <TableRow>
-                                        <TableCell align='center'>
-                                          <Checkbox
-                                            checked={
-                                              rowsToDisplay.length > 0 &&
-                                              rowsToDisplay.every(
-                                                (row: any) => row.learnerMap ?? false
-                                              )
-                                            }
-                                            onChange={(e) =>
-                                              selectAllLearnerMapHandler(
-                                                unitIndex,
-                                                e.target.checked
-                                              )
-                                            }
-                                            disabled={
-                                              isEditMode ||
-                                              !canEditLearnerFields
-                                            }
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          {hasSubUnit
-                                            ? 'Sub unit name'
-                                            : 'Unit name'}
-                                        </TableCell>
-                                        <TableCell>Trainer Comment</TableCell>
-                                        <TableCell align='center'>
-                                          Gap
-                                        </TableCell>
-                                        <TableCell align='center'>
-                                          {canEditTrainerFields ? (
-                                            <FormControlLabel
-                                              control={
-                                                <Checkbox
-                                                  checked={
-                                                    rowsToDisplay.length > 0 &&
-                                                    rowsToDisplay
-                                                      .filter((row: any) => row.learnerMap && row.trainerMap)
-                                                      .every((row: any) => row.signedOff ?? false)
-                                                  }
-                                                  indeterminate={
-                                                    rowsToDisplay.some(
-                                                      (row: any) =>
-                                                        row.learnerMap &&
-                                                        row.trainerMap &&
-                                                        (row.signedOff ?? false)
-                                                    ) &&
-                                                    !rowsToDisplay
-                                                      .filter((row: any) => row.learnerMap && row.trainerMap)
-                                                      .every((row: any) => row.signedOff ?? false)
-                                                  }
-                                                  onChange={(e) =>
-                                                    selectAllSignedOffHandler(
-                                                      unitIndex,
-                                                      e.target.checked
-                                                    )
-                                                  }
-                                                  disabled={isEditMode}
-                                                />
-                                              }
-                                              label='Signed Off'
-                                              sx={{ margin: 0 }}
-                                            />
-                                          ) : (
-                                            'Signed Off'
-                                          )}
-                                        </TableCell>
-                                      </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                      {rowsToDisplay.map((row: any) => {
-                                        // row is now an evidenceBox object
-                                        const mappingId = row.mapping_id
-                                        const rowHasSubUnit = row.subUnitId !== undefined && row.subUnitId !== null
-                                        
-                                        // Get current values from form state (unitsWatch) for real-time updates
-                                        let currentLearnerMap = row.learnerMap ?? false
-                                        let currentTrainerMap = row.trainerMap ?? false
-                                        let currentSignedOff = row.signedOff ?? false
-                                        let currentComment = row.comment ?? ''
-                                        
-                                        // Update from unitsWatch if available (for real-time sync)
-                                        const currentUnit = (unitsWatch || []).find(
-                                          (u) => String(u.id) === String(row.unitId)
-                                        )
-                                        if (currentUnit) {
-                                          if (rowHasSubUnit && currentUnit.subUnit) {
-                                            const currentSubUnit = currentUnit.subUnit.find(
-                                              (s: any) => String(s.id) === String(row.subUnitId)
-                                            )
-                                            if (currentSubUnit?.evidenceBoxes) {
-                                              const currentEvidenceBox = currentSubUnit.evidenceBoxes.find(
-                                                (box: any) => box.mapping_id === mappingId
-                                              )
-                                              if (currentEvidenceBox) {
-                                                currentLearnerMap = currentEvidenceBox.learnerMap ?? false
-                                                currentTrainerMap = currentEvidenceBox.trainerMap ?? false
-                                                currentSignedOff = currentEvidenceBox.signedOff ?? false
-                                                currentComment = currentEvidenceBox.comment ?? ''
-                                              }
-                                            }
-                                          } else if (currentUnit.evidenceBoxes) {
-                                            const currentEvidenceBox = currentUnit.evidenceBoxes.find(
-                                              (box: any) => box.mapping_id === mappingId
-                                            )
-                                            if (currentEvidenceBox) {
-                                              currentLearnerMap = currentEvidenceBox.learnerMap ?? false
-                                              currentTrainerMap = currentEvidenceBox.trainerMap ?? false
-                                              currentSignedOff = currentEvidenceBox.signedOff ?? false
-                                              currentComment = currentEvidenceBox.comment ?? ''
-                                            }
-                                          }
-                                        }
-                                        
-                                        // Determine display title
-                                        const displayTitle = rowHasSubUnit ? (row.subUnitTitle || row.title) : (row.unitTitle || row.title)
-                                        
-                                        return (
-                                          <TableRow key={`evidenceBox-${mappingId || `new-${row.unitId}-${row.subUnitId || 'unit'}`}`}>
-                                            <TableCell align='center'>
-                                              <Checkbox
-                                                checked={currentLearnerMap}
-                                                onChange={() => {
-                                                  learnerMapHandler(row)
-                                                }}
-                                                disabled={
-                                                  isEditMode ||
-                                                  !canEditLearnerFields
-                                                }
-                                              />
-                                            </TableCell>
-                                            <TableCell>{displayTitle}</TableCell>
-                                            <TableCell>
-                                              {!canEditTrainerFields ? (
-                                                <span>
-                                                  {currentComment || 'No comment'}
-                                                </span>
-                                              ) : (
-                                                <TextField
-                                                  size='small'
-                                                  value={currentComment || ''}
-                                                  onChange={(e) => {
-                                                    commentHandler(e, mappingId)
-                                                  }}
-                                                />
-                                              )}
-                                            </TableCell>
-                                            <TableCell
-                                              align='center'
-                                              className='flex items-center justify-center'
-                                            >
-                                              <div
-                                                className='border-2 border-gray-500 w-[16px] h-[16px] mt-[12px] p-[1px] flex items-center justify-center cursor-pointer'
-                                                onClick={() => {
-                                                  if (
-                                                    canEditTrainerFields &&
-                                                    !isEditMode &&
-                                                    currentLearnerMap
-                                                  ) {
-                                                    trainerMapHandler(row)
-                                                  }
-                                                }}
-                                                style={{
-                                                  cursor:
-                                                    canEditTrainerFields &&
-                                                    !isEditMode &&
-                                                    currentLearnerMap
-                                                      ? 'pointer'
-                                                      : 'default',
-                                                  opacity:
-                                                    canEditTrainerFields &&
-                                                    !isEditMode &&
-                                                    currentLearnerMap
-                                                      ? 1
-                                                      : 0.8,
-                                                }}
-                                              >
-                                                <div
-                                                  style={{
-                                                    backgroundColor:
-                                                      currentLearnerMap && currentTrainerMap
-                                                        ? 'green'
-                                                        : currentLearnerMap && !currentTrainerMap
-                                                        ? 'orange'
-                                                        : '',
-                                                    width: '100%',
-                                                    height: '100%',
-                                                  }}
-                                                />
-                                              </div>
-                                            </TableCell>
-                                            <TableCell align='center'>
-                                              <Checkbox
-                                                checked={currentSignedOff}
-                                                disabled={
-                                                  !canEditTrainerFields ||
-                                                  isEditMode ||
-                                                  !currentLearnerMap ||
-                                                  !currentTrainerMap
-                                                }
-                                                onChange={() => {
-                                                  signedOffHandler(row)
-                                                }}
-                                              />
-                                            </TableCell>
-                                          </TableRow>
-                                        )
-                                      })}
-                                    </TableBody>
-                                  </Table>
-                                </TableContainer>
-                                {isSubmitted && (() => {
-                                  // Check if at least one evidenceBox has learnerMap selected for this unit
-                                  const currentUnit = (unitsWatch || []).find(
-                                    (u) => String(u.id) === String(units.id) && u.course_id === course.course_id
-                                  )
-                                  let hasLearnerMapSelected = false
-                                  
-                                  if (currentUnit) {
-                                    if (hasSubUnit && currentUnit.subUnit) {
-                                      // Check subUnit evidenceBoxes
-                                      hasLearnerMapSelected = currentUnit.subUnit.some((sub: any) => {
-                                        return sub.evidenceBoxes?.some((box: any) => box.learnerMap === true) ?? false
-                                      })
-                                    } else if (currentUnit.evidenceBoxes) {
-                                      // Check unit-level evidenceBoxes
-                                      hasLearnerMapSelected = currentUnit.evidenceBoxes.some((box: any) => box.learnerMap === true)
-                                    }
-                                  }
-                                  
-                                  // Only show error if no learnerMap is selected for this unit
-                                  return !hasLearnerMapSelected && errors?.units?.[unitIndex]?.subUnit?.message && (
-                                    <FormHelperText error>
-                                      {errors.units[unitIndex].subUnit?.message || 'At least one evidence must have Learner Map selected'}
-                                    </FormHelperText>
-                                  )
-                                })()}
-                              </Box>
+                                variant='duty'
+                                title={hasSubUnit ? units.title : ''}
+                                rows={rowsToDisplay}
+                                unitsWatch={unitsWatch || []}
+                                courseId={course.course_id}
+                                isEditMode={isEditMode}
+                                canEditLearnerFields={canEditLearnerFields}
+                                canEditTrainerFields={canEditTrainerFields}
+                                isSubmitted={isSubmitted}
+                                errors={errors}
+                                learnerMapHandler={learnerMapHandler}
+                                trainerMapHandler={trainerMapHandler}
+                                signedOffHandler={signedOffHandler}
+                                commentHandler={commentHandler}
+                                selectAllLearnerMapHandler={selectAllLearnerMapHandler}
+                                selectAllSignedOffHandler={selectAllSignedOffHandler}
+                                getEvidenceCount={getEvidenceCount}
+                                setValue={setValue}
+                                trigger={trigger}
+                                units={units}
+                                unitIndex={unitIndex}
+                                validationMessage={validationMessage}
+                              />
                             )
                           })}
                         </Box>
                       )
                     }
-                  } else if (course.course_core_type === 'Qualification') {
+                  } else if (course.course_core_type === COURSE_TYPES.QUALIFICATION) {
                     // For Qualification courses: Show unit first, then its subUnits
                     // Get units for this course from unitsWatch (only show manually selected units)
                     const displayUnits = (unitsWatch || []).filter(
@@ -2825,275 +1962,46 @@ const CreateViewEvidenceLibrary = () => {
                         (u) => u.id === units.id
                       )
 
-                      // Build evidenceBoxes array from all subUnits
-                      const evidenceBoxesToDisplay: any[] = []
-                      if (units.subUnit && Array.isArray(units.subUnit)) {
-                        units.subUnit.forEach((sub) => {
-                          const subEvidenceBoxes = sub.evidenceBoxes || []
-                          subEvidenceBoxes.forEach((evidenceBox: any) => {
-                            evidenceBoxesToDisplay.push({
-                              ...evidenceBox,
-                              unitId: units.id,
-                              unitTitle: units.title,
-                              subUnitId: sub.id,
-                              subUnitTitle: sub.title,
-                              subUnitCode: sub.code,
-                            })
-                          })
-                          // If no evidenceBoxes exist, create a placeholder entry
-                          if (subEvidenceBoxes.length === 0) {
-                            evidenceBoxesToDisplay.push({
-                              mapping_id: null,
-                              assignment_id: id ? Number(id) : null,
-                              learnerMap: false,
-                              trainerMap: false,
-                              signedOff: false,
-                              comment: '',
-                              sub_unit_id: sub.id,
-                              unitId: units.id,
-                              unitTitle: units.title,
-                              subUnitId: sub.id,
-                              subUnitTitle: sub.title,
-                              subUnitCode: sub.code,
-                            })
-                          }
-                        })
-                      }
+                      // Calculate validation message for qualification variant
+                      const validationMessage = isSubmitted ? (() => {
+                        const currentUnit = (unitsWatch || []).find(
+                          (u) => String(u.id) === String(units.id) && u.course_id === course.course_id
+                        )
+                        const hasLearnerMapSelected = currentUnit?.subUnit?.some(
+                          (sub) => sub.learnerMap === true
+                        ) || false
+                        
+                        return !hasLearnerMapSelected
+                          ? `At least one sub unit must have Learner Map selected for ${units.title}`
+                          : undefined
+                      })() : undefined
 
                       return (
-                        <Box
+                        <UnitsTable
                           key={units.id}
-                          className='flex flex-col gap-2'
-                          sx={{ mt: 2, mb: 3 }}
-                        >
-                          {/* Show Unit Title First */}
-                          <Typography
-                            variant='h5'
-                            sx={{ mb: 1, fontWeight: 600 }}
-                          >
-                            {units.title}
-                          </Typography>
-
-                          {/* Then show evidenceBoxes table */}
-                          <TableContainer>
-                            <Table size='small'>
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell>
-                                    <FormControlLabel
-                                      control={
-                                        <Checkbox
-                                          checked={
-                                            evidenceBoxesToDisplay.length > 0 &&
-                                            evidenceBoxesToDisplay.every(
-                                              (row: any) => row.learnerMap ?? false
-                                            )
-                                          }
-                                          onChange={(e) =>
-                                            selectAllLearnerMapHandler(
-                                              unitIndex,
-                                              e.target.checked
-                                            )
-                                          }
-                                          disabled={
-                                            isEditMode || !canEditLearnerFields
-                                          }
-                                        />
-                                      }
-                                      label='Learner Map'
-                                      sx={{ margin: 0 }}
-                                    />
-                                  </TableCell>
-                                  <TableCell>Sub unit name</TableCell>
-                                  <TableCell>Trainer Comment</TableCell>
-                                  <TableCell align='center'>Gap</TableCell>
-                                  <TableCell align='center'>
-                                    {canEditTrainerFields ? (
-                                      <FormControlLabel
-                                        control={
-                                          <Checkbox
-                                            checked={
-                                              evidenceBoxesToDisplay.length > 0 &&
-                                              evidenceBoxesToDisplay
-                                                .filter((row: any) => row.learnerMap && row.trainerMap)
-                                                .every((row: any) => row.signedOff ?? false)
-                                            }
-                                            indeterminate={
-                                              evidenceBoxesToDisplay.some(
-                                                (row: any) =>
-                                                  row.learnerMap &&
-                                                  row.trainerMap &&
-                                                  (row.signedOff ?? false)
-                                              ) &&
-                                              !evidenceBoxesToDisplay
-                                                .filter((row: any) => row.learnerMap && row.trainerMap)
-                                                .every((row: any) => row.signedOff ?? false)
-                                            }
-                                            onChange={(e) =>
-                                              selectAllSignedOffHandler(
-                                                unitIndex,
-                                                e.target.checked
-                                              )
-                                            }
-                                            disabled={isEditMode}
-                                          />
-                                        }
-                                        label='Signed Off'
-                                        sx={{ margin: 0 }}
-                                      />
-                                    ) : (
-                                      'Signed Off'
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {evidenceBoxesToDisplay.map((row: any) => {
-                                  // row is now an evidenceBox object
-                                  const mappingId = row.mapping_id
-                                  
-                                  // Get current values from form state (unitsWatch) for real-time updates
-                                  let currentLearnerMap = row.learnerMap ?? false
-                                  let currentTrainerMap = row.trainerMap ?? false
-                                  let currentSignedOff = row.signedOff ?? false
-                                  let currentComment = row.comment ?? ''
-                                  
-                                  // Update from unitsWatch if available (for real-time sync)
-                                  const currentUnit = (unitsWatch || []).find(
-                                    (u) => String(u.id) === String(row.unitId)
-                                  )
-                                  if (currentUnit?.subUnit) {
-                                    const currentSubUnit = currentUnit.subUnit.find(
-                                      (s: any) => String(s.id) === String(row.subUnitId)
-                                    )
-                                    if (currentSubUnit?.evidenceBoxes) {
-                                      const currentEvidenceBox = currentSubUnit.evidenceBoxes.find(
-                                        (box: any) => box.mapping_id === mappingId
-                                      )
-                                      if (currentEvidenceBox) {
-                                        currentLearnerMap = currentEvidenceBox.learnerMap ?? false
-                                        currentTrainerMap = currentEvidenceBox.trainerMap ?? false
-                                        currentSignedOff = currentEvidenceBox.signedOff ?? false
-                                        currentComment = currentEvidenceBox.comment ?? ''
-                                      }
-                                    }
-                                  }
-                                  
-                                  return (
-                                    <TableRow key={`evidenceBox-${mappingId || `new-${row.unitId}-${row.subUnitId}`}`}>
-                                      <TableCell>
-                                        <Checkbox
-                                          checked={currentLearnerMap}
-                                          onChange={() => learnerMapHandler(row)}
-                                          disabled={
-                                            isEditMode || !canEditLearnerFields
-                                          }
-                                        />
-                                      </TableCell>
-                                      <TableCell>{row.subUnitTitle || row.title}</TableCell>
-                                      <TableCell>
-                                        {!canEditTrainerFields ? (
-                                          <span>
-                                            {currentComment || 'No comment'}
-                                          </span>
-                                        ) : (
-                                          <TextField
-                                            size='small'
-                                            value={currentComment || ''}
-                                            onChange={(e) =>
-                                              commentHandler(e, mappingId)
-                                            }
-                                          />
-                                        )}
-                                      </TableCell>
-                                      <TableCell
-                                        align='center'
-                                        className='flex items-center justify-center'
-                                      >
-                                        <div
-                                          className='border-2 border-gray-500 w-[16px] h-[16px] mt-[12px] p-[1px] flex items-center justify-center cursor-pointer'
-                                          onClick={() => {
-                                            if (
-                                              canEditTrainerFields &&
-                                              !isEditMode &&
-                                              currentLearnerMap
-                                            ) {
-                                              trainerMapHandler(row)
-                                            }
-                                          }}
-                                          style={{
-                                            cursor:
-                                              canEditTrainerFields &&
-                                              !isEditMode &&
-                                              currentLearnerMap
-                                                ? 'pointer'
-                                                : 'default',
-                                            opacity:
-                                              canEditTrainerFields &&
-                                              !isEditMode &&
-                                              currentLearnerMap
-                                                ? 1
-                                                : 0.8,
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              backgroundColor:
-                                                currentLearnerMap && currentTrainerMap
-                                                  ? 'green'
-                                                  : currentLearnerMap && !currentTrainerMap
-                                                  ? 'orange'
-                                                  : '',
-                                              width: '100%',
-                                              height: '100%',
-                                            }}
-                                          />
-                                        </div>
-                                      </TableCell>
-                                      <TableCell align='center'>
-                                        <Checkbox
-                                          checked={currentSignedOff}
-                                          disabled={
-                                            !canEditTrainerFields ||
-                                            isEditMode ||
-                                            !currentLearnerMap ||
-                                            !currentTrainerMap
-                                          }
-                                          onChange={() => signedOffHandler(row)}
-                                        />
-                                      </TableCell>
-                                    </TableRow>
-                                  )
-                                })}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                          {/* Show validation error for this specific unit (only after form submission attempt) */}
-                          {isSubmitted && (() => {
-                            // Get the current unit from unitsWatch to check real-time state for THIS SPECIFIC UNIT ONLY
-                            const currentUnit = (unitsWatch || []).find(
-                              (u) => String(u.id) === String(units.id) && u.course_id === course.course_id
-                            )
-                            
-                            // Check if at least one evidenceBox has learnerMap selected for THIS SPECIFIC UNIT's subUnits
-                            let hasLearnerMapSelected = false
-                            if (currentUnit?.subUnit) {
-                              hasLearnerMapSelected = currentUnit.subUnit.some((sub: any) => {
-                                return sub.evidenceBoxes?.some((box: any) => box.learnerMap === true) ?? false
-                              })
-                            }
-                            
-                            // Show error ONLY for THIS SPECIFIC UNIT if no learnerMap is selected
-                            if (!hasLearnerMapSelected) {
-                              return (
-                            <FormHelperText error>
-                                  At least one sub unit must have Learner Map selected for {units.title}
-                            </FormHelperText>
-                              )
-                            }
-                            return null
-                })()}
-                        </Box>
+                          variant='qualification'
+                          title=''
+                          rows={units.subUnit || []}
+                          unitsWatch={unitsWatch || []}
+                          courseId={course.course_id}
+                          isEditMode={isEditMode}
+                          canEditLearnerFields={canEditLearnerFields}
+                          canEditTrainerFields={canEditTrainerFields}
+                          isSubmitted={isSubmitted}
+                          errors={errors}
+                          learnerMapHandler={learnerMapHandler}
+                          trainerMapHandler={trainerMapHandler}
+                          signedOffHandler={signedOffHandler}
+                          commentHandler={commentHandler}
+                          selectAllLearnerMapHandler={selectAllLearnerMapHandler}
+                          selectAllSignedOffHandler={selectAllSignedOffHandler}
+                          getEvidenceCount={getEvidenceCount}
+                          setValue={setValue}
+                          trigger={trigger}
+                          units={units}
+                          unitIndex={unitIndex}
+                          validationMessage={validationMessage}
+                        />
                       )
                         })}
                       </Box>

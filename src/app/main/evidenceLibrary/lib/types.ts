@@ -42,6 +42,10 @@ export interface SubUnit {
   type?: string
   showOrder?: number
   code?: string
+  learnerMap?: boolean
+  trainerMap?: boolean
+  signedOff?: boolean
+  comment?: string
   evidenceBoxes?: EvidenceBox[]
 }
 
@@ -59,6 +63,10 @@ export interface Unit {
   sort_order?: string
   active?: boolean
   subUnit: SubUnit[]
+  learnerMap?: boolean
+  trainerMap?: boolean
+  signedOff?: boolean
+  comment?: string
   evidenceBoxes?: EvidenceBox[]
   course_id?: string | number
 }
