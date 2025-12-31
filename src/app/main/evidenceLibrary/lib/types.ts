@@ -25,17 +25,24 @@ export interface SignatureData {
   signature_required: boolean
 }
 
+export interface EvidenceBox {
+  mapping_id: number
+  assignment_id: number
+  learnerMap: boolean
+  trainerMap: boolean
+  signedOff?: boolean
+  comment?: string | null
+  sub_unit_id?: number | null
+}
+
 export interface SubUnit {
-  id: string
+  id: string | number
   title: string
   description?: string
   type?: string
   showOrder?: number
   code?: string
-  learnerMap?: boolean
-  trainerMap?: boolean
-  signedOff?: boolean
-  comment?: string
+  evidenceBoxes?: EvidenceBox[]
 }
 
 export interface Unit {
@@ -52,10 +59,7 @@ export interface Unit {
   sort_order?: string
   active?: boolean
   subUnit: SubUnit[]
-  learnerMap?: boolean
-  trainerMap?: boolean
-  signedOff?: boolean
-  comment?: string
+  evidenceBoxes?: EvidenceBox[]
   course_id?: string | number
 }
 
