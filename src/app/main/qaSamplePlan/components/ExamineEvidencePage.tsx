@@ -65,6 +65,7 @@ interface EvidenceRow {
 }
 
 interface EvidenceData {
+  mapping_id?: number
   assignment_id: number
   title: string
   description: string | null
@@ -302,34 +303,6 @@ const ExamineEvidencePage: React.FC = () => {
   // ==========================================================================
   // Computed Values
   // ==========================================================================
-  // Calculate unit progress statistics
-  const unitProgress = useMemo(() => {
-    if (!evidenceData || evidenceData.length === 0) {
-      return { pendingTrainerMap: 0, iqaChecked: 0, total: 0 }
-    }
-
-    let pendingTrainerMap = 0
-    let iqaChecked = 0
-    let total = 0
-
-    evidenceData.forEach((evidence) => {
-      if (evidence.mappedSubUnits && evidence.mappedSubUnits.length > 0) {
-        evidence.mappedSubUnits.forEach((subUnit) => {
-          total++
-          // Check if IQA checked (signed_off: true)
-          if (subUnit.review?.signed_off === true) {
-            iqaChecked++
-          }
-          // Check if trainer mapped but not IQA checked
-          else if (subUnit.trainerMapped === true) {
-            pendingTrainerMap++
-          }
-        })
-      }
-    })
-
-    return { pendingTrainerMap, iqaChecked, total }
-  }, [evidenceData])
 
   const getAllMappedSubUnits = useMemo(() => {
     const allSubUnits: Array<{
@@ -369,7 +342,87 @@ const ExamineEvidencePage: React.FC = () => {
     return allSubUnits
   }, [evidenceData])
 
+  // Generate all units to display based on unitMappingResponse
+  // If type is "code" or "qualification", use subUnits, otherwise use parent unit
+  const getAllUnitsToDisplay = useMemo(() => {
+    if (!unitMappingResponse?.data || unitMappingResponse.data.length === 0) {
+      return []
+    }
+
+    const unitsToDisplay: Array<{
+      id: string | number
+      code: string
+      title: string
+      unit_code: string | number
+      learnerMapped?: boolean
+      trainerMapped?: boolean
+    }> = []
+
+    unitMappingResponse.data.forEach((unit) => {
+      const shouldUseSubUnits = unit.type === 'code' || unit.type === 'qualification'
+      
+      if (shouldUseSubUnits && unit.subUnits && unit.subUnits.length > 0) {
+        // Use subUnits for code/qualification type
+        unit.subUnits.forEach((subUnit) => {
+          unitsToDisplay.push({
+            id: subUnit.id,
+            code: subUnit.code || String(subUnit.id),
+            title: subUnit.title || '',
+            unit_code: unit.unit_code,
+            learnerMapped: subUnit.learnerMapped || false,
+            trainerMapped: subUnit.trainerMapped || false,
+          })
+        })
+      } else {
+        // Use parent unit for other types
+        unitsToDisplay.push({
+          id: unit.unit_code,
+          code: unit.code || String(unit.unit_code),
+          title: unit.unit_title || '',
+          unit_code: unit.unit_code,
+          learnerMapped: unit.learnerMapped || false,
+          trainerMapped: unit.trainerMapped || false,
+        })
+      }
+    })
+
+    return unitsToDisplay
+  }, [unitMappingResponse])
+
+  // Calculate unit progress statistics based on evidence data
+  const unitProgress = useMemo(() => {
+    // Total Evidence should be the count of evidence items
+    const total = evidenceData ? evidenceData.length : 0
+
+    let pendingTrainerMap = 0
+    let pendingIqaMap = 0
+    let iqaChecked = 0
+
+    // Count directly from evidenceData.mappedSubUnits
+    evidenceData.forEach((evidence) => {
+      if (evidence.mappedSubUnits && evidence.mappedSubUnits.length > 0) {
+        evidence.mappedSubUnits.forEach((subUnit) => {
+          // Check if IQA checked (signed_off: true)
+          if (subUnit.review?.signed_off === true) {
+            iqaChecked++
+          }
+          // Count as pending IQA map if trainerMapped is true but signed_off is false
+          else if (subUnit.trainerMapped === true) {
+            pendingIqaMap++
+          }
+          // Count as pending trainer map if trainerMapped is false (trainer hasn't mapped it yet)
+          else if (subUnit.trainerMapped === false) {
+            pendingTrainerMap++
+          }
+        })
+      }
+    })
+
+    return { pendingTrainerMap, pendingIqaMap, iqaChecked, total }
+  }, [evidenceData])
+
   const allMappedSubUnits = getAllMappedSubUnits
+  const allUnitsToDisplay = getAllUnitsToDisplay
   const hasExpandedRows = Object.values(expandedRows).some((expanded) => expanded)
 
   // ==========================================================================
@@ -453,8 +506,19 @@ const ExamineEvidencePage: React.FC = () => {
 
     try {
       const userRole = currentUser?.role || 'IQA'
+      
+      if (!selectedEvidence.mapping_id) {
+        dispatch(
+          showMessage({
+            message: 'Mapping ID is required. Cannot add comment.',
+            variant: 'error',
+          })
+        )
+        return
+      }
+
       await addAssignmentReview({
-        assignment_id: selectedEvidence.assignment_id,
+        mapping_id: selectedEvidence.mapping_id,
         sampling_plan_detail_id: Number(planDetailId),
         role: userRole,
         comment: comment.trim(),
@@ -565,9 +629,19 @@ const ExamineEvidencePage: React.FC = () => {
 
     // Call API for each subUnit
     try {
+      if (!evidence.mapping_id) {
+        dispatch(
+          showMessage({
+            message: 'Mapping ID is required. Cannot update sign-off status.',
+            variant: 'error',
+          })
+        )
+        return
+      }
+
       const updatePromises = subUnitsToSignOff.map((subUnit) =>
         updateMappedSubUnitSignOff({
-          assignment_id: evidence.assignment_id,
+          mapping_id: evidence.mapping_id,
           unit_code: unitCode,
           pc_id: subUnit.id,
           signed_off: true,
@@ -772,8 +846,33 @@ const ExamineEvidencePage: React.FC = () => {
         return
       }
 
+      if (!targetEvidence.mapping_id) {
+        dispatch(
+          showMessage({
+            message: 'Mapping ID is required. Cannot update sign-off status.',
+            variant: 'error',
+          })
+        )
+        // Revert state changes on error
+        setMappedSubUnitsChecked((prev) => ({
+          ...prev,
+          [stateKey]: !newSignedOffState,
+        }))
+        setLockedCheckboxes((prev) => {
+          const newSet = new Set(prev)
+          newSet.delete(stateKey)
+          return newSet
+        })
+        setIqaCheckedCheckboxes((prev) => {
+          const newSet = new Set(prev)
+          newSet.delete(stateKey)
+          return newSet
+        })
+        return
+      }
+
       await updateMappedSubUnitSignOff({
-        assignment_id: targetEvidence.assignment_id,
+        mapping_id: targetEvidence.mapping_id,
         unit_code: unitCode,
         pc_id: subUnitId,
         signed_off: newSignedOffState,
@@ -856,8 +955,26 @@ const ExamineEvidencePage: React.FC = () => {
         return
       }
 
+      if (!firstEvidence.mapping_id) {
+        dispatch(
+          showMessage({
+            message: 'Mapping ID is required. Cannot update status.',
+            variant: 'error',
+          })
+        )
+        setConfirmationRows((prev) => {
+          const updated = [...prev]
+          updated[index] = {
+            ...updated[index],
+            completed: !newCompletedState,
+          }
+          return updated
+        })
+        return
+      }
+
       await addAssignmentReview({
-        assignment_id: firstEvidence.assignment_id,
+        mapping_id: firstEvidence.mapping_id,
         sampling_plan_detail_id: Number(planDetailId),
         role: confirmationRow.role,
         comment: confirmationRow.comments || '',
@@ -926,8 +1043,18 @@ const ExamineEvidencePage: React.FC = () => {
       const confirmationRow = confirmationRows[selectedIndex]
       const role = confirmationRow?.role || currentUser?.role || 'IQA'
 
+      if (!firstEvidence.mapping_id) {
+        dispatch(
+          showMessage({
+            message: 'Mapping ID is required. Cannot add comment.',
+            variant: 'error',
+          })
+        )
+        return
+      }
+
       const response = await addAssignmentReview({
-        assignment_id: firstEvidence.assignment_id,
+        mapping_id: firstEvidence.mapping_id,
         sampling_plan_detail_id: Number(planDetailId),
         role: role,
         comment: comment.trim() || '',
@@ -1254,17 +1381,10 @@ const ExamineEvidencePage: React.FC = () => {
                 Sign off all criteria
               </TableCell>
               {hasExpandedRows &&
-                allMappedSubUnits.map((subUnit) => {
-                  const evidenceWithSubUnit = evidenceData.find((evidence) =>
-                    evidence.mappedSubUnits?.some(
-                      (su) => String(su.id) === String(subUnit.id)
-                    )
-                  )
-                  const code = evidenceWithSubUnit?.unit?.code || subUnit.id
-
+                allUnitsToDisplay.map((unit) => {
                   return (
                     <TableCell
-                      key={subUnit.id}
+                      key={unit.id}
                       sx={{
                         fontWeight: 600,
                         borderRight: '1px solid #e0e0e0',
@@ -1272,8 +1392,8 @@ const ExamineEvidencePage: React.FC = () => {
                         minWidth: 100,
                       }}
                     >
-                      <Tooltip title={subUnit.subTitle || ''} arrow>
-                        <span>{code}</span>
+                      <Tooltip title={unit.title || ''} arrow>
+                        <span>{unit.code}</span>
                       </Tooltip>
                     </TableCell>
                   )
@@ -1295,7 +1415,7 @@ const ExamineEvidencePage: React.FC = () => {
             {evidenceRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8 + (hasExpandedRows ? allMappedSubUnits.length : 0)}
+                  colSpan={8 + (hasExpandedRows ? allUnitsToDisplay.length : 0)}
                   align='center'
                   sx={{ py: 4, color: '#666666' }}
                 >
@@ -1425,14 +1545,17 @@ const ExamineEvidencePage: React.FC = () => {
                         />
                       </TableCell>
                       {hasExpandedRows &&
-                        allMappedSubUnits.map((subUnit) => {
+                        allUnitsToDisplay.map((unit) => {
                           const evidenceSubUnit = isExpanded
-                            ? mappedSubUnits.find((su) => su.id === subUnit.id)
+                            ? mappedSubUnits.find((su) => String(su.id) === String(unit.id))
                             : null
+
+                          // Unit is not in evidence data
+                          const isUnitNotInEvidence = !evidenceSubUnit
 
                           const stateKey = createStateKey(
                             evidence?.assignment_id,
-                            evidenceSubUnit?.id || subUnit.id
+                            evidenceSubUnit?.id || unit.id
                           )
 
                           const isChecked = evidenceSubUnit
@@ -1446,9 +1569,9 @@ const ExamineEvidencePage: React.FC = () => {
                           const isIQA = currentUser?.role === 'IQA'
                           // IQA can only check if trainerMapped is true
                           const canIqaCheck = isIQA && evidenceSubUnit?.trainerMapped === true
-                          // Disable if locked, or if trainerMapped is false, or if user is not IQA
+                          // Disable if unit is not in evidence, locked, trainerMapped is false, or user is not IQA
                           const isDisabled =
-                            isLocked || !evidenceSubUnit?.trainerMapped || !isIQA
+                            isUnitNotInEvidence || isLocked || !evidenceSubUnit?.trainerMapped || !isIQA
                           // Check if it's trainer mapped but not IQA signed off (show blue)
                           const isTrainerMappedOnly = evidenceSubUnit?.trainerMapped === true && 
                             !evidenceSubUnit?.review?.signed_off && 
@@ -1456,14 +1579,14 @@ const ExamineEvidencePage: React.FC = () => {
 
                           return (
                             <TableCell
-                              key={subUnit.id}
+                              key={unit.id}
                               sx={{
                                 borderRight: '1px solid #e0e0e0',
                                 textAlign: 'center',
                                 position: 'relative',
                               }}
                             >
-                              {isExpanded && evidenceSubUnit ? (
+                              {isExpanded && (
                                 <Box
                                   sx={{
                                     display: 'flex',
@@ -1475,6 +1598,7 @@ const ExamineEvidencePage: React.FC = () => {
                                   <Checkbox
                                     checked={isChecked}
                                     onChange={() =>
+                                      evidenceSubUnit &&
                                       handleMappedSubUnitToggle(
                                         evidenceSubUnit.id,
                                         evidence?.assignment_id
@@ -1495,7 +1619,7 @@ const ExamineEvidencePage: React.FC = () => {
                                     }}
                                   />
                                 </Box>
-                              ) : null}
+                              )}
                             </TableCell>
                           )
                         })}
@@ -2081,6 +2205,37 @@ const ExamineEvidencePage: React.FC = () => {
               sx={{ fontWeight: 600, color: '#2196f3' }}
             >
               {unitProgress.pendingTrainerMap}
+            </Typography>
+          </Box>
+
+          {/* Pending IQA Map */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              p: 1.5,
+              borderRadius: 1,
+              backgroundColor: '#f5f5f5',
+              border: '1px solid #e0e0e0',
+            }}
+          >
+            <Box
+              sx={{
+                width: 16,
+                height: 16,
+                borderRadius: '50%',
+                backgroundColor: '#ff9800',
+              }}
+            />
+            <Typography variant='body2' sx={{ fontWeight: 500 }}>
+              Pending IQA Map:
+            </Typography>
+            <Typography
+              variant='body2'
+              sx={{ fontWeight: 600, color: '#ff9800' }}
+            >
+              {unitProgress.pendingIqaMap}
             </Typography>
           </Box>
 
