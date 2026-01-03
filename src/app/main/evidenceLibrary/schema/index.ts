@@ -70,6 +70,20 @@ export const getValidationSchema = (userRole?: string) => {
                 trainerMap: Yup.boolean().optional(),
                 signedOff: Yup.boolean().optional(),
                 comment: Yup.string().optional(),
+                // Topics array for Qualification courses (Assessment Criteria)
+                topics: Yup.array()
+                  .of(
+                    Yup.object().shape({
+                      id: Yup.mixed().required(),
+                      title: Yup.string().required(),
+                      code: Yup.string().optional(),
+                      learnerMap: Yup.boolean().optional(),
+                      trainerMap: Yup.boolean().optional(),
+                      signedOff: Yup.boolean().optional(),
+                      comment: Yup.string().optional(),
+                    })
+                  )
+                  .optional(),
               })
             )
             .optional()
@@ -95,35 +109,34 @@ export const getValidationSchema = (userRole?: string) => {
                 
                 // If unit has subUnits, check subUnit learnerMap
                 if (hasSubUnits) {
-                  // Check if any subUnit has learnerMap selected
-                  const hasSubUnitLearnerMap = subUnits.some((s) => s?.learnerMap === true)
-                  // Also check if unit-level learnerMap is selected (for units that might have both)
-                  const hasUnitLearnerMap = unitLearnerMap === true
+                  // Determine if this is a Qualification course unit by checking structure
+                  // Qualification courses have topics in subUnits, Standard courses don't
+                  const hasTopics = subUnits.some((subUnit: any) => 
+                    subUnit.topics && Array.isArray(subUnit.topics) && subUnit.topics.length > 0
+                  )
                   
-                  // Try to determine if this is a Qualification course unit
-                  // In Yup tests, we can access parent values but not easily root values
-                  // Try to access through options.context if available
-                  let isQualificationCourse = false
-                  try {
-                    const rootValue = (this as any).options?.context
-                    if (rootValue && rootValue.selectedCourses) {
-                      const selectedCourses = rootValue.selectedCourses || []
-                      const course = selectedCourses.find((c: any) => c?.course_id === unit.course_id)
-                      isQualificationCourse = course?.course_core_type === 'Qualification'
-                    }
-                  } catch (e) {
-                    // Context not available, will use fallback logic
-                  }
-                  
-                  // For Qualification courses, require at least one learnerMap per unit (strict - no exceptions)
-                  if (isQualificationCourse) {
-                    // Each Qualification unit MUST have at least one subUnit with learnerMap selected
-                    if (!hasSubUnitLearnerMap && !hasUnitLearnerMap) {
+                  // For Qualification courses (units with topics), check topics instead of subUnits
+                  if (hasTopics) {
+                    // Check if any topic has learnerMap selected
+                    const hasTopicLearnerMap = subUnits.some((subUnit: any) => {
+                      if (subUnit.topics && Array.isArray(subUnit.topics) && subUnit.topics.length > 0) {
+                        return subUnit.topics.some((topic: any) => topic?.learnerMap === true)
+                      }
+                      return false
+                    })
+                    
+                    if (!hasTopicLearnerMap) {
                       // Return false to fail validation - this will create an error
                       return false
                     }
                     return true
                   }
+                  
+                  // For Standard courses (units without topics), check subUnit learnerMap
+                  // Check if any subUnit has learnerMap selected
+                  const hasSubUnitLearnerMap = subUnits.some((s) => s?.learnerMap === true)
+                  // Also check if unit-level learnerMap is selected (for units that might have both)
+                  const hasUnitLearnerMap = unitLearnerMap === true
                   
                   // For Standard courses (Duty type) OR if we can't determine course type:
                   // If neither subUnit nor unit-level learnerMap is selected, check if this appears to be a newly added unit
@@ -231,12 +244,16 @@ export const getValidationSchema = (userRole?: string) => {
               const hasSubUnits = unit?.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0
               
               if (hasSubUnits) {
-                // Check if any subUnit has learnerMap selected
-                const hasSubUnitLearnerMap = unit.subUnit.some((s: any) => s?.learnerMap === true)
-                const hasUnitLearnerMap = unit?.learnerMap === true
+                // For Qualification courses, check topics instead of subUnits
+                const hasTopicLearnerMap = unit.subUnit.some((subUnit: any) => {
+                  if (subUnit.topics && Array.isArray(subUnit.topics) && subUnit.topics.length > 0) {
+                    return subUnit.topics.some((topic: any) => topic?.learnerMap === true)
+                  }
+                  return false
+                })
                 
-                // For Qualification courses, require at least one learnerMap
-                if (!hasSubUnitLearnerMap && !hasUnitLearnerMap) {
+                // For Qualification courses, require at least one topic with learnerMap
+                if (!hasTopicLearnerMap) {
                   return false // This will create an error at errors.units[index]
                 }
               } else {
@@ -257,8 +274,29 @@ export const getValidationSchema = (userRole?: string) => {
         function (units) {
           if (!Array.isArray(units) || units.length === 0) return false
           
-          // Get selectedCourses from root form values
-          const selectedCourses = (this.options?.context as any)?.selectedCourses || []
+          // Get selectedCourses from root form values using this.parent
+          // Try multiple ways to access selectedCourses
+          let selectedCourses: any[] = []
+          try {
+            // Method 1: Access through form root (this.parent is the form root)
+            const formRoot = this.parent
+            if (formRoot && formRoot.selectedCourses) {
+              selectedCourses = formRoot.selectedCourses
+            }
+            // Method 2: Access through options context (if provided)
+            if (selectedCourses.length === 0 && (this.options?.context as any)?.selectedCourses) {
+              selectedCourses = (this.options?.context as any).selectedCourses
+            }
+          } catch (e) {
+            // If we can't access selectedCourses, skip validation
+            // This prevents errors when form is not fully initialized
+            return true
+          }
+          
+          if (!Array.isArray(selectedCourses) || selectedCourses.length === 0) {
+            // No courses selected yet, validation will be handled by selectedCourses field
+            return true
+          }
           
           // Group units by course_id
           const unitsByCourse = units.reduce((acc, unit) => {
@@ -272,22 +310,32 @@ export const getValidationSchema = (userRole?: string) => {
             return acc
           }, {} as Record<string, any[]>)
           
-          // Check each course has at least one unit with learnerMap selected
-          const courseIds = Object.keys(unitsByCourse)
-          if (courseIds.length === 0) return false
-          
-          return courseIds.every((courseId) => {
-            const courseUnits = unitsByCourse[courseId]
-            const course = selectedCourses.find((c: any) => String(c?.course_id) === courseId)
+          // Check each selected course has at least one unit with learnerMap selected
+          return selectedCourses.every((course: any) => {
+            const courseId = String(course?.course_id)
+            const courseUnits = unitsByCourse[courseId] || []
+            
+            // If no units selected for this course, validation fails
+            if (courseUnits.length === 0) {
+              return false
+            }
+            
             const isQualificationCourse = course?.course_core_type === 'Qualification'
             
-            // For Qualification courses: EACH unit must have at least one learnerMap selected
+            // For Qualification courses: at least ONE unit must have at least one topic with learnerMap selected
             if (isQualificationCourse) {
-              return courseUnits.every((unit) => {
+              return courseUnits.some((unit) => {
                 const hasSubUnits = unit?.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0
                 if (hasSubUnits) {
-                  return unit.subUnit.some((s) => s?.learnerMap === true)
+                  // Check if any subUnit has topics with learnerMap selected
+                  return unit.subUnit.some((subUnit: any) => {
+                    if (subUnit.topics && Array.isArray(subUnit.topics) && subUnit.topics.length > 0) {
+                      return subUnit.topics.some((topic: any) => topic?.learnerMap === true)
+                    }
+                    return false
+                  })
                 } else {
+                  // Unit without subUnits - check unit-level learnerMap (fallback for edge cases)
                   return unit?.learnerMap === true
                 }
               })

@@ -55,17 +55,38 @@ export const useEvidenceCount = ({ learner, selectedCourses }: UseEvidenceCountP
         return 0
       }
 
-      // If subunitId is provided, find the subunit and return its evidenceBoxes count
+      // If subunitId is provided, it could be a subUnit ID (Standard) or topic ID (Qualification)
       if (subunitId !== undefined && subunitId !== null) {
-        const subUnits = unit.subUnit || []
-        const subUnit = subUnits.find(
-          (s: any) =>
-            String(s.id) === String(subunitId) || String(s.code) === String(subunitId)
+        // Check if this is a qualification course (topics exist)
+        const hasTopics = unit.subUnit?.some((sub: any) => 
+          sub.topics && Array.isArray(sub.topics) && sub.topics.length > 0
         )
-        if (subUnit && subUnit.evidenceBoxes && Array.isArray(subUnit.evidenceBoxes)) {
-          return subUnit.evidenceBoxes.length
+        
+        if (hasTopics) {
+          // For Qualification: subunitId is actually a topic ID
+          for (const subUnit of unit.subUnit || []) {
+            if (subUnit.topics && Array.isArray(subUnit.topics)) {
+              const topic = subUnit.topics.find(
+                (t: any) => String(t.id) === String(subunitId) || t.code === subunitId
+              )
+              if (topic && topic.evidenceBoxes && Array.isArray(topic.evidenceBoxes)) {
+                return topic.evidenceBoxes.length
+              }
+            }
+          }
+          return 0
+        } else {
+          // For Standard: subunitId is a subUnit ID
+          const subUnits = unit.subUnit || []
+          const subUnit = subUnits.find(
+            (s: any) =>
+              String(s.id) === String(subunitId) || String(s.code) === String(subunitId)
+          )
+          if (subUnit && subUnit.evidenceBoxes && Array.isArray(subUnit.evidenceBoxes)) {
+            return subUnit.evidenceBoxes.length
+          }
+          return 0
         }
-        return 0
       }
 
       // For unit-level (no subunit), return unit's evidenceBoxes count

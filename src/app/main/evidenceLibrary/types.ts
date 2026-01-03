@@ -84,6 +84,7 @@ export type SelectionAction =
   | { type: 'RESET_FILES' }
 
 export interface CourseOption {
+  course_core_type: string
   course_id: number | ''
   course_name: string
   course_code: string

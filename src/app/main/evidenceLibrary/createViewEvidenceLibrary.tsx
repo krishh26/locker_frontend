@@ -63,6 +63,7 @@ import { selectLearnerManagement } from 'app/store/learnerManagement'
 import NewTimeLog from '../timeLog/newTimeLog'
 import SignatureTable from './components/SignatureTable'
 import UnitsTable from './components/UnitsTable'
+import QualificationHierarchy from './components/QualificationHierarchy'
 import { FormValues } from './lib/types'
 import { getValidationSchema } from './schema'
 import {
@@ -76,6 +77,7 @@ import {
 } from './constants'
 import { useEvidenceCount } from './hooks/useEvidenceCount'
 import { useUnitHandlers } from './hooks/useUnitHandlers'
+import { useQualificationHandlers } from './hooks/useQualificationHandlers'
 
 const CreateViewEvidenceLibrary = () => {
   const navigate = useNavigate()
@@ -191,6 +193,7 @@ const CreateViewEvidenceLibrary = () => {
     },
     mode: 'onSubmit',
   })
+  console.log("🚀 ~ CreateViewEvidenceLibrary ~ errors:", errors)
 
 
   const {
@@ -230,16 +233,16 @@ const CreateViewEvidenceLibrary = () => {
   const learnerCoursesData = useMemo(() => {
     if (!learner?.course) return []
     return learner.course
-      .map((courseItem: any) => {
-        // Handle nested course structure
-        const course = courseItem.course || courseItem
-        // Ensure units are included from either course or courseItem
-        return {
-          ...course,
-          units: course.units || courseItem.units || [],
-          course_core_type: course.course_core_type || courseItem.course_core_type,
-        }
-      })
+        .map((courseItem: any) => {
+          // Handle nested course structure
+          const course = courseItem.course || courseItem
+          // Ensure units are included from either course or courseItem
+          return {
+            ...course,
+            units: course.units || courseItem.units || [],
+            course_core_type: course.course_core_type || courseItem.course_core_type,
+          }
+        })
       .filter((course: any) => course?.course_core_type !== COURSE_TYPES.GATEWAY)
   }, [learner?.course])
   const isLoadingLearnerCourses = false
@@ -339,7 +342,7 @@ const CreateViewEvidenceLibrary = () => {
 
     // Build selected courses from mappings
     const selectedCoursesArray: any[] = []
-    const courseSelectedTypesObj: Record<string | number, string> = {}
+    const courseSelectedTypesObj: Record<string | number, string[]> = {}
     const unitsArray: any[] = []
 
     mappingsByCourse.forEach((courseMappings, courseId) => {
@@ -348,19 +351,25 @@ const CreateViewEvidenceLibrary = () => {
 
       selectedCoursesArray.push(course)
 
-      // For Standard courses, determine selected type from mappings
+      // For Standard courses, collect all types that have mappings
       if (course.course_core_type === COURSE_TYPES.STANDARD) {
-        // Find the first mapping's unit type
-        const firstMapping = courseMappings[0]
-        const unitIdOrRef = firstMapping?.unit_code || firstMapping?.unit_ref
-        if (unitIdOrRef && course.units) {
-          // unit_code now contains unit ID, so match by id first, then fallback to code for backward compatibility
-          const matchedUnit = course.units.find(
-            (u: any) => String(u.id) === String(unitIdOrRef) || u.code === unitIdOrRef || u.unit_ref === unitIdOrRef
-          )
-          if (matchedUnit?.type) {
-            courseSelectedTypesObj[courseId] = matchedUnit.type
-          }
+        const selectedTypesSet = new Set<string>()
+        if (courseMappings.length > 0 && course.units) {
+          courseMappings.forEach((mapping) => {
+            const unitIdOrRef = mapping.unit_code || mapping.unit_ref
+            if (unitIdOrRef) {
+              // unit_code now contains unit ID, so match by id first, then fallback to code for backward compatibility
+              const matchedUnit = course.units.find(
+                (u: any) => String(u.id) === String(unitIdOrRef) || u.code === unitIdOrRef || u.unit_ref === unitIdOrRef
+              )
+              if (matchedUnit?.type) {
+                selectedTypesSet.add(matchedUnit.type)
+              }
+            }
+          })
+        }
+        if (selectedTypesSet.size > 0) {
+          courseSelectedTypesObj[courseId] = Array.from(selectedTypesSet)
         }
       }
 
@@ -368,69 +377,90 @@ const CreateViewEvidenceLibrary = () => {
       const courseUnits = course.units || []
       const unitsMap = new Map<string, any>()
 
+      // For Qualification courses: First, initialize all units with all subUnits and topics
+      // Then apply mapping values to topics that have mappings
+      if (course.course_core_type === COURSE_TYPES.QUALIFICATION) {
+        // Create a map to track which topics have mappings
+        const topicMappingsMap = new Map<string, any>()
+        courseMappings.forEach((mapping) => {
+          const unitIdOrRef = mapping.unit_code || mapping.unit_ref
+          const key = `${courseId}-${unitIdOrRef}`
+          topicMappingsMap.set(key, mapping)
+        })
+
+        // Initialize all units with all their subUnits and topics
+        courseUnits.forEach((unit) => {
+          const unitKey = `${courseId}-${unit.id || unit.code}`
+          if (unitsMap.has(unitKey)) return // Already processed
+
+          const unitData: any = {
+            ...unit,
+            course_id: courseId,
+            type: unit.type,
+            code: unit.code || unit.unit_ref,
+            subUnit: [],
+          }
+
+          // Add all subUnits with all topics
+          if (unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0) {
+            unitData.subUnit = unit.subUnit.map((subUnit: any) => {
+              const subUnitData: any = {
+                ...subUnit,
+                topics: [],
+              }
+
+              // Add all topics from the course structure
+              if (subUnit.topics && Array.isArray(subUnit.topics) && subUnit.topics.length > 0) {
+                subUnitData.topics = subUnit.topics.map((topic: any) => {
+                  // Check if this topic has a mapping
+                  const topicKey = `${courseId}-${topic.id}`
+                  const mapping = topicMappingsMap.get(topicKey)
+
+                  if (mapping) {
+                    // Apply mapping values
+                    const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
+                    const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
+                    const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
+                    const comment = mapping.comment ?? ''
+
+                    return {
+                      ...topic,
+                      learnerMap,
+                      trainerMap,
+                      signedOff,
+                      comment,
+                      mapping_id: mapping.mapping_id,
+                    }
+                  } else {
+                    // No mapping, use default values
+                    return {
+                      ...topic,
+                      learnerMap: false,
+                      trainerMap: false,
+                      signedOff: false,
+                      comment: '',
+                    }
+                  }
+                })
+              }
+
+              return subUnitData
+            })
+          }
+
+          unitsMap.set(unitKey, unitData)
+        })
+
+        // Push Qualification units to array and continue to next course
+        unitsArray.push(...Array.from(unitsMap.values()))
+        return // Skip the forEach loop below for Qualification courses
+      }
+
       courseMappings.forEach((mapping) => {
         // unit_code now contains the unit ID (not code), but keep backward compatibility with unit_ref
         const unitIdOrRef = mapping.unit_code || mapping.unit_ref
         // Support both sub_unit_id (new API) and sub_unit_ref (old API)
         const subUnitRef = mapping.sub_unit_id || mapping.sub_unit_ref
-        
-        // For Qualification courses: when sub_unit_id is null, unit_code might be a sub-unit ID
-        if (course.course_core_type === COURSE_TYPES.QUALIFICATION && (subUnitRef === null || subUnitRef === undefined)) {
-          // Try to find it as a subUnit ID first
-          let foundSubUnit: any = null
-          let foundUnit: any = null
-          
-          for (const unit of courseUnits) {
-            if (unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0) {
-              const subunit = unit.subUnit.find(
-                (s: any) => String(s.id) === String(unitIdOrRef) || s.code === unitIdOrRef
-              )
-              if (subunit) {
-                foundSubUnit = subunit
-                foundUnit = unit
-                break
-              }
-            }
-          }
-          
-          if (foundSubUnit && foundUnit) {
-            // It's a sub-unit mapping for Qualification course
-            const unitKey = `${courseId}-${foundUnit.id || foundUnit.code}`
-            if (!unitsMap.has(unitKey)) {
-              unitsMap.set(unitKey, {
-                ...foundUnit,
-                course_id: courseId,
-                type: foundUnit.type,
-                code: foundUnit.code || foundUnit.unit_ref,
-                subUnit: [],
-                mapping_id: mapping.mapping_id, // Store mapping_id for updates
-              })
-            }
-            
-            const unitData = unitsMap.get(unitKey)!
-            const existingSubUnit = unitData.subUnit.find(
-              (s: any) => s.id === foundSubUnit.id || s.code === foundSubUnit.code
-            )
-            
-            if (!existingSubUnit) {
-              // Support both camelCase (learnerMap) and snake_case (learner_map) from API
-              const learnerMap = mapping.learnerMap ?? mapping.learner_map ?? false
-              const trainerMap = mapping.trainerMap ?? mapping.trainer_map ?? false
-              const signedOff = mapping.signedOff ?? mapping.signed_off ?? false
-              const comment = mapping.comment ?? ''
-              
-              unitData.subUnit.push({
-                ...foundSubUnit,
-                learnerMap,
-                trainerMap,
-                signedOff,
-                comment,
-                mapping_id: mapping.mapping_id,
-              })
-            }
-            return // Skip the rest of the logic for this mapping
-          }
-        }
         
         // For Standard courses or when sub_unit_id is provided: match by unit ID
         const unit = courseUnits.find(
@@ -595,6 +625,18 @@ const CreateViewEvidenceLibrary = () => {
     setValue,
     trigger,
   })
+  
+  // Qualification-specific handlers (for topics)
+  const {
+    learnerMapHandler: qualificationLearnerMapHandler,
+    trainerMapHandler: qualificationTrainerMapHandler,
+    signedOffHandler: qualificationSignedOffHandler,
+    commentHandler: qualificationCommentHandler,
+  } = useQualificationHandlers({
+    units: unitsWatch || [],
+    setValue,
+    trigger,
+  })
 
   // Initialize time log data when evidence details are loaded
   useEffect(() => {
@@ -745,10 +787,11 @@ const CreateViewEvidenceLibrary = () => {
       (c) => c.course_core_type === COURSE_TYPES.STANDARD
     )
     for (const course of standardCourses) {
-      if (!data.courseSelectedTypes || !data.courseSelectedTypes[course.course_id]) {
+      const selectedTypes = data.courseSelectedTypes?.[course.course_id] || []
+      if (!Array.isArray(selectedTypes) || selectedTypes.length === 0) {
         dispatch(
           showMessage({
-            message: `Please select a type for ${course.course_name}`,
+            message: `Please select at least one type for ${course.course_name}`,
             variant: 'error',
           })
         )
@@ -808,18 +851,41 @@ const CreateViewEvidenceLibrary = () => {
       // Update evidence
       await updateEvidenceId(evidencePayload).unwrap()
 
-      // Step 2: Handle mappings for each course/unit/subunit combination
-      // Map key: course_id-unit_code (using unit_code instead of unit_ref/sub_unit_ref)
+      // Step 2: Handle mappings for each course/unit/subunit/topic combination
+      // Map key: course_id-topic_id (for Qualification, topics are mapped; for Standard, subUnits or units are mapped)
       // Build desired mappings from form state
       const desiredMappings: Map<string, any> = new Map()
       const formUnits = data.units || []
 
       formUnits.forEach((unit: any) => {
         const courseId = unit.course_id
+        const course = selectedCourses.find((c: any) => c.course_id === courseId)
+        const isQualification = course?.course_core_type === COURSE_TYPES.QUALIFICATION
         const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
 
-        if (hasSubUnit) {
-          // Unit has subunits - create mapping for each subunit (unit_code = subunit code)
+        if (isQualification && hasSubUnit) {
+          // For Qualification courses: map topics (Assessment Criteria) only
+          unit.subUnit.forEach((subUnit: any) => {
+            if (subUnit.topics && Array.isArray(subUnit.topics) && subUnit.topics.length > 0) {
+              subUnit.topics.forEach((topic: any) => {
+                // Only add to desiredMappings if learnerMap is true
+                if (topic.learnerMap === true) {
+                  const key = `${courseId}-${topic.id}`
+                  desiredMappings.set(key, {
+                    assignment_id: Number(id),
+                    course_id: Number(courseId),
+                    unit_code: String(topic.id), // For qualification, unit_code = topic.id
+                    learnerMap: true,
+                    trainerMap: topic.trainerMap ?? false,
+                    code: topic.code,
+                    mapping_id: topic.mapping_id, // For updates (if exists)
+                  })
+                }
+              })
+            }
+          })
+        } else if (hasSubUnit) {
+          // For Standard courses: Unit has subunits - create mapping for each subunit
           // Only include mappings where learnerMap is true
           unit.subUnit.forEach((sub: any) => {
             // Only add to desiredMappings if learnerMap is true
@@ -1443,7 +1509,7 @@ const CreateViewEvidenceLibrary = () => {
                           course.course_core_type === COURSE_TYPES.STANDARD &&
                           !updatedCourseSelectedTypes[course.course_id]
                         ) {
-                          updatedCourseSelectedTypes[course.course_id] = ''
+                          updatedCourseSelectedTypes[course.course_id] = []
                         }
                       })
 
@@ -1518,91 +1584,112 @@ const CreateViewEvidenceLibrary = () => {
                     {course.course_name} - Select Type:
                 </Typography>
                 <FormGroup row>
-                    {[UNIT_TYPES.KNOWLEDGE, UNIT_TYPES.BEHAVIOUR, UNIT_TYPES.SKILLS, UNIT_TYPES.DUTY].map(
-                      (type) => (
-                    <FormControlLabel
-                      key={type}
-                      control={
-                        <Radio
-                              checked={
-                                courseSelectedTypes[course.course_id] === type
-                              }
-                          onChange={() => {
-                                // Reset units for this course and type to unchecked when switching types
-                                const currentUnits = unitsWatch || []
-                                const unitsToKeep = currentUnits.filter(
-                                  (u) =>
-                                    !(
-                                      u.course_id === course.course_id &&
-                                      u.type === type
+                    {[UNIT_TYPES.KNOWLEDGE, UNIT_TYPES.BEHAVIOUR, UNIT_TYPES.SKILLS].map(
+                      (type) => {
+                        const selectedTypes = courseSelectedTypes[course.course_id] || []
+                        const isSelected = Array.isArray(selectedTypes) ? selectedTypes.includes(type) : false
+                        return (
+                          <FormControlLabel
+                            key={type}
+                            control={
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  const checked = e.target.checked
+                                  const currentCourseSelectedTypes = watch('courseSelectedTypes') || {}
+                                  const currentSelectedTypes = currentCourseSelectedTypes[course.course_id] || []
+                                  
+                                  if (checked) {
+                                    // Add type to array
+                                    const updatedTypes = Array.isArray(currentSelectedTypes) 
+                                      ? [...currentSelectedTypes, type]
+                                      : [type]
+                                    setValue('courseSelectedTypes', {
+                                      ...currentCourseSelectedTypes,
+                                      [course.course_id]: updatedTypes,
+                                    })
+                                    
+                                    // Add units for this type
+                                    const currentUnits = unitsWatch || []
+                                    const unitsToKeep = currentUnits.filter(
+                                      (u) => !(u.course_id === course.course_id && u.type === type)
                                     )
-                                )
-                                
-                                // Get units from course data for the selected type
-                                const courseUnits = course.units || []
-                                const filteredUnits = courseUnits.filter(
-                                  (unit: any) => unit.type === type
-                                )
-                                
-                                // Re-initialize units with all values set to false/unchecked
-                                const resetUnits = filteredUnits.map((method: any) => {
-                                  const hasSubUnit =
-                                    method.subUnit &&
-                                    Array.isArray(method.subUnit) &&
-                                    method.subUnit.length > 0
+                                    
+                                    const courseUnits = course.units || []
+                                    const filteredUnits = courseUnits.filter(
+                                      (unit: any) => unit.type === type
+                                    )
+                                    
+                                    const initializedUnits = filteredUnits.map((method: any) => {
+                                      const hasSubUnit =
+                                        method.subUnit &&
+                                        Array.isArray(method.subUnit) &&
+                                        method.subUnit.length > 0
 
-                                  return {
-                                    ...method,
-                                    course_id: course.course_id,
-                                    type: method.type,
-                                    code: method.code,
-                                    subUnit: hasSubUnit
-                                      ? method.subUnit.map((sub: any) => ({
-                                          ...sub,
-                                          learnerMap: false,
-                                          trainerMap: false,
-                                          signedOff: false,
-                                          comment: '',
-                                        }))
-                                      : [],
-                                    learnerMap: hasSubUnit ? undefined : false,
-                                    trainerMap: hasSubUnit ? undefined : false,
-                                    signedOff: hasSubUnit ? undefined : false,
-                                    comment: hasSubUnit ? undefined : '',
+                                      return {
+                                        ...method,
+                                        course_id: course.course_id,
+                                        type: method.type,
+                                        code: method.code,
+                                        subUnit: hasSubUnit
+                                          ? method.subUnit.map((sub: any) => ({
+                                              ...sub,
+                                              learnerMap: false,
+                                              trainerMap: false,
+                                              signedOff: false,
+                                              comment: '',
+                                            }))
+                                          : [],
+                                        learnerMap: hasSubUnit ? undefined : false,
+                                        trainerMap: hasSubUnit ? undefined : false,
+                                        signedOff: hasSubUnit ? undefined : false,
+                                        comment: hasSubUnit ? undefined : '',
+                                      }
+                                    })
+                                    
+                                    setValue('units', [...unitsToKeep, ...initializedUnits], {
+                                      shouldValidate: true,
+                                    })
+                                  } else {
+                                    // Remove type from array
+                                    const updatedTypes = Array.isArray(currentSelectedTypes)
+                                      ? currentSelectedTypes.filter((t: string) => t !== type)
+                                      : []
+                                    setValue('courseSelectedTypes', {
+                                      ...currentCourseSelectedTypes,
+                                      [course.course_id]: updatedTypes,
+                                    })
+                                    
+                                    // Remove ALL units of this type
+                                    const currentUnits = unitsWatch || []
+                                    const updatedUnits = currentUnits.filter(
+                                      (u) => !(u.course_id === course.course_id && u.type === type)
+                                    )
+                                    setValue('units', updatedUnits, {
+                                      shouldValidate: true,
+                                    })
                                   }
-                                })
-                                
-                                // Update selected type first
-                                const currentCourseSelectedTypes = watch('courseSelectedTypes') || {}
-                                setValue('courseSelectedTypes', {
-                                  ...currentCourseSelectedTypes,
-                                  [course.course_id]: type,
-                                })
-                                
-                                // Update form with reset units and trigger validation
-                                setValue('units', [...unitsToKeep, ...resetUnits], {
-                                  shouldValidate: true,
-                                })
-                          }}
-                          disabled={isEditMode || !canEditLearnerFields}
-                        />
+                                }}
+                                disabled={isEditMode || !canEditLearnerFields}
+                              />
+                            }
+                            label={type}
+                          />
+                        )
                       }
-                      label={type}
-                    />
-                      )
                     )}
                 </FormGroup>
                   {/* Show validation error if type not selected (only after form submission attempt) */}
-                  {isSubmitted && !courseSelectedTypes[course.course_id] && (
+                  {isSubmitted && (!courseSelectedTypes[course.course_id] || (Array.isArray(courseSelectedTypes[course.course_id]) && courseSelectedTypes[course.course_id].length === 0)) && (
                     <FormHelperText error>
-                      Please select a type for {course.course_name}
+                      Please select at least one type for {course.course_name}
                     </FormHelperText>
                   )}
                   {isSubmitted && errors.courseSelectedTypes && (
                     <FormHelperText error>
                       {typeof errors.courseSelectedTypes.message === 'string' 
                         ? errors.courseSelectedTypes.message 
-                        : 'Please select a type for all Standard courses'}
+                        : 'Please select at least one type for all Standard courses'}
                     </FormHelperText>
                   )}
               </Box>
@@ -1649,19 +1736,33 @@ const CreateViewEvidenceLibrary = () => {
                                 const unitToAdd = {
                                   ...unit,
                                     course_id: course.course_id,
-                                    // Explicitly set learnerMap to false when adding unit
-                                    learnerMap: false,
-                                    trainerMap: false,
-                                    signedOff: false,
-                                    comment: '',
+                                    // Qualification units don't have unit-level mapping
+                                    learnerMap: undefined,
+                                    trainerMap: undefined,
+                                    signedOff: undefined,
+                                    comment: undefined,
                                   subUnit: hasSubUnit
-                                      ? unit.subUnit.map((sub: any) => ({
+                                      ? unit.subUnit.map((sub: any) => {
+                                          // For Qualification: subUnits (Learning Outcomes) don't have mapping
+                                          // Only topics (Assessment Criteria) have mapping
+                                          const hasTopics = sub.topics && Array.isArray(sub.topics) && sub.topics.length > 0
+                                          return {
                                         ...sub,
-                                          learnerMap: false, // Always start as false
+                                            learnerMap: undefined,
+                                            trainerMap: undefined,
+                                            signedOff: undefined,
+                                            comment: undefined,
+                                            topics: hasTopics
+                                              ? sub.topics.map((topic: any) => ({
+                                                  ...topic,
+                                                  learnerMap: false,
                                           trainerMap: false,
                                           signedOff: false,
                                           comment: '',
                                       }))
+                                              : [],
+                                          }
+                                        })
                                     : [],
                                 }
                                 setValue(
@@ -1705,15 +1806,15 @@ const CreateViewEvidenceLibrary = () => {
             {selectedCourses.length > 0 && (
               <Box sx={{ mt: 3 }}>
                 {selectedCourses.map((course) => {
-                  // For Standard courses, show units based on selected type
+                  // For Standard courses, show units based on selected types
                   if (course.course_core_type === COURSE_TYPES.STANDARD) {
-                    const selectedType = courseSelectedTypes[course.course_id]
-                    if (!selectedType) return null
+                    const selectedTypes = courseSelectedTypes[course.course_id] || []
+                    if (!Array.isArray(selectedTypes) || selectedTypes.length === 0) return null
 
-                    // Get units for this course and type from unitsWatch
+                    // Get units for this course and all selected types from unitsWatch
                     const typeUnits = (unitsWatch || []).filter(
                       (unit) =>
-                        unit.type === selectedType &&
+                        selectedTypes.includes(unit.type) &&
                         unit.course_id === course.course_id
                     )
 
@@ -1722,16 +1823,16 @@ const CreateViewEvidenceLibrary = () => {
                       // Always reset to unchecked state when switching types
                       const courseUnits = course.units || []
                       const filteredUnits = courseUnits.filter(
-                        (unit) => unit.type === selectedType
+                        (unit: any) => selectedTypes.includes(unit.type)
                       )
                       if (filteredUnits.length > 0) {
                         const currentUnits = unitsWatch || []
-                        // Remove existing units of this type if any (to reset them)
-                        const unitsWithoutThisType = currentUnits.filter(
+                        // Remove existing units of selected types if any (to reset them)
+                        const unitsWithoutSelectedTypes = currentUnits.filter(
                           (u) =>
                             !(
                               u.course_id === course.course_id &&
-                              u.type === selectedType
+                              selectedTypes.includes(u.type)
                             )
                         )
                         
@@ -1762,8 +1863,8 @@ const CreateViewEvidenceLibrary = () => {
                             comment: hasSubUnit ? undefined : '',
                           }
                         })
-                        // Replace units of this type with fresh ones (unchecked)
-                        const newUnits = [...unitsWithoutThisType, ...initializedUnits]
+                        // Replace units of selected types with fresh ones (unchecked)
+                        const newUnits = [...unitsWithoutSelectedTypes, ...initializedUnits]
                         setValue('units', newUnits, { shouldValidate: false })
                         return null // Will re-render with units
                       }
@@ -1771,144 +1872,84 @@ const CreateViewEvidenceLibrary = () => {
                       return null
                     }
 
-                    // For Knowledge, Behaviour, Skills: Combine all subUnits into one table
-                    // For Duty: Show separate tables for each unit
-                    const shouldCombineSubUnits = COMBINED_UNIT_TYPES.includes(selectedType as any)
+                    // Group units by type and show one table per type
+                    // Group typeUnits by their type
+                    const unitsByType = new Map<string, typeof typeUnits>()
+                    typeUnits.forEach((unit) => {
+                      const unitType = unit.type || ''
+                      if (!unitsByType.has(unitType)) {
+                        unitsByType.set(unitType, [])
+                      }
+                      unitsByType.get(unitType)!.push(unit)
+                    })
 
-                    if (shouldCombineSubUnits) {
-                      // Combine all subUnits from all units of this type
-                      const combinedSubUnits: any[] = []
-                      typeUnits.forEach((unit) => {
-                        const hasSubUnit =
-                          unit.subUnit && unit.subUnit.length > 0
-                        if (hasSubUnit) {
-                          unit.subUnit.forEach((sub) => {
-                            combinedSubUnits.push({
-                              ...sub,
-                              unitId: unit.id,
-                              unitTitle: unit.title,
-                              courseId: course.course_id,
-                            })
+                    return (
+                      <Box key={course.course_id} sx={{ mb: 3 }}>
+                        {Array.from(unitsByType.entries()).map(([unitType, unitsOfType]) => {
+                          // Combine all subUnits from all units of this type
+                          const combinedSubUnits: any[] = []
+                          unitsOfType.forEach((unit) => {
+                            const hasSubUnit = unit.subUnit && unit.subUnit.length > 0
+                            if (hasSubUnit) {
+                              unit.subUnit.forEach((sub) => {
+                                combinedSubUnits.push({
+                                  ...sub,
+                                  unitId: unit.id,
+                                  unitTitle: unit.title,
+                                  courseId: course.course_id,
+                                })
+                              })
+                            } else {
+                              // If unit doesn't have subUnit, add the unit itself
+                              combinedSubUnits.push({
+                                id: unit.id,
+                                title: unit.title,
+                                learnerMap: unit.learnerMap ?? false,
+                                trainerMap: unit.trainerMap ?? false,
+                                signedOff: unit.signedOff ?? false,
+                                comment: unit.comment ?? '',
+                                unitId: unit.id,
+                                unitTitle: unit.title,
+                                courseId: course.course_id,
+                              })
+                            }
                           })
-                        } else {
-                          // If unit doesn't have subUnit, add the unit itself
-                          combinedSubUnits.push({
-                            id: unit.id,
-                            title: unit.title,
-                            learnerMap: unit.learnerMap ?? false,
-                            trainerMap: unit.trainerMap ?? false,
-                            signedOff: unit.signedOff ?? false,
-                            comment: unit.comment ?? '',
-                            unitId: unit.id,
-                            unitTitle: unit.title,
-                            courseId: course.course_id,
-                          })
-                        }
-                      })
 
-                      if (combinedSubUnits.length === 0) return null
+                          if (combinedSubUnits.length === 0) return null
 
-                      // Calculate validation message for combined variant
-                      const validationMessage = isSubmitted ? (() => {
-                        const hasLearnerMapSelected = combinedSubUnits.some((sub) => {
-                          const unit = typeUnits.find((u) => u.id === sub.unitId)
-                          const hasSubUnit = unit?.subUnit && unit.subUnit.length > 0
-                          
-                          if (!hasSubUnit) {
-                            const currentUnit = (unitsWatch || []).find(
-                              (u) => String(u.id) === String(sub.id || sub.unitId) && u.course_id === course.course_id
-                            )
-                            return currentUnit?.learnerMap === true
-                          } else {
-                            const currentUnit = (unitsWatch || []).find(
-                              (u) => String(u.id) === String(sub.unitId) && u.course_id === course.course_id
-                            )
-                            const currentSubUnit = currentUnit?.subUnit?.find(
-                              (s) => String(s.id) === String(sub.id)
-                            )
-                            return currentSubUnit?.learnerMap === true
-                          }
-                        })
-                        
-                        return !hasLearnerMapSelected && (errors?.units as any)?.message
-                          ? `At least one unit must have Learner Map selected for ${course.course_name} - ${selectedType}`
-                          : undefined
-                      })() : undefined
-
-                      return (
-                        <Box key={course.course_id}>
-                          <UnitsTable
-                            variant='combined'
-                            title={`${course.course_name} - ${selectedType} Units`}
-                            rows={combinedSubUnits}
-                            unitsWatch={unitsWatch || []}
-                            courseId={course.course_id}
-                            isEditMode={isEditMode}
-                            canEditLearnerFields={canEditLearnerFields}
-                            canEditTrainerFields={canEditTrainerFields}
-                            isSubmitted={isSubmitted}
-                            errors={errors}
-                            learnerMapHandler={learnerMapHandler}
-                            trainerMapHandler={trainerMapHandler}
-                            signedOffHandler={signedOffHandler}
-                            commentHandler={commentHandler}
-                            selectAllSignedOffForCombinedHandler={selectAllSignedOffForCombinedHandler}
-                            getEvidenceCount={getEvidenceCount}
-                            setValue={setValue}
-                            trigger={trigger}
-                            validationMessage={validationMessage}
-                            combinedSubUnits={combinedSubUnits}
-                          />
-                        </Box>
-                      )
-                    } else {
-                      // For Duty: Show separate tables for each unit
-                      return (
-                        <Box key={course.course_id} sx={{ mb: 3 }}>
-                          <Typography
-                            variant='h6'
-                            sx={{ mb: 1, color: 'primary.main' }}
-                          >
-                            {course.course_name} - {selectedType} Units
-                          </Typography>
-                          {typeUnits.map((units) => {
-                            const unitIndex = unitsWatch.findIndex(
-                              (u) => u.id === units.id
-                            )
-                            const hasSubUnit =
-                              units.subUnit && units.subUnit.length > 0
-                            const rowsToDisplay = hasSubUnit
-                              ? units.subUnit
-                              : [
-                                  {
-                                    id: units.id,
-                                    title: units.title,
-                                    learnerMap: units.learnerMap ?? false,
-                                    trainerMap: units.trainerMap ?? false,
-                                    comment: units.comment ?? '',
-                                  },
-                                ]
-
-                            // Calculate validation message for duty variant
-                            const validationMessage = isSubmitted && hasSubUnit ? (() => {
-                              const currentUnit = (unitsWatch || []).find(
-                                (u) => String(u.id) === String(units.id) && u.course_id === course.course_id
-                              )
-                              const hasLearnerMapSelected = currentUnit?.subUnit?.some(
-                                (sub) => sub.learnerMap === true
-                              ) || false
+                          // Calculate validation message
+                          const validationMessage = isSubmitted ? (() => {
+                            const hasLearnerMapSelected = combinedSubUnits.some((sub) => {
+                              const unit = unitsOfType.find((u) => u.id === sub.unitId)
+                              const hasSubUnit = unit?.subUnit && unit.subUnit.length > 0
                               
-                              return !hasLearnerMapSelected && errors?.units?.[unitIndex]?.subUnit?.message
-                                ? errors.units[unitIndex].subUnit.message
-                                : undefined
-                            })() : undefined
+                              if (!hasSubUnit) {
+                                const currentUnit = (unitsWatch || []).find(
+                                  (u) => String(u.id) === String(sub.id || sub.unitId) && u.course_id === course.course_id
+                                )
+                                return currentUnit?.learnerMap === true
+                              } else {
+                                const currentUnit = (unitsWatch || []).find(
+                                  (u) => String(u.id) === String(sub.unitId) && u.course_id === course.course_id
+                                )
+                                const currentSubUnit = currentUnit?.subUnit?.find(
+                                  (s) => String(s.id) === String(sub.id)
+                                )
+                                return currentSubUnit?.learnerMap === true
+                              }
+                            })
+                            
+                            return !hasLearnerMapSelected && (errors?.units as any)?.message
+                              ? `At least one unit must have Learner Map selected for ${course.course_name} - ${unitType}`
+                              : undefined
+                          })() : undefined
 
-                            return (
+                          return (
+                            <Box key={unitType} sx={{ mb: 3 }}>
                               <UnitsTable
-                                key={units.id}
-                                variant='duty'
-                                title={hasSubUnit ? units.title : ''}
-                                rows={rowsToDisplay}
+                                variant='combined'
+                                title={`${course.course_name} - ${unitType} Units`}
+                                rows={combinedSubUnits}
                                 unitsWatch={unitsWatch || []}
                                 courseId={course.course_id}
                                 isEditMode={isEditMode}
@@ -1920,28 +1961,25 @@ const CreateViewEvidenceLibrary = () => {
                                 trainerMapHandler={trainerMapHandler}
                                 signedOffHandler={signedOffHandler}
                                 commentHandler={commentHandler}
-                                selectAllLearnerMapHandler={selectAllLearnerMapHandler}
-                                selectAllSignedOffHandler={selectAllSignedOffHandler}
+                                selectAllSignedOffForCombinedHandler={selectAllSignedOffForCombinedHandler}
                                 getEvidenceCount={getEvidenceCount}
                                 setValue={setValue}
                                 trigger={trigger}
-                                units={units}
-                                unitIndex={unitIndex}
                                 validationMessage={validationMessage}
+                                combinedSubUnits={combinedSubUnits}
                               />
-                            )
-                          })}
-                        </Box>
-                      )
-                    }
+                            </Box>
+                          )
+                        })}
+                      </Box>
+                    )
                   } else if (course.course_core_type === COURSE_TYPES.QUALIFICATION) {
-                    // For Qualification courses: Show unit first, then its subUnits
+                    // For Qualification courses: Show hierarchical structure
+                    // Unit → Learning Outcomes (subUnit) → Assessment Criteria (topics)
                     // Get units for this course from unitsWatch (only show manually selected units)
                     const displayUnits = (unitsWatch || []).filter(
                       (units) =>
-                        units.course_id === course.course_id &&
-                        units.subUnit &&
-                        units.subUnit.length > 0
+                        units.course_id === course.course_id
                     )
 
                     // Don't auto-initialize units - only show units that user has manually selected
@@ -1953,55 +1991,36 @@ const CreateViewEvidenceLibrary = () => {
                       <Box key={course.course_id} sx={{ mb: 3 }}>
                         <Typography
                           variant='h6'
-                          sx={{ mb: 1, color: 'primary.main' }}
+                          sx={{ mb: 2, color: 'primary.main' }}
                         >
                           {course.course_name} - Units
                         </Typography>
-                        {displayUnits.map((units) => {
+                        {displayUnits.map((unit) => {
                       const unitIndex = unitsWatch.findIndex(
-                        (u) => u.id === units.id
+                            (u) => u.id === unit.id
                       )
 
-                      // Calculate validation message for qualification variant
-                      const validationMessage = isSubmitted ? (() => {
-                        const currentUnit = (unitsWatch || []).find(
-                          (u) => String(u.id) === String(units.id) && u.course_id === course.course_id
-                        )
-                        const hasLearnerMapSelected = currentUnit?.subUnit?.some(
-                          (sub) => sub.learnerMap === true
-                        ) || false
-                        
-                        return !hasLearnerMapSelected
-                          ? `At least one sub unit must have Learner Map selected for ${units.title}`
-                          : undefined
-                      })() : undefined
-
                       return (
-                        <UnitsTable
-                          key={units.id}
-                          variant='qualification'
-                          title=''
-                          rows={units.subUnit || []}
-                          unitsWatch={unitsWatch || []}
-                          courseId={course.course_id}
-                          isEditMode={isEditMode}
-                          canEditLearnerFields={canEditLearnerFields}
-                          canEditTrainerFields={canEditTrainerFields}
-                          isSubmitted={isSubmitted}
-                          errors={errors}
-                          learnerMapHandler={learnerMapHandler}
-                          trainerMapHandler={trainerMapHandler}
-                          signedOffHandler={signedOffHandler}
-                          commentHandler={commentHandler}
-                          selectAllLearnerMapHandler={selectAllLearnerMapHandler}
-                          selectAllSignedOffHandler={selectAllSignedOffHandler}
-                          getEvidenceCount={getEvidenceCount}
-                          setValue={setValue}
-                          trigger={trigger}
-                          units={units}
-                          unitIndex={unitIndex}
-                          validationMessage={validationMessage}
-                        />
+                            <QualificationHierarchy
+                              key={unit.id}
+                              unit={unit}
+                              unitsWatch={unitsWatch || []}
+                              courseId={course.course_id}
+                              courseName={course.course_name}
+                              isEditMode={isEditMode}
+                              canEditLearnerFields={canEditLearnerFields}
+                              canEditTrainerFields={canEditTrainerFields}
+                              isSubmitted={isSubmitted}
+                              errors={errors}
+                              learnerMapHandler={qualificationLearnerMapHandler}
+                              trainerMapHandler={qualificationTrainerMapHandler}
+                              signedOffHandler={qualificationSignedOffHandler}
+                              commentHandler={qualificationCommentHandler}
+                              getEvidenceCount={getEvidenceCount}
+                              setValue={setValue}
+                              trigger={trigger}
+                              unitIndex={unitIndex}
+                            />
                       )
                         })}
                       </Box>

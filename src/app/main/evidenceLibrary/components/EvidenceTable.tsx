@@ -1,4 +1,8 @@
-import { FC, useMemo } from 'react'
+import FuseLoading from '@fuse/core/FuseLoading'
+import ClearIcon from '@mui/icons-material/Clear'
+import DescriptionIcon from '@mui/icons-material/Description'
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import {
   alpha,
   Avatar,
@@ -6,7 +10,6 @@ import {
   Button,
   Card,
   Checkbox,
-  Chip,
   IconButton,
   Link as MuiLink,
   TablePagination,
@@ -14,23 +17,21 @@ import {
   Typography,
   useTheme
 } from '@mui/material'
-import ClearIcon from '@mui/icons-material/Clear'
-import DescriptionIcon from '@mui/icons-material/Description'
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import {
-  useReactTable,
+  ColumnDef,
+  createColumnHelper,
+  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  flexRender,
-  createColumnHelper,
-  ColumnDef,
+  useReactTable,
 } from '@tanstack/react-table'
-import FuseLoading from '@fuse/core/FuseLoading'
+import { FC, useMemo } from 'react'
 import DataNotFound from 'src/app/component/Pages/dataNotFound'
-import { EvidenceData, CourseOption } from '../types'
-import { formatDate, getStatusColor, displayValue, truncateText, getUnitMappingStatus } from '../utils/evidenceHelpers'
+import { COMBINED_UNIT_TYPES, COURSE_TYPES } from '../constants'
+import { CourseOption, EvidenceData } from '../types'
+import { displayValue, formatDate, truncateText } from '../utils/evidenceHelpers'
 
 const columnHelper = createColumnHelper<EvidenceData>()
 
@@ -47,6 +48,7 @@ interface EvidenceTableProps {
   selectedCourseFilter: CourseOption | null
   learnerCourses: CourseOption[]
   onOpenMenu: (e: React.MouseEvent<HTMLElement>, evidence: EvidenceData) => void
+  onViewDetails?: (evidence: EvidenceData) => void
 }
 
 const EvidenceTable: FC<EvidenceTableProps> = ({
@@ -61,7 +63,8 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
   totalPages,
   selectedCourseFilter,
   learnerCourses,
-  onOpenMenu
+  onOpenMenu,
+  onViewDetails
 }) => {
   const theme = useTheme()
 
@@ -179,6 +182,30 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
           )
         },
       }),
+      columnHelper.display({
+        id: 'view_details',
+        header: 'View',
+        cell: (info) => {
+          const row = info.row.original
+          return (
+            <Tooltip title="View evidence details">
+              <IconButton
+                size='small'
+                onClick={() => onViewDetails?.(row)}
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                    color: theme.palette.primary.main
+                  }
+                }}
+              >
+                <VisibilityIcon fontSize='small' />
+              </IconButton>
+            </Tooltip>
+          )
+        },
+      }),
     ]
 
     // If "All" is selected, show course name columns instead of unit columns
@@ -238,67 +265,13 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
           )
         })
     } else if (selectedCourseFilter?.units && Array.isArray(selectedCourseFilter.units)) {
-      // Add dynamic unit columns if selectedCourseFilter has units
-      selectedCourseFilter.units.forEach((unit: any) => {
-        if (unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0) {
-          unit.subUnit.forEach((subUnit: any) => {
-            const subUnitId = subUnit.id
-            const subUnitCode = subUnit.code || String(subUnitId)
-            const subUnitTitle = subUnit.title || `SubUnit ${subUnitCode}`
-            
-            baseColumns.push(
-              columnHelper.display({
-                id: `unit_${subUnitId}`,
-                header: () => (
-                  <Tooltip title={subUnitTitle} arrow>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                        cursor: 'help',
-                        textAlign: 'center',
-                        width: '100%'
-                      }}
-                    >
-                      {subUnitCode}
-                    </Typography>
-                  </Tooltip>
-                ),
-                cell: (info) => {
-                  const row = info.row.original
-                  // For subunits, pass the subUnitId and mark as isSubUnit=true
-                  const mappingStatus = getUnitMappingStatus(row, subUnitId, subUnitCode, true)
-                  const isMapped = mappingStatus.learnerMap || mappingStatus.trainerMap || mappingStatus.signedOff
-                  
-                  let checkboxColor = theme.palette.action.disabled
-                  if (mappingStatus.signedOff) {
-                    checkboxColor = theme.palette.success.main
-                  } else if (mappingStatus.trainerMap) {
-                    checkboxColor = theme.palette.warning.main
-                  } else if (mappingStatus.learnerMap) {
-                    checkboxColor = 'inherit'
-                  }
-                  
-                  return (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      <Checkbox
-                        checked={isMapped}
-                        disabled
-                        size="small"
-                        sx={{
-                          padding: '4px',
-                          '&.Mui-disabled': {
-                            color: checkboxColor,
-                          }
-                        }}
-                      />
-                    </Box>
-                  )
-                },
-              })
-            )
-          })
-        } else {
+      // Check if this is a Qualification course
+      const isQualificationCourse = selectedCourseFilter.course_core_type === COURSE_TYPES.QUALIFICATION
+      
+      if (isQualificationCourse) {
+        // For Qualification courses: Show one column per unit
+        // Check if any topic within the unit has a mapping
+        selectedCourseFilter.units.forEach((unit: any) => {
           const unitId = unit.id
           const unitCode = unit.code || String(unitId)
           const unitTitle = unit.title || `Unit ${unitCode}`
@@ -323,8 +296,46 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
               ),
               cell: (info) => {
                 const row = info.row.original
-                // For units, pass the unitId and unitCode, isSubUnit=false
-                const mappingStatus = getUnitMappingStatus(row, unitId, unitCode, false)
+                // For Qualification courses: Check if any topic within this unit has a mapping
+                // Collect all topic IDs from this unit
+                const topicIds: (string | number)[] = []
+                if (unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0) {
+                  unit.subUnit.forEach((subUnit: any) => {
+                    if (subUnit.topics && Array.isArray(subUnit.topics) && subUnit.topics.length > 0) {
+                      subUnit.topics.forEach((topic: any) => {
+                        topicIds.push(topic.id)
+                      })
+                    }
+                  })
+                }
+                
+                // Check if any topic in this unit has a mapping
+                let mappingStatus = { learnerMap: false, trainerMap: false, signedOff: false }
+                
+                if (row.mappings && Array.isArray(row.mappings) && topicIds.length > 0) {
+                  // Find any mapping where unit_code matches any topic ID in this unit
+                  const matchingMapping = row.mappings.find((mapping: any) => {
+                    // Check if mapping belongs to this course
+                    const belongsToCourse = mapping.course?.course_id === selectedCourseFilter.course_id
+                    if (!belongsToCourse) return false
+                    
+                    // For Qualification: unit_code contains topic ID, sub_unit_id is null
+                    // Check if this mapping's unit_code matches any topic ID in this unit
+                    return (
+                      mapping.sub_unit_id === null &&
+                      topicIds.some((topicId) => String(mapping.unit_code) === String(topicId))
+                    )
+                  })
+                  
+                  if (matchingMapping) {
+                    mappingStatus = {
+                      learnerMap: matchingMapping.learnerMap === true,
+                      trainerMap: matchingMapping.trainerMap === true,
+                      signedOff: matchingMapping.signedOff === true,
+                    }
+                  }
+                }
+                
                 const isMapped = mappingStatus.learnerMap || mappingStatus.trainerMap || mappingStatus.signedOff
                 
                 let checkboxColor = theme.palette.action.disabled
@@ -354,8 +365,104 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
               },
             })
           )
-        }
-      })
+        })
+      } else {
+        // For Standard courses: Show Knowledge, Behaviour, and Skills columns
+        // Get all units grouped by type
+        const unitsByType = new Map<string, any[]>()
+        selectedCourseFilter.units.forEach((unit: any) => {
+          if (unit.type && COMBINED_UNIT_TYPES.includes(unit.type)) {
+            if (!unitsByType.has(unit.type)) {
+              unitsByType.set(unit.type, [])
+            }
+            unitsByType.get(unit.type)!.push(unit)
+          }
+        })
+
+        // Create columns for Knowledge, Behaviour, and Skills
+        COMBINED_UNIT_TYPES.forEach((unitType) => {
+          const unitsOfType = unitsByType.get(unitType) || []
+          if (unitsOfType.length > 0) {
+            baseColumns.push(
+              columnHelper.display({
+                id: `type_${unitType}`,
+                header: () => (
+                  <Tooltip title={unitType} arrow>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        cursor: 'help',
+                        textAlign: 'center',
+                        width: '100%'
+                      }}
+                    >
+                      {unitType}
+                    </Typography>
+                  </Tooltip>
+                ),
+                cell: (info) => {
+                  const row = info.row.original
+                  
+                  // Check if any mapping's unit_code matches a unit with this type
+                  let mappingStatus = { learnerMap: false, trainerMap: false, signedOff: false }
+                  
+                  if (row.mappings && Array.isArray(row.mappings)) {
+                    // Get all unit IDs of this type
+                    const unitIdsOfType = unitsOfType.map((u: any) => String(u.id))
+                    
+                    // Find any mapping where unit_code matches a unit of this type
+                    const matchingMapping = row.mappings.find((mapping: any) => {
+                      // Check if mapping belongs to this course
+                      const belongsToCourse = mapping.course?.course_id === selectedCourseFilter.course_id
+                      if (!belongsToCourse) return false
+                      
+                      // For Standard courses: unit_code is the unit ID
+                      // Check if it matches any unit ID of this type
+                      return mapping.sub_unit_id === null && unitIdsOfType.includes(String(mapping.unit_code))
+                    })
+                    
+                    if (matchingMapping) {
+                      mappingStatus = {
+                        learnerMap: matchingMapping.learnerMap === true,
+                        trainerMap: matchingMapping.trainerMap === true,
+                        signedOff: matchingMapping.signedOff === true
+                      }
+                    }
+                  }
+                  
+                  const isMapped = mappingStatus.learnerMap || mappingStatus.trainerMap || mappingStatus.signedOff
+                  
+                  let checkboxColor = theme.palette.action.disabled
+                  if (mappingStatus.signedOff) {
+                    checkboxColor = theme.palette.success.main
+                  } else if (mappingStatus.trainerMap) {
+                    checkboxColor = theme.palette.warning.main
+                  } else if (mappingStatus.learnerMap) {
+                    checkboxColor = 'inherit'
+                  }
+                  
+                  return (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <Checkbox
+                        checked={isMapped}
+                        disabled
+                        size="small"
+                        sx={{
+                          padding: '4px',
+                          '&.Mui-disabled': {
+                            color: checkboxColor,
+                          }
+                        }}
+                      />
+                    </Box>
+                  )
+                },
+              })
+            )
+          }
+        })
+      }
     }
 
     baseColumns.push(
@@ -386,7 +493,7 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
     )
 
     return baseColumns
-  }, [theme, selectedCourseFilter?.units, selectedCourseFilter?.course_id, learnerCourses, onOpenMenu])
+  }, [theme, selectedCourseFilter?.units, selectedCourseFilter?.course_id, learnerCourses, onOpenMenu, onViewDetails])
 
   const table = useReactTable({
     data,
