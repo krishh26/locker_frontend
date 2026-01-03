@@ -1,6 +1,7 @@
 import { lazy } from 'react'
 const EvidenceLibraryView = lazy(() => import('./evidenceLibrary'))
 const CreateViewEvidenceLibrary = lazy(() => import('./createViewEvidenceLibrary'))
+const ViewEvidenceLibrary = lazy(() => import('./viewEvidenceLibrary'))
 import authRoles from 'src/app/auth/authRoles'
 
 const EvidenceLibraryConfig = {
@@ -34,6 +35,10 @@ const EvidenceLibraryConfig = {
     {
       path: '/evidenceLibrary/:id',
       element: <CreateViewEvidenceLibrary />,
+    },
+    {
+      path: '/evidenceLibrary/:id/view',
+      element: <ViewEvidenceLibrary />,
     },
   ],
 }

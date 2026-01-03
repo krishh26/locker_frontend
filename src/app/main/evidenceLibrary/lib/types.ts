@@ -11,7 +11,7 @@ export type FormValues = {
   declaration: boolean
   assessment_method: string[]
   selectedCourses: any[]
-  courseSelectedTypes: Record<string | number, string>
+  courseSelectedTypes: Record<string | number, string[]>
   units: Unit[]
   signatures: SignatureData[]
 }
@@ -35,6 +35,33 @@ export interface EvidenceBox {
   sub_unit_id?: number | null
 }
 
+export interface Topic {
+  mapping_id: any
+  id: string | number
+  title: string
+  code?: string
+  type?: string
+  showOrder?: number
+  learnerMap?: boolean
+  trainerMap?: boolean
+  signedOff?: boolean
+  comment?: string
+  evidenceBoxes?: EvidenceBox[]
+}
+
+export interface Task {
+  id: string | number
+  title: string
+  code?: string
+  type?: string
+  showOrder?: number
+  learnerMap?: boolean
+  trainerMap?: boolean
+  signedOff?: boolean
+  comment?: string
+  evidenceBoxes?: EvidenceBox[]
+}
+
 export interface SubUnit {
   id: string | number
   title: string
@@ -47,6 +74,8 @@ export interface SubUnit {
   signedOff?: boolean
   comment?: string
   evidenceBoxes?: EvidenceBox[]
+  topics?: Topic[] // For Qualification courses: Assessment Criteria
+  tasks?: Task[] // For Module Based courses: Tasks
 }
 
 export interface Unit {

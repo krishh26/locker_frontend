@@ -267,6 +267,7 @@ const EvidenceLibrary: FC = () => {
       course_name: 'All',
       course_code: '',
       units: [],
+      course_core_type: '', 
     }
     
     if (!learner?.course || !Array.isArray(learner.course)) {
@@ -1002,6 +1003,10 @@ const EvidenceLibrary: FC = () => {
     }
   }, [uiState.selectedRow, navigate])
 
+  const handleViewDetails = useCallback((evidence: EvidenceData) => {
+    navigate(`/evidenceLibrary/${evidence.assignment_id}/view`)
+  }, [navigate])
+
   const handlePageChange = (event: unknown, newPage: number) => {
     setPagination((prev) => ({ ...prev, pageIndex: newPage }))
   }
@@ -1026,7 +1031,7 @@ const EvidenceLibrary: FC = () => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }))
   }
 
-  const handleCourseFilterChange = useCallback((event: any, newValue: { course_id: number | ''; course_name: string; course_code: string; units?: any[] } | null) => {
+  const handleCourseFilterChange = useCallback((event: any, newValue: { course_id: number | ''; course_name: string; course_code: string; units?: any[]; course_core_type: string } | null) => {
     setSelectedCourseFilter(newValue)
     // Track if user manually cleared the filter
     if (newValue === null) {
@@ -1051,6 +1056,7 @@ const EvidenceLibrary: FC = () => {
         const courseWithUnits = {
           ...defaultCourse,
           units: singleData.course.units || defaultCourse.units || [],
+          course_core_type: singleData.course.course_core_type || defaultCourse.course_core_type || '',
         }
         setSelectedCourseFilter(courseWithUnits)
       }
@@ -1278,6 +1284,7 @@ const EvidenceLibrary: FC = () => {
         selectedCourseFilter={selectedCourseFilter}
         learnerCourses={learnerCourses}
         onOpenMenu={openMenu}
+        onViewDetails={handleViewDetails}
       />
       <ActionMenu
         anchorEl={uiState.anchorEl}

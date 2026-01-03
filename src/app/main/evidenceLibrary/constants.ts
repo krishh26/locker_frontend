@@ -7,6 +7,7 @@ export const COURSE_TYPES = {
   STANDARD: 'Standard',
   QUALIFICATION: 'Qualification',
   GATEWAY: 'Gateway',
+  MODULE_BASED: 'Module Based',
 } as const
 
 export type CourseType = typeof COURSE_TYPES[keyof typeof COURSE_TYPES]
@@ -15,7 +16,6 @@ export const UNIT_TYPES = {
   KNOWLEDGE: 'Knowledge',
   BEHAVIOUR: 'Behaviour',
   SKILLS: 'Skills',
-  DUTY: 'Duty',
 } as const
 
 export type UnitType = typeof UNIT_TYPES[keyof typeof UNIT_TYPES]
