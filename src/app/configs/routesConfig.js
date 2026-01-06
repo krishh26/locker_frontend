@@ -20,6 +20,7 @@ import AdminConfig from '../main/admin/adminConfig'
 import AdminCombinedConfig from '../main/admin/AdminCombinedConfig'
 import CourseBuilderConfig from '../main/courseBuilder/courseBuilderConfig'
 import FormsConfig from '../main/forms/formsConfig'
+import SurveysConfig from '../main/surveys/surveysConfig'
 import CommunicationsConfig from '../main/communications/communicationsConfig'
 import ForgotConfig from '../main/forgotPassword/forgotConfig'
 
@@ -68,6 +69,7 @@ const routeConfigs = [
   AdminCombinedConfig,
   CourseBuilderConfig,
   FormsConfig,
+  SurveysConfig,
   CommunicationsConfig,
   WellbeingConfig,
   ForgotConfig,
