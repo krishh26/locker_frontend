@@ -19,18 +19,39 @@ import {
   Divider,
 } from '@mui/material';
 import { Eye, Trash2 } from 'lucide-react';
-import { useSelector, useDispatch } from 'react-redux';
-import { selectResponsesBySurveyId, deleteResponse, type Response } from 'app/store/responseSlice';
-import { selectQuestionsBySurveyId } from 'app/store/surveySlice';
+import {
+  useGetResponsesQuery,
+  useGetQuestionsQuery,
+  useDeleteResponseMutation,
+  type Response,
+} from 'app/store/api/survey-api';
 
 interface ResponsesTableProps {
   surveyId: string;
 }
 
 const ResponsesTable: React.FC<ResponsesTableProps> = ({ surveyId }) => {
-  const dispatch = useDispatch();
-  const responses = useSelector((state: any) => selectResponsesBySurveyId(state, surveyId));
-  const questions = useSelector((state: any) => selectQuestionsBySurveyId(state, surveyId));
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  
+  // Fetch responses from API
+  const { data: responsesResponse, isLoading: isLoadingResponses } = useGetResponsesQuery({
+    surveyId,
+    params: { page, limit },
+  },{
+    refetchOnMountOrArgChange: true,
+    skip: !surveyId,
+  });
+  const responses = responsesResponse?.data?.responses || [];
+  
+  // Fetch questions from API
+  const { data: questionsResponse } = useGetQuestionsQuery(surveyId, {
+    skip: !surveyId,
+    refetchOnMountOrArgChange: true,
+  });
+  const questions = questionsResponse?.data?.questions || [];
+  
+  const [deleteResponse, { isLoading: isDeleting }] = useDeleteResponseMutation();
   const [selectedResponse, setSelectedResponse] = useState<Response | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
@@ -39,11 +60,28 @@ const ResponsesTable: React.FC<ResponsesTableProps> = ({ surveyId }) => {
     setDetailDialogOpen(true);
   };
 
-  const handleDeleteResponse = (responseId: string) => {
+  const handleDeleteResponse = async (responseId: string) => {
     if (confirm('Are you sure you want to delete this response?')) {
-      dispatch(deleteResponse({ id: responseId, surveyId }) as any);
+      try {
+        await deleteResponse({
+          surveyId,
+          responseId,
+        }).unwrap();
+        // You can add a toast notification here if you have a toast system
+      } catch (error: unknown) {
+        console.error('Failed to delete response:', error);
+        // You can add error toast notification here
+      }
     }
   };
+
+  if (isLoadingResponses) {
+    return (
+      <Paper sx={{ p: 6, textAlign: 'center' }}>
+        <Typography color="text.secondary">Loading responses...</Typography>
+      </Paper>
+    );
+  }
 
   if (responses.length === 0) {
     return (

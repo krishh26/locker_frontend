@@ -265,10 +265,95 @@ export interface ReorderQuestionsResponse {
   }
 }
 
+// Response Management API Types
+
+export interface Response {
+  id: string
+  surveyId: string
+  userId?: string
+  email?: string
+  answers: Record<string, string | string[] | null> // questionId → answer value
+  submittedAt: string
+}
+
+// Response Request Types
+export interface GetResponsesQueryParams {
+  page?: number
+  limit?: number
+  startDate?: string // ISO 8601
+  endDate?: string // ISO 8601
+}
+
+export interface SubmitResponseRequest {
+  userId?: string
+  email?: string
+  answers: Record<string, string | string[] | null>
+}
+
+// Response Response Types
+export interface GetResponsesResponse {
+  success: boolean
+  data: {
+    responses: Response[]
+    pagination: PaginationMeta
+  }
+  error?: {
+    code: string
+    message: string
+    details?: Array<{
+      field: string
+      message: string
+    }>
+  }
+}
+
+export interface GetResponseResponse {
+  success: boolean
+  data: {
+    response: Response
+  }
+  error?: {
+    code: string
+    message: string
+    details?: Array<{
+      field: string
+      message: string
+    }>
+  }
+}
+
+export interface SubmitResponseResponse {
+  success: boolean
+  data: {
+    response: Response
+  }
+  error?: {
+    code: string
+    message: string
+    details?: Array<{
+      field: string
+      message: string
+    }>
+  }
+}
+
+export interface DeleteResponseResponse {
+  success: boolean
+  message?: string
+  error?: {
+    code: string
+    message: string
+    details?: Array<{
+      field: string
+      message: string
+    }>
+  }
+}
+
 export const surveyAPI = createApi({
   reducerPath: 'survey-api',
   baseQuery: createBaseQueryWithReAuth(),
-  tagTypes: ['Survey', 'Question'],
+  tagTypes: ['Survey', 'Question', 'Response'],
   endpoints: (builder) => ({
     // 1.1 Get All Surveys
     getSurveys: builder.query<GetSurveysResponse, GetSurveysQueryParams | void>({
@@ -422,6 +507,76 @@ export const surveyAPI = createApi({
         { type: 'Survey', id: surveyId },
       ],
     }),
+
+    // 3.1 Get Responses for Survey
+    getResponses: builder.query<
+      GetResponsesResponse,
+      { surveyId: string; params?: GetResponsesQueryParams }
+    >({
+      query: ({ surveyId, params = {} }) => {
+        const { page = 1, limit = 10, startDate, endDate } = params
+        let url = `/surveys/${surveyId}/responses?page=${page}&limit=${limit}`
+        
+        if (startDate) {
+          url += `&startDate=${encodeURIComponent(startDate)}`
+        }
+        if (endDate) {
+          url += `&endDate=${encodeURIComponent(endDate)}`
+        }
+        
+        return { url }
+      },
+      providesTags: (result, error, { surveyId }) => [
+        { type: 'Response', id: `LIST-${surveyId}` },
+      ],
+      keepUnusedDataFor: 0,
+    }),
+
+    // 3.2 Get Response by ID
+    getResponseById: builder.query<
+      GetResponseResponse,
+      { surveyId: string; responseId: string }
+    >({
+      query: ({ surveyId, responseId }) => ({
+        url: `/surveys/${surveyId}/responses/${responseId}`,
+      }),
+      providesTags: (result, error, { surveyId, responseId }) => [
+        { type: 'Response', id: responseId },
+        { type: 'Response', id: `LIST-${surveyId}` },
+      ],
+      keepUnusedDataFor: 0,
+    }),
+
+    // 3.3 Submit Survey Response (Public Endpoint)
+    submitResponse: builder.mutation<
+      SubmitResponseResponse,
+      { surveyId: string; response: SubmitResponseRequest }
+    >({
+      query: ({ surveyId, response }) => ({
+        url: `/surveys/${surveyId}/responses`,
+        method: 'POST',
+        body: response,
+      }),
+      invalidatesTags: (result, error, { surveyId }) => [
+        { type: 'Response', id: `LIST-${surveyId}` },
+        { type: 'Survey', id: surveyId },
+      ],
+    }),
+
+    // 3.4 Delete Response
+    deleteResponse: builder.mutation<
+      DeleteResponseResponse,
+      { surveyId: string; responseId: string }
+    >({
+      query: ({ surveyId, responseId }) => ({
+        url: `/surveys/${surveyId}/responses/${responseId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, { surveyId }) => [
+        { type: 'Response', id: `LIST-${surveyId}` },
+        { type: 'Survey', id: surveyId },
+      ],
+    }),
   }),
 })
 
@@ -436,5 +591,9 @@ export const {
   useUpdateQuestionMutation,
   useDeleteQuestionMutation,
   useReorderQuestionsMutation,
+  useGetResponsesQuery,
+  useGetResponseByIdQuery,
+  useSubmitResponseMutation,
+  useDeleteResponseMutation,
 } = surveyAPI
 

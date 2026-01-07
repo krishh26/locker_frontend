@@ -2,19 +2,32 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, IconButton, Paper } from '@mui/material';
 import { ArrowLeft } from 'lucide-react';
-import { useSelector } from 'react-redux';
-import { selectSurveyById } from 'app/store/surveySlice';
+import { useGetSurveyByIdQuery } from 'app/store/api/survey-api';
 import ResponsesTable from './components/responses-table';
 
 const Responses = () => {
   const { surveyId } = useParams<{ surveyId: string }>();
   const navigate = useNavigate();
-  const survey = useSelector((state: any) => (surveyId ? selectSurveyById(state, surveyId) : null));
+  
+  // Fetch survey from API
+  const { data: surveyResponse, isLoading: isLoadingSurvey } = useGetSurveyByIdQuery(
+    surveyId || '',
+    { skip: !surveyId, refetchOnMountOrArgChange: true }
+  );
+  const survey = surveyResponse?.data?.survey;
 
   if (!surveyId) {
     return (
       <Box sx={{ p: 3 }}>
         <Typography variant="h6">Survey ID not provided</Typography>
+      </Box>
+    );
+  }
+
+  if (isLoadingSurvey) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="text.secondary">Loading survey...</Typography>
       </Box>
     );
   }
