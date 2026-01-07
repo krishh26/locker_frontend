@@ -1,30 +1,92 @@
 import React from 'react';
-import { Box, Button, Select, MenuItem, FormControl, InputLabel, Typography } from '@mui/material';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { type Table } from '@tanstack/react-table';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Box,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Typography,
+  IconButton,
+} from '@mui/material';
 
 interface DataTablePaginationProps<TData> {
   table: Table<TData>;
+  manualPagination?: boolean;
+  currentPage?: number;
+  totalPages?: number;
+  totalItems?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   showSelectedRows?: boolean;
 }
 
-export function DataTablePagination<TData>({
+function DataTablePagination<TData>({
   table,
+  manualPagination = false,
+  currentPage,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
   showSelectedRows = false,
 }: DataTablePaginationProps<TData>) {
-  const page = table.getState().pagination.pageIndex + 1;
-  const pages = table.getPageCount();
-  const currentPageSize = table.getState().pagination.pageSize;
+  const page = manualPagination
+    ? currentPage ?? 1
+    : table.getState().pagination.pageIndex + 1;
+  const pages = manualPagination ? totalPages ?? 0 : table.getPageCount();
+  const items = manualPagination
+    ? totalItems ?? 0
+    : table.getFilteredRowModel().rows.length;
+  const currentPageSize = manualPagination
+    ? pageSize ?? 10
+    : table.getState().pagination.pageSize;
 
-  const handlePageSizeChange = (value: number) => {
-    table.setPageSize(value);
+  const handlePrevious = () => {
+    if (manualPagination && onPageChange) {
+      onPageChange(Math.max(1, page - 1));
+    } else {
+      table.previousPage();
+    }
   };
 
-  const canPrevious = table.getCanPreviousPage();
-  const canNext = table.getCanNextPage();
+  const handleNext = () => {
+    if (manualPagination && onPageChange) {
+      onPageChange(Math.min(pages, page + 1));
+    } else {
+      table.nextPage();
+    }
+  };
 
-  if (pages <= 1) {
-    return null;
+  const handlePageSizeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    const newPageSize = Number(event.target.value);
+    if (manualPagination && onPageSizeChange) {
+      onPageSizeChange(newPageSize);
+    } else {
+      table.setPageSize(newPageSize);
+    }
+  };
+
+  const canPrevious = manualPagination ? page > 1 : table.getCanPreviousPage();
+  const canNext = manualPagination ? page < pages : table.getCanNextPage();
+
+  if (manualPagination) {
+    if (totalPages === undefined || totalPages === null) {
+      if (totalItems === 0 || totalItems === undefined) {
+        return null;
+      }
+    }
+    if (totalPages === 0) {
+      return null;
+    }
+  } else {
+    if (pages <= 1) {
+      return null;
+    }
   }
 
   return (
@@ -32,19 +94,16 @@ export function DataTablePagination<TData>({
       sx={{
         display: 'flex',
         flexDirection: { xs: 'column', sm: 'row' },
-        alignItems: { xs: 'stretch', sm: 'center' },
-        justifyContent: 'space-between',
         gap: 2,
+        alignItems: { xs: 'flex-start', sm: 'center' },
+        justifyContent: 'space-between',
         py: 2,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography variant="body2">Show</Typography>
         <FormControl size="small" sx={{ minWidth: 80 }}>
-          <Select
-            value={currentPageSize}
-            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-          >
+          <Select value={currentPageSize} onChange={handlePageSizeChange as any}>
             {[10, 20, 30, 40, 50].map((size) => (
               <MenuItem key={size} value={size}>
                 {size}
@@ -54,43 +113,38 @@ export function DataTablePagination<TData>({
         </FormControl>
       </Box>
 
-      {showSelectedRows && (
-        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+      {showSelectedRows && !manualPagination && (
+        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
           {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </Typography>
       )}
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Typography variant="body2">
-          Page <strong>{page}</strong> of <strong>{pages}</strong>
+      {manualPagination && (
+        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+          Showing {(page - 1) * currentPageSize + 1} to{' '}
+          {Math.min(page * currentPageSize, items)} of {items} item(s).
         </Typography>
+      )}
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2">Page</Typography>
+          <Typography variant="body2" fontWeight="bold">
+            {page} of {pages}
+          </Typography>
+        </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => table.previousPage()}
-            disabled={!canPrevious}
-            startIcon={<ChevronLeft size={16} />}
-          >
-            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-              Previous
-            </Box>
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => table.nextPage()}
-            disabled={!canNext}
-            endIcon={<ChevronRight size={16} />}
-          >
-            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-              Next
-            </Box>
-          </Button>
+          <IconButton size="small" onClick={handlePrevious} disabled={!canPrevious}>
+            <ChevronLeft size={20} />
+          </IconButton>
+          <IconButton size="small" onClick={handleNext} disabled={!canNext}>
+            <ChevronRight size={20} />
+          </IconButton>
         </Box>
       </Box>
     </Box>
   );
 }
 
+export default DataTablePagination;

@@ -64,10 +64,7 @@ const schema = yup.object({
     }),
 })
 
-interface FormData {
-  message: string
-  file: File | null
-}
+type AcknowledgeMessageFormData = yup.InferType<typeof schema>
 
 const AcknowledgeMessage: React.FC = () => {
   const [snackbar, setSnackbar] = useState({
@@ -98,7 +95,7 @@ const AcknowledgeMessage: React.FC = () => {
     formState: { errors },
     setValue,
     watch,
-  } = useForm<FormData>({
+  } = useForm<AcknowledgeMessageFormData>({
     resolver: yupResolver(schema),
     defaultValues: {
       message: '',
@@ -119,7 +116,7 @@ const AcknowledgeMessage: React.FC = () => {
     setValue('file', file)
   }
   // Handle form submission
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: AcknowledgeMessageFormData) => {
     try {
       // Create FormData for file upload
       const formData = new FormData()

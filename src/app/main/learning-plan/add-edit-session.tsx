@@ -87,6 +87,9 @@ const schema = yup.object().shape({
     then: (schema) => schema.required('End date is required'),
     otherwise: (schema) => schema.notRequired(),
   }),
+  file: yup.mixed().nullable().optional(),
+  file_type: yup.string().optional(),
+  session_type: yup.string().optional(),
 })
 
 const AddEditSession = (props) => {
@@ -112,8 +115,8 @@ const AddEditSession = (props) => {
       description: '',
       location: '',
       startDate: '',
-      hours: '',
-      minutes: '',
+      hours: 0,
+      minutes: 0,
       type: '',
       courses: [],
 

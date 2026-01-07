@@ -125,11 +125,7 @@ const schema = yup.object().shape({
   isActive: yup.boolean(),
 })
 
-type FormData = {
-  name: string
-  isOffTheJob: boolean
-  isActive: boolean
-}
+type SessionTypeFormData = yup.InferType<typeof schema>
 
 // Sortable Row Component
 interface SortableRowProps {
@@ -255,7 +251,7 @@ const SessionTypePage: React.FC = () => {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<FormData>({
+  } = useForm<SessionTypeFormData>({
     resolver: yupResolver(schema),
     defaultValues: {
       name: '',
@@ -316,7 +312,7 @@ const SessionTypePage: React.FC = () => {
     })
   }
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: SessionTypeFormData) => {
     try {
       if (isEditMode && editingId) {
         const payload: UpdateSessionTypePayload = {

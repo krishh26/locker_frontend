@@ -1,33 +1,35 @@
 import React, { useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
+  DialogContentText,
   TextField,
+  Button,
+  Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Select,
+  FormHelperText,
   Box,
-  Typography,
 } from '@mui/material';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useDispatch } from 'react-redux';
 import { addSurvey, updateSurvey, type Survey } from 'app/store/surveySlice';
 
-const surveyFormSchema = z.object({
-  name: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
-  }),
-  description: z.string().optional(),
-  status: z.enum(['Draft', 'Published']),
+const surveyFormSchema = yup.object().shape({
+  name: yup
+    .string()
+    .required('Name is required')
+    .min(2, 'Name must be at least 2 characters.'),
+  description: yup.string().optional(),
+  status: yup.string().oneOf(['Draft', 'Published'], 'Invalid status').required('Status is required'),
 });
 
-type SurveyFormValues = z.infer<typeof surveyFormSchema>;
+type SurveyFormValues = yup.InferType<typeof surveyFormSchema>;
 
 interface SurveyFormProps {
   open: boolean;
@@ -42,9 +44,12 @@ const SurveyForm: React.FC<SurveyFormProps> = ({ open, onOpenChange, survey }) =
     control,
     handleSubmit,
     reset,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<SurveyFormValues>({
-    resolver: zodResolver(surveyFormSchema),
+    resolver: yupResolver(surveyFormSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit',
+    shouldUnregister: false,
     defaultValues: {
       name: '',
       description: '',
@@ -58,15 +63,15 @@ const SurveyForm: React.FC<SurveyFormProps> = ({ open, onOpenChange, survey }) =
         name: survey.name,
         description: survey.description || '',
         status: survey.status === 'Archived' ? 'Draft' : survey.status,
-      });
+      }, { keepErrors: false });
     } else {
       reset({
         name: '',
         description: '',
         status: 'Draft',
-      });
+      }, { keepErrors: false });
     }
-  }, [survey, reset]);
+  }, [survey, reset, open]);
 
   const onSubmit = (data: SurveyFormValues) => {
     if (survey) {
@@ -76,7 +81,7 @@ const SurveyForm: React.FC<SurveyFormProps> = ({ open, onOpenChange, survey }) =
           updates: {
             name: data.name,
             description: data.description,
-            status: data.status,
+            status: data.status as 'Draft' | 'Published',
           },
         }) as any
       );
@@ -85,7 +90,7 @@ const SurveyForm: React.FC<SurveyFormProps> = ({ open, onOpenChange, survey }) =
         addSurvey({
           name: data.name,
           description: data.description,
-          status: data.status,
+          status: data.status as 'Draft' | 'Published',
         }) as any
       );
     }
@@ -94,76 +99,73 @@ const SurveyForm: React.FC<SurveyFormProps> = ({ open, onOpenChange, survey }) =
   };
 
   return (
-    <Dialog open={open} onClose={() => onOpenChange(false)} maxWidth="sm" fullWidth>
-      <DialogTitle>{survey ? 'Edit Survey' : 'Create Survey'}</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          {survey
-            ? 'Update the survey details. Click save when youre done.'
-            : "Create a new survey form. Click save when youre done."}
-        </Typography>
-        <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Name"
-                placeholder="Enter survey name"
-                error={!!errors.name}
-                helperText={errors.name?.message}
-                fullWidth
-              />
-            )}
-          />
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Description"
-                placeholder="Enter survey description (optional)"
-                multiline
-                rows={3}
-                error={!!errors.description}
-                helperText={errors.description?.message}
-                fullWidth
-              />
-            )}
-          />
-          <Controller
-            name="status"
-            control={control}
-            render={({ field }) => (
-              <FormControl fullWidth error={!!errors.status}>
-                <InputLabel>Status</InputLabel>
-                <Select {...field} label="Status">
-                  <MenuItem value="Draft">Draft</MenuItem>
-                  <MenuItem value="Published">Published</MenuItem>
-                </Select>
-                {errors.status && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
-                    {errors.status.message}
-                  </Typography>
-                )}
-              </FormControl>
-            )}
-          />
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => onOpenChange(false)} variant="outlined">
-          Cancel
-        </Button>
-        <Button onClick={handleSubmit(onSubmit)} variant="contained" disabled={!isValid}>
-          {survey ? 'Update Survey' : 'Create Survey'}
-        </Button>
-      </DialogActions>
+    <Dialog open={open} onClose={() => onOpenChange(false)} maxWidth="md" fullWidth>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <DialogTitle>{survey ? 'Edit Survey' : 'Create Survey'}</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 3 }}>
+            {survey
+              ? "Update the survey details. Click save when you're done."
+              : "Create a new survey form. Click save when you're done."}
+          </DialogContentText>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Controller
+              name="name"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label="Name"
+                  placeholder="Enter survey name"
+                  error={!!errors.name}
+                  helperText={errors.name?.message}
+                  fullWidth
+                />
+              )}
+            />
+            <Controller
+              name="description"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label="Description"
+                  placeholder="Enter survey description (optional)"
+                  error={!!errors.description}
+                  helperText={errors.description?.message}
+                  fullWidth
+                  multiline
+                  rows={3}
+                />
+              )}
+            />
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth error={!!errors.status}>
+                  <InputLabel>Status</InputLabel>
+                  <Select {...field} label="Status">
+                    <MenuItem value="Draft">Draft</MenuItem>
+                    <MenuItem value="Published">Published</MenuItem>
+                  </Select>
+                  {errors.status && (
+                    <FormHelperText>{errors.status.message}</FormHelperText>
+                  )}
+                </FormControl>
+              )}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="submit" variant="contained">
+            {survey ? 'Update Survey' : 'Create Survey'}
+          </Button>
+        </DialogActions>
+      </form>
     </Dialog>
   );
 };
 
 export default SurveyForm;
-

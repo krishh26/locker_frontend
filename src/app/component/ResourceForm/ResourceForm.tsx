@@ -214,7 +214,7 @@ const ResourceForm: React.FC<ResourceFormProps> = ({
     formState: { errors },
     reset,
   } = useForm<ResourceFormData>({
-    resolver: yupResolver(createValidationSchema(isEdit, showFeedback || isFeedback)),
+    resolver: yupResolver(createValidationSchema(isEdit, showFeedback || isFeedback)) as any,
     defaultValues: {
       resource_name: initialData?.resource_name || '',
       resourceType: initialData?.location?.startsWith('http') ? 'URL' : 'FILE',

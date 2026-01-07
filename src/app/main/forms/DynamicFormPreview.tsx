@@ -84,6 +84,9 @@ const widthToGrid = (width?: string) => {
   }
 }
 
+// Type for form values based on fields
+export type DynamicFormValues = Record<string, string | string[] | Date | File | null>
+
 export const getDynamicYupSchema = (fields: SimpleFormField[]) => {
   return yup.object().shape(
     fields.reduce((acc, field) => {
@@ -234,13 +237,13 @@ const DynamicFormPreview: React.FC<Props> = ({
     reset,
     formState: { errors },
     getValues,
-  } = useForm({
+  } = useForm<DynamicFormValues>({
     resolver: yupResolver(validationSchema),
     mode: 'onSubmit',
     defaultValues: fields.reduce((acc, field) => {
       acc[field.id] = field.type === 'checkbox' ? [] : ''
       return acc
-    }, {} as Record<string, any>),
+    }, {} as DynamicFormValues),
   })
 
   const formValues = getValues()
@@ -679,9 +682,11 @@ const DynamicFormPreview: React.FC<Props> = ({
                                       control={
                                         <Checkbox
                                           checked={
-                                            controllerField.value?.includes(
-                                              opt.value
-                                            ) || false
+                                            (Array.isArray(controllerField.value) &&
+                                              controllerField.value.includes(
+                                                opt.value
+                                              )) ||
+                                            false
                                           }
                                           onChange={(e) => {
                                             const checked = e.target.checked
@@ -731,7 +736,10 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 helperText={helperText}
                                 disabled={isLocked}
                                 value={formatDateForInput(
-                                  controllerField.value
+                                  typeof controllerField.value === 'string' ||
+                                  controllerField.value instanceof Date
+                                    ? controllerField.value
+                                    : null
                                 )}
                                 onChange={(e) => {
                                   // Convert YYYY-MM-DD back to ISO string when user changes the date
@@ -756,7 +764,12 @@ const DynamicFormPreview: React.FC<Props> = ({
                                   label={field.label}
                                   error={errors[field.id]?.message as string}
                                   disabled={isLocked}
-                                  value={controllerField.value}
+                                  value={
+                                    controllerField.value instanceof File ||
+                                    typeof controllerField.value === 'string'
+                                      ? controllerField.value
+                                      : null
+                                  }
                                 />
                               </Box>
                             )
@@ -767,7 +780,20 @@ const DynamicFormPreview: React.FC<Props> = ({
                                 <SignatureInput
                                   label={field.label}
                                   required={field.required}
-                                  value={controllerField.value}
+                                  value={
+                                    typeof controllerField.value === 'string' ||
+                                    controllerField.value instanceof File ||
+                                    (typeof controllerField.value === 'object' &&
+                                      controllerField.value !== null &&
+                                      !Array.isArray(controllerField.value) &&
+                                      'name' in controllerField.value &&
+                                      'timestamp' in controllerField.value)
+                                      ? (controllerField.value as
+                                          | string
+                                          | File
+                                          | { name: string; timestamp: string })
+                                      : null
+                                  }
                                   onChange={controllerField.onChange}
                                   error={!!fieldState.error}
                                   helperText={fieldState.error?.message}
