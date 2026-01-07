@@ -56,8 +56,8 @@ import {
   FormControlLabel,
   Switch,
 } from '@mui/material';
-import { useDispatch, useSelector } from 'react-redux';
-import { selectAllSurveys, deleteSurvey, type Survey } from 'app/store/surveySlice';
+import { useSelector } from 'react-redux';
+import { useGetSurveysQuery, useDeleteSurveyMutation, type Survey, SurveyStatus } from 'app/store/api/survey-api';
 import SurveyForm from './survey-form';
 import DataTablePagination from './data-table-pagination';
 
@@ -68,11 +68,6 @@ type SurveyWithStats = Survey & {
 
 const SurveysDataTable = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const surveys = useSelector(selectAllSurveys);
-  const allQuestions = useSelector((state: any) => state.survey?.questions || {});
-  const allResponses = useSelector((state: any) => state.response?.responses || {});
-
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [surveyToDelete, setSurveyToDelete] = useState<string | null>(null);
   const [editingSurvey, setEditingSurvey] = useState<Survey | null>(null);
@@ -81,12 +76,32 @@ const SurveysDataTable = () => {
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
   const [columnVisibilityAnchor, setColumnVisibilityAnchor] = useState<null | HTMLElement>(null);
   const [exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
+  const [statusFilter, setStatusFilter] = useState<SurveyStatus | "">("")
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState('');
+
+  // API hooks
+  const { data: surveysResponse, isLoading, error } = useGetSurveysQuery({
+    status: statusFilter || undefined,
+    page,
+    limit,
+    search: searchQuery || undefined,
+  });
+  const [deleteSurvey, { isLoading: isDeleting }] = useDeleteSurveyMutation();
+
+  const surveys = surveysResponse?.data?.surveys || [];
+  const pagination = surveysResponse?.data?.pagination;
+
+  // Get all questions and responses from store (for stats - these will be replaced with API calls later)
+  const allQuestions = useSelector((state: any) => state.survey?.questions || {});
+  const allResponses = useSelector((state: any) => state.response?.responses || {});
 
   // Calculate stats for each survey
   const surveysWithStats: SurveyWithStats[] = useMemo(() => {
@@ -126,13 +141,19 @@ const SurveysDataTable = () => {
     setDeleteDialogOpen(true);
   }, []);
 
-  const confirmDelete = useCallback(() => {
+  const confirmDelete = useCallback(async () => {
     if (surveyToDelete) {
-      dispatch(deleteSurvey(surveyToDelete) as any);
-      setDeleteDialogOpen(false);
-      setSurveyToDelete(null);
+      try {
+        await deleteSurvey(surveyToDelete).unwrap();
+        setDeleteDialogOpen(false);
+        setSurveyToDelete(null);
+        // You can add a toast notification here if you have a toast system
+      } catch (error: any) {
+        console.error('Failed to delete survey:', error);
+        // You can add error toast notification here
+      }
     }
-  }, [surveyToDelete, dispatch]);
+  }, [surveyToDelete, deleteSurvey]);
 
   const handleEdit = useCallback((survey: Survey) => {
     setEditingSurvey(survey);
@@ -300,7 +321,6 @@ const SurveysDataTable = () => {
     },
   });
 
-  const statusFilter = (table.getColumn('status')?.getFilterValue() as string) || '';
 
   return (
     <>
@@ -318,7 +338,11 @@ const SurveysDataTable = () => {
           <TextField
             placeholder="Search surveys..."
             value={globalFilter ?? ''}
-            onChange={(e) => setGlobalFilter(String(e.target.value))}
+            onChange={(e) => {
+              setGlobalFilter(String(e.target.value));
+              setSearchQuery(String(e.target.value));
+              setPage(1); // Reset to first page on search
+            }}
             size="small"
             sx={{ maxWidth: { xs: '100%', sm: 400 }, flex: 1 }}
             InputProps={{
@@ -351,9 +375,12 @@ const SurveysDataTable = () => {
             <Select
               value={statusFilter}
               label="Status"
-              onChange={(e) =>
-                table.getColumn('status')?.setFilterValue(e.target.value === 'all' ? '' : e.target.value)
-              }
+              onChange={(e) => {
+                const newStatus = e.target.value === 'all' ? '' : (e.target.value as SurveyStatus | "") ;
+                setStatusFilter(newStatus);
+                table.getColumn('status')?.setFilterValue(newStatus);
+                setPage(1); // Reset to first page on filter change
+              }}
             >
               <MenuItem value="all">All Status</MenuItem>
               <MenuItem value="Draft">Draft</MenuItem>
@@ -387,7 +414,19 @@ const SurveysDataTable = () => {
               ))}
             </TableHead>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">Loading surveys...</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
+                    <Typography color="error">Error loading surveys. Please try again.</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} selected={row.getIsSelected()}>
                     {row.getVisibleCells().map((cell) => (
@@ -409,7 +448,16 @@ const SurveysDataTable = () => {
         </TableContainer>
 
         {/* Pagination */}
-        <DataTablePagination table={table} showSelectedRows={true} />
+        <DataTablePagination
+          table={table}
+          showSelectedRows={true}
+          manualPagination={true}
+          currentPage={page}
+          totalPages={pagination?.totalPages || 1}
+          totalItems={pagination?.total || 0}
+          pageSize={limit}
+          onPageChange={(newPage) => setPage(newPage)}
+        />
       </Box>
 
       {/* Actions Menu */}
@@ -512,8 +560,8 @@ const SurveysDataTable = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={confirmDelete} color="error" variant="contained">
-            Delete
+          <Button onClick={confirmDelete} color="error" variant="contained" disabled={isDeleting}>
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

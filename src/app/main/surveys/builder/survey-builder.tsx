@@ -25,12 +25,12 @@ import {
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  selectSurveyById,
   selectQuestionsBySurveyId,
   reorderQuestions,
   setQuestions,
   updateSurvey,
 } from 'app/store/surveySlice';
+import { useGetSurveyByIdQuery } from 'app/store/api/survey-api';
 import QuestionSettings from './components/question-settings';
 import TemplateSelector from './components/template-selector';
 import SurveyPreview from './components/survey-preview';
@@ -42,7 +42,13 @@ const SurveyBuilder = () => {
   const { surveyId } = useParams<{ surveyId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const survey = useSelector((state: any) => (surveyId ? selectSurveyById(state, surveyId) : null));
+  
+  // Fetch survey from API
+  const { data: surveyResponse, isLoading, error } = useGetSurveyByIdQuery(surveyId || '', {
+    skip: !surveyId,
+  });
+  const survey = surveyResponse?.data?.survey;
+  
   const questions = useSelector((state: any) =>
     surveyId ? selectQuestionsBySurveyId(state, surveyId) : []
   );
@@ -61,7 +67,23 @@ const SurveyBuilder = () => {
     );
   }
 
-  if (!survey) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <IconButton onClick={() => navigate('/surveys')}>
+            <ArrowLeft size={20} />
+          </IconButton>
+          <Typography variant="h5">Loading Survey...</Typography>
+        </Box>
+        <Typography color="text.secondary">Please wait while we load the survey</Typography>
+      </Box>
+    );
+  }
+
+  // Error or not found state
+  if (error || !survey) {
     return (
       <Box sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -70,7 +92,9 @@ const SurveyBuilder = () => {
           </IconButton>
           <Typography variant="h5">Survey Not Found</Typography>
         </Box>
-        <Typography color="text.secondary">The survey you're looking for doesn't exist</Typography>
+        <Typography color="text.secondary">
+          {error ? 'Failed to load the survey. Please try again.' : 'The survey you\'re looking for doesn\'t exist'}
+        </Typography>
       </Box>
     );
   }

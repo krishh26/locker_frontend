@@ -17,8 +17,7 @@ import {
   FormHelperText,
   Box,
 } from '@mui/material';
-import { useDispatch } from 'react-redux';
-import { addSurvey, updateSurvey, type Survey } from 'app/store/surveySlice';
+import { useCreateSurveyMutation, useUpdateSurveyMutation, type Survey } from 'app/store/api/survey-api';
 
 const surveyFormSchema = yup.object().shape({
   name: yup
@@ -38,7 +37,8 @@ interface SurveyFormProps {
 }
 
 const SurveyForm: React.FC<SurveyFormProps> = ({ open, onOpenChange, survey }) => {
-  const dispatch = useDispatch();
+  const [createSurvey, { isLoading: isCreating }] = useCreateSurveyMutation();
+  const [updateSurvey, { isLoading: isUpdating }] = useUpdateSurveyMutation();
 
   const {
     control,
@@ -73,29 +73,32 @@ const SurveyForm: React.FC<SurveyFormProps> = ({ open, onOpenChange, survey }) =
     }
   }, [survey, reset, open]);
 
-  const onSubmit = (data: SurveyFormValues) => {
-    if (survey) {
-      dispatch(
-        updateSurvey({
-          id: survey.id,
+  const onSubmit = async (data: SurveyFormValues) => {
+    try {
+      if (survey) {
+        await updateSurvey({
+          surveyId: survey.id,
           updates: {
             name: data.name,
             description: data.description,
             status: data.status as 'Draft' | 'Published',
           },
-        }) as any
-      );
-    } else {
-      dispatch(
-        addSurvey({
+        }).unwrap();
+        // You can add a toast notification here if you have a toast system
+      } else {
+        await createSurvey({
           name: data.name,
           description: data.description,
           status: data.status as 'Draft' | 'Published',
-        }) as any
-      );
+        }).unwrap();
+        // You can add a toast notification here if you have a toast system
+      }
+      reset();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Failed to save survey:', error);
+      // You can add error toast notification here
     }
-    reset();
-    onOpenChange(false);
   };
 
   return (
@@ -159,8 +162,14 @@ const SurveyForm: React.FC<SurveyFormProps> = ({ open, onOpenChange, survey }) =
         </DialogContent>
         <DialogActions>
           <Button onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" variant="contained">
-            {survey ? 'Update Survey' : 'Create Survey'}
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={isCreating || isUpdating}
+          >
+            {isCreating || isUpdating
+              ? (survey ? 'Updating...' : 'Creating...')
+              : (survey ? 'Update Survey' : 'Create Survey')}
           </Button>
         </DialogActions>
       </form>
