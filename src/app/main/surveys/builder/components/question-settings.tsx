@@ -22,8 +22,11 @@ import {
   Typography,
 } from '@mui/material';
 import { Plus, Trash2 } from 'lucide-react';
-import { useDispatch } from 'react-redux';
-import { addQuestion, updateQuestion, type Question } from 'app/store/surveySlice';
+import {
+  useCreateQuestionMutation,
+  useUpdateQuestionMutation,
+  type Question,
+} from 'app/store/api/survey-api';
 
 const questionFormSchema = yup.object().shape({
   title: yup.string().required('Title is required.'),
@@ -64,7 +67,8 @@ const QuestionSettings: React.FC<QuestionSettingsProps> = ({
   surveyId,
   question,
 }) => {
-  const dispatch = useDispatch();
+  const [createQuestion, { isLoading: isCreating }] = useCreateQuestionMutation();
+  const [updateQuestion, { isLoading: isUpdating }] = useUpdateQuestionMutation();
 
   const {
     control,
@@ -117,9 +121,8 @@ const QuestionSettings: React.FC<QuestionSettingsProps> = ({
     }
   }, [showOptions, fields.length, append]);
 
-  const onSubmit = (data: QuestionFormValues) => {
+  const onSubmit = async (data: QuestionFormValues) => {
     const questionData = {
-      surveyId,
       title: data.title,
       description: data.description,
       type: data.type,
@@ -127,23 +130,30 @@ const QuestionSettings: React.FC<QuestionSettingsProps> = ({
       options:
         showOptions && data.options
           ? data.options.map((opt) => opt.value).filter((v) => v.trim())
-          : undefined,
+          : null,
     };
 
-    if (question) {
-      dispatch(
-        updateQuestion({
-          id: question.id,
+    try {
+      if (question) {
+        await updateQuestion({
           surveyId,
+          questionId: question.id,
           updates: questionData,
-        }) as any
-      );
-    } else {
-      dispatch(addQuestion(questionData) as any);
+        }).unwrap();
+        // You can add a toast notification here if you have a toast system
+      } else {
+        await createQuestion({
+          surveyId,
+          question: questionData,
+        }).unwrap();
+        // You can add a toast notification here if you have a toast system
+      }
+      reset();
+      onOpenChange(false);
+    } catch (error: unknown) {
+      console.error('Failed to save question:', error);
+      // You can add error toast notification here
     }
-
-    reset();
-    onOpenChange(false);
   };
 
   return (
@@ -261,8 +271,14 @@ const QuestionSettings: React.FC<QuestionSettingsProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" variant="contained">
-            {question ? 'Update Question' : 'Add Question'}
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={isCreating || isUpdating}
+          >
+            {isCreating || isUpdating
+              ? (question ? 'Updating...' : 'Creating...')
+              : (question ? 'Update Question' : 'Add Question')}
           </Button>
         </DialogActions>
       </form>

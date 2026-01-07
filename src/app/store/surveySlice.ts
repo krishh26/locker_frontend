@@ -20,8 +20,10 @@ export interface Question {
   description?: string;
   type: 'short-text' | 'long-text' | 'multiple-choice' | 'checkbox' | 'rating' | 'date';
   required: boolean;
-  options?: string[];
+  options?: string[] | null;
   order: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 type SurveyState = {

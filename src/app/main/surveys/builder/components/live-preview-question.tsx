@@ -22,8 +22,11 @@ import {
   Divider,
   Paper,
 } from '@mui/material';
-import { useDispatch } from 'react-redux';
-import { deleteQuestion, addQuestion, type Question } from 'app/store/surveySlice';
+import {
+  useDeleteQuestionMutation,
+  useCreateQuestionMutation,
+  type Question,
+} from 'app/store/api/survey-api';
 
 interface LivePreviewQuestionProps {
   question: Question;
@@ -38,9 +41,10 @@ const LivePreviewQuestion: React.FC<LivePreviewQuestionProps> = ({
   index,
   onEdit,
 }) => {
-  const dispatch = useDispatch();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [deleteQuestion, { isLoading: isDeleting }] = useDeleteQuestionMutation();
+  const [createQuestion] = useCreateQuestionMutation();
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: question.id,
@@ -52,16 +56,23 @@ const LivePreviewQuestion: React.FC<LivePreviewQuestionProps> = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const handleDuplicate = () => {
-    const { id: _id, order: _order, ...questionData } = question;
-    dispatch(
-      addQuestion({
-        ...questionData,
+  const handleDuplicate = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, order: _order, createdAt: _createdAt, updatedAt: _updatedAt, ...questionData } = question;
+    try {
+      await createQuestion({
         surveyId,
-        title: `${question.title} (Copy)`,
-      }) as any
-    );
-    setAnchorEl(null);
+        question: {
+          ...questionData,
+          title: `${question.title} (Copy)`,
+        },
+      }).unwrap();
+      // You can add a toast notification here if you have a toast system
+      setAnchorEl(null);
+    } catch (error: unknown) {
+      console.error('Failed to duplicate question:', error);
+      // You can add error toast notification here
+    }
   };
 
   const handleDelete = () => {
@@ -69,9 +80,18 @@ const LivePreviewQuestion: React.FC<LivePreviewQuestionProps> = ({
     setAnchorEl(null);
   };
 
-  const confirmDelete = () => {
-    dispatch(deleteQuestion({ id: question.id, surveyId }) as any);
-    setDeleteDialogOpen(false);
+  const confirmDelete = async () => {
+    try {
+      await deleteQuestion({
+        surveyId,
+        questionId: question.id,
+      }).unwrap();
+      // You can add a toast notification here if you have a toast system
+      setDeleteDialogOpen(false);
+    } catch (error: unknown) {
+      console.error('Failed to delete question:', error);
+      // You can add error toast notification here
+    }
   };
 
   const renderQuestionField = () => {
@@ -288,8 +308,13 @@ const LivePreviewQuestion: React.FC<LivePreviewQuestionProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={confirmDelete} color="error" variant="contained">
-            Delete
+          <Button
+            onClick={confirmDelete}
+            color="error"
+            variant="contained"
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

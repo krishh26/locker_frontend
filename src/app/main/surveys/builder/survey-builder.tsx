@@ -23,19 +23,21 @@ import {
   IconButton,
   Divider,
 } from '@mui/material';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import {
-  selectQuestionsBySurveyId,
-  reorderQuestions,
   setQuestions,
   updateSurvey,
 } from 'app/store/surveySlice';
-import { useGetSurveyByIdQuery } from 'app/store/api/survey-api';
+import {
+  useGetSurveyByIdQuery,
+  useGetQuestionsQuery,
+  useReorderQuestionsMutation,
+} from 'app/store/api/survey-api';
 import QuestionSettings from './components/question-settings';
 import TemplateSelector from './components/template-selector';
 import SurveyPreview from './components/survey-preview';
 import LivePreviewQuestion from './components/live-preview-question';
-import { type Question } from 'app/store/surveySlice';
+import { type Question } from 'app/store/api/survey-api';
 import { type SurveyTemplate } from './components/templates';
 
 const SurveyBuilder = () => {
@@ -44,14 +46,18 @@ const SurveyBuilder = () => {
   const dispatch = useDispatch();
   
   // Fetch survey from API
-  const { data: surveyResponse, isLoading, error } = useGetSurveyByIdQuery(surveyId || '', {
+  const { data: surveyResponse, isLoading: isLoadingSurvey, error: surveyError } = useGetSurveyByIdQuery(surveyId || '', {
     skip: !surveyId,
   });
   const survey = surveyResponse?.data?.survey;
   
-  const questions = useSelector((state: any) =>
-    surveyId ? selectQuestionsBySurveyId(state, surveyId) : []
-  );
+  // Fetch questions from API
+  const { data: questionsResponse, isLoading: isLoadingQuestions } = useGetQuestionsQuery(surveyId || '', {
+    skip: !surveyId,
+  });
+  const questions = questionsResponse?.data?.questions || [];
+  
+  const [reorderQuestions] = useReorderQuestionsMutation();
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
@@ -68,7 +74,7 @@ const SurveyBuilder = () => {
   }
 
   // Loading state
-  if (isLoading) {
+  if (isLoadingSurvey || isLoadingQuestions) {
     return (
       <Box sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -83,7 +89,7 @@ const SurveyBuilder = () => {
   }
 
   // Error or not found state
-  if (error || !survey) {
+  if (surveyError || !survey) {
     return (
       <Box sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -93,7 +99,7 @@ const SurveyBuilder = () => {
           <Typography variant="h5">Survey Not Found</Typography>
         </Box>
         <Typography color="text.secondary">
-          {error ? 'Failed to load the survey. Please try again.' : 'The survey you\'re looking for doesn\'t exist'}
+          {surveyError ? 'Failed to load the survey. Please try again.' : 'The survey you\'re looking for doesn\'t exist'}
         </Typography>
       </Box>
     );
@@ -111,22 +117,26 @@ const SurveyBuilder = () => {
         }
     : {};
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
+    if (over && active.id !== over.id && surveyId) {
       const oldIndex = sortedQuestions.findIndex((q) => q.id === active.id);
       const newIndex = sortedQuestions.findIndex((q) => q.id === over.id);
 
       const newOrder = arrayMove(sortedQuestions, oldIndex, newIndex);
       const questionIds = newOrder.map((q) => q.id);
 
-      dispatch(
-        reorderQuestions({
+      try {
+        await reorderQuestions({
           surveyId,
           questionIds,
-        }) as any
-      );
+        }).unwrap();
+        // You can add a toast notification here if you have a toast system
+      } catch (error: unknown) {
+        console.error('Failed to reorder questions:', error);
+        // You can add error toast notification here
+      }
     }
   };
 
