@@ -104,15 +104,16 @@ const SurveyBuilder = () => {
 
   const sortedQuestions = [...questions].sort((a: Question, b: Question) => a.order - b.order);
 
-  const backgroundStyle = survey.background
-    ? survey.background.type === 'gradient'
-      ? { background: survey.background.value }
-      : {
-          backgroundImage: `url(${survey.background.value})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }
-    : {};
+  // Handle both nested background object and flat backgroundType/backgroundValue structure
+  const backgroundType = survey.background?.type || survey.backgroundType;
+  const backgroundValue = survey.background?.value || survey.backgroundValue;
+  
+  const backgroundStyle = backgroundType && backgroundValue
+    ? backgroundType === "gradient"
+      ? { background: backgroundValue }
+      : { backgroundImage: `url(${backgroundValue})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : {}
+
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;

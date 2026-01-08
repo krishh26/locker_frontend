@@ -224,6 +224,159 @@ interface Response {
 
 **Note:** Should also delete all associated questions and responses (or mark as archived)
 
+#### 1.6 Apply Template to Survey
+**POST** `/api/surveys/:surveyId/apply-template`
+
+**Description:** Applies a template to a survey by updating the survey's background design and creating multiple questions in a single API call. This is useful for quickly populating a survey with pre-configured questions and styling.
+
+**Request Body:**
+```json
+{
+  "background": {
+    "type": "gradient",
+    "value": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+  },
+  "questions": [
+    {
+      "title": "How satisfied are you with your current role?",
+      "description": "Please rate your overall satisfaction",
+      "type": "rating",
+      "required": true,
+      "options": null,
+      "order": 0
+    },
+    {
+      "title": "What aspects of your job do you enjoy most?",
+      "description": "Select all that apply",
+      "type": "checkbox",
+      "required": false,
+      "options": [
+        "Challenging projects",
+        "Team collaboration",
+        "Career growth opportunities",
+        "Work flexibility"
+      ],
+      "order": 1
+    },
+    {
+      "title": "What improvements would you suggest?",
+      "description": "Please share your thoughts and suggestions",
+      "type": "long-text",
+      "required": false,
+      "options": null,
+      "order": 2
+    }
+  ]
+}
+```
+
+**Request Body Fields:**
+- `background` (optional): Object containing:
+  - `type`: 'gradient' | 'image'
+  - `value`: CSS gradient string or image URL
+- `questions` (required): Array of question objects to create. Each question should have:
+  - `title`: Required, minimum 1 character
+  - `description`: Optional
+  - `type`: Required, must be one of: 'short-text', 'long-text', 'multiple-choice', 'checkbox', 'rating', 'date'
+  - `required`: Required, boolean
+  - `options`: Required if type is 'multiple-choice' or 'checkbox', must be array with at least 1 item. Must be null or empty array for other question types.
+  - `order`: Optional, auto-incremented if not provided (based on existing questions count)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "survey": {
+      "id": "survey-123",
+      "name": "Employee Satisfaction Survey",
+      "description": "Quarterly employee feedback",
+      "status": "Draft",
+      "background": {
+        "type": "gradient",
+        "value": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+      },
+      "userId": "user-456",
+      "organizationId": "org-789",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-20T15:45:00Z"
+    },
+    "questions": [
+      {
+        "id": "question-123",
+        "surveyId": "survey-123",
+        "title": "How satisfied are you with your current role?",
+        "description": "Please rate your overall satisfaction",
+        "type": "rating",
+        "required": true,
+        "options": null,
+        "order": 0,
+        "createdAt": "2024-01-20T15:45:00Z",
+        "updatedAt": "2024-01-20T15:45:00Z"
+      },
+      {
+        "id": "question-124",
+        "surveyId": "survey-123",
+        "title": "What aspects of your job do you enjoy most?",
+        "description": "Select all that apply",
+        "type": "checkbox",
+        "required": false,
+        "options": [
+          "Challenging projects",
+          "Team collaboration",
+          "Career growth opportunities",
+          "Work flexibility"
+        ],
+        "order": 1,
+        "createdAt": "2024-01-20T15:45:00Z",
+        "updatedAt": "2024-01-20T15:45:00Z"
+      },
+      {
+        "id": "question-125",
+        "surveyId": "survey-123",
+        "title": "What improvements would you suggest?",
+        "description": "Please share your thoughts and suggestions",
+        "type": "long-text",
+        "required": false,
+        "options": null,
+        "order": 2,
+        "createdAt": "2024-01-20T15:45:00Z",
+        "updatedAt": "2024-01-20T15:45:00Z"
+      }
+    ]
+  }
+}
+```
+
+**Validation Rules:**
+- Survey must exist
+- `background`: Optional, if provided must have `type` ('gradient' or 'image') and `value`
+- `questions`: Required, must be a non-empty array
+- Each question in `questions` array must follow the same validation rules as Create Question (2.2):
+  - `title`: Required, minimum 1 character
+  - `type`: Required, must be one of: 'short-text', 'long-text', 'multiple-choice', 'checkbox', 'rating', 'date'
+  - `options`: Required if type is 'multiple-choice' or 'checkbox', must be array with at least 1 item
+  - `options`: Must be null or empty array for other question types
+  - `order`: If not provided, should be auto-incremented based on existing questions count (appends after existing questions)
+
+**Authorization:** User must be the creator or have organization admin rights
+
+**Business Logic:**
+- If `background` is provided, updates the survey's background design
+- Creates all questions in the `questions` array atomically (all or nothing)
+- Question `order` values should be calculated to append after existing questions:
+  - If survey has 3 existing questions (orders 0, 1, 2), new template questions should start at order 3
+  - This ensures template questions are added after existing questions, not replacing them
+- All questions are created in a single transaction to ensure data consistency
+- Survey's `updatedAt` timestamp should be updated
+
+**Error Responses:**
+- If survey not found: `NOT_FOUND` error
+- If validation fails: `VALIDATION_ERROR` with field-specific details
+- If user lacks permission: `FORBIDDEN` error
+
+**Note:** This endpoint is designed to be called when a user applies a template to their survey. It combines the functionality of updating survey background and creating multiple questions in a single API call for better performance and atomicity.
+
 ---
 
 ### 2. Question Management
@@ -700,6 +853,7 @@ CREATE TABLE responses (
 3. **Templates:** Consider storing survey templates for quick creation
    - `GET /api/survey-templates`
    - `POST /api/surveys/from-template/:templateId`
+   - `POST /api/surveys/:surveyId/apply-template` (Already implemented - see 1.6)
 
 4. **Rate Limiting:** Apply rate limiting to public response submission endpoint to prevent spam
 
@@ -721,6 +875,7 @@ The frontend currently uses these Redux actions that need to be replaced with AP
 - `addSurvey` → `POST /api/surveys`
 - `updateSurvey` → `PUT /api/surveys/:surveyId`
 - `deleteSurvey` → `DELETE /api/surveys/:surveyId`
+- `applyTemplate` → `POST /api/surveys/:surveyId/apply-template` (Applies template background and creates questions)
 
 ### Question Actions:
 - `addQuestion` → `POST /api/surveys/:surveyId/questions`

@@ -15,10 +15,15 @@ export interface Survey {
     type: BackgroundType
     value: string // CSS gradient string or image URL
   }
+  // Alternative API format (flat structure)
+  backgroundType?: BackgroundType
+  backgroundValue?: string
   userId?: string
   organizationId?: string
   createdAt: string
   updatedAt: string
+  totalQuestions?: number // Optional: provided by API in list responses
+  totalResponses?: number // Optional: provided by API in list responses
 }
 
 export interface SurveyBackground {

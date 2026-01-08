@@ -56,15 +56,10 @@ import {
   FormControlLabel,
   Switch,
 } from '@mui/material';
-import { useSelector } from 'react-redux';
 import { useGetSurveysQuery, useDeleteSurveyMutation, type Survey, SurveyStatus } from 'app/store/api/survey-api';
 import SurveyForm from './survey-form';
 import DataTablePagination from './data-table-pagination';
 
-type SurveyWithStats = Survey & {
-  totalQuestions: number;
-  totalResponses: number;
-};
 
 const SurveysDataTable = () => {
   const navigate = useNavigate();
@@ -99,23 +94,6 @@ const SurveysDataTable = () => {
   const surveys = surveysResponse?.data?.surveys || [];
   const pagination = surveysResponse?.data?.pagination;
 
-  // Get all questions and responses from store (for stats - these will be replaced with API calls later)
-  const allQuestions = useSelector((state: any) => state.survey?.questions || {});
-  const allResponses = useSelector((state: any) => state.response?.responses || {});
-
-  // Calculate stats for each survey
-  const surveysWithStats: SurveyWithStats[] = useMemo(() => {
-    return surveys.map((survey) => {
-      const questions = allQuestions[survey.id] || [];
-      const responses = allResponses[survey.id] || [];
-      return {
-        ...survey,
-        totalQuestions: questions.length,
-        totalResponses: responses.length,
-      };
-    });
-  }, [surveys, allQuestions, allResponses]);
-
   const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'Published':
@@ -130,7 +108,7 @@ const SurveysDataTable = () => {
   }, []);
 
   const exactFilter = useCallback(
-    (row: Row<SurveyWithStats>, columnId: string, value: string) => {
+    (row: Row<Survey>, columnId: string, value: string) => {
       return row.getValue(columnId) === value;
     },
     []
@@ -182,7 +160,7 @@ const SurveysDataTable = () => {
     setSelectedSurveyId(null);
   }, []);
 
-  const columns: ColumnDef<SurveyWithStats>[] = useMemo(
+  const columns: ColumnDef<Survey>[] = useMemo(
     () => [
       {
         id: 'select',
@@ -240,7 +218,7 @@ const SurveysDataTable = () => {
         accessorKey: 'totalQuestions',
         header: 'Questions',
         cell: ({ row }) => {
-          const count = row.getValue('totalQuestions') as number;
+          const count = (row.getValue('totalQuestions') as number | undefined) ?? 0;
           return <Typography variant="body2">{count}</Typography>;
         },
       },
@@ -248,7 +226,7 @@ const SurveysDataTable = () => {
         accessorKey: 'totalResponses',
         header: 'Responses',
         cell: ({ row }) => {
-          const count = row.getValue('totalResponses') as number;
+          const count = (row.getValue('totalResponses') as number | undefined) ?? 0;
           return <Typography variant="body2">{count}</Typography>;
         },
       },
@@ -301,7 +279,7 @@ const SurveysDataTable = () => {
   );
 
   const table = useReactTable({
-    data: surveysWithStats,
+    data: surveys,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
