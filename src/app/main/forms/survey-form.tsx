@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -17,28 +17,43 @@ import {
   FormLabel,
   FormHelperText,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import { CheckCircle2 } from 'lucide-react';
-import { useSelector, useDispatch } from 'react-redux';
-import { selectSurveyById, selectQuestionsBySurveyId } from 'app/store/surveySlice';
-import { addResponse } from 'app/store/responseSlice';
+import {
+  useGetPublicSurveyQuery,
+  useSubmitResponseMutation,
+  type Question,
+} from 'src/app/store/api/survey-api';
 
 const SurveyForm = () => {
   const { surveyId } = useParams<{ surveyId: string }>();
-  const dispatch = useDispatch();
-  const survey = useSelector((state: any) => (surveyId ? selectSurveyById(state, surveyId) : null));
-  const questions = useSelector((state: any) =>
-    surveyId ? selectQuestionsBySurveyId(state, surveyId) : []
-  );
   const [submitted, setSubmitted] = useState(false);
 
-  const sortedQuestions = [...questions].sort((a: any, b: any) => a.order - b.order);
+  const {
+    data: surveyData,
+    isLoading,
+    isError,
+    error,
+  } = useGetPublicSurveyQuery(surveyId || '', {
+    skip: !surveyId,
+  });
+
+  const [submitResponse, { isLoading: isSubmitting }] = useSubmitResponseMutation();
+
+  const survey = surveyData?.data?.survey;
+  const questions = surveyData?.data?.questions || [];
+
+  const sortedQuestions = useMemo(
+    () => [...questions].sort((a: Question, b: Question) => a.order - b.order),
+    [questions]
+  );
 
   // Build dynamic Yup schema
   const schemaFields: Record<string, yup.Schema<any>> = {};
   const defaultValues: Record<string, any> = {};
 
-  sortedQuestions.forEach((question: any) => {
+  sortedQuestions.forEach((question: Question) => {
     if (question.type === 'checkbox') {
       if (question.required) {
         schemaFields[question.id] = yup
@@ -91,7 +106,22 @@ const SurveyForm = () => {
     defaultValues,
   });
 
-  if (!survey) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 4 }}>
+        <Paper sx={{ p: 4, maxWidth: 500, textAlign: 'center' }}>
+          <CircularProgress sx={{ mb: 2 }} />
+          <Typography variant="h5" fontWeight="bold" sx={{ mb: 1 }}>
+            Loading Survey...
+          </Typography>
+        </Paper>
+      </Box>
+    );
+  }
+
+  // Error state
+  if (isError || !survey) {
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 4 }}>
         <Paper sx={{ p: 4, maxWidth: 500 }}>
@@ -99,7 +129,9 @@ const SurveyForm = () => {
             Survey Not Found
           </Typography>
           <Typography color="text.secondary">
-            The survey you're looking for doesn't exist.
+            {error && 'message' in error
+              ? (error.message as string)
+              : "The survey you're looking for doesn't exist or is not available."}
           </Typography>
         </Paper>
       </Box>
@@ -140,10 +172,12 @@ const SurveyForm = () => {
     );
   }
 
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = async (data: FormValues) => {
+    if (!surveyId || !survey) return;
+
     const answers: Record<string, string | string[] | null> = {};
 
-    sortedQuestions.forEach((question: any) => {
+    sortedQuestions.forEach((question: Question) => {
       const value = data[question.id];
       if (value !== undefined && value !== null && value !== '') {
         if (Array.isArray(value) && value.length === 0) {
@@ -156,14 +190,19 @@ const SurveyForm = () => {
       }
     });
 
-    dispatch(
-      addResponse({
-        surveyId: survey.id,
-        answers,
-      }) as any
-    );
+    try {
+      await submitResponse({
+        surveyId,
+        response: {
+          answers,
+        },
+      }).unwrap();
 
-    setSubmitted(true);
+      setSubmitted(true);
+    } catch (error) {
+      // Handle error - could show toast or error message
+      console.error('Failed to submit response:', error);
+    }
   };
 
 
@@ -210,7 +249,7 @@ const SurveyForm = () => {
     );
   }
 
-  const renderQuestionField = (question: any) => {
+  const renderQuestionField = (question: Question) => {
     const error = errors[question.id];
 
     switch (question.type) {
@@ -381,7 +420,7 @@ const SurveyForm = () => {
 
           {/* Questions */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {sortedQuestions.map((question: any, index: number) => (
+            {sortedQuestions.map((question: Question, index: number) => (
               <Box key={question.id}>
                 <Typography variant="body1" fontWeight="medium" sx={{ mb: 1 }}>
                   {index + 1}. {question.title}
@@ -403,8 +442,15 @@ const SurveyForm = () => {
 
           {/* Submit Button */}
           <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
-            <Button type="submit" variant="contained" fullWidth size="large">
-              Submit
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              size="large"
+              disabled={isSubmitting}
+              startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit'}
             </Button>
           </Box>
         </Paper>

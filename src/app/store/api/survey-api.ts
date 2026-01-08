@@ -373,6 +373,23 @@ export interface ApplyTemplateResponse {
   }
 }
 
+// Public Survey API Types
+export interface GetPublicSurveyResponse {
+  success: boolean
+  data: {
+    survey: Survey
+    questions: Question[]
+  }
+  error?: {
+    code: string
+    message: string
+    details?: Array<{
+      field: string
+      message: string
+    }>
+  }
+}
+
 export const surveyAPI = createApi({
   reducerPath: 'survey-api',
   baseQuery: createBaseQueryWithReAuth(),
@@ -448,13 +465,28 @@ export const surveyAPI = createApi({
     // 1.5 Delete Survey
     deleteSurvey: builder.mutation<DeleteSurveyResponse, string>({
       query: (surveyId) => ({
-        url: `api/surveys/${surveyId}`,
+        url: `/surveys/${surveyId}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, surveyId) => [
         { type: 'Survey', id: surveyId },
         'Survey',
       ],
+    }),
+
+    // 1.6 Get Public Survey with Questions (No Auth Required)
+    getPublicSurvey: builder.query<GetPublicSurveyResponse, string>({
+      query: (surveyId) => ({
+        url: `/surveys/public/${surveyId}`,
+        headers: {
+          // Explicitly don't send auth header for public endpoint
+          Authorization: undefined,
+        },
+      }),
+      providesTags: (result, error, surveyId) => [
+        { type: 'Survey', id: surveyId },
+      ],
+      keepUnusedDataFor: 0,
     }),
 
     // 2.1 Get Questions for Survey
@@ -626,6 +658,7 @@ export const {
   useCreateSurveyMutation,
   useUpdateSurveyMutation,
   useDeleteSurveyMutation,
+  useGetPublicSurveyQuery,
   useGetQuestionsQuery,
   useCreateQuestionMutation,
   useUpdateQuestionMutation,
