@@ -23,15 +23,12 @@ import {
   IconButton,
   Divider,
 } from '@mui/material';
-import { useDispatch } from 'react-redux';
-import {
-  setQuestions,
-  updateSurvey,
-} from 'app/store/surveySlice';
 import {
   useGetSurveyByIdQuery,
   useGetQuestionsQuery,
   useReorderQuestionsMutation,
+  useApplyTemplateMutation,
+  type CreateQuestionRequest,
 } from 'app/store/api/survey-api';
 import QuestionSettings from './components/question-settings';
 import TemplateSelector from './components/template-selector';
@@ -43,7 +40,6 @@ import { type SurveyTemplate } from './components/templates';
 const SurveyBuilder = () => {
   const { surveyId } = useParams<{ surveyId: string }>();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   
   // Fetch survey from API
   const { data: surveyResponse, isLoading: isLoadingSurvey, error: surveyError } = useGetSurveyByIdQuery(surveyId || '', {
@@ -58,6 +54,7 @@ const SurveyBuilder = () => {
   const questions = questionsResponse?.data?.questions || [];
   
   const [reorderQuestions] = useReorderQuestionsMutation();
+  const [applyTemplate, { isLoading: isApplyingTemplate }] = useApplyTemplateMutation();
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
@@ -150,28 +147,40 @@ const SurveyBuilder = () => {
     setSettingsOpen(true);
   };
 
-  const handleSelectTemplate = (template: SurveyTemplate) => {
-    // Clear existing questions and add template questions
-    const templateQuestions: Question[] = template.questions.map((q, index) => ({
-      ...q,
-      id: `question-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
-      surveyId,
-      order: index,
-    }));
+  const handleSelectTemplate = async (template: SurveyTemplate) => {
+    if (!survey || !surveyId) return;
 
-    // Replace all questions with template questions
-    dispatch(setQuestions({ surveyId, questions: templateQuestions }) as any);
+    try {
+      // Calculate starting order based on existing questions count
+      // This ensures template questions are appended after existing questions
+      const existingQuestionsCount = questions.length;
+      
+      // Prepare template questions with proper order values
+      const templateQuestions: CreateQuestionRequest[] = template.questions.map((q, index) => ({
+        title: q.title,
+        description: q.description,
+        type: q.type,
+        required: q.required,
+        options: q.options || null,
+        order: existingQuestionsCount + index, // Append after existing questions
+      }));
 
-    // Apply template background to survey
-    if (survey) {
-      dispatch(
-        updateSurvey({
-          id: survey.id,
-          updates: {
-            background: template.background,
-          },
-        }) as any
-      );
+      // Call API to apply template (background + questions in one call)
+      await applyTemplate({
+        surveyId,
+        template: {
+          background: template.background,
+          questions: templateQuestions,
+        },
+      }).unwrap();
+
+      // Close template selector on success
+      setTemplateSelectorOpen(false);
+      // You can add a success notification here if you have a toast system
+      console.log('Template applied successfully!');
+    } catch (error: unknown) {
+      console.error('Failed to apply template:', error);
+      // You can add error notification here if you have a toast system
     }
   };
 
@@ -212,8 +221,9 @@ const SurveyBuilder = () => {
             variant="outlined"
             startIcon={<FileText size={18} />}
             onClick={() => setTemplateSelectorOpen(true)}
+            disabled={isApplyingTemplate}
           >
-            Use Template
+            {isApplyingTemplate ? 'Applying...' : 'Use Template'}
           </Button>
           <Button variant="contained" startIcon={<Plus size={18} />} onClick={handleAddQuestion}>
             Add Question
@@ -232,8 +242,9 @@ const SurveyBuilder = () => {
               variant="outlined"
               startIcon={<FileText size={18} />}
               onClick={() => setTemplateSelectorOpen(true)}
+              disabled={isApplyingTemplate}
             >
-              Use Template
+              {isApplyingTemplate ? 'Applying...' : 'Use Template'}
             </Button>
             <Button variant="contained" startIcon={<Plus size={18} />} onClick={handleAddQuestion}>
               Add Question

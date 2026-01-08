@@ -350,6 +350,29 @@ export interface DeleteResponseResponse {
   }
 }
 
+// Template Application API Types
+export interface ApplyTemplateRequest {
+  background?: SurveyBackground
+  questions: CreateQuestionRequest[]
+}
+
+export interface ApplyTemplateResponse {
+  success: boolean
+  data: {
+    survey: Survey
+    questions: Question[]
+  }
+  message?: string
+  error?: {
+    code: string
+    message: string
+    details?: Array<{
+      field: string
+      message: string
+    }>
+  }
+}
+
 export const surveyAPI = createApi({
   reducerPath: 'survey-api',
   baseQuery: createBaseQueryWithReAuth(),
@@ -577,6 +600,23 @@ export const surveyAPI = createApi({
         { type: 'Survey', id: surveyId },
       ],
     }),
+
+    // 4. Apply Template (Background + Questions in one call)
+    applyTemplate: builder.mutation<
+      ApplyTemplateResponse,
+      { surveyId: string; template: ApplyTemplateRequest }
+    >({
+      query: ({ surveyId, template }) => ({
+        url: `/surveys/${surveyId}/apply-template`,
+        method: 'POST',
+        body: template,
+      }),
+      invalidatesTags: (result, error, { surveyId }) => [
+        { type: 'Survey', id: surveyId },
+        { type: 'Question', id: `LIST-${surveyId}` },
+        'Survey',
+      ],
+    }),
   }),
 })
 
@@ -595,5 +635,6 @@ export const {
   useGetResponseByIdQuery,
   useSubmitResponseMutation,
   useDeleteResponseMutation,
+  useApplyTemplateMutation,
 } = surveyAPI
 
