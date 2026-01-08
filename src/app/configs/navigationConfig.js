@@ -153,15 +153,6 @@ const navigationConfig = [
     ],
   },
   {
-    id: 'dashboards.surveys',
-    title: 'Surveys',
-    type: 'item',
-    icon: 'heroicons-outline:clipboard-document-list',
-    url: '/surveys',
-    visible: [UserRole.Trainer, UserRole.Admin, UserRole.IQA, UserRole.LIQA],
-  },
-
-  {
     id: 'dashboards.trainerRiskRating',
     title: 'Trainer Risk Rating',
     type: 'item',

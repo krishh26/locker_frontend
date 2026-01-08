@@ -25,6 +25,8 @@ import { useDispatch } from 'react-redux'
 import { useUserRole } from 'src/app/utils/userHelpers'
 import UnitsTable from './components/UnitsTable'
 import QualificationHierarchy from './components/QualificationHierarchy'
+import QualificationMinimal from './components/QualificationMinimal'
+import StandardCourseMinimal from './components/StandardCourseMinimal'
 import { useEvidenceCount } from './hooks/useEvidenceCount'
 import { useUnitHandlers } from './hooks/useUnitHandlers'
 import { useQualificationHandlers } from './hooks/useQualificationHandlers'
@@ -677,30 +679,117 @@ const ViewEvidenceLibrary = () => {
             if (course.course_core_type === COURSE_TYPES.QUALIFICATION) {
               return (
                 <Box key={course.course_id} sx={{ mb: 4 }}>
-                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                    {course.course_name} - Units
-                  </Typography>
-                  {units.map((unit: any, unitIndex: number) => (
-                    <QualificationHierarchy
-                      key={unit.id}
-                      unit={unit}
-                      unitsWatch={unitsWatch}
-                      courseId={course.course_id}
-                      courseName={course.course_name}
-                      isEditMode={false}
-                      canEditLearnerFields={canEditLearnerFields}
-                      canEditTrainerFields={canEditTrainerFields}
-                      isSubmitted={false}
-                      learnerMapHandler={qualLearnerMapHandler}
-                      trainerMapHandler={qualTrainerMapHandler}
-                      signedOffHandler={qualSignedOffHandler}
-                      commentHandler={qualCommentHandler}
-                      getEvidenceCount={getEvidenceCount}
-                      setValue={setValue}
-                      trigger={trigger}
-                      unitIndex={unitIndex}
-                    />
-                  ))}
+                  {units.map((unit: any, unitIndex: number) => {
+                    // Transform unit data to match QualificationMinimal format
+                    // Flatten subUnits and topics into performanceCriteria
+                    const performanceCriteria: any[] = []
+                    
+                    if (unit.subUnit && Array.isArray(unit.subUnit)) {
+                      unit.subUnit.forEach((subUnit: any) => {
+                        if (subUnit.topics && Array.isArray(subUnit.topics)) {
+                          subUnit.topics.forEach((topic: any) => {
+                            const currentTopic = subUnit.topics?.find(
+                              (t: any) => String(t.id) === String(topic.id)
+                            )
+                            const learnerMap = currentTopic?.learnerMap ?? topic.learnerMap ?? false
+                            const trainerMap = currentTopic?.trainerMap ?? topic.trainerMap ?? false
+                            const signedOff = currentTopic?.signedOff ?? topic.signedOff ?? false
+                            const comment = currentTopic?.comment ?? topic.comment ?? ''
+                            
+                            // Determine gap status based on mapping states
+                            let gapStatus: 'none' | 'minor' | 'major' | undefined = undefined
+                            if (learnerMap && trainerMap && signedOff) {
+                              gapStatus = 'none' // Green - all mapped
+                            } else if (learnerMap && trainerMap) {
+                              gapStatus = 'minor' // Yellow - learner and trainer mapped but not signed off
+                            } else if (learnerMap) {
+                              gapStatus = 'major' // Red - only learner mapped
+                            }
+                            
+                            performanceCriteria.push({
+                              id: topic.id,
+                              code: topic.code || '',
+                              description: topic.title || topic.description || '',
+                              gapStatus,
+                              comment,
+                              signedOff,
+                              mapped: learnerMap,
+                              topic, // Keep original topic for handlers
+                              subUnitId: subUnit.id,
+                              unitId: unit.id,
+                            })
+                          })
+                        }
+                      })
+                    }
+                    
+                    // Handlers for QualificationMinimal
+                    const handleMapChange = (pcId: string | number, mapped: boolean) => {
+                      // Find the performance criteria item
+                      const pc = performanceCriteria.find((p) => String(p.id) === String(pcId))
+                      if (pc && pc.topic) {
+                        qualLearnerMapHandler(pc.topic, unit.id, pc.subUnitId)
+                      }
+                    }
+                    
+                    const handleCommentChange = (pcId: string | number, comment: string) => {
+                      const pc = performanceCriteria.find((p) => String(p.id) === String(pcId))
+                      if (pc && pc.topic) {
+                        const event = {
+                          target: { value: comment }
+                        } as React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+                        qualCommentHandler(event, pc.topic.id, unit.id, pc.subUnitId)
+                      }
+                    }
+                    
+                    const handleSignOffChange = (pcId: string | number, signedOff: boolean) => {
+                      const pc = performanceCriteria.find((p) => String(p.id) === String(pcId))
+                      if (pc && pc.topic) {
+                        qualSignedOffHandler(pc.topic, unit.id, pc.subUnitId)
+                      }
+                    }
+                    
+                    const handleSelectAll = (selected: boolean) => {
+                      // Select/deselect all performance criteria
+                      performanceCriteria.forEach((pc) => {
+                        if (pc.topic && pc.mapped !== selected) {
+                          qualLearnerMapHandler(pc.topic, unit.id, pc.subUnitId)
+                        }
+                      })
+                    }
+                    
+                    return (
+                      <QualificationMinimal
+                        key={unit.id}
+                        unit={{
+                          id: unit.id,
+                          code: unit.code || unit.unit_ref || '',
+                          title: unit.title,
+                          evidenceRequirements: [
+                            { code: 'DO', name: 'Direct Observation' },
+                            { code: 'WT', name: 'Witness Testimony' },
+                            { code: 'PE', name: 'Product Evidence' },
+                            { code: 'QA', name: 'Questioning & Answers' },
+                            { code: 'PS', name: 'Personal Statement' },
+                            { code: 'DI', name: 'Discussion' },
+                          ],
+                          assessmentMethods: [
+                            { code: 'ET', name: 'Exams and Tests', count: 0 },
+                            { code: 'RA', name: 'Reflective Account', count: 0 },
+                            { code: 'OT', name: 'Other', count: 0 },
+                            { code: 'APL/RPL', name: 'Recognised Prior Learning', count: 0 },
+                            { code: 'SI', name: 'Simulation', count: 0 },
+                          ],
+                          performanceCriteria,
+                        }}
+                        onMapChange={handleMapChange}
+                        onCommentChange={handleCommentChange}
+                        onSignOffChange={handleSignOffChange}
+                        onSelectAll={handleSelectAll}
+                        canEdit={canEditLearnerFields || canEditTrainerFields}
+                      />
+                    )
+                  })}
                 </Box>
               )
             } else {
@@ -718,60 +807,137 @@ const ViewEvidenceLibrary = () => {
               return (
                 <Box key={course.course_id} sx={{ mb: 4 }}>
                   {Array.from(unitsByType.entries()).map(([unitType, unitsOfType]) => {
-                    // Combine all subUnits from all units of this type
-                    const combinedSubUnits: any[] = []
+                    // Transform units/subUnits into knowledgeItems format for StandardCourseMinimal
+                    const knowledgeItems: any[] = []
+                    
                     unitsOfType.forEach((unit: any) => {
                       const hasSubUnit = unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0
+                      
                       if (hasSubUnit) {
                         unit.subUnit.forEach((sub: any) => {
-                          combinedSubUnits.push({
-                            ...sub,
+                          // Get current state from unitsWatch
+                          const currentUnit = unitsWatch?.find(
+                            (u: any) => String(u.id) === String(unit.id) && u.course_id === course.course_id
+                          )
+                          const currentSubUnit = currentUnit?.subUnit?.find(
+                            (s: any) => String(s.id) === String(sub.id)
+                          )
+                          
+                          const learnerMap = currentSubUnit?.learnerMap ?? sub.learnerMap ?? false
+                          const trainerMap = currentSubUnit?.trainerMap ?? sub.trainerMap ?? false
+                          const signedOff = currentSubUnit?.signedOff ?? sub.signedOff ?? false
+                          const comment = currentSubUnit?.comment ?? sub.comment ?? ''
+                          
+                          // Determine gap status based on mapping states
+                          let gapStatus: 'none' | 'minor' | 'major' | undefined = undefined
+                          if (learnerMap && trainerMap && signedOff) {
+                            gapStatus = 'none' // Green bars - all mapped and signed off
+                          } else if (learnerMap && trainerMap) {
+                            gapStatus = 'minor' // Yellow square - learner and trainer mapped but not signed off
+                          } else if (learnerMap) {
+                            gapStatus = 'major' // Red square - only learner mapped
+                          }
+                          
+                          knowledgeItems.push({
+                            id: sub.id,
+                            code: sub.code || `K${knowledgeItems.length + 1}`,
+                            description: sub.title || sub.description || '',
+                            gapStatus,
+                            comment,
+                            signedOff,
+                            mapped: learnerMap,
+                            subUnit: sub, // Keep original for handlers
                             unitId: unit.id,
-                            unitTitle: unit.title,
                             courseId: course.course_id,
                           })
                         })
                       } else {
                         // If unit doesn't have subUnit, add the unit itself
-                        combinedSubUnits.push({
+                        const currentUnit = unitsWatch?.find(
+                          (u: any) => String(u.id) === String(unit.id) && u.course_id === course.course_id
+                        )
+                        
+                        const learnerMap = currentUnit?.learnerMap ?? unit.learnerMap ?? false
+                        const trainerMap = currentUnit?.trainerMap ?? unit.trainerMap ?? false
+                        const signedOff = currentUnit?.signedOff ?? unit.signedOff ?? false
+                        const comment = currentUnit?.comment ?? unit.comment ?? ''
+                        
+                        // Determine gap status
+                        let gapStatus: 'none' | 'minor' | 'major' | undefined = undefined
+                        if (learnerMap && trainerMap && signedOff) {
+                          gapStatus = 'none'
+                        } else if (learnerMap && trainerMap) {
+                          gapStatus = 'minor'
+                        } else if (learnerMap) {
+                          gapStatus = 'major'
+                        }
+                        
+                        knowledgeItems.push({
                           id: unit.id,
-                          title: unit.title,
-                          learnerMap: unit.learnerMap ?? false,
-                          trainerMap: unit.trainerMap ?? false,
-                          signedOff: unit.signedOff ?? false,
-                          comment: unit.comment ?? '',
+                          code: unit.code || `K${knowledgeItems.length + 1}`,
+                          description: unit.title || unit.description || '',
+                          gapStatus,
+                          comment,
+                          signedOff,
+                          mapped: learnerMap,
+                          unit: unit, // Keep original for handlers
                           unitId: unit.id,
-                          unitTitle: unit.title,
                           courseId: course.course_id,
                         })
                       }
                     })
 
-                    if (combinedSubUnits.length === 0) return null
+                    if (knowledgeItems.length === 0) return null
+
+                    // Handlers for StandardCourseMinimal
+                    const handleMapChange = (itemId: string | number, mapped: boolean) => {
+                      const item = knowledgeItems.find((k) => String(k.id) === String(itemId))
+                      if (item) {
+                        // Create a row object that matches what the handler expects
+                        const row = item.subUnit || item.unit || { id: itemId }
+                        learnerMapHandler(row)
+                      }
+                    }
+                    
+                    const handleCommentChange = (itemId: string | number, comment: string) => {
+                      const item = knowledgeItems.find((k) => String(k.id) === String(itemId))
+                      if (item) {
+                        const event = {
+                          target: { value: comment }
+                        } as React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+                        commentHandler(event, itemId)
+                      }
+                    }
+                    
+                    const handleSignOffChange = (itemId: string | number, signedOff: boolean) => {
+                      const item = knowledgeItems.find((k) => String(k.id) === String(itemId))
+                      if (item) {
+                        // Create a row object that matches what the handler expects
+                        const row = item.subUnit || item.unit || { id: itemId }
+                        signedOffHandler(row)
+                      }
+                    }
+                    
+                    const handleSelectAll = (selected: boolean) => {
+                      knowledgeItems.forEach((item) => {
+                        if (item.mapped !== selected) {
+                          const row = item.subUnit || item.unit || { id: item.id }
+                          learnerMapHandler(row)
+                        }
+                      })
+                    }
 
                     return (
-                      <Box key={unitType} sx={{ mb: 3 }}>
-                        <UnitsTable
-                          variant='combined'
-                          title={`${course.course_name} - ${unitType} Units`}
-                          rows={combinedSubUnits}
-                          unitsWatch={unitsWatch}
-                          courseId={course.course_id}
-                          isEditMode={false}
-                          canEditLearnerFields={canEditLearnerFields}
-                          canEditTrainerFields={canEditTrainerFields}
-                          isSubmitted={false}
-                          learnerMapHandler={learnerMapHandler}
-                          trainerMapHandler={trainerMapHandler}
-                          signedOffHandler={signedOffHandler}
-                          commentHandler={commentHandler}
-                          selectAllSignedOffForCombinedHandler={selectAllSignedOffForCombinedHandler}
-                          getEvidenceCount={getEvidenceCount}
-                          setValue={setValue}
-                          trigger={trigger}
-                          combinedSubUnits={combinedSubUnits}
-                        />
-                      </Box>
+                      <StandardCourseMinimal
+                        key={unitType}
+                        title={`Map ${unitType}`}
+                        knowledgeItems={knowledgeItems}
+                        onMapChange={handleMapChange}
+                        onCommentChange={handleCommentChange}
+                        onSignOffChange={handleSignOffChange}
+                        onSelectAll={handleSelectAll}
+                        canEdit={canEditLearnerFields || canEditTrainerFields}
+                      />
                     )
                   })}
                 </Box>
