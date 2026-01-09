@@ -19,10 +19,7 @@ import { showMessage } from 'app/store/fuse/messageSlice'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 
-type FormValues = {
-  courseId: string
-  file: File | null
-}
+type FormValues = yup.InferType<typeof schema>
 
 type ReactUploadFileProps = {
   handleClose: () => void
@@ -72,7 +69,6 @@ const ReuploadEvidenceLibrary: FC<ReactUploadFileProps> = ({ handleClose,id }) =
   } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
-      courseId: '',
       file: null,
     },
   })

@@ -73,9 +73,7 @@ interface Slide {
   content: string;
 }
 
-type FormValues = {
-  file: File | null
-}
+type FormValues = yup.InferType<typeof schema>
 
 type EvidenceUploadWithCreationProps = {
   handleClose: () => void

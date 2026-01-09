@@ -193,6 +193,7 @@ const UserFriendlyFormBuilder: React.FC = () => {
     setError,
     formState: { errors },
   } = useForm<MetadataFormValues>({
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       form_name: '',
       type: '',
@@ -210,7 +211,6 @@ const UserFriendlyFormBuilder: React.FC = () => {
       otherEmail: '',
       requestSignature: false,
     },
-    resolver: yupResolver(schema),
     mode: 'all',
   })
 

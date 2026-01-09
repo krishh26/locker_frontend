@@ -149,7 +149,7 @@ export interface LearnerDetailsFormData {
 
 export const useLearnerDetailsForm = (defaultValues?: Partial<LearnerDetailsFormData>) => {
   const form = useForm<LearnerDetailsFormData>({
-    resolver: yupResolver(learnerDetailsSchema),
+    resolver: yupResolver(learnerDetailsSchema) as any,
     defaultValues: {
       uln: '',
       mis_learner_id: '',

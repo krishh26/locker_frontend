@@ -82,6 +82,7 @@ export default function LearnerManagementTable(props) {
     course_id: yup.string().required('Course is required'),
     trainer_id: yup.string().required('Trainer is required'),
     IQA_id: yup.string().required('IQA is required'),
+    learner_id: yup.string().optional(),
     EQA_id: yup.string().required('EQA is required'),
     LIQA_id: yup.string().required('LIQA is required'),
     start_date: yup.string().required('Start date is required'),

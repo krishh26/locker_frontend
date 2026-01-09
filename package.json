@@ -19,7 +19,7 @@
         "@fullcalendar/interaction": "^6.1.13",
         "@fullcalendar/react": "^6.1.13",
         "@fullcalendar/timegrid": "^6.1.13",
-        "@hookform/resolvers": "^3.0.0",
+        "@hookform/resolvers": "^3.10.0",
         "@material-ui/icons": "^4.11.3",
         "@mui/base": "5.0.0-alpha.123",
         "@mui/icons-material": "^5.15.20",
@@ -66,6 +66,7 @@
         "jwt-decode": "3.1.2",
         "keycode": "2.2.1",
         "lodash": "4.17.21",
+        "lucide-react": "^0.562.0",
         "marked": "4.3.0",
         "material-ui-popup-state": "5.0.8",
         "mobile-detect": "1.4.5",
@@ -111,7 +112,8 @@
         "uuid": "^11.1.0",
         "web-vitals": "3.3.0",
         "xlsx": "^0.18.5",
-        "yup": "^1.0.2"
+        "yup": "^1.0.2",
+        "zod": "^4.3.5"
     },
     "peerDependencies": {
         "autoprefixer": "10.4.7",

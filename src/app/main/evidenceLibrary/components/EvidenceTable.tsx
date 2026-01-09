@@ -29,6 +29,7 @@ import {
 } from '@tanstack/react-table'
 import { FC, useMemo } from 'react'
 import DataNotFound from 'src/app/component/Pages/dataNotFound'
+import { useUserRole } from 'src/app/utils/userHelpers'
 import { COMBINED_UNIT_TYPES, COURSE_TYPES } from '../constants'
 import { CourseOption, EvidenceData } from '../types'
 import { displayValue, formatDate, truncateText } from '../utils/evidenceHelpers'
@@ -48,7 +49,9 @@ interface EvidenceTableProps {
   selectedCourseFilter: CourseOption | null
   learnerCourses: CourseOption[]
   onOpenMenu: (e: React.MouseEvent<HTMLElement>, evidence: EvidenceData) => void
-  onViewDetails?: (evidence: EvidenceData) => void
+  onViewDetails?: (evidence: EvidenceData, selectedUnits?: (string | number)[]) => void
+  learnerSelectedUnits: Map<number, Set<string | number>>
+  onLearnerSelectedUnitsChange: (units: Map<number, Set<string | number>>) => void
 }
 
 const EvidenceTable: FC<EvidenceTableProps> = ({
@@ -64,9 +67,15 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
   selectedCourseFilter,
   learnerCourses,
   onOpenMenu,
-  onViewDetails
+  onViewDetails,
+  learnerSelectedUnits,
+  onLearnerSelectedUnitsChange
 }) => {
   const theme = useTheme()
+
+  // Get user role to check if user is a learner
+  const userRole = useUserRole()
+  const isLearner = userRole === 'Learner'
 
   // Column definitions
   const columns = useMemo<ColumnDef<EvidenceData>[]>(() => {
@@ -187,11 +196,17 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
         header: 'View',
         cell: (info) => {
           const row = info.row.original
+          const evidenceId = row.assignment_id
+          const selectedUnits = learnerSelectedUnits.get(evidenceId)
+          
           return (
             <Tooltip title="View evidence details">
               <IconButton
                 size='small'
-                onClick={() => onViewDetails?.(row)}
+                onClick={() => {
+                  // Pass selected units via navigation state
+                  onViewDetails?.(row, selectedUnits ? Array.from(selectedUnits) : [])
+                }}
                 sx={{ 
                   color: theme.palette.text.secondary,
                   '&:hover': {
@@ -296,6 +311,9 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
               ),
               cell: (info) => {
                 const row = info.row.original
+                const evidenceId = row.assignment_id
+                const selectedUnits = learnerSelectedUnits.get(evidenceId) || new Set<string | number>()
+                
                 // For Qualification courses: Check if any topic within this unit has a mapping
                 // Collect all topic IDs from this unit
                 const topicIds: (string | number)[] = []
@@ -303,11 +321,16 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
                   unit.subUnit.forEach((subUnit: any) => {
                     if (subUnit.topics && Array.isArray(subUnit.topics) && subUnit.topics.length > 0) {
                       subUnit.topics.forEach((topic: any) => {
+                        if (topic.id) {
                         topicIds.push(topic.id)
+                        }
                       })
                     }
                   })
                 }
+                
+                // Check if any topic in this unit is selected by learner
+                const isLearnerSelected = topicIds.some((topicId) => selectedUnits.has(topicId))
                 
                 // Check if any topic in this unit has a mapping
                 let mappingStatus = { learnerMap: false, trainerMap: false, signedOff: false }
@@ -336,25 +359,53 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
                   }
                 }
                 
-                const isMapped = mappingStatus.learnerMap || mappingStatus.trainerMap || mappingStatus.signedOff
+                const isMapped = mappingStatus.learnerMap || mappingStatus.trainerMap || mappingStatus.signedOff || isLearnerSelected
                 
                 let checkboxColor = theme.palette.action.disabled
                 if (mappingStatus.signedOff) {
                   checkboxColor = theme.palette.success.main
                 } else if (mappingStatus.trainerMap) {
                   checkboxColor = theme.palette.warning.main
-                } else if (mappingStatus.learnerMap) {
+                } else if (mappingStatus.learnerMap || isLearnerSelected) {
                   checkboxColor = 'inherit'
+                }
+
+                const handleUnitToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+                  const checked = event.target.checked
+                  const newMap = new Map(learnerSelectedUnits)
+                  const evidenceUnits = new Set(newMap.get(evidenceId) || [])
+                  
+                  if (checked) {
+                    // Select all topics in this unit
+                    topicIds.forEach((topicId) => {
+                      evidenceUnits.add(topicId)
+                    })
+                  } else {
+                    // Deselect all topics in this unit
+                    topicIds.forEach((topicId) => {
+                      evidenceUnits.delete(topicId)
+                    })
+                  }
+                  
+                  if (evidenceUnits.size > 0) {
+                    newMap.set(evidenceId, evidenceUnits)
+                  } else {
+                    newMap.delete(evidenceId)
+                  }
+                  
+                  onLearnerSelectedUnitsChange(newMap)
                 }
                 
                 return (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <Checkbox
                       checked={isMapped}
-                      disabled
+                      disabled={!isLearner || isAllSelected}
+                      onChange={handleUnitToggle}
                       size="small"
                       sx={{
                         padding: '4px',
+                        color: checkboxColor,
                         '&.Mui-disabled': {
                           color: checkboxColor,
                         }
@@ -431,25 +482,81 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
                     }
                   }
                   
-                  const isMapped = mappingStatus.learnerMap || mappingStatus.trainerMap || mappingStatus.signedOff
+                  const evidenceId = row.assignment_id
+                  const selectedUnits = learnerSelectedUnits.get(evidenceId) || new Set<string | number>()
+                  
+                  // Check if any unit/subUnit of this type is selected by learner
+                  const isLearnerSelected = unitsOfType.some((u: any) => {
+                    if (u.subUnit && Array.isArray(u.subUnit) && u.subUnit.length > 0) {
+                      return u.subUnit.some((sub: any) => sub.id && selectedUnits.has(sub.id))
+                    } else {
+                      return u.id && selectedUnits.has(u.id)
+                    }
+                  })
+                  
+                  const isMapped = mappingStatus.learnerMap || mappingStatus.trainerMap || mappingStatus.signedOff || isLearnerSelected
                   
                   let checkboxColor = theme.palette.action.disabled
                   if (mappingStatus.signedOff) {
                     checkboxColor = theme.palette.success.main
                   } else if (mappingStatus.trainerMap) {
                     checkboxColor = theme.palette.warning.main
-                  } else if (mappingStatus.learnerMap) {
+                  } else if (mappingStatus.learnerMap || isLearnerSelected) {
                     checkboxColor = 'inherit'
+                  }
+
+                  const handleTypeToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+                    const checked = event.target.checked
+                    const newMap = new Map(learnerSelectedUnits)
+                    const evidenceUnits = new Set(newMap.get(evidenceId) || [])
+                    
+                    if (checked) {
+                      // Select all units/subUnits of this type
+                      unitsOfType.forEach((u: any) => {
+                        if (u.subUnit && Array.isArray(u.subUnit) && u.subUnit.length > 0) {
+                          u.subUnit.forEach((sub: any) => {
+                            if (sub.id) {
+                              evidenceUnits.add(sub.id)
+                            }
+                          })
+                        } else if (u.id) {
+                          evidenceUnits.add(u.id)
+                        }
+                      })
+                    } else {
+                      // Deselect all units/subUnits of this type
+                      unitsOfType.forEach((u: any) => {
+                        if (u.subUnit && Array.isArray(u.subUnit) && u.subUnit.length > 0) {
+                          u.subUnit.forEach((sub: any) => {
+                            if (sub.id) {
+                              evidenceUnits.delete(sub.id)
+                            }
+                          })
+                        } else if (u.id) {
+                          evidenceUnits.delete(u.id)
+                        }
+                      })
+                    }
+                    
+                    if (evidenceUnits.size > 0) {
+                      newMap.set(evidenceId, evidenceUnits)
+                    } else {
+                      newMap.delete(evidenceId)
+                    }
+                    
+                    onLearnerSelectedUnitsChange(newMap)
                   }
                   
                   return (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <Checkbox
                         checked={isMapped}
-                        disabled
+                        disabled={!isLearner || isAllSelected}
+                        onChange={handleTypeToggle}
                         size="small"
                         sx={{
                           padding: '4px',
+                          color: checkboxColor,
                           '&.Mui-disabled': {
                             color: checkboxColor,
                           }
@@ -493,7 +600,7 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
     )
 
     return baseColumns
-  }, [theme, selectedCourseFilter?.units, selectedCourseFilter?.course_id, learnerCourses, onOpenMenu, onViewDetails])
+  }, [theme, selectedCourseFilter?.units, selectedCourseFilter?.course_id, selectedCourseFilter?.course_core_type, learnerCourses, onOpenMenu, onViewDetails, isLearner, learnerSelectedUnits, onLearnerSelectedUnitsChange])
 
   const table = useReactTable({
     data,

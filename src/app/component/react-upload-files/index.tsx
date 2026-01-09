@@ -22,10 +22,7 @@ import { selectLearnerManagement } from 'app/store/learnerManagement'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 
-type FormValues = {
-  courseId: string
-  file: File | null
-}
+type FormValues = yup.InferType<typeof schema>
 
 type ReactUploadFileProps = {
   handleClose: () => void

@@ -46,6 +46,8 @@ const saveState = (state) => {
       courseManagement: state.courseManagement,
       cpdLearner: state.cpdLearner,
       fuse: state.fuse,
+      survey: state.survey,
+      response: state.response,
     };
 
     const serializedState = JSON.stringify(persistedState);

@@ -110,6 +110,11 @@ const EvidenceLibrary: FC = () => {
     pageSize: 10,
   })
 
+  // Learner-selected units state: Map<evidenceId, Set<unitId>>
+  const [learnerSelectedUnits, setLearnerSelectedUnits] = useState<
+    Map<number, Set<string | number>>
+  >(new Map())
+
   // Dialog helper functions
   const openDialog = useCallback((dialog: keyof DialogState) => {
     setDialogs(prev => ({ ...prev, [dialog]: true }))
@@ -1003,8 +1008,10 @@ const EvidenceLibrary: FC = () => {
     }
   }, [uiState.selectedRow, navigate])
 
-  const handleViewDetails = useCallback((evidence: EvidenceData) => {
-    navigate(`/evidenceLibrary/${evidence.assignment_id}/view`)
+  const handleViewDetails = useCallback((evidence: EvidenceData, selectedUnits?: (string | number)[]) => {
+    navigate(`/evidenceLibrary/${evidence.assignment_id}/view`, {
+      state: { selectedUnits: selectedUnits || [] }
+    })
   }, [navigate])
 
   const handlePageChange = (event: unknown, newPage: number) => {
@@ -1285,6 +1292,8 @@ const EvidenceLibrary: FC = () => {
         learnerCourses={learnerCourses}
         onOpenMenu={openMenu}
         onViewDetails={handleViewDetails}
+        learnerSelectedUnits={learnerSelectedUnits}
+        onLearnerSelectedUnitsChange={setLearnerSelectedUnits}
       />
       <ActionMenu
         anchorEl={uiState.anchorEl}

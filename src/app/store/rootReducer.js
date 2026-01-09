@@ -29,6 +29,8 @@ import learnersWaitingToBeSampled from './learnersWaitingToBeSampled'
 import progressExclusion from './progressExclusion'
 import homePage from './homePage'
 import courseBuilder from './courseBuilderSlice'
+import survey from './surveySlice'
+import response from './responseSlice'
 
 import { evidenceAPI } from './api/evidence-api'
 import { learnerPlanAPI } from './api/learner-plan-api'
@@ -46,6 +48,7 @@ import { timelogExportAPI } from './api/timelog-export-api'
 import { samplePlanAPI } from './api/sample-plan-api'
 import { iqaQuestionsAPI } from './api/iqa-questions-api'
 import { sessionTypeApi } from './api/session-type-api'
+import { surveyAPI } from './api/survey-api'
 
 const createReducer = (asyncReducers) => (state, action) => {
   const combinedReducer = combineReducers({
@@ -80,6 +83,8 @@ const createReducer = (asyncReducers) => (state, action) => {
     progressExclusion,
     homePage,
     courseBuilder,
+    survey,
+    response,
 
     // Add the API reducer
     [evidenceAPI.reducerPath]: evidenceAPI.reducer,
@@ -98,6 +103,7 @@ const createReducer = (asyncReducers) => (state, action) => {
     [samplePlanAPI.reducerPath]: samplePlanAPI.reducer,
     [iqaQuestionsAPI.reducerPath]: iqaQuestionsAPI.reducer,
     [sessionTypeApi.reducerPath]: sessionTypeApi.reducer,
+    [surveyAPI.reducerPath]: surveyAPI.reducer,
     ...asyncReducers,
   })
 
@@ -127,6 +133,7 @@ export const concatMiddleware = [
   samplePlanAPI.middleware,
   iqaQuestionsAPI.middleware,
   sessionTypeApi.middleware,
+  surveyAPI.middleware,
 ]
 
 export default createReducer

@@ -145,7 +145,8 @@ const NewCourseBuilder = ({
       // Dynamically determine which schema to use based on current course_core_type value and activeStep
       const currentCourseType = (values.course_core_type || initialCourseType) as CourseCoreType
       const schema = getCourseValidationSchema(currentCourseType, activeStep)
-      return yupResolver(schema)(values, context, options)
+      const resolver = yupResolver(schema)
+      return resolver(values as any, context, options as any) as any
     },
     defaultValues: defaultFormValues,
     shouldUnregister: false, // Keep all fields registered even when empty

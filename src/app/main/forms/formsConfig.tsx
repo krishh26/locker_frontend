@@ -1,5 +1,6 @@
 import { lazy } from "react";
 const FormsView = lazy(() => import("./forms"));
+const SurveyForm = lazy(() => import("./survey-form"));
 import authRoles from 'src/app/auth/authRoles';
 import ImprovedFormBuilder from "./ImprovedFormBuilder";
 import FormBuilderDemo from "./FormBuilderDemo";
@@ -61,6 +62,10 @@ const FormsConfig = {
     {
       path: "/forms/:id/submit",
       element: <AddViewForm />
+    },
+    {
+      path: "/forms/survey/:surveyId",
+      element: <SurveyForm />
     },
   ],
 };

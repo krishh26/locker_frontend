@@ -48,7 +48,7 @@ const schema = yup.object().shape({
   requireFileUpload: yup.boolean(),
 })
 
-type FormData = SaveConfigRequest
+type DefaultReviewWeeksFormData = yup.InferType<typeof schema>
 
 const DefaultReviewWeeks: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<
@@ -72,7 +72,7 @@ const DefaultReviewWeeks: React.FC = () => {
     handleSubmit,
     reset,
     formState: { errors, isDirty },
-  } = useForm<FormData>({
+  } = useForm<DefaultReviewWeeksFormData>({
     resolver: yupResolver(schema),
     defaultValues: {
       noReviewWeeks: 5,
@@ -96,10 +96,10 @@ const DefaultReviewWeeks: React.FC = () => {
   }, [configResponse, reset, isInitialLoad])
 
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: DefaultReviewWeeksFormData) => {
     try {
       // Save or update configuration (upsert)
-      await saveConfig(data).unwrap()
+      await saveConfig(data as SaveConfigRequest).unwrap()
 
       // Refetch data to get updated configuration
       refetch()

@@ -138,7 +138,7 @@ const CreateViewEvidenceLibrary = () => {
     trigger,
     formState: { errors, isSubmitted },
   } = useForm<FormValues>({
-    resolver: yupResolver(getValidationSchema(userRole)),
+    resolver: yupResolver(getValidationSchema(userRole)) as any,
     defaultValues: {
       title: '',
       description: '',

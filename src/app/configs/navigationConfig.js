@@ -152,7 +152,6 @@ const navigationConfig = [
       UserRole.LIQA,
     ],
   },
-
   {
     id: 'dashboards.trainerRiskRating',
     title: 'Trainer Risk Rating',
@@ -360,6 +359,14 @@ const navigationConfig = [
     icon: 'heroicons-outline:user-add',
     url: '/session-type',
     visible: [UserRole.Admin],
+  },
+  {
+    id: 'dashboards.surveyBuilder',
+    title: 'Survey Builder',
+    type: 'item',
+    icon: 'heroicons-outline:pencil-alt',
+    url: '/surveys',
+    visible: [UserRole.Admin, UserRole.Trainer, UserRole.IQA, UserRole.LIQA],
   },
 ]
 export default navigationConfig

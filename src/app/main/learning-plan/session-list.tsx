@@ -411,7 +411,7 @@ const SessionList = () => {
     editReset({
       actionDescription: session.action_description,
       onOffJob: session.job_type,
-      targetDate: session.target_date ? new Date(session.target_date) : '',
+      targetDate: session.target_date ? new Date(session.target_date as unknown as string) : null,
       time_spent: session.time_spent,
       trainer_feedback: session.trainer_feedback,
       learner_feedback: session.learner_feedback,

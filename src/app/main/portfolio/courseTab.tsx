@@ -63,6 +63,7 @@ const courseSchema = yup.object().shape({
   course_id: yup.string().required('Please select a course'),
   trainer_id: yup.string().required('Please select a trainer'),
   IQA_id: yup.string().required('Please select an IQA'),
+  learner_id: yup.string().optional(),
   LIQA_id: yup.string().required('Please select a LIQA'),
   EQA_id: yup.string().required('Please select an EQA'),
   start_date: yup.string().required('Please select a start date'),
