@@ -770,12 +770,12 @@ const ViewEvidenceLibrary = () => {
     setIsSubmitting(true)
     try {
       // Update trainer feedback
-      await updateEvidence({
-        id: Number(id),
-        data: {
-          trainer_feedback: getValues('trainer_feedback'),
-        },
-      }).unwrap()
+      // await updateEvidence({
+      //   id: Number(id),
+      //   data: {
+      //     trainer_feedback: getValues('trainer_feedback'),
+      //   },
+      // }).unwrap()
 
       // Track original mappings for deletion comparison
       const originalMappings = evidenceDetails.data.mappings || []
@@ -903,15 +903,40 @@ const ViewEvidenceLibrary = () => {
         }
       }
 
-      // Upsert desired mappings
-      for (const [key, desiredMapping] of Array.from(
-        desiredMappings.entries()
-      )) {
+      // Upsert mappings and collect mapping IDs
+      const allMappingIds: number[] = []
+      const desiredMappingsArray = Array.from(desiredMappings.entries())
+      
+      for (const [key, desiredMapping] of desiredMappingsArray) {
         try {
+          // Use merged upsert API - it handles both create and update
           const { mapping_id, ...payload } = desiredMapping
-
-          // Upsert mapping (creates if new, updates if exists)
-          await upsertMapping(payload).unwrap()
+          const result = await upsertMapping(payload).unwrap()
+          
+          // Extract mapping_id from response
+          // Response structure: { status: true, message: "...", data: [{ mapping_id: 11, ... }] }
+          let mappingId: number | null = null
+          
+          if (result?.data && Array.isArray(result.data) && result.data.length > 0) {
+            // Get mapping_id from the first item in the data array
+            mappingId = result.data[0]?.mapping_id || null
+          } else if ((result as any)?.mapping_id) {
+            // Fallback: direct mapping_id property
+            mappingId = (result as any).mapping_id
+          } else if ((result as any)?.id) {
+            // Fallback: direct id property
+            mappingId = (result as any).id
+          } else if ((result as any)?.data?.mapping_id) {
+            // Fallback: data.mapping_id (if data is not an array)
+            mappingId = (result as any).data.mapping_id
+          } else if (mapping_id) {
+            // Final fallback: use existing mapping_id from desiredMapping
+            mappingId = mapping_id
+          }
+          
+          if (mappingId) {
+            allMappingIds.push(mappingId)
+          }
         } catch (error) {
           console.warn('Failed to upsert mapping:', error)
         }

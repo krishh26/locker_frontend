@@ -388,7 +388,7 @@ const SurveyForm = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', p: 4, py: 8, ...backgroundStyle }}>
+    <Box sx={{ p: 4, py: 8, ...backgroundStyle }}>
       <Box sx={{ mx: 'auto', maxWidth: 800 }}>
         <Paper
           component="form"
