@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react'
 import {
   Box,
   Checkbox,
   FormControlLabel,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -11,261 +10,246 @@ import {
   TableHead,
   TableRow,
   Typography,
-  IconButton,
-} from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+  TextField,
+} from '@mui/material'
+import GapIndicator from './GapIndicator'
+import EvidenceIndicator from './EvidenceIndicator'
 
 export interface StandardCourseMinimalProps {
-  title: string;
-  knowledgeItems?: Array<{
-    id: string | number;
-    code: string;
-    description: string;
-    gapStatus?: 'none' | 'minor' | 'major'; // 'none' = green bars, 'minor' = yellow, 'major' = red
-    comment?: string;
-    signedOff?: boolean;
-    mapped?: boolean;
-  }>;
-  onMapChange?: (itemId: string | number, mapped: boolean) => void;
-  onCommentChange?: (itemId: string | number, comment: string) => void;
-  onSignOffChange?: (itemId: string | number, signedOff: boolean) => void;
-  onSelectAll?: (selected: boolean) => void;
-  canEdit?: boolean;
+  title: string
+  rows: Array<{
+    id: string | number
+    title: string
+    unitId?: string | number
+    courseId?: string | number
+    learnerMap?: boolean
+    trainerMap?: boolean
+    signedOff?: boolean
+    comment?: string
+  }>
+  unitsWatch: any[]
+  courseId: string | number
+  canEditLearnerFields: boolean
+  canEditTrainerFields: boolean
+  // Handlers - matching actual useUnitHandlers signatures
+  learnerMapHandler: (row: any) => void
+  trainerMapHandler: (row: any) => void
+  signedOffHandler: (row: any) => void
+  commentHandler: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, id: string | number) => void
+  selectAllSignedOffForCombinedHandler?: (combinedSubUnits: any[], checked: boolean) => void
+  // Evidence count
+  getEvidenceCount: (courseId: string | number, unitId: string | number, subunitId?: string | number) => number
+  // Form methods
+  setValue: (name: string, value: any) => void
+  trigger: (name?: any) => Promise<any>
+  // For combined variant - the actual combinedSubUnits array
+  combinedSubUnits?: any[]
 }
 
 const StandardCourseMinimal: React.FC<StandardCourseMinimalProps> = ({
   title,
-  knowledgeItems = [],
-  onMapChange,
-  onCommentChange,
-  onSignOffChange,
-  onSelectAll,
-  canEdit = true,
+  rows = [],
+  unitsWatch,
+  courseId,
+  canEditLearnerFields,
+  canEditTrainerFields,
+  learnerMapHandler,
+  trainerMapHandler,
+  signedOffHandler,
+  commentHandler,
+  selectAllSignedOffForCombinedHandler,
+  getEvidenceCount,
+  setValue,
+  trigger,
+  combinedSubUnits,
 }) => {
-  const allMapped = knowledgeItems.every((item) => item.mapped) && knowledgeItems.length > 0;
-  const someMapped = knowledgeItems.some((item) => item.mapped);
+  // Get current row values from unitsWatch for real-time updates (same as UnitsTable)
+  const getCurrentRowValues = (row: any) => {
+    const unit = unitsWatch.find((u: any) => String(u.id) === String(row.unitId))
+    const hasSubUnitInUnit = unit?.subUnit && unit.subUnit.length > 0
 
-  const getGapIndicator = (status?: 'none' | 'minor' | 'major') => {
-    switch (status) {
-      case 'none':
-        // Green horizontal bar with segments (like in the image)
-        return (
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 0.5,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {[1, 2, 3, 4].map((segment) => (
-              <Box
-                key={segment}
-                sx={{
-                  width: 8,
-                  height: 16,
-                  bgcolor: '#4caf50', // Green
-                  borderRadius: 0.5,
-                }}
-              />
-            ))}
-          </Box>
-        );
-      case 'minor':
-        // Yellow square
-        return (
-          <Box
-            sx={{
-              width: 20,
-              height: 20,
-              borderRadius: 0.5,
-              bgcolor: '#ffc107', // Yellow
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          />
-        );
-      case 'major':
-        // Red square
-        return (
-          <Box
-            sx={{
-              width: 20,
-              height: 20,
-              borderRadius: 0.5,
-              bgcolor: '#f44336', // Red
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          />
-        );
-      default:
-        // Grey square (no status)
-        return (
-          <Box
-            sx={{
-              width: 20,
-              height: 20,
-              borderRadius: 0.5,
-              bgcolor: '#e0e0e0', // Grey
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          />
-        );
+    if (!hasSubUnitInUnit) {
+      const currentUnit = unitsWatch.find(
+        (u: any) => String(u.id) === String(row.id || row.unitId)
+      )
+      return {
+        learnerMap: currentUnit?.learnerMap ?? row.learnerMap ?? false,
+        trainerMap: currentUnit?.trainerMap ?? row.trainerMap ?? false,
+        signedOff: currentUnit?.signedOff ?? row.signedOff ?? false,
+        comment: currentUnit?.comment ?? row.comment ?? '',
+      }
+    } else {
+      const currentUnit = unitsWatch.find((u: any) => String(u.id) === String(row.unitId))
+      const currentSubUnit = currentUnit?.subUnit?.find(
+        (s: any) => String(s.id) === String(row.id)
+      )
+      return {
+        learnerMap: currentSubUnit?.learnerMap ?? row.learnerMap ?? false,
+        trainerMap: currentSubUnit?.trainerMap ?? row.trainerMap ?? false,
+        signedOff: currentSubUnit?.signedOff ?? row.signedOff ?? false,
+        comment: currentSubUnit?.comment ?? row.comment ?? '',
+      }
     }
-  };
+  }
 
-  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (onSelectAll) {
-      onSelectAll(event.target.checked);
+  // Calculate evidence count (same as UnitsTable)
+  const getRowEvidenceCount = (row: any) => {
+    const unit = unitsWatch.find((u: any) => String(u.id) === String(row.unitId))
+    const hasSubUnitInUnit = unit?.subUnit && unit.subUnit.length > 0
+    if (hasSubUnitInUnit) {
+      return getEvidenceCount(courseId, row.unitId!, row.id)
+    } else {
+      return getEvidenceCount(courseId, row.id || row.unitId!)
     }
-  };
+  }
+
+  // Calculate select all states (same as UnitsTable)
+  const allLearnerMapSelected = rows.every((r) => getCurrentRowValues(r).learnerMap)
+
+  const allSignedOffSelected = rows.every((r) => {
+    const values = getCurrentRowValues(r)
+    return (values.learnerMap && values.trainerMap && values.signedOff)
+  })
+
+  const someSignedOffSelected = rows.some((r) => {
+    const values = getCurrentRowValues(r)
+    return (values.learnerMap && values.trainerMap && values.signedOff)
+  })
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
-      <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
-        {/* Title */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
-            {title}
-          </Typography>
-        </Box>
-
-        {/* Knowledge Items Table */}
-        <Box>
-          {/* Select All Checkbox */}
-          <Box sx={{ mb: 2 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={allMapped}
-                  indeterminate={someMapped && !allMapped}
-                  onChange={handleSelectAll}
-                  disabled={!canEdit}
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+        {title}
+      </Typography>
+      <TableContainer>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={allLearnerMapSelected}
+                      onChange={(e) => {
+                        // Handle combined variant select all (same as UnitsTable)
+                        const updated = [...unitsWatch]
+                        rows.forEach((row) => {
+                          const unit = updated.find((u: any) => u.id === row.unitId)
+                          if (unit) {
+                            const hasSubUnitInUnit = unit.subUnit && unit.subUnit.length > 0
+                            if (hasSubUnitInUnit) {
+                              unit.subUnit.forEach((usub: any) => {
+                                if (usub.id === row.id) {
+                                  usub.learnerMap = e.target.checked
+                                }
+                              })
+                            } else {
+                              unit.learnerMap = e.target.checked
+                            }
+                          }
+                        })
+                        setValue('units', updated)
+                        trigger('units')
+                      }}
+                      disabled={!canEditLearnerFields}
+                    />
+                  }
+                  label="Learner Map"
+                  sx={{ margin: 0 }}
                 />
-              }
-              label="Select All"
-              sx={{ m: 0 }}
-            />
-          </Box>
+              </TableCell>
+              <TableCell>{title}</TableCell>
+              <TableCell>Trainer Comment</TableCell>
+              <TableCell align="center">Gap</TableCell>
+              <TableCell align="center">
+                {canEditTrainerFields ? (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={allSignedOffSelected}
+                        indeterminate={someSignedOffSelected && !allSignedOffSelected}
+                        onChange={(e) => {
+                          if (selectAllSignedOffForCombinedHandler && combinedSubUnits) {
+                            selectAllSignedOffForCombinedHandler(combinedSubUnits, e.target.checked)
+                          }
+                        }}
+                      />
+                    }
+                    label="Signed Off"
+                    sx={{ margin: 0 }}
+                  />
+                ) : (
+                  'Signed Off'
+                )}
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map((row) => {
+              const currentValues = getCurrentRowValues(row)
+              const rowKey = `${row.unitId}-${row.id}`
 
-          {/* Knowledge Items Table */}
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ width: 80 }}>Map</TableCell>
-                  <TableCell>Knowledge</TableCell>
-                  <TableCell align="center" sx={{ width: 100 }}>
-                    Gaps
+              return (
+                <TableRow key={rowKey}>
+                  <TableCell>
+                    <Checkbox
+                      checked={currentValues.learnerMap}
+                      onChange={() => {
+                        learnerMapHandler(row)
+                      }}
+                      disabled={!canEditLearnerFields}
+                    />
                   </TableCell>
-                  <TableCell align="center" sx={{ width: 100 }}>
-                    Comment
+                  <TableCell>{row.title}</TableCell>
+                  <TableCell>
+                    {!canEditTrainerFields ? (
+                      <span>{currentValues.comment || 'No comment'}</span>
+                    ) : (
+                      <TextField
+                        size="small"
+                        value={currentValues.comment}
+                        onChange={(e) => {
+                          commentHandler(e, row.id)
+                        }}
+                      />
+                    )}
                   </TableCell>
-                  <TableCell align="center" sx={{ width: 100 }}>
-                    Sign Off
+                  <TableCell align="center" className="flex flex-col items-center justify-center">
+                    <GapIndicator
+                      learnerMap={currentValues.learnerMap}
+                      trainerMap={currentValues.trainerMap}
+                      signedOff={currentValues.signedOff}
+                      onClick={() => {
+                        if (canEditTrainerFields && currentValues.learnerMap) {
+                          trainerMapHandler(row)
+                        }
+                      }}
+                      disabled={!canEditTrainerFields || !currentValues.learnerMap}
+                    />
+                    <EvidenceIndicator evidenceCount={getRowEvidenceCount(row)} />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Checkbox
+                      checked={currentValues.signedOff}
+                      disabled={
+                        !canEditTrainerFields ||
+                        !currentValues.learnerMap ||
+                        !currentValues.trainerMap
+                      }
+                      onChange={() => {
+                        signedOffHandler(row)
+                      }}
+                    />
                   </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {knowledgeItems.map((item) => (
-                  <TableRow key={item.id} hover>
-                    <TableCell>
-                      <Checkbox
-                        checked={item.mapped ?? false}
-                        onChange={(e) => {
-                          if (onMapChange) {
-                            onMapChange(item.id, e.target.checked);
-                          }
-                        }}
-                        disabled={!canEdit}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {item.code && (
-                          <Typography component="span" variant="body2" sx={{ fontWeight: 500, mr: 1 }}>
-                            {item.code} - 
-                          </Typography>
-                        )}
-                        {item.description}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      {getGapIndicator(item.gapStatus)}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Box
-                        sx={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: 0.5,
-                          bgcolor: item.comment ? 'primary.light' : 'grey.200',
-                          mx: 'auto',
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          cursor: canEdit ? 'pointer' : 'default',
-                        }}
-                        onClick={() => {
-                          if (canEdit && onCommentChange) {
-                            const newComment = prompt('Enter comment:', item.comment || '');
-                            if (newComment !== null) {
-                              onCommentChange(item.id, newComment);
-                            }
-                          }
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                        <Checkbox
-                          checked={item.signedOff ?? false}
-                          onChange={(e) => {
-                            if (onSignOffChange) {
-                              onSignOffChange(item.id, e.target.checked);
-                            }
-                          }}
-                          disabled={!canEdit || !item.mapped}
-                          size="small"
-                        />
-                        {item.signedOff && (
-                          <Box
-                            sx={{
-                              width: 16,
-                              height: 16,
-                              borderRadius: 0.5,
-                              bgcolor: '#4caf50',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                color: 'white',
-                                fontSize: '10px',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              ✓
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      </Paper>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </Box>
-  );
-};
+  )
+}
 
-export default StandardCourseMinimal;
+export default StandardCourseMinimal
 
