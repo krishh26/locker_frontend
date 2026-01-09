@@ -170,9 +170,9 @@ const SurveyBuilder = () => {
       await applyTemplate({
         surveyId,
         template: {
-          background: template.background,
+            background: template.background,
           questions: templateQuestions,
-        },
+          },
       }).unwrap();
 
       // Close template selector on success

@@ -322,7 +322,7 @@ const EvidenceTable: FC<EvidenceTableProps> = ({
                     if (subUnit.topics && Array.isArray(subUnit.topics) && subUnit.topics.length > 0) {
                       subUnit.topics.forEach((topic: any) => {
                         if (topic.id) {
-                          topicIds.push(topic.id)
+                        topicIds.push(topic.id)
                         }
                       })
                     }
