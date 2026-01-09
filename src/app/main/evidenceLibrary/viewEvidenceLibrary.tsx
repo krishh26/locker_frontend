@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
   Box,
   Button,
@@ -18,6 +18,7 @@ import {
   useGetEvidenceDetailsQuery,
   useUpdateEvidenceIdMutation,
   useUpsertAssignmentMappingMutation,
+  useDeleteAssignmentMappingMutation,
 } from 'app/store/api/evidence-api'
 import { selectLearnerManagement } from 'app/store/learnerManagement'
 import { showMessage } from 'app/store/fuse/messageSlice'
@@ -329,12 +330,23 @@ const reconstructFormStateFromMappings = (
 
 const ViewEvidenceLibrary = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams()
   const theme = useTheme()
   const dispatch = useDispatch()
   const userRole = useUserRole()
   const { learner } = useSelector(selectLearnerManagement)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Read selected units from navigation state
+  const selectedUnitsFromNavigation = useMemo(() => {
+    const selectedUnits = (location.state as any)?.selectedUnits || []
+    const selectedSet = new Set(selectedUnits.map((id: string | number) => {
+      const numId = Number(id)
+      return isNaN(numId) ? id : numId
+    }))
+    return selectedSet
+  }, [location.state])
 
   const {
     data: evidenceDetails,
@@ -351,6 +363,7 @@ const ViewEvidenceLibrary = () => {
 
   const [updateEvidence] = useUpdateEvidenceIdMutation()
   const [upsertMapping] = useUpsertAssignmentMappingMutation()
+  const [deleteMapping] = useDeleteAssignmentMappingMutation()
 
   const { control, setValue, watch, getValues, trigger } = useForm<FormValues>({
     defaultValues: {
@@ -382,19 +395,208 @@ const ViewEvidenceLibrary = () => {
     if (evidenceDetails?.data && learnerCoursesData.length > 0) {
       const evidence = evidenceDetails.data
       setValue('trainer_feedback', evidence.trainer_feedback || '')
+      
+      let reconstructed
       if (evidence.mappings && evidence.mappings.length > 0) {
-        const reconstructed = reconstructFormStateFromMappings(
+        reconstructed = reconstructFormStateFromMappings(
           evidence.mappings,
           learnerCoursesData
         )
+      } else {
+        reconstructed = { selectedCourses: [], courseSelectedTypes: {}, units: [] }
+      }
+      
+      // Include selected units from navigation state (learner selections)
+      // If there are no mappings, we need to find courses from learnerCoursesData
+      let coursesToProcess = reconstructed.selectedCourses
+      
+      if (coursesToProcess.length === 0 && selectedUnitsFromNavigation.size > 0) {
+        // Find courses that contain the selected units
+        coursesToProcess = learnerCoursesData.filter((course: any) => {
+          // Check if any selected unit belongs to this course
+          if (course.course_core_type === COURSE_TYPES.QUALIFICATION) {
+            return course.units?.some((unit: any) => {
+              return unit.subUnit?.some((subUnit: any) => {
+                return subUnit.topics?.some((topic: any) => {
+                  // Compare as strings to handle type mismatches
+                  return topic.id && (selectedUnitsFromNavigation.has(topic.id) || selectedUnitsFromNavigation.has(String(topic.id)) || selectedUnitsFromNavigation.has(Number(topic.id)))
+                })
+              })
+            })
+          } else {
+            return course.units?.some((unit: any) => {
+              if (unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0) {
+                return unit.subUnit.some((sub: any) => {
+                  return sub.id && (selectedUnitsFromNavigation.has(sub.id) || selectedUnitsFromNavigation.has(String(sub.id)) || selectedUnitsFromNavigation.has(Number(sub.id)))
+                })
+              } else {
+                return unit.id && (selectedUnitsFromNavigation.has(unit.id) || selectedUnitsFromNavigation.has(String(unit.id)) || selectedUnitsFromNavigation.has(Number(unit.id)))
+              }
+            })
+          }
+        }).map((course: any) => ({
+          course_id: course.course_id,
+          course_name: course.course_name,
+          course_code: course.course_code,
+          course_core_type: course.course_core_type,
+          units: course.units || [],
+        }))
+      }
+      
+      if (selectedUnitsFromNavigation.size > 0 && coursesToProcess.length > 0) {
+        const updatedUnits = [...reconstructed.units]
+        
+        coursesToProcess.forEach((course) => {
+          if (!course.units || course.units.length === 0) return
+          
+          if (course.course_core_type === COURSE_TYPES.QUALIFICATION) {
+            // For Qualification: selectedUnits contains topic IDs
+            course.units.forEach((unit: any) => {
+              // Check if this unit has any selected topics
+              let hasSelectedTopics = false
+              if (unit.subUnit && Array.isArray(unit.subUnit)) {
+                unit.subUnit.forEach((subUnit: any) => {
+                  if (subUnit.topics && Array.isArray(subUnit.topics)) {
+                    subUnit.topics.forEach((topic: any) => {
+                      // Compare as strings to handle type mismatches
+                      if (topic.id && (selectedUnitsFromNavigation.has(topic.id) || selectedUnitsFromNavigation.has(String(topic.id)) || selectedUnitsFromNavigation.has(Number(topic.id)))) {
+                        hasSelectedTopics = true
+                      }
+                    })
+                  }
+                })
+              }
+              
+              if (hasSelectedTopics) {
+                // Find or create unit in updatedUnits
+                let existingUnit = updatedUnits.find(
+                  (u: any) => u.id === unit.id && u.course_id === course.course_id
+                ) as any
+                
+                if (!existingUnit) {
+                  // Create new unit with selected topics
+                  existingUnit = {
+                    ...unit,
+                    course_id: course.course_id,
+                    subUnit: unit.subUnit ? unit.subUnit.map((subUnit: any) => ({
+                      ...subUnit,
+                      topics: subUnit.topics ? subUnit.topics.map((topic: any) => ({
+                        ...topic,
+                        learnerMap: false,
+                        trainerMap: false,
+                        signedOff: false,
+                        comment: '',
+                      })) : [],
+                    })) : [],
+                  }
+                  updatedUnits.push(existingUnit)
+                } else {
+                  // Update existing unit to include selected topics
+                  if (existingUnit.subUnit && Array.isArray(existingUnit.subUnit)) {
+                    existingUnit.subUnit.forEach((subUnit: any) => {
+                      if (subUnit.topics && Array.isArray(subUnit.topics)) {
+                        subUnit.topics.forEach((topic: any) => {
+                          // Compare as strings to handle type mismatches
+                          if (topic.id && (selectedUnitsFromNavigation.has(topic.id) || selectedUnitsFromNavigation.has(String(topic.id)) || selectedUnitsFromNavigation.has(Number(topic.id)))) {
+                            // Only set learnerMap if not already set from mapping
+                            if (topic.learnerMap === undefined || topic.learnerMap === false) {
+                              topic.learnerMap = true
+                            }
+                          }
+                        })
+                      }
+                    })
+                  }
+                }
+              }
+            })
+          } else {
+            // For Standard courses: selectedUnits contains unit IDs or subUnit IDs
+            course.units.forEach((unit: any) => {
+              let isSelected = false
+              
+              if (unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0) {
+                // Check if any subUnit is selected - handle type mismatches
+                isSelected = unit.subUnit.some((sub: any) => {
+                  return sub.id && (selectedUnitsFromNavigation.has(sub.id) || selectedUnitsFromNavigation.has(String(sub.id)) || selectedUnitsFromNavigation.has(Number(sub.id)))
+                })
+              } else {
+                // Check if unit itself is selected - handle type mismatches
+                isSelected = unit.id && (selectedUnitsFromNavigation.has(unit.id) || selectedUnitsFromNavigation.has(String(unit.id)) || selectedUnitsFromNavigation.has(Number(unit.id)))
+              }
+              
+              if (isSelected) {
+                // Find or create unit in updatedUnits
+                let existingUnit = updatedUnits.find(
+                  (u: any) => u.id === unit.id && u.course_id === course.course_id
+                ) as any
+                
+                if (!existingUnit) {
+                  // Create new unit with selected subUnits/unit
+                  if (unit.subUnit && Array.isArray(unit.subUnit) && unit.subUnit.length > 0) {
+                    existingUnit = {
+                      ...unit,
+                      course_id: course.course_id,
+                      type: unit.type,
+                      subUnit: unit.subUnit.map((sub: any) => ({
+                        ...sub,
+                        learnerMap: sub.id && (selectedUnitsFromNavigation.has(sub.id) || selectedUnitsFromNavigation.has(String(sub.id)) || selectedUnitsFromNavigation.has(Number(sub.id))),
+                        trainerMap: false,
+                        signedOff: false,
+                        comment: '',
+                      })),
+                    }
+                  } else {
+                    existingUnit = {
+                      ...unit,
+                      course_id: course.course_id,
+                      type: unit.type,
+                      learnerMap: true,
+                      trainerMap: false,
+                      signedOff: false,
+                      comment: '',
+                    }
+                  }
+                  updatedUnits.push(existingUnit)
+                } else {
+                  // Update existing unit to include selected subUnits/unit
+                  if (existingUnit.subUnit && Array.isArray(existingUnit.subUnit) && existingUnit.subUnit.length > 0) {
+                    existingUnit.subUnit.forEach((sub: any) => {
+                      // Compare as strings to handle type mismatches
+                      if (sub.id && (selectedUnitsFromNavigation.has(sub.id) || selectedUnitsFromNavigation.has(String(sub.id)) || selectedUnitsFromNavigation.has(Number(sub.id)))) {
+                        if (sub.learnerMap === undefined || sub.learnerMap === false) {
+                          sub.learnerMap = true
+                        }
+                      }
+                    })
+                  } else if (existingUnit.id && (selectedUnitsFromNavigation.has(existingUnit.id) || selectedUnitsFromNavigation.has(String(existingUnit.id)) || selectedUnitsFromNavigation.has(Number(existingUnit.id)))) {
+                    if (existingUnit.learnerMap === undefined || existingUnit.learnerMap === false) {
+                      existingUnit.learnerMap = true
+                    }
+                  }
+                }
+              }
+            })
+          }
+        })
+        
+        // Update selectedCourses to include courses that have selected units
+        const updatedSelectedCourses = coursesToProcess.map((course: any) => ({
+          course_id: course.course_id,
+          course_name: course.course_name,
+          course_code: course.course_code,
+          course_core_type: course.course_core_type,
+          units: course.units || [],
+        }))
+        
+        setSelectedCourses(updatedSelectedCourses)
+        setValue('units', updatedUnits)
+      } else {
         setSelectedCourses(reconstructed.selectedCourses)
         setValue('units', reconstructed.units)
-      } else {
-        setSelectedCourses([])
-        setValue('units', [])
       }
     }
-  }, [evidenceDetails, learnerCoursesData, setValue])
+  }, [evidenceDetails, learnerCoursesData, setValue, selectedUnitsFromNavigation])
 
   // Evidence count hook
   const { getEvidenceCount } = useEvidenceCount({ learner, selectedCourses })
@@ -442,6 +644,21 @@ const ViewEvidenceLibrary = () => {
         },
       }).unwrap()
 
+      // Track original mappings for deletion comparison
+      const originalMappings = evidenceDetails.data.mappings || []
+      const originalMappingsMap = new Map<string, any>()
+      originalMappings.forEach((mapping: any) => {
+        const courseId = mapping.course_id || mapping.course?.course_id
+        const unitCode = mapping.unit_code
+        if (courseId && unitCode) {
+          const key = `${courseId}-${unitCode}`
+          originalMappingsMap.set(key, mapping)
+        }
+      })
+
+      // Track desired mappings
+      const desiredMappings: Map<string, any> = new Map()
+
       // Update mappings
       const units = getValues('units')
       for (const unit of units) {
@@ -459,22 +676,11 @@ const ViewEvidenceLibrary = () => {
                   for (const topic of subUnit.topics) {
                     // Type assertion for mapping_id (not in Topic type but exists in runtime)
                     const topicWithMapping = topic as any
-                    // Always update if mapping_id exists (to update trainerMap, signedOff, comment)
-                    if (topicWithMapping.mapping_id) {
-                      await upsertMapping({
-                        assignment_id: Number(id),
-                        unit_code: topic.id,
-                        sub_unit_id: null,
-                        course_id: unit.course_id,
-                        learnerMap: topic.learnerMap || false,
-                        trainerMap: topic.trainerMap || false,
-                        signedOff: topic.signedOff || false,
-                        comment: topic.comment || '',
-                        mapping_id: topicWithMapping.mapping_id,
-                      }).unwrap()
-                    } else if (topic.learnerMap === true) {
-                      // Only create new mapping if learnerMap is true (following create page pattern)
-                      await upsertMapping({
+                    const key = `${unit.course_id}-${topic.id}`
+                    
+                    // Only add to desiredMappings if learnerMap is true
+                    if (topic.learnerMap === true) {
+                      desiredMappings.set(key, {
                         assignment_id: Number(id),
                         unit_code: topic.id,
                         sub_unit_id: null,
@@ -483,7 +689,8 @@ const ViewEvidenceLibrary = () => {
                         trainerMap: topic.trainerMap || false,
                         signedOff: topic.signedOff || false,
                         comment: topic.comment || '',
-                      }).unwrap()
+                        mapping_id: topicWithMapping.mapping_id,
+                      })
                     }
                   }
                 }
@@ -495,22 +702,11 @@ const ViewEvidenceLibrary = () => {
               for (const subUnit of unit.subUnit) {
                 // Type assertion for mapping_id (not in SubUnit type but exists in runtime)
                 const subUnitWithMapping = subUnit as any
-                // Always update if mapping_id exists (to update trainerMap, signedOff, comment)
-                if (subUnitWithMapping.mapping_id) {
-                  await upsertMapping({
-                    assignment_id: Number(id),
-                    unit_code: unit.id,
-                    sub_unit_id: subUnit.id,
-                    course_id: unit.course_id,
-                    learnerMap: subUnit.learnerMap || false,
-                    trainerMap: subUnit.trainerMap || false,
-                    signedOff: subUnit.signedOff || false,
-                    comment: subUnit.comment || '',
-                    mapping_id: subUnitWithMapping.mapping_id,
-                  }).unwrap()
-                } else if (subUnit.learnerMap === true) {
-                  // Only create new mapping if learnerMap is true (following create page pattern)
-                  await upsertMapping({
+                const key = `${unit.course_id}-${subUnit.id}`
+                
+                // Only add to desiredMappings if learnerMap is true
+                if (subUnit.learnerMap === true) {
+                  desiredMappings.set(key, {
                     assignment_id: Number(id),
                     unit_code: unit.id,
                     sub_unit_id: subUnit.id,
@@ -519,29 +715,19 @@ const ViewEvidenceLibrary = () => {
                     trainerMap: subUnit.trainerMap || false,
                     signedOff: subUnit.signedOff || false,
                     comment: subUnit.comment || '',
-                  }).unwrap()
+                    mapping_id: subUnitWithMapping.mapping_id,
+                  })
                 }
               }
             } else {
               // Unit-level mapping (no subUnit)
               // Type assertion for mapping_id (not in Unit type but exists in runtime)
               const unitWithMapping = unit as any
-              if (unitWithMapping.mapping_id) {
-                // Always update if mapping_id exists
-                await upsertMapping({
-                  assignment_id: Number(id),
-                  unit_code: unit.id,
-                  sub_unit_id: null,
-                  course_id: unit.course_id,
-                  learnerMap: unit.learnerMap || false,
-                  trainerMap: unit.trainerMap || false,
-                  signedOff: unit.signedOff || false,
-                  comment: unit.comment || '',
-                  mapping_id: unitWithMapping.mapping_id,
-                }).unwrap()
-              } else if (unit.learnerMap === true) {
-                // Only create new mapping if learnerMap is true
-                await upsertMapping({
+              const key = `${unit.course_id}-${unit.id}`
+              
+              // Only add to desiredMappings if learnerMap is true
+              if (unit.learnerMap === true) {
+                desiredMappings.set(key, {
                   assignment_id: Number(id),
                   unit_code: unit.id,
                   sub_unit_id: null,
@@ -550,10 +736,43 @@ const ViewEvidenceLibrary = () => {
                   trainerMap: unit.trainerMap || false,
                   signedOff: unit.signedOff || false,
                   comment: unit.comment || '',
-                }).unwrap()
+                  mapping_id: unitWithMapping.mapping_id,
+                })
               }
             }
           }
+        }
+      }
+
+      // Find mappings to delete (existed before but not in desiredMappings)
+      const mappingsToDelete: any[] = []
+      originalMappingsMap.forEach((mapping, key) => {
+        if (!desiredMappings.has(key)) {
+          // This mapping existed before but is not in desired mappings - mark for deletion
+          if (mapping.mapping_id) {
+            mappingsToDelete.push(mapping)
+          }
+        }
+      })
+
+      // Delete mappings that were unselected
+      for (const mappingToDelete of mappingsToDelete) {
+        try {
+          await deleteMapping({ mapping_id: mappingToDelete.mapping_id }).unwrap()
+        } catch (error) {
+          console.warn('Failed to delete mapping:', error)
+        }
+      }
+
+      // Upsert desired mappings
+      for (const [key, desiredMapping] of Array.from(desiredMappings.entries())) {
+        try {
+          const { mapping_id, ...payload } = desiredMapping
+          
+          // Upsert mapping (creates if new, updates if exists)
+          await upsertMapping(payload).unwrap()
+        } catch (error) {
+          console.warn('Failed to upsert mapping:', error)
         }
       }
 
